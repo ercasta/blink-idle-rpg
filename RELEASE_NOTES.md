@@ -1,10 +1,10 @@
 # Blink Idle RPG - Combat Demo Release v0.1.0
 
-🎉 **First Official Release!** 
+**First Official Release!** 
 
 This is the first official release of Blink Idle RPG, featuring an interactive combat demonstration showcasing the Blink engine and rule language in action.
 
-## 📦 What's Included
+## What's Included
 
 ### Combat Demo
 - **Interactive browser-based combat simulation** between Hero and Goblin
@@ -35,7 +35,7 @@ This is the first official release of Blink Idle RPG, featuring an interactive c
 - `classic-rpg.ir.json` - Full RPG system IR
 - BCL (Blink Choice Language) examples for AI strategies
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Playing the Demo
 
@@ -52,10 +52,14 @@ That's it! No build process, no installation, no server required.
 
 **Windows:**
 ```cmd
-# Install Rust from https://rustup.rs/
-rustup-init.exe
+# 1. Download Rust installer from https://rustup.rs/
+# 2. Run rustup-init.exe and follow the prompts
+# 3. Restart your terminal/command prompt
+# 4. Verify installation
+rustup --version
+cargo --version
 
-# Build the compiler
+# 5. Build the compiler
 cd src\compiler
 cargo build
 cargo test
@@ -83,18 +87,18 @@ npm install
 npm run build
 ```
 
-## 📋 What's New in This Release
+## What's New in This Release
 
 ### Features
-✅ Interactive combat demo with visual feedback  
-✅ Rust-based BRL compiler with lexer, parser, and IR generator  
-✅ JavaScript game engine with ECS architecture  
-✅ Component tracking system for UI updates  
-✅ Event-driven simulation  
-✅ TypeScript support and type definitions  
-✅ Mobile-responsive design  
-✅ **NEW: Comprehensive Windows build instructions**  
-✅ **NEW: Detailed CHANGELOG documenting the release**  
+- Interactive combat demo with visual feedback  
+- Rust-based BRL compiler with lexer, parser, and IR generator  
+- JavaScript game engine with ECS architecture  
+- Component tracking system for UI updates  
+- Event-driven simulation  
+- TypeScript support and type definitions  
+- Mobile-responsive design  
+- **NEW: Comprehensive Windows build instructions**  
+- **NEW: Detailed CHANGELOG documenting the release**  
 
 ### Documentation
 - Main README with quick start guide
@@ -104,7 +108,7 @@ npm run build
 - Engine architecture documentation
 - **NEW: Windows-specific build instructions and troubleshooting**
 
-## 🎮 How It Works
+## How It Works
 
 The Blink system uses a three-part architecture:
 
@@ -118,7 +122,7 @@ BRL Source → Compiler → IR (JSON) → Engine → Game Simulation
 
 The combat demo loads pre-compiled IR and executes it in real-time in your browser!
 
-## 🔧 Technical Details
+## Technical Details
 
 - **Rust Compiler Version**: 0.1.0
 - **JavaScript Engine Version**: 0.1.0
@@ -128,12 +132,12 @@ The combat demo loads pre-compiled IR and executes it in real-time in your brows
 - **Browser Support**: Modern browsers with ES6+ support
 
 ### Platforms
-✅ Windows (with new build instructions!)  
-✅ Linux  
-✅ macOS  
-✅ Mobile browsers (iOS, Android)  
+- Windows (with new build instructions!)  
+- Linux  
+- macOS  
+- Mobile browsers (iOS, Android)  
 
-## ⚠️ Known Limitations
+## Known Limitations
 
 This is an early release with some limitations:
 
@@ -144,7 +148,7 @@ This is an early release with some limitations:
 - Testing framework present but limited coverage
 - BCL (Blink Choice Language) specification not yet complete
 
-## 🗺️ What's Next
+## What's Next
 
 Future releases will include:
 - Enhanced BRL language features and improved parser
@@ -155,7 +159,7 @@ Future releases will include:
 - Language Server Protocol (LSP) for IDE support
 - VS Code extension for BRL development
 
-## 📖 Documentation
+## Documentation
 
 Full documentation is available in the repository:
 - [Main README](README.md) - Quick start and overview
@@ -165,17 +169,17 @@ Full documentation is available in the repository:
 - [Engine Architecture](doc/engine/architecture.md) - How the engine works
 - [Compiler README](src/compiler/README.md) - Compiler usage and development
 
-## 🐛 Reporting Issues
+## Reporting Issues
 
 Found a bug or have a suggestion? Please open an issue on GitHub:
 https://github.com/ercasta/blink-idle-rpg/issues
 
-## 📄 License
+## License
 
 MIT License - see [LICENSE](LICENSE) file
 
 ---
 
-**Enjoy the combat demo!** ⚔️
+**Enjoy the combat demo!**
 
 We're excited to share this first release with you. The combat demo showcases the core concepts of Blink Idle RPG, and we can't wait to see what you think!
