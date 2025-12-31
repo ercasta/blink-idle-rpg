@@ -27,11 +27,9 @@ describe('Boss Spawn Requirements', () => {
       const gameState = game.getComponent(99, 'GameState');
       assert.ok(gameState, 'GameState should exist');
       
-      // Set current wave to 4 (about to spawn boss on next SpawnEnemy event)
+      // Access internal store for testing purposes (type casting is acceptable in tests)
       const store = (game as any).store;
       store.setField(99, 'GameState', 'currentWave', 4);
-      
-      // Set enemiesDefeated to less than 2000
       store.setField(99, 'GameState', 'enemiesDefeated', 1999);
       
       // Verify the initial state
