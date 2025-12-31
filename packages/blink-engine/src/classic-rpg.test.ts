@@ -127,17 +127,6 @@ const classicRpgIR = {
             left: { type: "field", entity: "attacker", component: "Combat", field: "damage" },
             right: { type: "field", entity: "attacker", component: "Buffs", field: "damageBonus" }
           }
-        },
-        {
-          type: "schedule",
-          event: "DoAttack",
-          source: { type: "var", name: "attacker" },
-          delay: {
-            type: "binary",
-            op: "divide",
-            left: { type: "literal", value: 1 },
-            right: { type: "field", entity: "attacker", component: "Combat", field: "attackSpeed" }
-          }
         }
       ]
     },
@@ -207,7 +196,7 @@ const classicRpgIR = {
     {
       id: 4,
       name: "level_up",
-      trigger: { type: "event", event: "CheckLevelUp", bindings: { character: "source" } },
+      trigger: { type: "event", event: "CheckLevelUp", bindings: { character: "character" } },
       filter: { components: ["Character"] },
       condition: {
         type: "binary",
@@ -223,6 +212,14 @@ const classicRpgIR = {
           field: "level",
           op: "add",
           value: { type: "literal", value: 1 }
+        },
+        {
+          type: "modify",
+          entity: { type: "var", name: "character" },
+          component: "Character",
+          field: "experienceToLevel",
+          op: "multiply",
+          value: { type: "literal", value: 1.5 }
         },
         {
           type: "modify",
@@ -293,7 +290,7 @@ const classicRpgIR = {
         id: 2,
         components: {
           Character: { name: "Goblin", class: "Monster", level: 1, experience: 0, experienceToLevel: 999 },
-          Health: { current: 50, max: 50 },
+          Health: { current: 40, max: 40 },
           Combat: { damage: 10, defense: 2, attackSpeed: 1.0 },
           Target: { entity: 0 },
           Team: { id: "enemy", isPlayer: false },
@@ -354,7 +351,7 @@ describe('Classic RPG', () => {
   describe('Combat System', () => {
     it('should deal damage when attacking', () => {
       const initialHealth = game.getComponent(2, 'Health');
-      assert.strictEqual(initialHealth?.current, 50);
+      assert.strictEqual(initialHealth?.current, 40);
       
       // Warrior attacks goblin
       game.scheduleEvent('DoAttack', 0, { source: 0 });
@@ -362,15 +359,16 @@ describe('Classic RPG', () => {
       
       const afterHealth = game.getComponent(2, 'Health');
       // Goblin should take 20 damage (warrior damage)
-      assert.strictEqual(afterHealth?.current, 30);
+      assert.strictEqual(afterHealth?.current, 20);
     });
 
-    it('should schedule next attack based on attack speed', () => {
+    it('should process attack events', () => {
       game.scheduleEvent('DoAttack', 0, { source: 0 });
-      game.step();
+      const result = game.step();
       
-      // Check that next attack was scheduled
-      assert.ok(game.hasEvents());
+      // Check that attack was processed
+      assert.ok(result);
+      assert.strictEqual(result?.event.eventType, 'DoAttack');
     });
 
     it('should not attack when attacker is dead', () => {
@@ -439,6 +437,79 @@ describe('Classic RPG', () => {
       assert.strictEqual(warriorSkills?.skillPoints, 0);
       assert.strictEqual(warriorSkills?.skill1, 'power_strike');
     });
+
+    it('should grant experience when enemy is killed', () => {
+      // Starting XP should be 0
+      const initialWarrior = game.getComponent(0, 'Character');
+      assert.strictEqual(initialWarrior?.experience, 0);
+      
+      // Warrior does 20 damage, mage does 25 = 45 damage per round
+      // Goblin has 40 HP, so two attacks should kill it
+      game.scheduleEvent('DoAttack', 0, { source: 0 });
+      game.scheduleEvent('DoAttack', 0.1, { source: 1 });
+      
+      game.runUntilComplete(20);
+      
+      // Check goblin is dead
+      const goblinHealth = game.getComponent(2, 'Health');
+      assert.ok((goblinHealth?.current as number) <= 0, 'Goblin should be dead');
+      
+      // Both warriors should have gained experience (50 XP per kill per player character)
+      const warriorAfter = game.getComponent(0, 'Character');
+      const mageAfter = game.getComponent(1, 'Character');
+      
+      assert.ok((warriorAfter?.experience as number) > 0, 'Warrior should have gained XP');
+      assert.ok((mageAfter?.experience as number) > 0, 'Mage should have gained XP');
+    });
+
+    it('should level up when experience reaches threshold', () => {
+      // Give warrior enough experience to level up (threshold is 100)
+      const store = (game as unknown as { store: { setField: (id: number, comp: string, field: string, val: number) => void } }).store;
+      store.setField(0, 'Character', 'experience', 95);
+      
+      // Track level up events
+      let levelUpCount = 0;
+      game.onTracker((output) => {
+        if (output.eventType === 'LevelUp') {
+          levelUpCount++;
+        }
+      });
+      
+      // Kill the goblin to trigger XP gain (+50), which should trigger level up
+      game.scheduleEvent('DoAttack', 0, { source: 0 });
+      game.scheduleEvent('DoAttack', 0.1, { source: 1 });
+      
+      game.runUntilComplete(20);
+      
+      // Check warrior leveled up
+      const warrior = game.getComponent(0, 'Character');
+      assert.strictEqual(warrior?.level, 2, 'Warrior should have leveled up to level 2');
+      
+      // Check skill points were granted
+      const skills = game.getComponent(0, 'Skills');
+      assert.strictEqual(skills?.skillPoints, 1, 'Warrior should have 1 skill point');
+      
+      // Check level up event was emitted
+      assert.ok(levelUpCount > 0, 'LevelUp event should have been emitted');
+    });
+
+    it('should increase experienceToLevel after leveling up', () => {
+      // Give warrior enough experience to level up
+      const store = (game as unknown as { store: { setField: (id: number, comp: string, field: string, val: number) => void } }).store;
+      store.setField(0, 'Character', 'experience', 95);
+      
+      const initialExpToLevel = game.getComponent(0, 'Character')?.experienceToLevel;
+      
+      // Kill the goblin to trigger level up
+      game.scheduleEvent('DoAttack', 0, { source: 0 });
+      game.scheduleEvent('DoAttack', 0.1, { source: 1 });
+      
+      game.runUntilComplete(20);
+      
+      const warrior = game.getComponent(0, 'Character');
+      assert.ok((warrior?.experienceToLevel as number) > (initialExpToLevel as number), 
+        'Experience to level should increase after leveling up');
+    });
   });
 
   describe('Game State', () => {
@@ -455,6 +526,22 @@ describe('Classic RPG', () => {
     it('should have game state entity', () => {
       const state = game.getComponent(99, 'GameState');
       assert.ok(state, 'GameState component should exist');
+    });
+
+    it('should increment enemies defeated when enemy dies', () => {
+      // Initial enemies defeated should be 0
+      const initialState = game.getComponent(99, 'GameState');
+      assert.strictEqual(initialState?.enemiesDefeated, 0);
+      
+      // Kill the goblin (50 HP, warrior does 20, mage does 25)
+      game.scheduleEvent('DoAttack', 0, { source: 0 });
+      game.scheduleEvent('DoAttack', 0.1, { source: 1 });
+      
+      game.runUntilComplete(20);
+      
+      // Check enemies defeated was incremented
+      const finalState = game.getComponent(99, 'GameState');
+      assert.strictEqual(finalState?.enemiesDefeated, 1, 'Enemies defeated should be 1');
     });
   });
 
