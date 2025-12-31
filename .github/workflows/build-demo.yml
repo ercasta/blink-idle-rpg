@@ -3,12 +3,14 @@ name: Build Demo Package
 on:
   push:
     branches: [main]
+    tags:
+      - 'v*'
   pull_request:
     branches: [main]
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build-demo:
@@ -60,9 +62,47 @@ jobs:
       - name: List demo package contents
         run: ls -la demo-package/
       
+      - name: Create demo package ZIP
+        run: |
+          cd demo-package
+          zip -r ../blink-combat-demo.zip .
+          cd ..
+          ls -lh blink-combat-demo.zip
+      
       - name: Upload demo package artifact
         uses: actions/upload-artifact@v4
         with:
           name: blink-demo-package
           path: demo-package/
           retention-days: 30
+      
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: blink-combat-demo.zip
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          body: |
+            # Blink Idle RPG - Combat Demo Release
+            
+            This release includes a ready-to-run combat demo package.
+            
+            ## Quick Start
+            1. Download `blink-combat-demo.zip`
+            2. Extract the files to a folder
+            3. Open `index.html` in your web browser
+            4. Choose a demo and start playing!
+            
+            No installation or build process required - just download and play!
+            
+            ## What's Included
+            - Interactive combat demo (`combat-demo.html`)
+            - Classic RPG demo (`rpg-demo.html`)
+            - Demo launcher (`index.html`)
+            - Blink engine bundle
+            - Example game files (BRL, IR, BCL)
+            - Complete documentation
+            
+            See `README.md` in the package for more details.
