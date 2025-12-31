@@ -16,7 +16,7 @@ component Health {
 // Attack capability
 component Attack {
     damage: integer
-    speed: float  // attacks per second
+    speed: float
 }
 
 // Current attack target
@@ -25,8 +25,8 @@ component Target {
 }
 
 // Function to calculate damage with multiplier
-fn calculate_damage(base: integer, multiplier: float): integer {
-    return (base * multiplier) as integer
+fn calculate_damage(base: float, multiplier: float): float {
+    return base * multiplier
 }
 
 // Main attack rule: apply damage and schedule next attack
@@ -40,7 +40,7 @@ rule attack_rule on DoAttack {
         target.Health.current -= damage
         
         // Schedule next attack based on attack speed
-        let delay = 1.0 / entity.Attack.speed
+        let delay = 100 / entity.Attack.speed
         schedule [delay: delay] DoAttack {
             source: entity.id
         }
@@ -49,24 +49,14 @@ rule attack_rule on DoAttack {
 
 // Death check: emit Death event when health drops to zero
 rule death_check on DoAttack {
-    for target in entity.Target.entity {
-        if target.Health.current <= 0 {
-            schedule Death {
-                target: target.id
-            }
+    if entity.Health.current <= 0 {
+        schedule Death {
+            target: entity.id
         }
     }
-}
-
-// Handle death: remove entity from combat
-rule handle_death on Death {
-    // Clear targeting from all entities
-    // (In a full game, this would iterate all entities)
-    delete event.target
 }
 
 // Trackers for UI feedback
 tracker Health on DoAttack
 tracker Character on DoAttack
 tracker Health on Death
-tracker Character on Death
