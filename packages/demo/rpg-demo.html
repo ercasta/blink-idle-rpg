@@ -723,8 +723,8 @@
         irStatus.textContent = 'Loaded from classic-rpg.ir.json';
         irStatus.className = 'file-status loaded';
       } catch (error) {
-        console.error('Failed to load IR file:', error);
-        irStatus.textContent = 'Failed to load IR file';
+        console.error('Failed to load classic-rpg.ir.json:', error);
+        irStatus.textContent = 'Failed to load classic-rpg.ir.json - ' + error.message;
         irStatus.className = 'file-status error';
         throw error;
       }
@@ -738,7 +738,8 @@
         enemyTemplates = data.templates;
         console.log('Loaded enemy templates from enemies.json');
       } catch (error) {
-        console.error('Failed to load enemies file:', error);
+        console.error('Failed to load enemies.json:', error);
+        addLogEntry('system', '❌ ERROR: Failed to load enemies.json - ' + error.message);
         throw error;
       }
     }

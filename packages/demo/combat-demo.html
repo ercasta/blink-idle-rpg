@@ -547,7 +547,8 @@
         combatIR = await response.json();
         console.log('Loaded IR from simple-combat.ir.json');
       } catch (error) {
-        console.error('Failed to load IR file:', error);
+        console.error('Failed to load simple-combat.ir.json:', error);
+        addLogEntry('system', '❌ ERROR: Failed to load simple-combat.ir.json - ' + error.message);
         throw error;
       }
     }
