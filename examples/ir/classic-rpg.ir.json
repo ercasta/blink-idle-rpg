@@ -165,13 +165,24 @@
       },
       "actions": [
         {
+          "type": "modify",
+          "entity": { "type": "field", "entity": "attacker", "component": "Target", "field": "entity" },
+          "component": "Health",
+          "field": "current",
+          "op": "subtract",
+          "value": {
+            "type": "binary",
+            "op": "add",
+            "left": { "type": "field", "entity": "attacker", "component": "Combat", "field": "damage" },
+            "right": { "type": "field", "entity": "attacker", "component": "Buffs", "field": "damageBonus" }
+          }
+        },
+        {
           "type": "emit",
-          "event": "DealDamage",
+          "event": "AfterAttack",
           "fields": {
             "attacker": { "type": "var", "name": "attacker" },
-            "target": { "type": "field", "entity": "attacker", "component": "Target", "field": "entity" },
-            "baseDamage": { "type": "field", "entity": "attacker", "component": "Combat", "field": "damage" },
-            "bonusDamage": { "type": "field", "entity": "attacker", "component": "Buffs", "field": "damageBonus" }
+            "target": { "type": "field", "entity": "attacker", "component": "Target", "field": "entity" }
           }
         },
         {
@@ -193,39 +204,11 @@
       ]
     },
     {
-      "id": 1,
-      "name": "deal_damage_rule",
-      "trigger": {
-        "type": "event",
-        "event": "DealDamage"
-      },
-      "filter": {
-        "components": ["Health"]
-      },
-      "actions": [
-        {
-          "type": "modify",
-          "entity": { "type": "field", "entity": "entity", "component": "Target", "field": "entity" },
-          "component": "Health",
-          "field": "current",
-          "op": "subtract",
-          "value": {
-            "type": "call",
-            "function": "calculate_damage",
-            "args": [
-              { "type": "field", "entity": "entity", "component": "Combat", "field": "damage" },
-              { "type": "field", "entity": "entity", "component": "Buffs", "field": "damageBonus" }
-            ]
-          }
-        }
-      ]
-    },
-    {
       "id": 2,
       "name": "death_check",
       "trigger": {
         "type": "event",
-        "event": "DealDamage"
+        "event": "AfterAttack"
       },
       "filter": {
         "components": ["Health", "Character"]
@@ -905,7 +888,7 @@
   "trackers": [
     { "id": 0, "component": "Health", "event": "DoAttack" },
     { "id": 1, "component": "Character", "event": "DoAttack" },
-    { "id": 2, "component": "Health", "event": "DealDamage" },
+    { "id": 2, "component": "Health", "event": "AfterAttack" },
     { "id": 3, "component": "Health", "event": "Death" },
     { "id": 4, "component": "Character", "event": "Death" },
     { "id": 5, "component": "Character", "event": "LevelUp" },

@@ -484,7 +484,7 @@
         <span class="status-value" id="current-wave">1</span>
       </div>
       <div class="status-item">
-        <span class="status-label">�� Enemies Defeated:</span>
+        <span class="status-label">💀 Enemies Defeated:</span>
         <span class="status-value" id="enemies-defeated">0</span>
       </div>
       <div class="status-item">
@@ -543,7 +543,7 @@
   <script src="blink-engine.bundle.js"></script>
   
   <!-- Load JSZip for BCL extraction -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" integrity="sha384-OLBgp1GsljhM2TJ+sbHjaiH9txEUvgdDTAzHv2P24donTt6/529l+9Ua0vFImLlb" crossorigin="anonymous"></script>
   
   <script>
     // Game state
@@ -1173,6 +1173,7 @@
             maxHealth: health.max,
             damage: combat?.damage || 0,
             defense: combat?.defense || 0,
+            attackSpeed: combat?.attackSpeed || 1,
             tier: enemy?.tier || 1,
             isBoss: enemy?.isBoss || false
           };
