@@ -4,10 +4,10 @@ Browser-based demos showcasing the Blink engine. **Works on mobile and desktop!*
 
 ## 🚀 Quick Start (No Installation Required!)
 
-**Simply open `demo.html` in your browser!**
+**Simply open `index.html` in your browser!**
 
 1. Navigate to this folder (`packages/demo/`)
-2. Double-click `demo.html` (or right-click → Open with your browser)
+2. Double-click `index.html` (or right-click → Open with your browser)
 3. Choose a demo and start playing!
 
 This works on:
@@ -39,14 +39,14 @@ Then open http://localhost:8000 in your browser.
 
 ## Available Demos
 
-### 📱 demo.html - Demo Launcher (Start Here!)
+### 📱 index.html - Demo Launcher (Start Here!)
 A mobile-friendly landing page that provides:
 - Easy navigation to all demos
 - Description of each demo
 - Tips and usage instructions
 - **Best choice for first-time users and mobile devices**
 
-### ⚔️ index.html - Simple Combat Demo
+### ⚔️ combat-demo.html - Simple Combat Demo
 
 - **Two Combatants**: Hero (green) vs Goblin (red)
 - **Automatic Combat**: Battles run automatically based on attack speeds
@@ -89,8 +89,8 @@ All demos are optimized for mobile devices with:
 
 ## Files
 
-- `demo.html` - Mobile-friendly demo launcher and landing page
-- `index.html` - Simple combat demo UI
+- `index.html` - Mobile-friendly demo launcher and landing page (default)
+- `combat-demo.html` - Simple combat demo UI
 - `rpg-demo.html` - Classic RPG demo UI
 - `blink-engine.bundle.js` - Standalone Blink engine bundle for browsers
 
@@ -102,8 +102,8 @@ All demos are optimized for mobile devices with:
 - Check the browser console for any errors (F12 → Console tab)
 
 **Q: Can I use these demos offline?**
-- Yes! The simple combat demo (`index.html`) works completely offline
-- The RPG demo (`rpg-demo.html`) needs internet for the first load to fetch JSZip library, but works offline after that
+- Yes! The demo launcher and simple combat demo work completely offline
+- The RPG demo needs internet for the first load to fetch JSZip library, but works offline after that
 
 **Q: The game is too fast/slow**
 - Use the speed slider at the bottom to adjust simulation speed

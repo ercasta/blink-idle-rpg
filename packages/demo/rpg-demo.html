@@ -1342,23 +1342,74 @@
       if (output.eventType === 'Death') {
         for (const entity of output.entities) {
           if (entity.fields.current <= 0) {
-            const charName = playerCharacters[entity.entityId]?.name || 
-                           enemyCharacters[entity.entityId]?.name || 
-                           'Unknown';
+            const deadEntityId = entity.entityId;
             
-            // Check if it's an enemy that died
-            if (enemyCharacters[entity.entityId]) {
-              const deadEnemyId = entity.entityId;
+            // Determine if this is a player or enemy by checking the Team component
+            const teamComp = game.getComponent(deadEntityId, 'Team');
+            const isPlayer = teamComp && teamComp.isPlayer;
+            
+            // Get character name for logging
+            const charComp = game.getComponent(deadEntityId, 'Character');
+            const charName = charComp ? charComp.name : 'Unknown';
+            
+            if (isPlayer) {
+              // Player hero died - CRITICAL: Retarget all enemies that were targeting this hero
+              addLogEntry('death', `💀 ${charName} has been defeated!`);
               
-              // Find all alive enemies first
-              const aliveEnemies = Object.keys(enemyCharacters)
-                .map(id => parseInt(id))
-                .filter(id => id !== deadEnemyId && game.hasEntity && game.hasEntity(id));
+              // Find all alive heroes
+              const aliveHeroes = [];
+              for (let heroId = 0; heroId <= 3; heroId++) {
+                const health = game.getComponent(heroId, 'Health');
+                if (health && health.current > 0) {
+                  aliveHeroes.push(heroId);
+                }
+              }
+              
+              // Retarget all enemies that were attacking the dead hero
+              // Query all entities with Team and Target components to find enemies
+              const allTeamEntities = game.query('Team', 'Target');
+              for (const enemyId of allTeamEntities) {
+                const team = game.getComponent(enemyId, 'Team');
+                if (team && !team.isPlayer) {
+                  const target = game.getComponent(enemyId, 'Target');
+                  if (target && target.entity === deadEntityId) {
+                    // Retarget to a random alive hero if any exist
+                    if (aliveHeroes.length > 0) {
+                      const newTarget = aliveHeroes[Math.floor(Math.random() * aliveHeroes.length)];
+                      game.setComponentField(enemyId, 'Target', 'entity', newTarget);
+                    } else {
+                      // No heroes left, game over
+                      game.setComponentField(enemyId, 'Target', 'entity', null);
+                    }
+                  }
+                }
+              }
+              
+              // Check if all heroes are dead for game over
+              if (aliveHeroes.length === 0) {
+                gameState.gameOver = true;
+                showGameBanner(false);
+                if (game) {
+                  game.pause();
+                }
+              }
+            } else {
+              // Enemy died
+              // Query all entities with Team component to find alive enemies
+              const allTeamEntities = game.query('Team', 'Target');
+              const aliveEnemies = [];
+              
+              for (const entityId of allTeamEntities) {
+                const team = game.getComponent(entityId, 'Team');
+                if (team && !team.isPlayer && entityId !== deadEntityId) {
+                  aliveEnemies.push(entityId);
+                }
+              }
               
               // Retarget any hero that was targeting this dead enemy
               for (let heroId = 0; heroId <= 3; heroId++) {
                 const target = game.getComponent(heroId, 'Target');
-                if (target && target.entity === deadEnemyId) {
+                if (target && target.entity === deadEntityId) {
                   // Pick a random alive enemy, or the new one we'll spawn
                   if (aliveEnemies.length > 0) {
                     const newTarget = aliveEnemies[Math.floor(Math.random() * aliveEnemies.length)];
@@ -1368,7 +1419,7 @@
               }
               
               // Remove the dead enemy
-              game.removeEntity(deadEnemyId);
+              game.removeEntity(deadEntityId);
               
               // Spawn a new enemy to replace it (unless game is over)
               if (!gameState.gameOver && gameState.enemiesDefeated < 1000) {
@@ -1377,7 +1428,7 @@
                 // If any hero has no valid target, give them this new enemy
                 for (let heroId = 0; heroId <= 3; heroId++) {
                   const target = game.getComponent(heroId, 'Target');
-                  if (!target || !target.entity || target.entity === deadEnemyId) {
+                  if (!target || !target.entity || target.entity === deadEntityId) {
                     game.setComponentField(heroId, 'Target', 'entity', newEnemyId);
                   }
                 }
@@ -1391,9 +1442,6 @@
                   lastLoggedKills = gameState.enemiesDefeated;
                 }
               }
-            } else {
-              // Player died - always log this
-              addLogEntry('death', `💀 ${charName} has been defeated!`);
             }
           }
         }

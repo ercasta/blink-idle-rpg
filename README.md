@@ -32,7 +32,7 @@ This project is in early development with parallel work streams:
 Simply open the demo file directly - works on mobile and desktop:
 
 1. Navigate to `packages/demo/`
-2. Open `demo.html` in your browser (double-click or right-click → Open with browser)
+2. Open `index.html` in your browser (double-click or right-click → Open with browser)
 3. Choose a demo and start playing!
 
 #### Option 2: Use a local web server
