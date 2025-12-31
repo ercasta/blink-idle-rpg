@@ -515,6 +515,10 @@
         <span class="status-value" id="enemies-defeated">0</span>
       </div>
       <div class="status-item">
+        <span class="status-label">☠️ Player Deaths:</span>
+        <span class="status-value" id="player-deaths">0</span>
+      </div>
+      <div class="status-item">
         <span class="status-label">🎮 Status:</span>
         <span class="status-value" id="game-status">Ready</span>
       </div>
@@ -579,7 +583,7 @@
     let loadedBCLFiles = [];
     let playerCharacters = {};
     let enemyCharacters = {};
-    let gameState = { wave: 1, enemiesDefeated: 0, victory: false, gameOver: false };
+    let gameState = { wave: 1, enemiesDefeated: 0, playerDeaths: 0, victory: false, gameOver: false };
     let nextEnemyId = 100; // Start enemy IDs from 100 to avoid conflicts
     let lastLoggedKills = 0; // Track kills for summary logging
     let updateCounter = 0; // Counter for batched UI updates
@@ -600,6 +604,7 @@
     const gameTimeEl = document.getElementById('game-time');
     const currentWaveEl = document.getElementById('current-wave');
     const enemiesDefeatedEl = document.getElementById('enemies-defeated');
+    const playerDeathsEl = document.getElementById('player-deaths');
     const gameStatusEl = document.getElementById('game-status');
     const gameBanner = document.getElementById('game-banner');
     const bannerText = document.getElementById('banner-text');
@@ -669,6 +674,7 @@
         { "id": 9, "name": "GameState", "fields": [
           { "name": "currentWave", "type": "number", "default": 1 },
           { "name": "enemiesDefeated", "type": "number", "default": 0 },
+          { "name": "playerDeaths", "type": "number", "default": 0 },
           { "name": "bossDefeated", "type": "boolean", "default": false },
           { "name": "gameOver", "type": "boolean", "default": false },
           { "name": "victory", "type": "boolean", "default": false }
@@ -1005,7 +1011,7 @@
           {
             "id": 99,
             "components": {
-              "GameState": { "currentWave": 1, "enemiesDefeated": 0, "bossDefeated": false, "gameOver": false, "victory": false }
+              "GameState": { "currentWave": 1, "enemiesDefeated": 0, "playerDeaths": 0, "bossDefeated": false, "gameOver": false, "victory": false }
             }
           }
         ]
@@ -1282,6 +1288,7 @@
       if (gs) {
         gameState.wave = gs.currentWave;
         gameState.enemiesDefeated = gs.enemiesDefeated;
+        gameState.playerDeaths = gs.playerDeaths || 0;
         gameState.victory = gs.victory;
         gameState.gameOver = gs.gameOver;
       }
@@ -1520,6 +1527,7 @@
         for (const entity of output.entities) {
           if (entity.component === 'GameState') {
             gameState.enemiesDefeated = entity.fields.enemiesDefeated;
+            gameState.playerDeaths = entity.fields.playerDeaths || 0;
           }
         }
       }
@@ -1588,6 +1596,7 @@
     function updateUI() {
       currentWaveEl.textContent = gameState.wave;
       enemiesDefeatedEl.textContent = gameState.enemiesDefeated;
+      playerDeathsEl.textContent = gameState.playerDeaths;
       if (game) {
         gameTimeEl.textContent = game.getTime().toFixed(2) + 's';
       }
@@ -1624,7 +1633,7 @@
       }
       
       // Reset UI
-      gameState = { wave: 1, enemiesDefeated: 0, victory: false, gameOver: false };
+      gameState = { wave: 1, enemiesDefeated: 0, playerDeaths: 0, victory: false, gameOver: false };
       gameBanner.style.display = 'none';
       logContainer.innerHTML = '';
       

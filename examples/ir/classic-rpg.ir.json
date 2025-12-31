@@ -108,6 +108,7 @@
       "fields": [
         { "name": "currentWave", "type": "number", "default": 1 },
         { "name": "enemiesDefeated", "type": "number", "default": 0 },
+        { "name": "playerDeaths", "type": "number", "default": 0 },
         { "name": "bossDefeated", "type": "boolean", "default": false },
         { "name": "gameOver", "type": "boolean", "default": false },
         { "name": "victory", "type": "boolean", "default": false }
@@ -727,6 +728,14 @@
           "type": "modify",
           "entity": { "type": "var", "name": "entity" },
           "component": "GameState",
+          "field": "playerDeaths",
+          "op": "add",
+          "value": { "type": "literal", "value": 1 }
+        },
+        {
+          "type": "modify",
+          "entity": { "type": "var", "name": "entity" },
+          "component": "GameState",
           "field": "gameOver",
           "op": "set",
           "value": { "type": "literal", "value": true }
@@ -754,7 +763,7 @@
         "type": "binary",
         "op": "gte",
         "left": { "type": "field", "entity": "entity", "component": "GameState", "field": "enemiesDefeated" },
-        "right": { "type": "literal", "value": 5 }
+        "right": { "type": "literal", "value": 2000 }
       },
       "actions": [
         {
@@ -1039,7 +1048,7 @@
       {
         "id": 99,
         "components": {
-          "GameState": { "currentWave": 1, "enemiesDefeated": 0, "bossDefeated": false, "gameOver": false, "victory": false }
+          "GameState": { "currentWave": 1, "enemiesDefeated": 0, "playerDeaths": 0, "bossDefeated": false, "gameOver": false, "victory": false }
         }
       }
     ]
