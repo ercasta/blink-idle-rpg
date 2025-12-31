@@ -1391,9 +1391,43 @@
                   lastLoggedKills = gameState.enemiesDefeated;
                 }
               }
-            } else {
-              // Player died - always log this
+            } else if (playerCharacters[entity.entityId]) {
+              // Player hero died - CRITICAL: Retarget all enemies that were targeting this hero
+              const deadHeroId = entity.entityId;
               addLogEntry('death', `💀 ${charName} has been defeated!`);
+              
+              // Find all alive heroes
+              const aliveHeroes = [];
+              for (let heroId = 0; heroId <= 3; heroId++) {
+                const health = game.getComponent(heroId, 'Health');
+                if (health && health.current > 0) {
+                  aliveHeroes.push(heroId);
+                }
+              }
+              
+              // Retarget all enemies that were attacking the dead hero
+              for (const enemyId of Object.keys(enemyCharacters).map(id => parseInt(id))) {
+                const target = game.getComponent(enemyId, 'Target');
+                if (target && target.entity === deadHeroId) {
+                  // Retarget to a random alive hero if any exist
+                  if (aliveHeroes.length > 0) {
+                    const newTarget = aliveHeroes[Math.floor(Math.random() * aliveHeroes.length)];
+                    game.setComponentField(enemyId, 'Target', 'entity', newTarget);
+                  } else {
+                    // No heroes left, game over
+                    game.setComponentField(enemyId, 'Target', 'entity', null);
+                  }
+                }
+              }
+              
+              // Check if all heroes are dead for game over
+              if (aliveHeroes.length === 0) {
+                gameState.gameOver = true;
+                showGameBanner(false);
+                if (game) {
+                  game.pause();
+                }
+              }
             }
           }
         }
