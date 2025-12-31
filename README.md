@@ -20,6 +20,7 @@ This project is in early development with parallel work streams:
 | **Compiler** | ✅ Scaffold | Lexer, Parser, IR Generator |
 | Rust Engine | 📋 Planned | Native performance engine |
 | **JS Engine** | ✅ Implemented | Browser-based engine |
+| **Testing Framework** | ✅ Implemented | Integrated testing for BRL/BCL |
 | Batch Engine | 📋 Planned | Balance testing engine |
 | Dev Tools | 📋 Planned | LSP and VS Code extension |
 
@@ -74,6 +75,42 @@ cargo test
 cargo run -- compile -i ../../examples/brl/simple-clicker.brl --pretty
 ```
 
+### For Testing Game Rules
+
+The `@blink/test` package provides an integrated testing framework for BRL and BCL:
+
+```bash
+cd packages/blink-test
+npm install
+npm run build
+```
+
+```typescript
+import { createTest, expect, Scenario } from '@blink/test';
+
+// Load your game rules and test them
+const test = createTest().loadRules(myGameIR);
+
+// Schedule events and step through the simulation
+test.scheduleEvent('DoAttack', 0, { source: 0 });
+test.step();
+
+// Assert game state with fluent API
+expect(test.getGame())
+  .entity(1)
+  .component('Health')
+  .toHaveFieldLessThan('current', 100);
+
+// Or use the scenario DSL for complex tests
+const scenario = Scenario('Combat Test')
+  .step('Attack enemy')
+    .do(() => test.scheduleEvent('DoAttack', 0, { source: 0 }))
+    .expectEntity(1).toHaveFieldLessThan('Health', 'current', 100)
+  .build();
+```
+
+See [Testing Framework README](packages/blink-test/README.md) for full documentation.
+
 ### For Engine Development
 
 Engines depend only on the IR specification. Example IR files are available:
@@ -91,6 +128,7 @@ See the [IR Specification](doc/ir-specification.md) for format details.
 - [Engine Architecture](doc/engine/architecture.md) - How engines work
 - [Browser Engine](doc/engine/browser-engine.md) - JavaScript engine details
 - [JS Engine README](packages/blink-engine/README.md) - Engine API documentation
+- [Testing Framework](packages/blink-test/README.md) - Testing framework for BRL/BCL
 
 ## License
 
