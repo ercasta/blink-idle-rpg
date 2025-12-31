@@ -118,26 +118,36 @@ mkdir -p doc/language/examples
 
 **Focus**: Parse BRL and generate IR
 
+**Status**: Scaffold created ✓
+
 ### Owner Requirements
 - Compiler/parser experience
 - Rust proficiency
 - Understanding of Track 1 output
 
 ### Deliverables
-1. BRL lexer
-2. BRL parser  
-3. Semantic analyzer
-4. IR generator
-5. CLI tool (`blink-compiler`)
+1. ✅ BRL lexer
+2. ✅ BRL parser  
+3. ✅ Semantic analyzer
+4. ✅ IR generator
+5. ✅ CLI tool (`blink-compiler`)
 
 ### Files
 ```
 src/compiler/
-├── lexer/
-├── parser/
-├── analyzer/
-├── ir/
-└── cli/
+├── Cargo.toml           # Project configuration
+├── README.md            # Compiler documentation
+├── src/
+│   ├── lib.rs           # Library entry point
+│   ├── main.rs          # CLI entry point
+│   ├── lexer/           # Tokenizer (logos-based)
+│   │   └── mod.rs
+│   ├── parser/          # AST builder
+│   │   └── mod.rs
+│   ├── analyzer/        # Semantic analysis
+│   │   └── mod.rs
+│   └── ir/              # IR generator
+│       └── mod.rs
 ```
 
 ### Dependencies
@@ -152,15 +162,28 @@ src/compiler/
 
 ### Getting Started
 ```bash
-# Set up Rust project
-cargo new blink-compiler --lib
+# The compiler scaffold is already created!
 
-# Read language spec
-cat doc/language/brl-specification.md
+# Build the compiler
+cd src/compiler
+cargo build
 
-# Start with lexer
-code src/compiler/lexer/mod.rs
+# Run tests
+cargo test
+
+# Use the CLI (after building)
+cargo run -- compile -i ../../examples/brl/simple-clicker.brl --pretty
+
+# Or check a file for errors
+cargo run -- check -i ../../examples/brl/simple-combat.brl
 ```
+
+### Next Steps
+1. Review the [BRL Specification](language/brl-specification.md)
+2. Enhance the lexer to handle all BRL tokens
+3. Extend the parser for complete BRL syntax
+4. Add comprehensive error messages
+5. Implement optimization passes
 
 ---
 
@@ -213,8 +236,13 @@ cat doc/engine/architecture.md
 # Read IR specification
 cat doc/ir-specification.md
 
+# Use example IR files for testing
+# examples/ir/simple-clicker.ir.json - minimal test case
+# examples/ir/simple-combat.ir.json  - more complex test case
+
 # Start with IR loader
-code src/engines/rust/ir/mod.rs
+mkdir -p src/engines/rust/src/ir
+code src/engines/rust/src/ir/mod.rs
 ```
 
 ---
@@ -277,7 +305,12 @@ cat doc/engine/browser-engine.md
 # Read IR specification
 cat doc/ir-specification.md
 
+# Use example IR files for testing
+# examples/ir/simple-clicker.ir.json - minimal test case
+# examples/ir/simple-combat.ir.json  - more complex test case
+
 # Set up TypeScript project
+mkdir -p packages/blink-engine/src
 cd packages/blink-engine
 npm init -y
 npm install typescript
@@ -325,13 +358,20 @@ src/engines/batch/
 ### Getting Started
 ```bash
 # Set up Rust project
-cargo new blink-batch --bin
+mkdir -p src/engines/batch
+cd src/engines/batch
+cargo init --name blink-batch
 
 # Read IR specification
 cat doc/ir-specification.md
 
+# Use example IR files for testing
+# examples/ir/simple-clicker.ir.json - minimal test case
+# examples/ir/simple-combat.ir.json  - more complex test case
+
 # Start with runner
-code src/engines/batch/runner/mod.rs
+mkdir -p src/runner
+code src/runner/mod.rs
 ```
 
 ---

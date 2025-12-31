@@ -29,6 +29,28 @@ doc/
     └── writing-specs.md         # How to write .hie files
 ```
 
+## Source Code
+
+```
+src/
+└── compiler/                    # Blink Compiler (Rust)
+    ├── Cargo.toml              # Project configuration
+    ├── README.md               # Compiler documentation
+    └── src/                    # Source code
+        ├── lexer/              # Tokenizer
+        ├── parser/             # AST builder
+        ├── analyzer/           # Semantic analysis
+        └── ir/                 # IR generator
+
+examples/
+├── brl/                        # BRL source examples
+│   ├── simple-clicker.brl
+│   └── simple-combat.brl
+└── ir/                         # Pre-compiled IR examples for engine testing
+    ├── simple-clicker.ir.json
+    └── simple-combat.ir.json
+```
+
 ## Development Tracks
 
 The project is organized to allow parallel development with **IR as the central contract**:
@@ -36,11 +58,11 @@ The project is organized to allow parallel development with **IR as the central 
 | Track | Folder | Description | Dependencies |
 |-------|--------|-------------|--------------|
 | **Language Design** | `doc/language/` | BRL & BCL specification | None |
-| **Compiler** | `doc/engine/` | Parser, validator, IR gen | Language spec |
-| **Rust Engine** | `doc/engine/` | Native Rust simulation | IR spec only |
-| **JS Engine** | `doc/engine/browser-engine.md` | TypeScript implementation | IR spec only |
-| **Batch Engine** | `doc/engine/` | Headless testing engine | IR spec only |
-| **Dev Tools** | `doc/engine/` | LSP, VSCode extension | Language spec |
+| **Compiler** | `src/compiler/` | Parser, validator, IR gen | Language spec |
+| **Rust Engine** | `src/engines/rust/` | Native Rust simulation | IR spec only |
+| **JS Engine** | `packages/blink-engine/` | TypeScript implementation | IR spec only |
+| **Batch Engine** | `src/engines/batch/` | Headless testing engine | IR spec only |
+| **Dev Tools** | `tools/` | LSP, VSCode extension | Language spec |
 
 All engines are **independent** - they depend only on the IR specification, not on each other.
 
@@ -50,6 +72,7 @@ See [architecture/ir-decision.md](architecture/ir-decision.md) for the architect
 ## Getting Started
 
 - **Language Designers**: Start with [language/README.md](language/README.md)
-- **Engine Developers**: Start with [ir-specification.md](ir-specification.md) and [engine/README.md](engine/README.md)
+- **Compiler Developers**: Start with [../src/compiler/README.md](../src/compiler/README.md)
+- **Engine Developers**: Start with [ir-specification.md](ir-specification.md) and use examples in [../examples/ir/](../examples/ir/)
 - **Game Designers**: See [summary.md](summary.md) for game concepts
 - **All Developers**: Read [hie/README.md](hie/README.md) to understand architecture enforcement
