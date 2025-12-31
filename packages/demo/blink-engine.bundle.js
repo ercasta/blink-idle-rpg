@@ -476,8 +476,8 @@
       }
 
       context.timeline.schedule(action.event, delay, {
-        source: source !== null ? source : undefined,
-        target: target !== null ? target : undefined,
+        source: source ?? undefined,
+        target: target ?? undefined,
         fields: Object.keys(fields).length > 0 ? fields : undefined,
       });
     }
