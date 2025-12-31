@@ -1,0 +1,41 @@
+{
+  "name": "@blink/test",
+  "version": "0.1.0",
+  "description": "Integrated testing framework for BRL and BCL - test game rules and player choices",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "node --test dist/index.test.js",
+    "lint": "tsc --noEmit"
+  },
+  "keywords": [
+    "blink",
+    "testing",
+    "brl",
+    "bcl",
+    "game-rules",
+    "idle-rpg"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@blink/engine": "file:../blink-engine"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.3",
+    "typescript": "^5.3.0"
+  },
+  "files": [
+    "dist/**/*"
+  ],
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  }
+}
