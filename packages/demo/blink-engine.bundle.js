@@ -792,6 +792,7 @@
         debug: options.debug || false,
         timeScale: options.timeScale || 1.0,
         maxEventsPerFrame: options.maxEventsPerFrame || 100,
+        discreteTimeStep: options.discreteTimeStep || 0,
       };
       
       this.store = new Store();
@@ -1052,6 +1053,63 @@
       this.timeline.clear();
     }
 
+    runSteps(maxSteps = 100, maxTime) {
+      const startTime = this.timeline.getTime();
+      const discreteStep = this.options.discreteTimeStep;
+      let stepsExecuted = 0;
+      let eventsProcessed = 0;
+      
+      while (stepsExecuted < maxSteps && this.timeline.hasEvents()) {
+        const nextEvent = this.timeline.peek();
+        if (!nextEvent) break;
+        
+        if (maxTime !== undefined && nextEvent.time > startTime + maxTime) {
+          break;
+        }
+        
+        if (discreteStep > 0 && nextEvent.time > this.timeline.getTime()) {
+          const timeToEvent = nextEvent.time - this.timeline.getTime();
+          const steps = Math.ceil(timeToEvent / discreteStep);
+          this.timeline.setTime(this.timeline.getTime() + (steps * discreteStep));
+        }
+        
+        this.step();
+        stepsExecuted++;
+        eventsProcessed++;
+        
+        if (maxTime !== undefined && this.timeline.getTime() >= startTime + maxTime) {
+          break;
+        }
+      }
+      
+      const timeAdvanced = this.timeline.getTime() - startTime;
+      
+      return {
+        stepsExecuted,
+        timeAdvanced,
+        eventsProcessed,
+      };
+    }
+
+    createEntity(id) {
+      return this.store.createEntity(id);
+    }
+
+    addComponent(entityId, componentName, data) {
+      this.store.addComponent(entityId, componentName, data);
+    }
+
+    removeEntity(entityId) {
+      this.store.deleteEntity(entityId);
+    }
+
+    setComponentField(entityId, componentName, field, value) {
+      const component = this.store.getComponent(entityId, componentName);
+      if (component) {
+        component[field] = value;
+      }
+    }
+
     scheduleNextFrame() {
       if (typeof requestAnimationFrame !== 'undefined') {
         this.animationFrameId = requestAnimationFrame(this.gameLoop.bind(this));
@@ -1070,7 +1128,14 @@
       
       const simulationDelta = deltaTime * this.options.timeScale;
       this.currentSimulationTime += simulationDelta;
-      const targetTime = this.currentSimulationTime;
+      let targetTime = this.currentSimulationTime;
+      
+      const discreteStep = this.options.discreteTimeStep;
+      if (discreteStep > 0) {
+        const currentDiscreteTime = Math.floor(this.timeline.getTime() / discreteStep) * discreteStep;
+        const targetDiscreteTime = Math.floor(targetTime / discreteStep) * discreteStep;
+        targetTime = targetDiscreteTime;
+      }
       
       let eventsProcessed = 0;
       
@@ -1081,6 +1146,12 @@
         const nextEvent = this.timeline.peek();
         if (!nextEvent || nextEvent.time > targetTime) {
           break;
+        }
+        
+        if (discreteStep > 0 && nextEvent.time > this.timeline.getTime()) {
+          const timeToEvent = nextEvent.time - this.timeline.getTime();
+          const steps = Math.ceil(timeToEvent / discreteStep);
+          this.timeline.setTime(this.timeline.getTime() + (steps * discreteStep));
         }
         
         this.step();
