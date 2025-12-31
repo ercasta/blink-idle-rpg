@@ -561,6 +561,10 @@ export class BlinkGame {
       eventsProcessed++;
     }
     
+    // Sync currentSimulationTime to where we actually got to, not where we wanted to go
+    // This prevents the "hanging" effect when hitting maxEventsPerFrame limit
+    this.currentSimulationTime = this.timeline.getTime();
+    
     // Check if simulation is complete
     if (!this.timeline.hasEvents()) {
       this.isRunning = false;

@@ -1138,6 +1138,7 @@
       }
       
       let eventsProcessed = 0;
+      const startTime = this.timeline.getTime();
       
       while (
         eventsProcessed < this.options.maxEventsPerFrame &&
@@ -1157,6 +1158,10 @@
         this.step();
         eventsProcessed++;
       }
+      
+      // Sync currentSimulationTime to where we actually got to, not where we wanted to go
+      // This prevents the "hanging" effect when hitting maxEventsPerFrame limit
+      this.currentSimulationTime = this.timeline.getTime();
       
       if (!this.timeline.hasEvents()) {
         this.isRunning = false;
