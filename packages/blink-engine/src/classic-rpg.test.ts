@@ -444,7 +444,7 @@ describe('Classic RPG', () => {
       assert.strictEqual(initialWarrior?.experience, 0);
       
       // Warrior does 20 damage, mage does 25 = 45 damage per round
-      // Goblin has 50 HP, so two attacks should kill it
+      // Goblin has 40 HP, so two attacks should kill it
       game.scheduleEvent('DoAttack', 0, { source: 0 });
       game.scheduleEvent('DoAttack', 0.1, { source: 1 });
       

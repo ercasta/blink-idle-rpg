@@ -103,6 +103,23 @@ export class RuleExecutor {
     }
   }
 
+  /**
+   * Check if an entity has all required filter components
+   */
+  private hasFilterComponents(
+    entityId: EntityId,
+    store: Store,
+    filter: IRRule['filter']
+  ): boolean {
+    const components = filter?.components || [];
+    for (const comp of components) {
+      if (!store.hasComponent(entityId, comp)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   private getFilteredEntities(
     rule: IRRule,
     store: Store,
@@ -115,15 +132,7 @@ export class RuleExecutor {
     
     // If we have a source entity and the rule binds from source, use that
     if (bindsSource && event.source !== undefined && store.hasEntity(event.source)) {
-      const components = rule.filter?.components || [];
-      let hasAll = true;
-      for (const comp of components) {
-        if (!store.hasComponent(event.source, comp)) {
-          hasAll = false;
-          break;
-        }
-      }
-      if (hasAll) {
+      if (this.hasFilterComponents(event.source, store, rule.filter)) {
         return [event.source];
       }
       return [];
@@ -140,15 +149,7 @@ export class RuleExecutor {
         if (source in event.fields) {
           const boundEntityId = event.fields[source];
           if (typeof boundEntityId === 'number' && store.hasEntity(boundEntityId)) {
-            const components = rule.filter?.components || [];
-            let hasAll = true;
-            for (const comp of components) {
-              if (!store.hasComponent(boundEntityId, comp)) {
-                hasAll = false;
-                break;
-              }
-            }
-            if (hasAll) {
+            if (this.hasFilterComponents(boundEntityId, store, rule.filter)) {
               return [boundEntityId];
             }
             return [];
