@@ -711,8 +711,74 @@
     // Classic RPG IR - will be loaded from file
     let classicRpgIR = null;
     
-    // Enemy templates - will be loaded from file
-    let enemyTemplates = [];
+    // Enemy templates - embedded from enemies.json
+    let enemyTemplates = [
+      {
+        "name": "Goblin Scout",
+        "tier": 1,
+        "health": 60,
+        "damage": 8,
+        "speed": 1.0,
+        "exp": 25
+      },
+      {
+        "name": "Orc Raider",
+        "tier": 2,
+        "health": 90,
+        "damage": 12,
+        "speed": 0.8,
+        "exp": 35
+      },
+      {
+        "name": "Dark Wolf",
+        "tier": 2,
+        "health": 75,
+        "damage": 14,
+        "speed": 1.2,
+        "exp": 40
+      },
+      {
+        "name": "Skeleton Warrior",
+        "tier": 3,
+        "health": 110,
+        "damage": 16,
+        "speed": 0.7,
+        "exp": 50
+      },
+      {
+        "name": "Troll Berserker",
+        "tier": 4,
+        "health": 180,
+        "damage": 22,
+        "speed": 0.6,
+        "exp": 80
+      },
+      {
+        "name": "Dark Mage",
+        "tier": 3,
+        "health": 80,
+        "damage": 25,
+        "speed": 0.5,
+        "exp": 75
+      },
+      {
+        "name": "Demon Knight",
+        "tier": 5,
+        "health": 250,
+        "damage": 30,
+        "speed": 0.7,
+        "exp": 150
+      },
+      {
+        "name": "Ancient Dragon",
+        "tier": 6,
+        "health": 400,
+        "damage": 40,
+        "speed": 0.8,
+        "exp": 300,
+        "boss": true
+      }
+    ];
     
     // Load IR from file
     async function loadDefaultIR() {
@@ -730,19 +796,7 @@
       }
     }
     
-    // Load enemies from file
-    async function loadEnemies() {
-      try {
-        const response = await fetch('enemies.json');
-        const data = await response.json();
-        enemyTemplates = data.templates;
-        console.log('Loaded enemy templates from enemies.json');
-      } catch (error) {
-        console.error('Failed to load enemies.json:', error);
-        addLogEntry('system', '❌ ERROR: Failed to load enemies.json - ' + error.message);
-        throw error;
-      }
-    }
+
     
     // File upload handlers
     irFileInput.addEventListener('change', async (e) => {
@@ -890,11 +944,6 @@
       // Load default IR if not already loaded
       if (!classicRpgIR && !currentIR) {
         await loadDefaultIR();
-      }
-      
-      // Load enemy templates if not already loaded
-      if (enemyTemplates.length === 0) {
-        await loadEnemies();
       }
       
       const ir = currentIR || classicRpgIR;
