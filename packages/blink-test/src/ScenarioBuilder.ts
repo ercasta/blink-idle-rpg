@@ -14,7 +14,7 @@ export interface ScenarioBuilder {
   describe(description: string): ScenarioBuilder;
   
   /** Add setup step */
-  setup(fn: (game: BlinkGame) => void | Promise<void>): ScenarioBuilder;
+  setup(fn: () => void | Promise<void>): ScenarioBuilder;
   
   /** Create entities */
   withEntities(entities: EntityFixture[]): ScenarioBuilder;
@@ -23,7 +23,7 @@ export interface ScenarioBuilder {
   step(name: string): StepBuilder;
   
   /** Add teardown */
-  teardown(fn: (game: BlinkGame) => void | Promise<void>): ScenarioBuilder;
+  teardown(fn: () => void | Promise<void>): ScenarioBuilder;
   
   /** Build the scenario */
   build(): TestScenario;
@@ -76,11 +76,10 @@ export function Scenario(name: string): ScenarioBuilder {
 class ScenarioBuilderImpl implements ScenarioBuilder {
   private name: string;
   private description?: string;
-  private setupFn?: (game: BlinkGame) => void | Promise<void>;
-  private teardownFn?: (game: BlinkGame) => void | Promise<void>;
+  private setupFn?: () => void | Promise<void>;
+  private teardownFn?: () => void | Promise<void>;
   private steps: TestStep[] = [];
   private entities: EntityFixture[] = [];
-  private currentGame: BlinkGame | null = null;
   
   constructor(name: string) {
     this.name = name;
@@ -91,7 +90,7 @@ class ScenarioBuilderImpl implements ScenarioBuilder {
     return this;
   }
   
-  setup(fn: (game: BlinkGame) => void | Promise<void>): ScenarioBuilder {
+  setup(fn: () => void | Promise<void>): ScenarioBuilder {
     this.setupFn = fn;
     return this;
   }
@@ -105,7 +104,7 @@ class ScenarioBuilderImpl implements ScenarioBuilder {
     return new StepBuilderImpl(this, name);
   }
   
-  teardown(fn: (game: BlinkGame) => void | Promise<void>): ScenarioBuilder {
+  teardown(fn: () => void | Promise<void>): ScenarioBuilder {
     this.teardownFn = fn;
     return this;
   }
@@ -115,27 +114,13 @@ class ScenarioBuilderImpl implements ScenarioBuilder {
   }
   
   build(): TestScenario {
-    const entities = this.entities;
-    const originalSetup = this.setupFn;
-    
     return {
       name: this.name,
       description: this.description,
-      setup: originalSetup ? async () => {
-        // Create entities first if provided
-        // Note: This requires access to the game instance
-        // The actual entity creation happens in the action
-        await originalSetup(this.currentGame!);
-      } : undefined,
+      setup: this.setupFn,
       steps: this.steps,
-      teardown: this.teardownFn ? async () => {
-        await this.teardownFn!(this.currentGame!);
-      } : undefined,
+      teardown: this.teardownFn,
     };
-  }
-  
-  setGame(game: BlinkGame): void {
-    this.currentGame = game;
   }
 }
 
