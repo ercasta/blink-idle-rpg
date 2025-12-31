@@ -1,8 +1,8 @@
 {
   "version": "1.0",
-  "module": "simple_combat",
+  "module": "unnamed",
   "metadata": {
-    "compiled_at": "2024-12-31T12:00:00Z",
+    "compiled_at": "2026-01-14T23:41:28Z",
     "compiler_version": "0.1.0"
   },
   "components": [
@@ -10,31 +10,66 @@
       "id": 0,
       "name": "Character",
       "fields": [
-        { "name": "name", "type": "string" },
-        { "name": "level", "type": "number", "default": 1 }
+        {
+          "name": "name",
+          "type": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "level",
+          "type": {
+            "type": "number"
+          }
+        }
       ]
     },
     {
       "id": 1,
       "name": "Health",
       "fields": [
-        { "name": "current", "type": "number", "default": 100 },
-        { "name": "max", "type": "number", "default": 100 }
+        {
+          "name": "current",
+          "type": {
+            "type": "number"
+          }
+        },
+        {
+          "name": "max",
+          "type": {
+            "type": "number"
+          }
+        }
       ]
     },
     {
       "id": 2,
       "name": "Attack",
       "fields": [
-        { "name": "damage", "type": "number", "default": 10 },
-        { "name": "speed", "type": "number", "default": 1.0 }
+        {
+          "name": "damage",
+          "type": {
+            "type": "number"
+          }
+        },
+        {
+          "name": "speed",
+          "type": {
+            "type": "number"
+          }
+        }
       ]
     },
     {
       "id": 3,
       "name": "Target",
       "fields": [
-        { "name": "entity", "type": "entity", "default": null }
+        {
+          "name": "entity",
+          "type": {
+            "type": "entity"
+          }
+        }
       ]
     }
   ],
@@ -44,59 +79,55 @@
       "name": "attack_rule",
       "trigger": {
         "type": "event",
-        "event": "DoAttack",
-        "bindings": {
-          "attacker": "source"
-        }
-      },
-      "filter": {
-        "components": ["Attack", "Target"]
-      },
-      "condition": {
-        "type": "binary",
-        "op": "neq",
-        "left": { 
-          "type": "field", 
-          "entity": "attacker", 
-          "component": "Target", 
-          "field": "entity" 
-        },
-        "right": { "type": "literal", "value": null }
+        "event": "DoAttack"
       },
       "actions": [
         {
-          "type": "modify",
-          "entity": { 
-            "type": "field", 
-            "entity": "attacker", 
-            "component": "Target", 
-            "field": "entity" 
-          },
-          "component": "Health",
-          "field": "current",
-          "op": "subtract",
-          "value": { 
-            "type": "field", 
-            "entity": "attacker", 
-            "component": "Attack", 
-            "field": "damage" 
-          }
-        },
-        {
-          "type": "schedule",
-          "event": "DoAttack",
-          "source": { "type": "var", "name": "attacker" },
-          "delay": { 
+          "type": "conditional",
+          "condition": {
             "type": "binary",
-            "op": "divide",
-            "left": { "type": "literal", "value": 100 },
-            "right": { 
-              "type": "field", 
-              "entity": "attacker", 
-              "component": "Attack", 
-              "field": "speed" 
+            "op": "neq",
+            "left": {
+              "type": "field",
+              "entity": "entity",
+              "component": "Target",
+              "field": "entity"
+            },
+            "right": {
+              "type": "literal",
+              "value": null
             }
-          }
+          },
+          "then_actions": [
+            {
+              "type": "modify",
+              "entity": {
+                "type": "var",
+                "name": "target"
+              },
+              "component": "Health",
+              "field": "current",
+              "op": "subtract",
+              "value": {
+                "type": "var",
+                "name": "damage"
+              }
+            },
+            {
+              "type": "schedule",
+              "event": "DoAttack",
+              "delay": {
+                "type": "var",
+                "name": "delay"
+              },
+              "fields": {
+                "source": {
+                  "type": "var",
+                  "name": "id"
+                }
+              }
+            }
+          ]
         }
       ]
     },
@@ -107,27 +138,35 @@
         "type": "event",
         "event": "DoAttack"
       },
-      "filter": {
-        "components": ["Health"]
-      },
-      "condition": {
-        "type": "binary",
-        "op": "lte",
-        "left": { 
-          "type": "field", 
-          "entity": "entity", 
-          "component": "Health", 
-          "field": "current" 
-        },
-        "right": { "type": "literal", "value": 0 }
-      },
       "actions": [
         {
-          "type": "emit",
-          "event": "Death",
-          "fields": {
-            "target": { "type": "var", "name": "entity" }
-          }
+          "type": "conditional",
+          "condition": {
+            "type": "binary",
+            "op": "lte",
+            "left": {
+              "type": "field",
+              "entity": "entity",
+              "component": "Health",
+              "field": "current"
+            },
+            "right": {
+              "type": "literal",
+              "value": 0.0
+            }
+          },
+          "then_actions": [
+            {
+              "type": "schedule",
+              "event": "Death",
+              "fields": {
+                "target": {
+                  "type": "var",
+                  "name": "id"
+                }
+              }
+            }
+          ]
         }
       ]
     }
@@ -137,43 +176,51 @@
       "id": 0,
       "name": "calculate_damage",
       "params": [
-        { "name": "base", "type": "number" },
-        { "name": "multiplier", "type": "number" }
+        {
+          "name": "base",
+          "type": {
+            "type": "number"
+          }
+        },
+        {
+          "name": "multiplier",
+          "type": {
+            "type": "number"
+          }
+        }
       ],
-      "return_type": { "type": "number" },
+      "return_type": {
+        "type": "number"
+      },
       "body": {
         "type": "binary",
         "op": "multiply",
-        "left": { "type": "param", "name": "base" },
-        "right": { "type": "param", "name": "multiplier" }
+        "left": {
+          "type": "var",
+          "name": "base"
+        },
+        "right": {
+          "type": "var",
+          "name": "multiplier"
+        }
       }
     }
   ],
   "trackers": [
-    { "id": 0, "component": "Health", "event": "DoAttack" },
-    { "id": 1, "component": "Character", "event": "DoAttack" },
-    { "id": 2, "component": "Health", "event": "Death" }
-  ],
-  "initial_state": {
-    "entities": [
-      {
-        "id": 0,
-        "components": {
-          "Character": { "name": "Hero", "level": 1 },
-          "Health": { "current": 100, "max": 100 },
-          "Attack": { "damage": 15, "speed": 1.2 },
-          "Target": { "entity": 1 }
-        }
-      },
-      {
-        "id": 1,
-        "components": {
-          "Character": { "name": "Goblin", "level": 1 },
-          "Health": { "current": 50, "max": 50 },
-          "Attack": { "damage": 8, "speed": 0.8 },
-          "Target": { "entity": 0 }
-        }
-      }
-    ]
-  }
+    {
+      "id": 0,
+      "component": "Health",
+      "event": "DoAttack"
+    },
+    {
+      "id": 1,
+      "component": "Character",
+      "event": "DoAttack"
+    },
+    {
+      "id": 2,
+      "component": "Health",
+      "event": "Death"
+    }
+  ]
 }

@@ -442,7 +442,10 @@ impl Parser {
         // Allow certain keywords to be used as field names
         let name_token = if let Some(token) = self.peek() {
             match token.kind {
-                TokenKind::Identifier | TokenKind::Entity | TokenKind::Event => {
+                TokenKind::Identifier 
+                | TokenKind::Entity 
+                | TokenKind::Event 
+                | TokenKind::TypeId => {
                     self.advance().unwrap().clone()
                 }
                 _ => self.consume(TokenKind::Identifier, "field name")?
