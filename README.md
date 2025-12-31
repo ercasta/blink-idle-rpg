@@ -19,11 +19,39 @@ This project is in early development with parallel work streams:
 | Language Design | 📝 Spec Draft | BRL/BCL specifications |
 | **Compiler** | ✅ Scaffold | Lexer, Parser, IR Generator |
 | Rust Engine | 📋 Planned | Native performance engine |
-| JS Engine | 📋 Planned | Browser-based engine |
+| **JS Engine** | ✅ Implemented | Browser-based engine |
 | Batch Engine | 📋 Planned | Balance testing engine |
 | Dev Tools | 📋 Planned | LSP and VS Code extension |
 
 ## Quick Start
+
+### Try the Demo
+
+Run the combat demo to see the engine in action:
+
+```bash
+cd packages/demo
+npx serve .
+# Open http://localhost:3000 in your browser
+```
+
+### For JavaScript Engine Development
+
+```bash
+cd packages/blink-engine
+npm install
+npm run build
+
+# Use the engine in your project
+```
+
+```typescript
+import { BlinkGame } from '@blink/engine';
+
+const game = await BlinkGame.create({ timeScale: 5.0 });
+await game.loadRules('./game.ir.json');
+game.start();
+```
 
 ### For Compiler Development
 
@@ -51,6 +79,8 @@ See the [IR Specification](doc/ir-specification.md) for format details.
 - [IR Specification](doc/ir-specification.md) - Central contract for engines
 - [BRL Specification](doc/language/brl-specification.md) - Game rule language
 - [Engine Architecture](doc/engine/architecture.md) - How engines work
+- [Browser Engine](doc/engine/browser-engine.md) - JavaScript engine details
+- [JS Engine README](packages/blink-engine/README.md) - Engine API documentation
 
 ## License
 

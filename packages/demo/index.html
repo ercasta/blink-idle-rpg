@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blink Idle RPG - Combat Demo</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      color: #eee;
+      margin: 0;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      text-align: center;
+      color: #e94560;
+      margin-bottom: 10px;
+      font-size: 2.5rem;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+    
+    .subtitle {
+      text-align: center;
+      color: #888;
+      margin-bottom: 30px;
+    }
+    
+    .game-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+      margin-bottom: 30px;
+    }
+    
+    @media (max-width: 768px) {
+      .game-container {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    .character-card {
+      background: rgba(255,255,255,0.05);
+      border-radius: 15px;
+      padding: 25px;
+      border: 2px solid rgba(255,255,255,0.1);
+      transition: all 0.3s ease;
+    }
+    
+    .character-card.hero {
+      border-color: #4ade80;
+    }
+    
+    .character-card.enemy {
+      border-color: #f87171;
+    }
+    
+    .character-card.dead {
+      opacity: 0.5;
+      filter: grayscale(0.8);
+    }
+    
+    .character-name {
+      font-size: 1.8rem;
+      margin: 0 0 5px 0;
+    }
+    
+    .character-level {
+      color: #888;
+      margin-bottom: 20px;
+    }
+    
+    .stat-group {
+      margin-bottom: 20px;
+    }
+    
+    .stat-label {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 5px;
+      font-size: 0.9rem;
+    }
+    
+    .health-bar-container {
+      background: rgba(0,0,0,0.3);
+      border-radius: 10px;
+      overflow: hidden;
+      height: 25px;
+    }
+    
+    .health-bar {
+      height: 100%;
+      transition: width 0.3s ease;
+      border-radius: 10px;
+    }
+    
+    .hero .health-bar {
+      background: linear-gradient(90deg, #22c55e 0%, #4ade80 100%);
+    }
+    
+    .enemy .health-bar {
+      background: linear-gradient(90deg, #dc2626 0%, #f87171 100%);
+    }
+    
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .stat-row:last-child {
+      border-bottom: none;
+    }
+    
+    .stat-icon {
+      margin-right: 8px;
+    }
+    
+    .controls {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    
+    button {
+      background: linear-gradient(135deg, #e94560 0%, #c23a51 100%);
+      color: white;
+      border: none;
+      padding: 15px 40px;
+      font-size: 1.1rem;
+      border-radius: 10px;
+      cursor: pointer;
+      margin: 0 10px;
+      transition: all 0.3s ease;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    
+    button:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 20px rgba(233, 69, 96, 0.4);
+    }
+    
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    button.secondary {
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    }
+    
+    button.secondary:hover:not(:disabled) {
+      box-shadow: 0 5px 20px rgba(59, 130, 246, 0.4);
+    }
+    
+    .combat-log {
+      background: rgba(0,0,0,0.3);
+      border-radius: 15px;
+      padding: 20px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    
+    .combat-log h2 {
+      margin-top: 0;
+      color: #e94560;
+      font-size: 1.3rem;
+    }
+    
+    .log-entry {
+      padding: 8px 12px;
+      margin: 5px 0;
+      border-radius: 5px;
+      font-size: 0.9rem;
+      animation: fadeIn 0.3s ease;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .log-entry.attack {
+      background: rgba(251, 191, 36, 0.1);
+      border-left: 3px solid #fbbf24;
+    }
+    
+    .log-entry.damage {
+      background: rgba(239, 68, 68, 0.1);
+      border-left: 3px solid #ef4444;
+    }
+    
+    .log-entry.death {
+      background: rgba(139, 92, 246, 0.1);
+      border-left: 3px solid #8b5cf6;
+    }
+    
+    .log-entry.system {
+      background: rgba(59, 130, 246, 0.1);
+      border-left: 3px solid #3b82f6;
+    }
+    
+    .log-time {
+      color: #888;
+      font-size: 0.8rem;
+      margin-right: 10px;
+    }
+    
+    .status-bar {
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      margin-bottom: 20px;
+      padding: 15px;
+      background: rgba(0,0,0,0.2);
+      border-radius: 10px;
+    }
+    
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .status-label {
+      color: #888;
+    }
+    
+    .status-value {
+      font-weight: bold;
+      color: #4ade80;
+    }
+    
+    .winner-banner {
+      text-align: center;
+      padding: 20px;
+      background: linear-gradient(135deg, rgba(74, 222, 128, 0.2) 0%, rgba(34, 197, 94, 0.2) 100%);
+      border-radius: 10px;
+      margin-bottom: 20px;
+      border: 2px solid #4ade80;
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.4); }
+      50% { box-shadow: 0 0 20px 10px rgba(74, 222, 128, 0); }
+    }
+    
+    .winner-banner h2 {
+      margin: 0;
+      color: #4ade80;
+      font-size: 1.8rem;
+    }
+    
+    .speed-control {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    
+    .speed-control label {
+      color: #888;
+    }
+    
+    .speed-control input[type="range"] {
+      width: 200px;
+      accent-color: #e94560;
+    }
+    
+    .attack-flash {
+      animation: flash 0.2s ease;
+    }
+    
+    @keyframes flash {
+      0%, 100% { background: rgba(255,255,255,0.05); }
+      50% { background: rgba(255,255,255,0.2); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>⚔️ Blink Idle RPG</h1>
+    <p class="subtitle">Simple Combat Demo - Watch the battle unfold automatically!</p>
+    
+    <div class="status-bar">
+      <div class="status-item">
+        <span class="status-label">Time:</span>
+        <span class="status-value" id="game-time">0.00s</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">Events:</span>
+        <span class="status-value" id="event-count">0</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">Status:</span>
+        <span class="status-value" id="game-status">Ready</span>
+      </div>
+    </div>
+    
+    <div id="winner-banner" class="winner-banner" style="display: none;">
+      <h2 id="winner-text">🎉 Victory! 🎉</h2>
+    </div>
+    
+    <div class="game-container">
+      <div class="character-card hero" id="hero-card">
+        <h2 class="character-name" id="hero-name">Hero</h2>
+        <p class="character-level" id="hero-level">Level 1</p>
+        
+        <div class="stat-group">
+          <div class="stat-label">
+            <span>❤️ Health</span>
+            <span id="hero-health-text">100 / 100</span>
+          </div>
+          <div class="health-bar-container">
+            <div class="health-bar" id="hero-health-bar" style="width: 100%"></div>
+          </div>
+        </div>
+        
+        <div class="stat-row">
+          <span><span class="stat-icon">⚔️</span>Attack Damage</span>
+          <span id="hero-damage">15</span>
+        </div>
+        <div class="stat-row">
+          <span><span class="stat-icon">⚡</span>Attack Speed</span>
+          <span id="hero-speed">1.2/s</span>
+        </div>
+      </div>
+      
+      <div class="character-card enemy" id="enemy-card">
+        <h2 class="character-name" id="enemy-name">Goblin</h2>
+        <p class="character-level" id="enemy-level">Level 1</p>
+        
+        <div class="stat-group">
+          <div class="stat-label">
+            <span>❤️ Health</span>
+            <span id="enemy-health-text">50 / 50</span>
+          </div>
+          <div class="health-bar-container">
+            <div class="health-bar" id="enemy-health-bar" style="width: 100%"></div>
+          </div>
+        </div>
+        
+        <div class="stat-row">
+          <span><span class="stat-icon">⚔️</span>Attack Damage</span>
+          <span id="enemy-damage">8</span>
+        </div>
+        <div class="stat-row">
+          <span><span class="stat-icon">⚡</span>Attack Speed</span>
+          <span id="enemy-speed">0.8/s</span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="speed-control">
+      <label for="speed-slider">Simulation Speed:</label>
+      <input type="range" id="speed-slider" min="0.5" max="10" step="0.5" value="1">
+      <span id="speed-value">1x</span>
+    </div>
+    
+    <div class="controls">
+      <button id="start-btn">▶️ Start Battle</button>
+      <button id="pause-btn" class="secondary" disabled>⏸️ Pause</button>
+      <button id="reset-btn" class="secondary">🔄 Reset</button>
+    </div>
+    
+    <div class="combat-log">
+      <h2>📜 Combat Log</h2>
+      <div id="log-container">
+        <div class="log-entry system">
+          <span class="log-time">[0.00s]</span>
+          <span>Waiting for battle to start...</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load the Blink Engine bundle -->
+  <script src="blink-engine.bundle.js"></script>
+  
+  <script>
+    // Game state tracking
+    let game = null;
+    let eventCount = 0;
+    let heroData = { id: 0, health: 100, maxHealth: 100, damage: 15, speed: 1.2, name: 'Hero', level: 1 };
+    let enemyData = { id: 1, health: 50, maxHealth: 50, damage: 8, speed: 0.8, name: 'Goblin', level: 1 };
+    let winner = null;
+    
+    // DOM elements
+    const startBtn = document.getElementById('start-btn');
+    const pauseBtn = document.getElementById('pause-btn');
+    const resetBtn = document.getElementById('reset-btn');
+    const logContainer = document.getElementById('log-container');
+    const speedSlider = document.getElementById('speed-slider');
+    const speedValue = document.getElementById('speed-value');
+    const gameTimeEl = document.getElementById('game-time');
+    const eventCountEl = document.getElementById('event-count');
+    const gameStatusEl = document.getElementById('game-status');
+    const winnerBanner = document.getElementById('winner-banner');
+    const winnerText = document.getElementById('winner-text');
+    
+    // Simple Combat IR (from examples/ir/simple-combat.ir.json)
+    const combatIR = {
+      "version": "1.0",
+      "module": "simple_combat",
+      "metadata": {
+        "compiled_at": "2024-12-31T12:00:00Z",
+        "compiler_version": "0.1.0"
+      },
+      "components": [
+        {
+          "id": 0,
+          "name": "Character",
+          "fields": [
+            { "name": "name", "type": "string" },
+            { "name": "level", "type": "number", "default": 1 }
+          ]
+        },
+        {
+          "id": 1,
+          "name": "Health",
+          "fields": [
+            { "name": "current", "type": "number", "default": 100 },
+            { "name": "max", "type": "number", "default": 100 }
+          ]
+        },
+        {
+          "id": 2,
+          "name": "Attack",
+          "fields": [
+            { "name": "damage", "type": "number", "default": 10 },
+            { "name": "speed", "type": "number", "default": 1.0 }
+          ]
+        },
+        {
+          "id": 3,
+          "name": "Target",
+          "fields": [
+            { "name": "entity", "type": "entity", "default": null }
+          ]
+        }
+      ],
+      "rules": [
+        {
+          "id": 0,
+          "name": "attack_rule",
+          "trigger": {
+            "type": "event",
+            "event": "DoAttack",
+            "bindings": {
+              "attacker": "source"
+            }
+          },
+          "filter": {
+            "components": ["Attack", "Target"]
+          },
+          "condition": {
+            "type": "binary",
+            "op": "neq",
+            "left": { 
+              "type": "field", 
+              "entity": "attacker", 
+              "component": "Target", 
+              "field": "entity" 
+            },
+            "right": { "type": "literal", "value": null }
+          },
+          "actions": [
+            {
+              "type": "modify",
+              "entity": { 
+                "type": "field", 
+                "entity": "attacker", 
+                "component": "Target", 
+                "field": "entity" 
+              },
+              "component": "Health",
+              "field": "current",
+              "op": "subtract",
+              "value": { 
+                "type": "field", 
+                "entity": "attacker", 
+                "component": "Attack", 
+                "field": "damage" 
+              }
+            },
+            {
+              "type": "schedule",
+              "event": "DoAttack",
+              "source": { "type": "var", "name": "attacker" },
+              "delay": { 
+                "type": "binary",
+                "op": "divide",
+                "left": { "type": "literal", "value": 1 },
+                "right": { 
+                  "type": "field", 
+                  "entity": "attacker", 
+                  "component": "Attack", 
+                  "field": "speed" 
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": 1,
+          "name": "death_check",
+          "trigger": {
+            "type": "event",
+            "event": "DoAttack"
+          },
+          "filter": {
+            "components": ["Health"]
+          },
+          "condition": {
+            "type": "binary",
+            "op": "lte",
+            "left": { 
+              "type": "field", 
+              "entity": "entity", 
+              "component": "Health", 
+              "field": "current" 
+            },
+            "right": { "type": "literal", "value": 0 }
+          },
+          "actions": [
+            {
+              "type": "emit",
+              "event": "Death",
+              "fields": {
+                "target": { "type": "var", "name": "entity" }
+              }
+            }
+          ]
+        }
+      ],
+      "functions": [
+        {
+          "id": 0,
+          "name": "calculate_damage",
+          "params": [
+            { "name": "base", "type": "number" },
+            { "name": "multiplier", "type": "number" }
+          ],
+          "return_type": { "type": "number" },
+          "body": {
+            "type": "binary",
+            "op": "multiply",
+            "left": { "type": "param", "name": "base" },
+            "right": { "type": "param", "name": "multiplier" }
+          }
+        }
+      ],
+      "trackers": [
+        { "id": 0, "component": "Health", "event": "DoAttack" },
+        { "id": 1, "component": "Character", "event": "DoAttack" },
+        { "id": 2, "component": "Health", "event": "Death" }
+      ],
+      "initial_state": {
+        "entities": [
+          {
+            "id": 0,
+            "components": {
+              "Character": { "name": "Hero", "level": 1 },
+              "Health": { "current": 100, "max": 100 },
+              "Attack": { "damage": 15, "speed": 1.2 },
+              "Target": { "entity": 1 }
+            }
+          },
+          {
+            "id": 1,
+            "components": {
+              "Character": { "name": "Goblin", "level": 1 },
+              "Health": { "current": 50, "max": 50 },
+              "Attack": { "damage": 8, "speed": 0.8 },
+              "Target": { "entity": 0 }
+            }
+          }
+        ]
+      }
+    };
+    
+    // Initialize game
+    function initGame() {
+      game = BlinkEngine.BlinkGame.createSync({ 
+        debug: false,
+        timeScale: parseFloat(speedSlider.value)
+      });
+      
+      game.loadRulesFromObject(combatIR);
+      
+      // Load initial data
+      updateCharacterData();
+      
+      // Subscribe to tracker events
+      game.onTracker((output) => {
+        handleTrackerOutput(output);
+      });
+      
+      // Subscribe to simulation events
+      game.onSimulation((event) => {
+        handleSimulationEvent(event);
+      });
+      
+      // Schedule initial attack events for both combatants
+      game.scheduleEvent('DoAttack', 0, { source: 0 }); // Hero attacks first
+      game.scheduleEvent('DoAttack', 0.5, { source: 1 }); // Goblin attacks after 0.5s
+      
+      addLogEntry('system', 'Battle initialized! Press Start to begin.');
+      updateUI();
+    }
+    
+    function updateCharacterData() {
+      // Get character data from game state
+      const heroHealth = game.getComponent(0, 'Health');
+      const heroChar = game.getComponent(0, 'Character');
+      const heroAttack = game.getComponent(0, 'Attack');
+      
+      if (heroHealth && heroChar && heroAttack) {
+        heroData = {
+          id: 0,
+          health: heroHealth.current,
+          maxHealth: heroHealth.max,
+          name: heroChar.name,
+          level: heroChar.level,
+          damage: heroAttack.damage,
+          speed: heroAttack.speed
+        };
+      }
+      
+      const enemyHealth = game.getComponent(1, 'Health');
+      const enemyChar = game.getComponent(1, 'Character');
+      const enemyAttack = game.getComponent(1, 'Attack');
+      
+      if (enemyHealth && enemyChar && enemyAttack) {
+        enemyData = {
+          id: 1,
+          health: enemyHealth.current,
+          maxHealth: enemyHealth.max,
+          name: enemyChar.name,
+          level: enemyChar.level,
+          damage: enemyAttack.damage,
+          speed: enemyAttack.speed
+        };
+      }
+    }
+    
+    function handleTrackerOutput(output) {
+      eventCount++;
+      
+      // Update character data from tracker output
+      if (output.component === 'Health') {
+        for (const entity of output.entities) {
+          if (entity.entityId === 0) {
+            heroData.health = entity.fields.current;
+            heroData.maxHealth = entity.fields.max;
+          } else if (entity.entityId === 1) {
+            enemyData.health = entity.fields.current;
+            enemyData.maxHealth = entity.fields.max;
+          }
+        }
+      }
+      
+      // Log attack events
+      if (output.eventType === 'DoAttack') {
+        // Determine attacker and defender
+        const heroEntity = output.entities.find(e => e.entityId === 0);
+        const enemyEntity = output.entities.find(e => e.entityId === 1);
+        
+        if (heroEntity && enemyEntity) {
+          // Determine who was damaged
+          if (heroData.health < heroData.maxHealth && enemyData.health === enemyData.maxHealth) {
+            addLogEntry('attack', `${enemyData.name} attacks ${heroData.name} for ${enemyData.damage} damage!`);
+          } else {
+            addLogEntry('attack', `${heroData.name} attacks ${enemyData.name} for ${heroData.damage} damage!`);
+          }
+        }
+        
+        // Add visual feedback
+        if (heroData.health < heroData.maxHealth) {
+          document.getElementById('hero-card').classList.add('attack-flash');
+          setTimeout(() => document.getElementById('hero-card').classList.remove('attack-flash'), 200);
+        }
+        if (enemyData.health < enemyData.maxHealth) {
+          document.getElementById('enemy-card').classList.add('attack-flash');
+          setTimeout(() => document.getElementById('enemy-card').classList.remove('attack-flash'), 200);
+        }
+      }
+      
+      // Handle death events
+      if (output.eventType === 'Death') {
+        for (const entity of output.entities) {
+          if (entity.fields.current <= 0) {
+            const charName = entity.entityId === 0 ? heroData.name : enemyData.name;
+            addLogEntry('death', `💀 ${charName} has been defeated!`);
+            
+            // Determine winner
+            if (entity.entityId === 0) {
+              winner = enemyData.name;
+              document.getElementById('hero-card').classList.add('dead');
+            } else {
+              winner = heroData.name;
+              document.getElementById('enemy-card').classList.add('dead');
+            }
+          }
+        }
+      }
+      
+      updateUI();
+    }
+    
+    function handleSimulationEvent(event) {
+      switch (event.type) {
+        case 'started':
+          gameStatusEl.textContent = 'Running';
+          gameStatusEl.style.color = '#4ade80';
+          break;
+        case 'paused':
+          gameStatusEl.textContent = 'Paused';
+          gameStatusEl.style.color = '#fbbf24';
+          break;
+        case 'resumed':
+          gameStatusEl.textContent = 'Running';
+          gameStatusEl.style.color = '#4ade80';
+          break;
+        case 'stopped':
+          gameStatusEl.textContent = 'Stopped';
+          gameStatusEl.style.color = '#f87171';
+          break;
+        case 'completed':
+          gameStatusEl.textContent = 'Complete';
+          gameStatusEl.style.color = '#8b5cf6';
+          addLogEntry('system', '⚔️ Battle complete!');
+          
+          if (winner) {
+            winnerText.textContent = `🎉 ${winner} Wins! 🎉`;
+            winnerBanner.style.display = 'block';
+          }
+          
+          startBtn.disabled = true;
+          pauseBtn.disabled = true;
+          break;
+        case 'step':
+          gameTimeEl.textContent = event.time.toFixed(2) + 's';
+          break;
+      }
+      
+      updateButtons();
+    }
+    
+    function updateUI() {
+      // Update hero stats
+      document.getElementById('hero-name').textContent = heroData.name;
+      document.getElementById('hero-level').textContent = `Level ${heroData.level}`;
+      document.getElementById('hero-health-text').textContent = `${Math.max(0, Math.round(heroData.health))} / ${heroData.maxHealth}`;
+      document.getElementById('hero-health-bar').style.width = `${Math.max(0, (heroData.health / heroData.maxHealth) * 100)}%`;
+      document.getElementById('hero-damage').textContent = heroData.damage;
+      document.getElementById('hero-speed').textContent = `${heroData.speed}/s`;
+      
+      // Update enemy stats
+      document.getElementById('enemy-name').textContent = enemyData.name;
+      document.getElementById('enemy-level').textContent = `Level ${enemyData.level}`;
+      document.getElementById('enemy-health-text').textContent = `${Math.max(0, Math.round(enemyData.health))} / ${enemyData.maxHealth}`;
+      document.getElementById('enemy-health-bar').style.width = `${Math.max(0, (enemyData.health / enemyData.maxHealth) * 100)}%`;
+      document.getElementById('enemy-damage').textContent = enemyData.damage;
+      document.getElementById('enemy-speed').textContent = `${enemyData.speed}/s`;
+      
+      // Update status
+      eventCountEl.textContent = eventCount;
+      if (game) {
+        gameTimeEl.textContent = game.getTime().toFixed(2) + 's';
+      }
+    }
+    
+    function updateButtons() {
+      if (!game) return;
+      
+      const isRunning = game.getIsRunning();
+      const isPaused = game.getIsPaused();
+      
+      startBtn.disabled = isRunning && !isPaused;
+      pauseBtn.disabled = !isRunning || isPaused;
+      pauseBtn.textContent = isPaused ? '▶️ Resume' : '⏸️ Pause';
+    }
+    
+    function addLogEntry(type, message) {
+      const time = game ? game.getTime().toFixed(2) : '0.00';
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.innerHTML = `<span class="log-time">[${time}s]</span><span>${message}</span>`;
+      logContainer.appendChild(entry);
+      logContainer.scrollTop = logContainer.scrollHeight;
+    }
+    
+    function resetGame() {
+      if (game) {
+        game.destroy();
+      }
+      
+      // Reset UI
+      eventCount = 0;
+      winner = null;
+      winnerBanner.style.display = 'none';
+      logContainer.innerHTML = '';
+      document.getElementById('hero-card').classList.remove('dead');
+      document.getElementById('enemy-card').classList.remove('dead');
+      
+      // Reinitialize
+      initGame();
+      
+      startBtn.disabled = false;
+      pauseBtn.disabled = true;
+    }
+    
+    // Event listeners
+    startBtn.addEventListener('click', () => {
+      if (game) {
+        if (game.getIsPaused()) {
+          game.resume();
+        } else {
+          game.start();
+        }
+        addLogEntry('system', '⚔️ Battle begins!');
+      }
+      updateButtons();
+    });
+    
+    pauseBtn.addEventListener('click', () => {
+      if (game) {
+        if (game.getIsPaused()) {
+          game.resume();
+        } else {
+          game.pause();
+        }
+      }
+      updateButtons();
+    });
+    
+    resetBtn.addEventListener('click', resetGame);
+    
+    speedSlider.addEventListener('input', (e) => {
+      const speed = parseFloat(e.target.value);
+      speedValue.textContent = `${speed}x`;
+      if (game) {
+        game.setTimeScale(speed);
+      }
+    });
+    
+    // Initialize on load
+    window.addEventListener('load', initGame);
+  </script>
+</body>
+</html>
