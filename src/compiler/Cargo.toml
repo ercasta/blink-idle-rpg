@@ -17,7 +17,8 @@ path = "src/main.rs"
 [dependencies]
 # Parsing
 logos = "0.14"           # Fast lexer generator
-chumsky = "0.9"          # Parser combinator library
+# Note: chumsky may be used in the future for more complex parsing with better error recovery
+# chumsky = "0.9"
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }

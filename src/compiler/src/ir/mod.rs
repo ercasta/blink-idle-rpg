@@ -442,7 +442,7 @@ impl IRGenerator {
             version: "1.0".to_string(),
             module: "unnamed".to_string(),
             metadata: Some(IRMetadata {
-                compiled_at: chrono_lite_now(),
+                compiled_at: generate_timestamp(),
                 compiler_version: env!("CARGO_PKG_VERSION").to_string(),
                 source_hash: None,
             }),
@@ -786,11 +786,35 @@ impl IRGenerator {
     }
 }
 
-/// Simple timestamp generator (avoiding chrono dependency)
-fn chrono_lite_now() -> String {
-    // Return a placeholder timestamp
-    // In production, you'd use chrono or std::time
-    "2024-12-31T12:00:00Z".to_string()
+/// Generate timestamp using std::time
+fn generate_timestamp() -> String {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    
+    let duration = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default();
+    
+    // Simple ISO 8601 format approximation
+    let secs = duration.as_secs();
+    let days_since_epoch = secs / 86400;
+    let remaining_secs = secs % 86400;
+    let hours = remaining_secs / 3600;
+    let minutes = (remaining_secs % 3600) / 60;
+    let seconds = remaining_secs % 60;
+    
+    // Calculate approximate date (not accounting for leap years perfectly)
+    let years_since_1970 = days_since_epoch / 365;
+    let year = 1970 + years_since_1970;
+    let days_in_year = days_since_epoch % 365;
+    
+    // Simple month/day approximation
+    let month = (days_in_year / 30) + 1;
+    let day = (days_in_year % 30) + 1;
+    
+    format!(
+        "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}Z",
+        year, month.min(12), day.min(31), hours, minutes, seconds
+    )
 }
 
 /// Generate IR from typed AST

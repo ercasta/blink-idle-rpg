@@ -528,7 +528,11 @@ impl Parser {
             self.consume(TokenKind::Identifier, "priority")?; // Assume "priority"
             self.consume(TokenKind::Colon, ":")?;
             let value_token = self.consume(TokenKind::IntegerLiteral, "priority value")?;
-            let priority: i32 = value_token.text.parse().unwrap_or(0);
+            let priority: i32 = value_token.text.parse().map_err(|_| {
+                ParseError::InvalidSyntax {
+                    message: format!("Invalid priority value: '{}' is not a valid integer", value_token.text),
+                }
+            })?;
             self.consume(TokenKind::RBracket, "]")?;
             Some(priority)
         } else {
@@ -1230,11 +1234,19 @@ impl Parser {
         
         match token.kind {
             TokenKind::IntegerLiteral => {
-                let value: i64 = token.text.parse().unwrap_or(0);
+                let value: i64 = token.text.parse().map_err(|_| {
+                    ParseError::InvalidSyntax {
+                        message: format!("Invalid integer literal: '{}'", token.text),
+                    }
+                })?;
                 Ok(Expr::Literal(Literal::Integer(value)))
             }
             TokenKind::FloatLiteral => {
-                let value: f64 = token.text.parse().unwrap_or(0.0);
+                let value: f64 = token.text.parse().map_err(|_| {
+                    ParseError::InvalidSyntax {
+                        message: format!("Invalid float literal: '{}'", token.text),
+                    }
+                })?;
                 Ok(Expr::Literal(Literal::Float(value)))
             }
             TokenKind::DecimalLiteral => {
