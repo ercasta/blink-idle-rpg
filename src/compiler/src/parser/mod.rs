@@ -439,7 +439,23 @@ impl Parser {
     }
     
     fn parse_field(&mut self) -> Result<FieldDef, ParseError> {
-        let name_token = self.consume(TokenKind::Identifier, "field name")?;
+        // Allow certain keywords to be used as field names (entity, event, id)
+        let name_token = if let Some(token) = self.peek() {
+            match token.kind {
+                TokenKind::Identifier 
+                | TokenKind::Entity 
+                | TokenKind::Event 
+                | TokenKind::TypeId => {
+                    // Safe to unwrap here since we just verified token exists via peek()
+                    self.advance().ok_or_else(|| ParseError::UnexpectedEof { 
+                        expected: "field name".to_string() 
+                    })?.clone()
+                }
+                _ => self.consume(TokenKind::Identifier, "field name")?
+            }
+        } else {
+            return Err(ParseError::UnexpectedEof { expected: "field name".to_string() });
+        };
         let name = name_token.text.clone();
         let start = name_token.span.start;
         
@@ -1182,7 +1198,23 @@ impl Parser {
             if self.check(&TokenKind::Dot) {
                 let span_start = expr.span().start;
                 self.advance();
-                let field_token = self.consume(TokenKind::Identifier, "field name")?;
+                // Allow 'entity', 'event', and 'id' type keyword as field names in addition to identifiers
+                let field_token = if let Some(token) = self.peek() {
+                    match token.kind {
+                        TokenKind::Identifier 
+                        | TokenKind::Entity 
+                        | TokenKind::Event
+                        | TokenKind::TypeId => {
+                            // Safe to use ok_or since we just verified token exists via peek()
+                            self.advance().ok_or_else(|| ParseError::UnexpectedEof { 
+                                expected: "field name".to_string() 
+                            })?.clone()
+                        }
+                        _ => self.consume(TokenKind::Identifier, "field name")?
+                    }
+                } else {
+                    return Err(ParseError::UnexpectedEof { expected: "field name".to_string() });
+                };
                 let field_name = field_token.text.clone();
                 
                 // Check if it's a method call
@@ -1262,6 +1294,11 @@ impl Parser {
             TokenKind::True => Ok(Expr::Literal(Literal::Boolean(true))),
             TokenKind::False => Ok(Expr::Literal(Literal::Boolean(false))),
             TokenKind::Null => Ok(Expr::Literal(Literal::Null)),
+            // Handle 'entity' and 'event' keywords as identifiers in expression context
+            // Note: 'id' (TypeId) is only allowed as field names, not as standalone identifiers
+            TokenKind::Entity | TokenKind::Event => {
+                Ok(Expr::Identifier(token.text.clone(), token.span))
+            }
             TokenKind::Identifier => {
                 // Check if it's a function call
                 if self.check(&TokenKind::LParen) {

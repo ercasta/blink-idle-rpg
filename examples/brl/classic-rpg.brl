@@ -1,0 +1,319 @@
+// Classic RPG System
+// A comprehensive RPG with traditional classes, skill trees, and boss battles
+
+// Character information with class and level progression
+component Character {
+    name: string
+    class: string
+    level: integer
+    experience: integer
+    experienceToLevel: integer
+}
+
+// Health component
+component Health {
+    current: integer
+    max: integer
+}
+
+// Mana component for spell casting
+component Mana {
+    current: integer
+    max: integer
+}
+
+// Character stats
+component Stats {
+    strength: integer
+    dexterity: integer
+    intelligence: integer
+    constitution: integer
+    wisdom: integer
+}
+
+// Combat stats
+component Combat {
+    damage: integer
+    defense: integer
+    attackSpeed: float
+    critChance: float
+    critMultiplier: float
+}
+
+// Current attack target
+component Target {
+    entity: id?
+}
+
+// Team affiliation
+component Team {
+    id: string
+    isPlayer: boolean
+}
+
+// Enemy information
+component Enemy {
+    tier: integer
+    isBoss: boolean
+    expReward: integer
+}
+
+// Character skills
+component Skills {
+    skill1: string
+    skill2: string
+    skill3: string
+    skill4: string
+    skillPoints: integer
+}
+
+// Active buffs
+component Buffs {
+    damageBonus: integer
+    defenseBonus: integer
+    hasteBonus: float
+    shieldAmount: integer
+    regenAmount: integer
+}
+
+// Game state tracking
+component GameState {
+    currentWave: integer
+    enemiesDefeated: integer
+    playerDeaths: integer
+    bossDefeated: boolean
+    gameOver: boolean
+    victory: boolean
+}
+
+// Skill cooldown tracking
+component SkillCooldown {
+    skill1Cooldown: float
+    skill2Cooldown: float
+    skill3Cooldown: float
+    skill4Cooldown: float
+}
+
+// Choice context for player decisions
+component ChoiceContext {
+    pendingChoice: string
+    options: string
+    chosen: string
+}
+
+// Helper function to calculate damage
+fn calculate_damage(base: float, bonus: float): float {
+    return base + bonus
+}
+
+// Helper function to calculate experience for level
+fn calculate_exp_for_level(level: float): float {
+    return 100 * level
+}
+
+// Main attack rule: apply damage and schedule next attack
+rule attack_rule on DoAttack {
+    if entity.Target.entity != null && entity.Health.current > 0 {
+        let target = entity.Target.entity
+        let damage = entity.Combat.damage + entity.Buffs.damageBonus
+        
+        // Apply damage to target
+        target.Health.current -= damage
+        
+        // Emit after attack event
+        schedule AfterAttack {
+            attacker: entity.id
+            target: target.id
+        }
+        
+        // Schedule next attack
+        let delay = 1 / (entity.Combat.attackSpeed + entity.Buffs.hasteBonus)
+        schedule [delay: delay] DoAttack {
+            source: entity.id
+        }
+    }
+}
+
+// Death check: emit Death event when health drops to zero
+rule death_check on AfterAttack {
+    if entity.Health.current <= 0 {
+        schedule Death {
+            target: entity.id
+        }
+    }
+}
+
+// Enemy death handler
+rule enemy_death_handler on Death {
+    if entity.Enemy.tier > 0 && entity.Health.current <= 0 {
+        schedule EnemyDefeated {
+            enemy: entity.id
+            expReward: entity.Enemy.expReward
+            isBoss: entity.Enemy.isBoss
+        }
+    }
+}
+
+// Player death handler
+rule player_death_handler on Death {
+    if entity.Team.isPlayer && entity.Health.current <= 0 {
+        schedule PlayerDefeated {
+            player: entity.id
+        }
+    }
+}
+
+// Grant experience to players when enemy defeated
+rule grant_experience on EnemyDefeated {
+    if entity.Team.isPlayer {
+        entity.Character.experience += 50
+        schedule CheckLevelUp {
+            source: entity.id
+        }
+    }
+}
+
+// Level up check
+rule level_up_check on CheckLevelUp {
+    if entity.Character.experience >= entity.Character.experienceToLevel {
+        entity.Character.level += 1
+        entity.Character.experience -= entity.Character.experienceToLevel
+        entity.Character.experienceToLevel *= 1.5
+        entity.Skills.skillPoints += 1
+        
+        schedule LevelUp {
+            source: entity.id
+        }
+        
+        schedule SkillChoice {
+            source: entity.id
+        }
+    }
+}
+
+// Level up stat increases
+rule level_up_stats on LevelUp {
+    entity.Health.max += 10
+    entity.Health.current += 10
+    entity.Combat.damage += 2
+    entity.Combat.defense += 1
+}
+
+// Track enemy defeats and check victory
+rule boss_defeated_victory on EnemyDefeated {
+    entity.GameState.enemiesDefeated += 1
+    schedule CheckVictory {
+    }
+}
+
+// Power strike skill
+rule use_skill_power_strike on UseSkill {
+    if entity.Skills.skill1 == "power_strike" {
+        entity.Buffs.damageBonus += 5
+    }
+}
+
+// Fireball skill
+rule use_skill_fireball on UseSkill {
+    if entity.Skills.skill1 == "fireball" && entity.Mana.current >= 20 {
+        entity.Mana.current -= 20
+        entity.Buffs.damageBonus += 15
+    }
+}
+
+// Heal skill
+rule use_skill_heal on UseSkill {
+    if entity.Skills.skill1 == "heal" && entity.Mana.current >= 15 {
+        entity.Mana.current -= 15
+        entity.Health.current += 30
+    }
+}
+
+// Backstab skill
+rule use_skill_backstab on UseSkill {
+    if entity.Skills.skill1 == "backstab" {
+        entity.Combat.critChance += 0.25
+    }
+}
+
+// Mana regeneration
+rule mana_regen on ManaRegen {
+    if entity.Health.current > 0 {
+        entity.Mana.current += 5
+        schedule [delay: 2] ManaRegen {
+            source: entity.id
+        }
+    }
+}
+
+// Spawn next enemy wave
+rule spawn_next_enemy on SpawnEnemy {
+    if entity.GameState.bossDefeated == false && entity.GameState.gameOver == false {
+        if entity.GameState.currentWave < 4 || entity.GameState.enemiesDefeated >= 2000 {
+            entity.GameState.currentWave += 1
+            schedule EnemySpawned {
+                wave: entity.GameState.currentWave
+            }
+        }
+    }
+}
+
+// Count player deaths
+rule count_player_death on PlayerDefeated {
+    entity.GameState.playerDeaths += 1
+}
+
+// Game over on player death
+rule game_over_check on PlayerDefeated {
+    entity.GameState.gameOver = true
+    schedule GameOver {
+        victory: false
+    }
+}
+
+// Victory check
+rule victory_check on CheckVictory {
+    if entity.GameState.enemiesDefeated >= 5 {
+        entity.GameState.bossDefeated = true
+        entity.GameState.victory = true
+        entity.GameState.gameOver = true
+        schedule GameOver {
+            victory: true
+        }
+    }
+}
+
+// Acquire skill
+rule acquire_skill on AcquireSkill {
+    if entity.Skills.skillPoints > 0 {
+        entity.Skills.skillPoints -= 1
+        schedule SkillAcquired {
+            character: entity.id
+        }
+    }
+}
+
+// Retarget after enemy death
+rule retarget_after_enemy_death on EnemyDefeated {
+    if entity.Team.isPlayer {
+        schedule FindNewTarget {
+            seeker: entity.id
+        }
+    }
+}
+
+// Trackers for UI feedback
+tracker Health on DoAttack
+tracker Character on DoAttack
+tracker Health on AfterAttack
+tracker Health on Death
+tracker Character on Death
+tracker Character on LevelUp
+tracker Skills on LevelUp
+tracker GameState on EnemyDefeated
+tracker GameState on GameOver
+tracker Enemy on EnemySpawned
+tracker Mana on UseSkill
+tracker Skills on SkillAcquired
+tracker ChoiceContext on SkillChoice
+tracker GameState on PlayerDefeated
