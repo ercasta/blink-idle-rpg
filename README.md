@@ -160,10 +160,18 @@ See the [IR Specification](doc/ir-specification.md) for format details.
 
 ## Documentation
 
+### User Guides
+
+- **[BRL User Guide](doc/language/brl-user-guide.md)** - Complete guide for game developers creating game rules
+- **[BCL User Guide](doc/language/bcl-user-guide.md)** - Complete guide for players creating party strategies
+
+### Reference Documentation
+
 - [Project Overview](doc/summary.md) - High-level game concepts
 - [Development Tracks](doc/DEVELOPMENT_TRACKS.md) - Parallel development guide
 - [IR Specification](doc/ir-specification.md) - Central contract for engines
-- [BRL Specification](doc/language/brl-specification.md) - Game rule language
+- [BRL Specification](doc/language/brl-specification.md) - BRL language reference
+- [BCL Specification](doc/language/bcl-specification.md) - BCL language reference
 - [Engine Architecture](doc/engine/architecture.md) - How engines work
 - [Browser Engine](doc/engine/browser-engine.md) - JavaScript engine details
 - [JS Engine README](packages/blink-engine/README.md) - Engine API documentation
