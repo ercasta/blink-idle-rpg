@@ -680,15 +680,35 @@
         "op": "and",
         "left": {
           "type": "binary",
-          "op": "eq",
-          "left": { "type": "field", "entity": "entity", "component": "GameState", "field": "bossDefeated" },
-          "right": { "type": "literal", "value": false }
+          "op": "and",
+          "left": {
+            "type": "binary",
+            "op": "eq",
+            "left": { "type": "field", "entity": "entity", "component": "GameState", "field": "bossDefeated" },
+            "right": { "type": "literal", "value": false }
+          },
+          "right": {
+            "type": "binary",
+            "op": "eq",
+            "left": { "type": "field", "entity": "entity", "component": "GameState", "field": "gameOver" },
+            "right": { "type": "literal", "value": false }
+          }
         },
         "right": {
           "type": "binary",
-          "op": "eq",
-          "left": { "type": "field", "entity": "entity", "component": "GameState", "field": "gameOver" },
-          "right": { "type": "literal", "value": false }
+          "op": "or",
+          "left": {
+            "type": "binary",
+            "op": "lt",
+            "left": { "type": "field", "entity": "entity", "component": "GameState", "field": "currentWave" },
+            "right": { "type": "literal", "value": 4 }
+          },
+          "right": {
+            "type": "binary",
+            "op": "gte",
+            "left": { "type": "field", "entity": "entity", "component": "GameState", "field": "enemiesDefeated" },
+            "right": { "type": "literal", "value": 2000 }
+          }
         }
       },
       "actions": [

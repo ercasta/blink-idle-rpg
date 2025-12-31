@@ -1987,30 +1987,66 @@
         "op": "and",
         "left": {
           "type": "binary",
-          "op": "eq",
+          "op": "and",
           "left": {
-            "type": "field",
-            "entity": "entity",
-            "component": "GameState",
-            "field": "bossDefeated"
+            "type": "binary",
+            "op": "eq",
+            "left": {
+              "type": "field",
+              "entity": "entity",
+              "component": "GameState",
+              "field": "bossDefeated"
+            },
+            "right": {
+              "type": "literal",
+              "value": false
+            }
           },
           "right": {
-            "type": "literal",
-            "value": false
+            "type": "binary",
+            "op": "eq",
+            "left": {
+              "type": "field",
+              "entity": "entity",
+              "component": "GameState",
+              "field": "gameOver"
+            },
+            "right": {
+              "type": "literal",
+              "value": false
+            }
           }
         },
         "right": {
           "type": "binary",
-          "op": "eq",
+          "op": "or",
           "left": {
-            "type": "field",
-            "entity": "entity",
-            "component": "GameState",
-            "field": "gameOver"
+            "type": "binary",
+            "op": "lt",
+            "left": {
+              "type": "field",
+              "entity": "entity",
+              "component": "GameState",
+              "field": "currentWave"
+            },
+            "right": {
+              "type": "literal",
+              "value": 4
+            }
           },
           "right": {
-            "type": "literal",
-            "value": false
+            "type": "binary",
+            "op": "gte",
+            "left": {
+              "type": "field",
+              "entity": "entity",
+              "component": "GameState",
+              "field": "enemiesDefeated"
+            },
+            "right": {
+              "type": "literal",
+              "value": 2000
+            }
           }
         }
       },
