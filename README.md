@@ -12,6 +12,8 @@ In Blink you define your RPG party and some decision rules, then the entire game
 
 ## Project Status
 
+**Latest Release:** [v0.1.0-combat-demo](RELEASE_NOTES.md) - Combat Demo with Windows build support! 🎉
+
 This project is in early development with parallel work streams:
 
 | Track | Status | Description |
