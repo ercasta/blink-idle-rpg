@@ -69,14 +69,26 @@ A mobile-friendly landing page that provides:
 
 ## How It Works
 
-The demos use the Blink engine to execute IR (Intermediate Representation):
+The demos load and execute game files in real-time:
 
+1. **BRL Files** (Blink Rule Language): Human-readable game rules defining components, rules, and game logic
+2. **IR Files** (Intermediate Representation): Compiled JSON format that the Blink engine executes
+3. **BCL Files** (Blink Choice Language): AI strategies and decision-making for characters
+4. **Blink Engine**: JavaScript runtime that processes IR and executes game logic
+
+The flow:
+- BRL → Compiler → IR → Blink Engine → Game Simulation
+- Demos load IR files directly (already compiled from BRL)
+- BCL files can be uploaded as ZIP to customize AI behavior
+
+Key concepts:
 1. **Components**: Define game entities (Character, Health, Attack, Target, etc.)
 2. **Rules**: 
    - `attack_rule`: Deals damage and schedules next attack
    - `death_check`: Emits Death event when health ≤ 0
    - `level_up`: Increases character stats on leveling
 3. **Trackers**: Capture component data on events for UI updates
+4. **Events**: Trigger rules and drive the game simulation
 
 ## Mobile Optimization
 
@@ -93,6 +105,25 @@ All demos are optimized for mobile devices with:
 - `combat-demo.html` - Simple combat demo UI
 - `rpg-demo.html` - Classic RPG demo UI
 - `blink-engine.bundle.js` - Standalone Blink engine bundle for browsers
+- **Game Files** (downloadable from demo pages):
+  - `simple-combat.brl` - BRL source for simple combat
+  - `simple-combat.ir.json` - Compiled IR for simple combat
+  - `simple-clicker.brl` - BRL source for clicker game
+  - `simple-clicker.ir.json` - Compiled IR for clicker game
+  - `classic-rpg.ir.json` - Compiled IR for classic RPG
+  - `party-config.bcl.zip` - ZIP containing all BCL strategy files
+  - Individual BCL files: `warrior-skills.bcl`, `mage-skills.bcl`, `rogue-skills.bcl`, `cleric-skills.bcl`, `party-config.bcl`
+
+## What's New
+
+🎉 **Demos now run from actual game files!** All demos load their rules from external IR (Intermediate Representation) files instead of hardcoded data. You can:
+
+- Download BRL files to see the human-readable game rules
+- Download IR files to see the compiled format the engine runs
+- Download BCL files to study AI strategies and player choices
+- Modify these files and upload them back to see your changes in action!
+
+This makes it easy for interested players to learn how Blink games work and even create their own modifications.
 
 ## Troubleshooting
 

@@ -300,6 +300,22 @@
     <h1>⚔️ Blink Idle RPG</h1>
     <p class="subtitle">Simple Combat Demo - Watch the battle unfold automatically!</p>
     
+    <div class="info-section" style="background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 15px; padding: 20px; margin-bottom: 20px;">
+      <h3 style="color: #c4b5fd; margin-top: 0; font-size: 1.1rem;">📦 Download Game Files</h3>
+      <p style="color: #aaa; font-size: 0.9rem; margin-bottom: 10px;">This demo runs from actual BRL (Blink Rule Language) files. Download them to study or modify:</p>
+      <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+        <a href="simple-combat.brl" download style="background: rgba(0,0,0,0.3); padding: 10px 15px; border-radius: 8px; text-decoration: none; color: #4ade80; font-size: 0.9rem; border: 1px solid rgba(74, 222, 128, 0.3); transition: all 0.3s; display: inline-block;">
+          📄 simple-combat.brl (Rules)
+        </a>
+        <a href="simple-combat.ir.json" download style="background: rgba(0,0,0,0.3); padding: 10px 15px; border-radius: 8px; text-decoration: none; color: #60a5fa; font-size: 0.9rem; border: 1px solid rgba(59, 130, 246, 0.3); transition: all 0.3s; display: inline-block;">
+          📋 simple-combat.ir.json (Compiled)
+        </a>
+      </div>
+      <p style="color: #888; font-size: 0.85rem; margin-top: 10px; margin-bottom: 0;">
+        💡 <strong>BRL files</strong> define game rules in readable syntax. <strong>IR files</strong> are the compiled format the engine runs.
+      </p>
+    </div>
+    
     <div class="status-bar">
       <div class="status-item">
         <span class="status-label">Time:</span>
@@ -402,6 +418,7 @@
     let heroData = { id: 0, health: 100, maxHealth: 100, damage: 15, speed: 1.2, name: 'Hero', level: 1 };
     let enemyData = { id: 1, health: 50, maxHealth: 50, damage: 8, speed: 0.8, name: 'Goblin', level: 1 };
     let winner = null;
+    let combatIR = null; // Will be loaded from file
     
     // DOM elements
     const startBtn = document.getElementById('start-btn');
@@ -416,8 +433,16 @@
     const winnerBanner = document.getElementById('winner-banner');
     const winnerText = document.getElementById('winner-text');
     
-    // Simple Combat IR (from examples/ir/simple-combat.ir.json)
-    const combatIR = {
+    // Load IR from file
+    async function loadIR() {
+      try {
+        const response = await fetch('simple-combat.ir.json');
+        combatIR = await response.json();
+        console.log('Loaded IR from simple-combat.ir.json');
+      } catch (error) {
+        console.error('Failed to load IR file:', error);
+        // Fallback to embedded IR if file loading fails
+        combatIR = {
       "version": "1.0",
       "module": "simple_combat",
       "metadata": {
@@ -610,10 +635,23 @@
           }
         ]
       }
-    };
+        };
+      }
+    }
     
     // Initialize game
-    function initGame() {
+    async function initGame() {
+      // Load IR if not already loaded
+      if (!combatIR) {
+        await loadIR();
+      }
+      if (!combatIR) {
+        console.error('Failed to load IR');
+        addLogEntry('system', '❌ ERROR: Failed to load game rules. Please refresh the page.');
+        gameStatusEl.textContent = 'Error';
+        gameStatusEl.style.color = '#f87171';
+        return;
+      }
       game = BlinkEngine.BlinkGame.createSync({ 
         debug: false,
         timeScale: parseFloat(speedSlider.value)
@@ -879,7 +917,9 @@
     });
     
     // Initialize on load
-    window.addEventListener('load', initGame);
+    window.addEventListener('load', async () => {
+      await initGame();
+    });
   </script>
 </body>
 </html>
