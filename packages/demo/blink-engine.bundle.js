@@ -1138,7 +1138,6 @@
       }
       
       let eventsProcessed = 0;
-      const startTime = this.timeline.getTime();
       
       while (
         eventsProcessed < this.options.maxEventsPerFrame &&
