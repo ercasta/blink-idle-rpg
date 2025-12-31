@@ -516,8 +516,8 @@
     <!-- Speed Control -->
     <div class="speed-control">
       <label for="speed-slider">Simulation Speed:</label>
-      <input type="range" id="speed-slider" min="0.5" max="20" step="0.5" value="2">
-      <span id="speed-value">2x</span>
+      <input type="range" id="speed-slider" min="1" max="1000" step="10" value="100">
+      <span id="speed-value">100x</span>
     </div>
     
     <!-- Controls -->
@@ -553,6 +553,9 @@
     let playerCharacters = {};
     let enemyCharacters = {};
     let gameState = { wave: 1, enemiesDefeated: 0, victory: false, gameOver: false };
+    let nextEnemyId = 100; // Start enemy IDs from 100 to avoid conflicts
+    let lastLoggedKills = 0; // Track kills for summary logging
+    let updateCounter = 0; // Counter for batched UI updates
     
     // DOM elements
     const irFileInput = document.getElementById('ir-file');
@@ -841,7 +844,7 @@
             "type": "binary",
             "op": "gte",
             "left": { "type": "field", "entity": "entity", "component": "GameState", "field": "enemiesDefeated" },
-            "right": { "type": "literal", "value": 5 }
+            "right": { "type": "literal", "value": 1000 }
           },
           "actions": [
             {
@@ -912,7 +915,7 @@
               "Health": { "current": 120, "max": 120 },
               "Mana": { "current": 30, "max": 30 },
               "Combat": { "damage": 18, "defense": 10, "attackSpeed": 0.8 },
-              "Target": { "entity": 4 },
+              "Target": { "entity": null },
               "Team": { "id": "player", "isPlayer": true },
               "Skills": { "skill1": "power_strike", "skill2": "", "skillPoints": 0 },
               "Buffs": { "damageBonus": 0 }
@@ -925,7 +928,7 @@
               "Health": { "current": 70, "max": 70 },
               "Mana": { "current": 100, "max": 100 },
               "Combat": { "damage": 25, "defense": 4, "attackSpeed": 0.6 },
-              "Target": { "entity": 4 },
+              "Target": { "entity": null },
               "Team": { "id": "player", "isPlayer": true },
               "Skills": { "skill1": "fireball", "skill2": "", "skillPoints": 0 },
               "Buffs": { "damageBonus": 0 }
@@ -938,7 +941,7 @@
               "Health": { "current": 80, "max": 80 },
               "Mana": { "current": 50, "max": 50 },
               "Combat": { "damage": 22, "defense": 6, "attackSpeed": 1.4 },
-              "Target": { "entity": 4 },
+              "Target": { "entity": null },
               "Team": { "id": "player", "isPlayer": true },
               "Skills": { "skill1": "backstab", "skill2": "", "skillPoints": 0 },
               "Buffs": { "damageBonus": 0 }
@@ -951,74 +954,9 @@
               "Health": { "current": 90, "max": 90 },
               "Mana": { "current": 80, "max": 80 },
               "Combat": { "damage": 12, "defense": 8, "attackSpeed": 0.7 },
-              "Target": { "entity": 4 },
+              "Target": { "entity": null },
               "Team": { "id": "player", "isPlayer": true },
               "Skills": { "skill1": "heal", "skill2": "", "skillPoints": 0 },
-              "Buffs": { "damageBonus": 0 }
-            }
-          },
-          {
-            "id": 4,
-            "components": {
-              "Character": { "name": "Goblin Scout", "class": "Monster", "level": 1, "experience": 0, "experienceToLevel": 999 },
-              "Health": { "current": 60, "max": 60 },
-              "Mana": { "current": 0, "max": 0 },
-              "Combat": { "damage": 8, "defense": 2, "attackSpeed": 1.0 },
-              "Target": { "entity": 0 },
-              "Team": { "id": "enemy", "isPlayer": false },
-              "Enemy": { "tier": 1, "isBoss": false, "expReward": 25 },
-              "Buffs": { "damageBonus": 0 }
-            }
-          },
-          {
-            "id": 5,
-            "components": {
-              "Character": { "name": "Orc Warrior", "class": "Monster", "level": 3, "experience": 0, "experienceToLevel": 999 },
-              "Health": { "current": 120, "max": 120 },
-              "Mana": { "current": 0, "max": 0 },
-              "Combat": { "damage": 15, "defense": 6, "attackSpeed": 0.7 },
-              "Target": { "entity": 1 },
-              "Team": { "id": "enemy", "isPlayer": false },
-              "Enemy": { "tier": 2, "isBoss": false, "expReward": 50 },
-              "Buffs": { "damageBonus": 0 }
-            }
-          },
-          {
-            "id": 6,
-            "components": {
-              "Character": { "name": "Dark Mage", "class": "Monster", "level": 5, "experience": 0, "experienceToLevel": 999 },
-              "Health": { "current": 80, "max": 80 },
-              "Mana": { "current": 100, "max": 100 },
-              "Combat": { "damage": 22, "defense": 4, "attackSpeed": 0.5 },
-              "Target": { "entity": 3 },
-              "Team": { "id": "enemy", "isPlayer": false },
-              "Enemy": { "tier": 3, "isBoss": false, "expReward": 75 },
-              "Buffs": { "damageBonus": 0 }
-            }
-          },
-          {
-            "id": 7,
-            "components": {
-              "Character": { "name": "Troll Berserker", "class": "Monster", "level": 7, "experience": 0, "experienceToLevel": 999 },
-              "Health": { "current": 200, "max": 200 },
-              "Mana": { "current": 0, "max": 0 },
-              "Combat": { "damage": 25, "defense": 10, "attackSpeed": 0.5 },
-              "Target": { "entity": 0 },
-              "Team": { "id": "enemy", "isPlayer": false },
-              "Enemy": { "tier": 4, "isBoss": false, "expReward": 100 },
-              "Buffs": { "damageBonus": 0 }
-            }
-          },
-          {
-            "id": 8,
-            "components": {
-              "Character": { "name": "Dragon Lord Vexar", "class": "Boss", "level": 10, "experience": 0, "experienceToLevel": 999 },
-              "Health": { "current": 500, "max": 500 },
-              "Mana": { "current": 200, "max": 200 },
-              "Combat": { "damage": 40, "defense": 15, "attackSpeed": 0.8 },
-              "Target": { "entity": 0 },
-              "Team": { "id": "enemy", "isPlayer": false },
-              "Enemy": { "tier": 5, "isBoss": true, "expReward": 500 },
               "Buffs": { "damageBonus": 0 }
             }
           },
@@ -1087,13 +1025,111 @@
       }
     });
     
+    // Enemy templates for pseudo-random generation
+    const enemyTemplates = [
+      { name: 'Goblin Scout', tier: 1, health: 60, damage: 8, speed: 1.0, exp: 25 },
+      { name: 'Orc Raider', tier: 2, health: 90, damage: 12, speed: 0.8, exp: 35 },
+      { name: 'Dark Wolf', tier: 2, health: 75, damage: 14, speed: 1.2, exp: 40 },
+      { name: 'Skeleton Warrior', tier: 3, health: 110, damage: 16, speed: 0.7, exp: 50 },
+      { name: 'Troll Berserker', tier: 4, health: 180, damage: 22, speed: 0.6, exp: 80 },
+      { name: 'Dark Mage', tier: 3, health: 80, damage: 25, speed: 0.5, exp: 75 },
+      { name: 'Demon Knight', tier: 5, health: 250, damage: 30, speed: 0.7, exp: 150 },
+      { name: 'Ancient Dragon', tier: 6, health: 400, damage: 40, speed: 0.8, exp: 300, boss: true },
+    ];
+    
+    // Spawn a new enemy
+    function spawnEnemy() {
+      // Select enemy based on how many have been defeated
+      const kills = gameState.enemiesDefeated;
+      let template;
+      
+      // Every 100 kills, spawn a boss
+      if (kills > 0 && kills % 100 === 0) {
+        template = enemyTemplates[7]; // Dragon boss
+      } else {
+        // Select based on progression
+        const tier = Math.min(6, Math.floor(kills / 50) + 1);
+        const candidates = enemyTemplates.filter(t => !t.boss && t.tier <= tier);
+        template = candidates[Math.floor(Math.random() * candidates.length)];
+      }
+      
+      const enemyId = nextEnemyId++;
+      game.createEntity(enemyId);
+      
+      // Randomly target one of the 4 heroes
+      const targetHero = Math.floor(Math.random() * 4);
+      
+      game.addComponent(enemyId, 'Character', {
+        name: template.name + (template.boss ? '' : ' #' + (kills + 1)),
+        class: template.boss ? 'Boss' : 'Monster',
+        level: Math.max(1, Math.floor(kills / 20) + 1),
+      });
+      
+      game.addComponent(enemyId, 'Health', {
+        current: template.health * (1 + kills / 200), // Scale with progression
+        max: template.health * (1 + kills / 200),
+      });
+      
+      game.addComponent(enemyId, 'Mana', {
+        current: 0,
+        max: 0,
+      });
+      
+      game.addComponent(enemyId, 'Combat', {
+        damage: template.damage * (1 + kills / 300),
+        defense: 2 + Math.floor(kills / 50),
+        attackSpeed: template.speed,
+      });
+      
+      game.addComponent(enemyId, 'Target', {
+        entity: targetHero,
+      });
+      
+      game.addComponent(enemyId, 'Team', {
+        id: 'enemy',
+        isPlayer: false,
+      });
+      
+      game.addComponent(enemyId, 'Enemy', {
+        tier: template.tier,
+        isBoss: template.boss || false,
+        expReward: template.exp,
+      });
+      
+      game.addComponent(enemyId, 'Buffs', {
+        damageBonus: 0,
+      });
+      
+      // Schedule first attack
+      game.scheduleEvent('DoAttack', 0.1, { source: enemyId });
+      
+      return enemyId;
+    }
+    
+    // Spawn multiple enemies at start
+    function spawnInitialEnemies(count) {
+      const spawnedIds = [];
+      for (let i = 0; i < count; i++) {
+        spawnedIds.push(spawnEnemy());
+      }
+      
+      // After spawning enemies, assign hero targets
+      // Each hero targets a random enemy
+      for (let heroId = 0; heroId <= 3; heroId++) {
+        const randomEnemy = spawnedIds[Math.floor(Math.random() * spawnedIds.length)];
+        game.setComponentField(heroId, 'Target', 'entity', randomEnemy);
+      }
+    }
+    
     // Initialize game
     function initGame() {
       const ir = currentIR || classicRpgIR;
       
       game = BlinkEngine.BlinkGame.createSync({
         debug: false,
-        timeScale: parseFloat(speedSlider.value)
+        timeScale: parseFloat(speedSlider.value),
+        discreteTimeStep: 0.01, // 1/100th of a second time steps
+        maxEventsPerFrame: 1000 // Process more events per frame for speed
       });
       
       game.loadRulesFromObject(ir);
@@ -1111,33 +1147,43 @@
         handleSimulationEvent(event);
       });
       
-      // Schedule initial attack events for all combatants
-      for (let i = 0; i <= 8; i++) {
+      // Schedule initial attack events for heroes (0-3)
+      for (let i = 0; i <= 3; i++) {
         const health = game.getComponent(i, 'Health');
         if (health && health.current > 0) {
           game.scheduleEvent('DoAttack', i * 0.1, { source: i });
         }
       }
       
+      // Spawn initial set of enemies (5 enemies to start)
+      spawnInitialEnemies(5);
+      
       renderParties();
-      addLogEntry('system', 'Battle initialized! Press Start to begin.');
+      addLogEntry('system', 'Battle initialized! Ready for 1000 fights. Press Start to begin.');
     }
     
     function updateCharacterData() {
       playerCharacters = {};
       enemyCharacters = {};
       
-      // Player characters (0-3)
-      for (let i = 0; i <= 3; i++) {
-        const char = game.getComponent(i, 'Character');
-        const health = game.getComponent(i, 'Health');
-        const mana = game.getComponent(i, 'Mana');
-        const combat = game.getComponent(i, 'Combat');
-        const skills = game.getComponent(i, 'Skills');
+      // Query all entities with Team component to find heroes and enemies
+      const teamEntities = game.query('Team', 'Character', 'Health');
+      
+      for (const entityId of teamEntities) {
+        const team = game.getComponent(entityId, 'Team');
+        const char = game.getComponent(entityId, 'Character');
+        const health = game.getComponent(entityId, 'Health');
         
-        if (char && health) {
-          playerCharacters[i] = {
-            id: i,
+        if (!char || !health || !team) continue;
+        
+        if (team.isPlayer) {
+          // It's a player character
+          const mana = game.getComponent(entityId, 'Mana');
+          const combat = game.getComponent(entityId, 'Combat');
+          const skills = game.getComponent(entityId, 'Skills');
+          
+          playerCharacters[entityId] = {
+            id: entityId,
             name: char.name,
             class: char.class,
             level: char.level,
@@ -1153,19 +1199,13 @@
             skills: skills ? [skills.skill1, skills.skill2].filter(s => s) : [],
             skillPoints: skills?.skillPoints || 0
           };
-        }
-      }
-      
-      // Enemy characters (4-8)
-      for (let i = 4; i <= 8; i++) {
-        const char = game.getComponent(i, 'Character');
-        const health = game.getComponent(i, 'Health');
-        const combat = game.getComponent(i, 'Combat');
-        const enemy = game.getComponent(i, 'Enemy');
-        
-        if (char && health) {
-          enemyCharacters[i] = {
-            id: i,
+        } else {
+          // It's an enemy
+          const combat = game.getComponent(entityId, 'Combat');
+          const enemy = game.getComponent(entityId, 'Enemy');
+          
+          enemyCharacters[entityId] = {
+            id: entityId,
             name: char.name,
             class: char.class,
             level: char.level,
@@ -1275,17 +1315,26 @@
     }
     
     function handleTrackerOutput(output) {
-      // Update character data from tracker
-      updateCharacterData();
+      // Batch UI updates - only update every 50 events
+      updateCounter++;
+      const shouldUpdate = updateCounter % 50 === 0;
+      
+      // Update character data from tracker (but less frequently)
+      if (shouldUpdate) {
+        updateCharacterData();
+      }
       
       // Handle specific events
       if (output.eventType === 'DoAttack') {
-        // Visual feedback for attacks
-        for (const entity of output.entities) {
-          const card = document.getElementById(`char-${entity.entityId}`);
-          if (card) {
-            card.classList.add('attacking');
-            setTimeout(() => card.classList.remove('attacking'), 200);
+        // Skip visual feedback for attacks to improve performance
+        // Only update UI periodically
+        if (shouldUpdate) {
+          for (const entity of output.entities) {
+            const card = document.getElementById(`char-${entity.entityId}`);
+            if (card) {
+              card.classList.add('attacking');
+              setTimeout(() => card.classList.remove('attacking'), 200);
+            }
           }
         }
       }
@@ -1296,16 +1345,68 @@
             const charName = playerCharacters[entity.entityId]?.name || 
                            enemyCharacters[entity.entityId]?.name || 
                            'Unknown';
-            addLogEntry('death', `💀 ${charName} has been defeated!`);
+            
+            // Check if it's an enemy that died
+            if (enemyCharacters[entity.entityId]) {
+              const deadEnemyId = entity.entityId;
+              
+              // Find all alive enemies first
+              const aliveEnemies = Object.keys(enemyCharacters)
+                .map(id => parseInt(id))
+                .filter(id => id !== deadEnemyId && game.hasEntity && game.hasEntity(id));
+              
+              // Retarget any hero that was targeting this dead enemy
+              for (let heroId = 0; heroId <= 3; heroId++) {
+                const target = game.getComponent(heroId, 'Target');
+                if (target && target.entity === deadEnemyId) {
+                  // Pick a random alive enemy, or the new one we'll spawn
+                  if (aliveEnemies.length > 0) {
+                    const newTarget = aliveEnemies[Math.floor(Math.random() * aliveEnemies.length)];
+                    game.setComponentField(heroId, 'Target', 'entity', newTarget);
+                  }
+                }
+              }
+              
+              // Remove the dead enemy
+              game.removeEntity(deadEnemyId);
+              
+              // Spawn a new enemy to replace it (unless game is over)
+              if (!gameState.gameOver && gameState.enemiesDefeated < 1000) {
+                const newEnemyId = spawnEnemy();
+                
+                // If any hero has no valid target, give them this new enemy
+                for (let heroId = 0; heroId <= 3; heroId++) {
+                  const target = game.getComponent(heroId, 'Target');
+                  if (!target || !target.entity || target.entity === deadEnemyId) {
+                    game.setComponentField(heroId, 'Target', 'entity', newEnemyId);
+                  }
+                }
+              }
+              
+              // Only log every 10th kill for summary
+              if (gameState.enemiesDefeated % 10 === 0) {
+                const killsSinceLast = gameState.enemiesDefeated - lastLoggedKills;
+                if (killsSinceLast > 0) {
+                  addLogEntry('death', `⚔️ ${killsSinceLast} enemies defeated! Total: ${gameState.enemiesDefeated}`);
+                  lastLoggedKills = gameState.enemiesDefeated;
+                }
+              }
+            } else {
+              // Player died - always log this
+              addLogEntry('death', `💀 ${charName} has been defeated!`);
+            }
           }
         }
       }
       
       if (output.eventType === 'LevelUp') {
+        // Only log level ups, they're important milestones
+        // Update character data first to get the latest level
+        updateCharacterData();
         for (const entity of output.entities) {
           const char = playerCharacters[entity.entityId];
           if (char) {
-            addLogEntry('levelup', `🎉 ${char.name} leveled up to Level ${entity.fields.level}!`);
+            addLogEntry('levelup', `🎉 ${char.name} leveled up to Level ${char.level}!`);
           }
         }
       }
@@ -1324,8 +1425,11 @@
         showGameBanner(true);
       }
       
-      updateUI();
-      renderParties();
+      // Update UI only periodically
+      if (shouldUpdate) {
+        updateUI();
+        renderParties();
+      }
     }
     
     function handleSimulationEvent(event) {

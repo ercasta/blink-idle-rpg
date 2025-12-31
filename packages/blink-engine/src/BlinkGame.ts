@@ -16,6 +16,8 @@ export interface GameOptions {
   timeScale?: number;
   /** Maximum events per frame */
   maxEventsPerFrame?: number;
+  /** Discrete time step in seconds (e.g., 0.01 for 1/100th second steps) */
+  discreteTimeStep?: number;
 }
 
 export interface GameState {
@@ -75,6 +77,7 @@ export class BlinkGame {
       debug: options.debug ?? false,
       timeScale: options.timeScale ?? 1.0,
       maxEventsPerFrame: options.maxEventsPerFrame ?? 100,
+      discreteTimeStep: options.discreteTimeStep ?? 0,
     };
     
     this.store = new Store();
@@ -422,6 +425,87 @@ export class BlinkGame {
     this.timeline.clear();
   }
 
+  /**
+   * Run multiple steps efficiently, optionally respecting discrete time steps
+   * Returns summary of what happened
+   */
+  runSteps(maxSteps: number = 100, maxTime?: number): {
+    stepsExecuted: number;
+    timeAdvanced: number;
+    eventsProcessed: number;
+  } {
+    const startTime = this.timeline.getTime();
+    const discreteStep = this.options.discreteTimeStep;
+    let stepsExecuted = 0;
+    let eventsProcessed = 0;
+    
+    while (stepsExecuted < maxSteps && this.timeline.hasEvents()) {
+      const nextEvent = this.timeline.peek();
+      if (!nextEvent) break;
+      
+      // If we have a max time and would exceed it, stop
+      if (maxTime !== undefined && nextEvent.time > startTime + maxTime) {
+        break;
+      }
+      
+      // If using discrete time stepping, advance time in discrete increments
+      if (discreteStep > 0 && nextEvent.time > this.timeline.getTime()) {
+        const timeToEvent = nextEvent.time - this.timeline.getTime();
+        const steps = Math.ceil(timeToEvent / discreteStep);
+        // Advance to next discrete time step that includes the event
+        this.timeline.setTime(this.timeline.getTime() + (steps * discreteStep));
+      }
+      
+      this.step();
+      stepsExecuted++;
+      eventsProcessed++;
+      
+      // Check if we've exceeded max time
+      if (maxTime !== undefined && this.timeline.getTime() >= startTime + maxTime) {
+        break;
+      }
+    }
+    
+    const timeAdvanced = this.timeline.getTime() - startTime;
+    
+    return {
+      stepsExecuted,
+      timeAdvanced,
+      eventsProcessed,
+    };
+  }
+
+  /**
+   * Create a new entity dynamically
+   */
+  createEntity(id?: EntityId): EntityId {
+    return this.store.createEntity(id);
+  }
+
+  /**
+   * Add a component to an entity
+   */
+  addComponent(entityId: EntityId, componentName: string, data: ComponentData): void {
+    this.store.addComponent(entityId, componentName, data);
+  }
+
+  /**
+   * Remove an entity
+   */
+  removeEntity(entityId: EntityId): void {
+    this.store.deleteEntity(entityId);
+  }
+
+  /**
+   * Update a component field
+   */
+  setComponentField(entityId: EntityId, componentName: string, field: string, value: any): void {
+    const component = this.store.getComponent(entityId, componentName);
+    if (component) {
+      component[field] = value;
+    }
+  }
+
   // ===== Private methods =====
 
   private scheduleNextFrame(): void {
@@ -444,7 +528,15 @@ export class BlinkGame {
     // Calculate how much simulation time to advance
     const simulationDelta = deltaTime * this.options.timeScale;
     this.currentSimulationTime += simulationDelta;
-    const targetTime = this.currentSimulationTime;
+    let targetTime = this.currentSimulationTime;
+    
+    // If using discrete time stepping, round target time to discrete intervals
+    const discreteStep = this.options.discreteTimeStep;
+    if (discreteStep > 0) {
+      const currentDiscreteTime = Math.floor(this.timeline.getTime() / discreteStep) * discreteStep;
+      const targetDiscreteTime = Math.floor(targetTime / discreteStep) * discreteStep;
+      targetTime = targetDiscreteTime;
+    }
     
     // Process events up to target time (or max events per frame)
     let eventsProcessed = 0;
@@ -456,6 +548,13 @@ export class BlinkGame {
       const nextEvent = this.timeline.peek();
       if (!nextEvent || nextEvent.time > targetTime) {
         break;
+      }
+      
+      // If using discrete time stepping, advance timeline to next discrete step
+      if (discreteStep > 0 && nextEvent.time > this.timeline.getTime()) {
+        const timeToEvent = nextEvent.time - this.timeline.getTime();
+        const steps = Math.ceil(timeToEvent / discreteStep);
+        this.timeline.setTime(this.timeline.getTime() + (steps * discreteStep));
       }
       
       this.step();
