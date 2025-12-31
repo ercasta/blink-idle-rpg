@@ -86,6 +86,7 @@ const classicRpgIR = {
       fields: [
         { name: "currentWave", type: "number", default: 1 },
         { name: "enemiesDefeated", type: "number", default: 0 },
+        { name: "playerDeaths", type: "number", default: 0 },
         { name: "bossDefeated", type: "boolean", default: false },
         { name: "gameOver", type: "boolean", default: false },
         { name: "victory", type: "boolean", default: false }
@@ -301,7 +302,7 @@ const classicRpgIR = {
       {
         id: 99,
         components: {
-          GameState: { currentWave: 1, enemiesDefeated: 0, bossDefeated: false, gameOver: false, victory: false }
+          GameState: { currentWave: 1, enemiesDefeated: 0, playerDeaths: 0, bossDefeated: false, gameOver: false, victory: false }
         }
       }
     ]
