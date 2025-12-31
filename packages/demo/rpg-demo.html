@@ -462,7 +462,7 @@
         <div class="upload-item">
           <label for="ir-file">Game Rules (IR JSON file):</label>
           <input type="file" id="ir-file" accept=".json,.ir.json">
-          <div class="file-status" id="ir-status">Using classic-rpg.ir.json from file</div>
+          <div class="file-status" id="ir-status">Loading from classic-rpg.ir.json...</div>
         </div>
         <div class="upload-item">
           <label for="bcl-file">Player Choices (BCL ZIP file):</label>
@@ -615,8 +615,12 @@
         const response = await fetch('classic-rpg.ir.json');
         classicRpgIR = await response.json();
         console.log('Loaded IR from classic-rpg.ir.json');
+        irStatus.textContent = 'Loaded from classic-rpg.ir.json';
+        irStatus.className = 'file-status loaded';
       } catch (error) {
         console.error('Failed to load IR file:', error);
+        irStatus.textContent = 'Failed to load - using embedded fallback';
+        irStatus.className = 'file-status error';
         // Fallback to embedded IR if file loading fails
         classicRpgIR = {
       "version": "1.0",
@@ -1172,6 +1176,9 @@
       
       if (!ir) {
         console.error('Failed to load IR');
+        addLogEntry('system', '❌ ERROR: Failed to load game rules. Please refresh the page.');
+        gameStatusEl.textContent = 'Error';
+        gameStatusEl.style.color = '#f87171';
         return;
       }
       

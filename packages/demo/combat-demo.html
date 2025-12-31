@@ -647,6 +647,9 @@
       }
       if (!combatIR) {
         console.error('Failed to load IR');
+        addLogEntry('system', '❌ ERROR: Failed to load game rules. Please refresh the page.');
+        gameStatusEl.textContent = 'Error';
+        gameStatusEl.style.color = '#f87171';
         return;
       }
       game = BlinkEngine.BlinkGame.createSync({ 
