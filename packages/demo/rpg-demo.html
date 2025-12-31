@@ -462,7 +462,7 @@
         <div class="upload-item">
           <label for="ir-file">Game Rules (IR JSON file):</label>
           <input type="file" id="ir-file" accept=".json,.ir.json">
-          <div class="file-status" id="ir-status">No file loaded - using built-in Classic RPG</div>
+          <div class="file-status" id="ir-status">Using classic-rpg.ir.json from file</div>
         </div>
         <div class="upload-item">
           <label for="bcl-file">Player Choices (BCL ZIP file):</label>
@@ -473,6 +473,30 @@
       <div class="bcl-info" id="bcl-info" style="display: none;">
         <h3>📜 Loaded BCL Files:</h3>
         <div class="bcl-file-list" id="bcl-file-list"></div>
+      </div>
+      
+      <!-- Download Links -->
+      <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+        <h3 style="color: #c4b5fd; margin-bottom: 10px; font-size: 1rem;">📦 Download Example Files</h3>
+        <p style="color: #aaa; font-size: 0.85rem; margin-bottom: 10px;">Study or modify these game files:</p>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
+          <a href="classic-rpg.ir.json" download style="background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 6px; text-decoration: none; color: #60a5fa; font-size: 0.85rem; border: 1px solid rgba(59, 130, 246, 0.3); transition: all 0.3s; display: inline-block;">
+            📋 classic-rpg.ir.json
+          </a>
+          <a href="party-config.bcl.zip" download style="background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 6px; text-decoration: none; color: #4ade80; font-size: 0.85rem; border: 1px solid rgba(74, 222, 128, 0.3); transition: all 0.3s; display: inline-block;">
+            📦 party-config.bcl.zip (All BCL)
+          </a>
+        </div>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <a href="warrior-skills.bcl" download style="background: rgba(0,0,0,0.2); padding: 6px 10px; border-radius: 4px; text-decoration: none; color: #aaa; font-size: 0.8rem; transition: all 0.3s; display: inline-block;">warrior-skills.bcl</a>
+          <a href="mage-skills.bcl" download style="background: rgba(0,0,0,0.2); padding: 6px 10px; border-radius: 4px; text-decoration: none; color: #aaa; font-size: 0.8rem; transition: all 0.3s; display: inline-block;">mage-skills.bcl</a>
+          <a href="rogue-skills.bcl" download style="background: rgba(0,0,0,0.2); padding: 6px 10px; border-radius: 4px; text-decoration: none; color: #aaa; font-size: 0.8rem; transition: all 0.3s; display: inline-block;">rogue-skills.bcl</a>
+          <a href="cleric-skills.bcl" download style="background: rgba(0,0,0,0.2); padding: 6px 10px; border-radius: 4px; text-decoration: none; color: #aaa; font-size: 0.8rem; transition: all 0.3s; display: inline-block;">cleric-skills.bcl</a>
+          <a href="party-config.bcl" download style="background: rgba(0,0,0,0.2); padding: 6px 10px; border-radius: 4px; text-decoration: none; color: #aaa; font-size: 0.8rem; transition: all 0.3s; display: inline-block;">party-config.bcl</a>
+        </div>
+        <p style="color: #888; font-size: 0.8rem; margin-top: 10px; margin-bottom: 0;">
+          💡 <strong>IR files</strong> define game rules (compiled format). <strong>BCL files</strong> define AI strategies and choices.
+        </p>
       </div>
     </div>
     
@@ -582,8 +606,19 @@
     const playerPartyEl = document.getElementById('player-party');
     const enemyPartyEl = document.getElementById('enemy-party');
     
-    // Built-in Classic RPG IR
-    const classicRpgIR = {
+    // Classic RPG IR - will be loaded from file
+    let classicRpgIR = null;
+    
+    // Load IR from file
+    async function loadDefaultIR() {
+      try {
+        const response = await fetch('classic-rpg.ir.json');
+        classicRpgIR = await response.json();
+        console.log('Loaded IR from classic-rpg.ir.json');
+      } catch (error) {
+        console.error('Failed to load IR file:', error);
+        // Fallback to embedded IR if file loading fails
+        classicRpgIR = {
       "version": "1.0",
       "module": "classic_rpg",
       "components": [
@@ -971,7 +1006,9 @@
           }
         ]
       }
-    };
+        };
+      }
+    }
     
     // File upload handlers
     irFileInput.addEventListener('change', async (e) => {
@@ -1125,8 +1162,18 @@
     }
     
     // Initialize game
-    function initGame() {
+    async function initGame() {
+      // Load default IR if not already loaded
+      if (!classicRpgIR && !currentIR) {
+        await loadDefaultIR();
+      }
+      
       const ir = currentIR || classicRpgIR;
+      
+      if (!ir) {
+        console.error('Failed to load IR');
+        return;
+      }
       
       game = BlinkEngine.BlinkGame.createSync({
         debug: false,
@@ -1564,7 +1611,7 @@
       }
     }
     
-    function resetGame() {
+    async function resetGame() {
       if (game) {
         game.destroy();
       }
@@ -1575,7 +1622,7 @@
       logContainer.innerHTML = '';
       
       // Reinitialize
-      initGame();
+      await initGame();
       
       startBtn.disabled = false;
       pauseBtn.disabled = true;
@@ -1616,7 +1663,9 @@
     });
     
     // Initialize on load
-    window.addEventListener('load', initGame);
+    window.addEventListener('load', async () => {
+      await initGame();
+    });
   </script>
 </body>
 </html>
