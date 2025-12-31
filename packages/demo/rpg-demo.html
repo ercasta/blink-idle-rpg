@@ -711,6 +711,9 @@
     // Classic RPG IR - will be loaded from file
     let classicRpgIR = null;
     
+    // Enemy templates - will be loaded from file
+    let enemyTemplates = [];
+    
     // Load IR from file
     async function loadDefaultIR() {
       try {
@@ -720,402 +723,24 @@
         irStatus.textContent = 'Loaded from classic-rpg.ir.json';
         irStatus.className = 'file-status loaded';
       } catch (error) {
-        console.error('Failed to load IR file:', error);
-        irStatus.textContent = 'Failed to load - using embedded fallback';
+        console.error('Failed to load classic-rpg.ir.json:', error);
+        irStatus.textContent = 'Failed to load classic-rpg.ir.json - ' + error.message;
         irStatus.className = 'file-status error';
-        // Fallback to embedded IR if file loading fails
-        classicRpgIR = {
-      "version": "1.0",
-      "module": "classic_rpg",
-      "components": [
-        { "id": 0, "name": "Character", "fields": [
-          { "name": "name", "type": "string" },
-          { "name": "class", "type": "string" },
-          { "name": "level", "type": "number", "default": 1 },
-          { "name": "experience", "type": "number", "default": 0 },
-          { "name": "experienceToLevel", "type": "number", "default": 100 }
-        ]},
-        { "id": 1, "name": "Health", "fields": [
-          { "name": "current", "type": "number", "default": 100 },
-          { "name": "max", "type": "number", "default": 100 }
-        ]},
-        { "id": 2, "name": "Mana", "fields": [
-          { "name": "current", "type": "number", "default": 50 },
-          { "name": "max", "type": "number", "default": 50 }
-        ]},
-        { "id": 3, "name": "Combat", "fields": [
-          { "name": "damage", "type": "number", "default": 10 },
-          { "name": "defense", "type": "number", "default": 5 },
-          { "name": "attackSpeed", "type": "number", "default": 1.0 }
-        ]},
-        { "id": 4, "name": "Target", "fields": [
-          { "name": "entity", "type": "entity", "default": null }
-        ]},
-        { "id": 5, "name": "Team", "fields": [
-          { "name": "id", "type": "string" },
-          { "name": "isPlayer", "type": "boolean", "default": false }
-        ]},
-        { "id": 6, "name": "Enemy", "fields": [
-          { "name": "tier", "type": "number", "default": 1 },
-          { "name": "isBoss", "type": "boolean", "default": false },
-          { "name": "expReward", "type": "number", "default": 25 }
-        ]},
-        { "id": 7, "name": "Skills", "fields": [
-          { "name": "skill1", "type": "string", "default": "" },
-          { "name": "skill2", "type": "string", "default": "" },
-          { "name": "skillPoints", "type": "number", "default": 0 }
-        ]},
-        { "id": 8, "name": "Buffs", "fields": [
-          { "name": "damageBonus", "type": "number", "default": 0 }
-        ]},
-        { "id": 9, "name": "GameState", "fields": [
-          { "name": "currentWave", "type": "number", "default": 1 },
-          { "name": "enemiesDefeated", "type": "number", "default": 0 },
-          { "name": "playerDeaths", "type": "number", "default": 0 },
-          { "name": "bossDefeated", "type": "boolean", "default": false },
-          { "name": "gameOver", "type": "boolean", "default": false },
-          { "name": "victory", "type": "boolean", "default": false }
-        ]}
-      ],
-      "rules": [
-        {
-          "id": 0,
-          "name": "attack_rule",
-          "trigger": { "type": "event", "event": "DoAttack", "bindings": { "attacker": "source" } },
-          "filter": { "components": ["Combat", "Target", "Health"] },
-          "condition": {
-            "type": "binary",
-            "op": "and",
-            "left": {
-              "type": "binary",
-              "op": "neq",
-              "left": { "type": "field", "entity": "attacker", "component": "Target", "field": "entity" },
-              "right": { "type": "literal", "value": null }
-            },
-            "right": {
-              "type": "binary",
-              "op": "gt",
-              "left": { "type": "field", "entity": "attacker", "component": "Health", "field": "current" },
-              "right": { "type": "literal", "value": 0 }
-            }
-          },
-          "actions": [
-            {
-              "type": "modify",
-              "entity": { "type": "field", "entity": "attacker", "component": "Target", "field": "entity" },
-              "component": "Health",
-              "field": "current",
-              "op": "subtract",
-              "value": {
-                "type": "binary",
-                "op": "add",
-                "left": { "type": "field", "entity": "attacker", "component": "Combat", "field": "damage" },
-                "right": { "type": "field", "entity": "attacker", "component": "Buffs", "field": "damageBonus" }
-              }
-            },
-            {
-              "type": "schedule",
-              "event": "DoAttack",
-              "source": { "type": "var", "name": "attacker" },
-              "delay": {
-                "type": "binary",
-                "op": "divide",
-                "left": { "type": "literal", "value": 1 },
-                "right": { "type": "field", "entity": "attacker", "component": "Combat", "field": "attackSpeed" }
-              }
-            }
-          ]
-        },
-        {
-          "id": 1,
-          "name": "death_check",
-          "trigger": { "type": "event", "event": "DoAttack" },
-          "filter": { "components": ["Health", "Character"] },
-          "condition": {
-            "type": "binary",
-            "op": "lte",
-            "left": { "type": "field", "entity": "entity", "component": "Health", "field": "current" },
-            "right": { "type": "literal", "value": 0 }
-          },
-          "actions": [
-            {
-              "type": "emit",
-              "event": "Death",
-              "fields": { "target": { "type": "var", "name": "entity" } }
-            }
-          ]
-        },
-        {
-          "id": 2,
-          "name": "enemy_death_xp",
-          "trigger": { "type": "event", "event": "Death", "bindings": { "deadEntity": "target" } },
-          "filter": { "components": ["Enemy"] },
-          "condition": {
-            "type": "binary",
-            "op": "lte",
-            "left": { "type": "field", "entity": "deadEntity", "component": "Health", "field": "current" },
-            "right": { "type": "literal", "value": 0 }
-          },
-          "actions": [
-            {
-              "type": "emit",
-              "event": "EnemyDefeated",
-              "fields": { 
-                "enemy": { "type": "var", "name": "deadEntity" },
-                "isBoss": { "type": "field", "entity": "deadEntity", "component": "Enemy", "field": "isBoss" }
-              }
-            }
-          ]
-        },
-        {
-          "id": 3,
-          "name": "grant_xp",
-          "trigger": { "type": "event", "event": "EnemyDefeated" },
-          "filter": { "components": ["Character", "Team"] },
-          "condition": { "type": "field", "entity": "entity", "component": "Team", "field": "isPlayer" },
-          "actions": [
-            {
-              "type": "modify",
-              "entity": { "type": "var", "name": "entity" },
-              "component": "Character",
-              "field": "experience",
-              "op": "add",
-              "value": { "type": "literal", "value": 30 }
-            },
-            {
-              "type": "schedule",
-              "event": "CheckLevelUp",
-              "source": { "type": "var", "name": "entity" },
-              "delay": { "type": "literal", "value": 0 }
-            }
-          ]
-        },
-        {
-          "id": 4,
-          "name": "level_up",
-          "trigger": { "type": "event", "event": "CheckLevelUp", "bindings": { "character": "source" } },
-          "filter": { "components": ["Character"] },
-          "condition": {
-            "type": "binary",
-            "op": "gte",
-            "left": { "type": "field", "entity": "character", "component": "Character", "field": "experience" },
-            "right": { "type": "field", "entity": "character", "component": "Character", "field": "experienceToLevel" }
-          },
-          "actions": [
-            {
-              "type": "modify",
-              "entity": { "type": "var", "name": "character" },
-              "component": "Character",
-              "field": "level",
-              "op": "add",
-              "value": { "type": "literal", "value": 1 }
-            },
-            {
-              "type": "modify",
-              "entity": { "type": "var", "name": "character" },
-              "component": "Character",
-              "field": "experience",
-              "op": "subtract",
-              "value": { "type": "field", "entity": "character", "component": "Character", "field": "experienceToLevel" }
-            },
-            {
-              "type": "modify",
-              "entity": { "type": "var", "name": "character" },
-              "component": "Character",
-              "field": "experienceToLevel",
-              "op": "multiply",
-              "value": { "type": "literal", "value": 1.5 }
-            },
-            {
-              "type": "modify",
-              "entity": { "type": "var", "name": "character" },
-              "component": "Health",
-              "field": "max",
-              "op": "add",
-              "value": { "type": "literal", "value": 15 }
-            },
-            {
-              "type": "modify",
-              "entity": { "type": "var", "name": "character" },
-              "component": "Health",
-              "field": "current",
-              "op": "add",
-              "value": { "type": "literal", "value": 15 }
-            },
-            {
-              "type": "modify",
-              "entity": { "type": "var", "name": "character" },
-              "component": "Combat",
-              "field": "damage",
-              "op": "add",
-              "value": { "type": "literal", "value": 3 }
-            },
-            {
-              "type": "modify",
-              "entity": { "type": "var", "name": "character" },
-              "component": "Skills",
-              "field": "skillPoints",
-              "op": "add",
-              "value": { "type": "literal", "value": 1 }
-            },
-            {
-              "type": "schedule",
-              "event": "LevelUp",
-              "source": { "type": "var", "name": "character" },
-              "delay": { "type": "literal", "value": 0 }
-            }
-          ]
-        },
-        {
-          "id": 5,
-          "name": "update_game_state",
-          "trigger": { "type": "event", "event": "EnemyDefeated" },
-          "filter": { "components": ["GameState"] },
-          "actions": [
-            {
-              "type": "modify",
-              "entity": { "type": "var", "name": "entity" },
-              "component": "GameState",
-              "field": "enemiesDefeated",
-              "op": "add",
-              "value": { "type": "literal", "value": 1 }
-            }
-          ]
-        },
-        {
-          "id": 6,
-          "name": "check_victory",
-          "trigger": { "type": "event", "event": "EnemyDefeated" },
-          "filter": { "components": ["GameState"] },
-          "condition": {
-            "type": "binary",
-            "op": "gte",
-            "left": { "type": "field", "entity": "entity", "component": "GameState", "field": "enemiesDefeated" },
-            "right": { "type": "literal", "value": 1000 }
-          },
-          "actions": [
-            {
-              "type": "modify",
-              "entity": { "type": "var", "name": "entity" },
-              "component": "GameState",
-              "field": "victory",
-              "op": "set",
-              "value": { "type": "literal", "value": true }
-            },
-            {
-              "type": "modify",
-              "entity": { "type": "var", "name": "entity" },
-              "component": "GameState",
-              "field": "gameOver",
-              "op": "set",
-              "value": { "type": "literal", "value": true }
-            },
-            {
-              "type": "emit",
-              "event": "GameVictory",
-              "fields": {}
-            }
-          ]
-        },
-        {
-          "id": 7,
-          "name": "player_death_check",
-          "trigger": { "type": "event", "event": "Death", "bindings": { "deadEntity": "target" } },
-          "filter": { "components": ["Team"] },
-          "condition": {
-            "type": "binary",
-            "op": "and",
-            "left": { "type": "field", "entity": "deadEntity", "component": "Team", "field": "isPlayer" },
-            "right": {
-              "type": "binary",
-              "op": "lte",
-              "left": { "type": "field", "entity": "deadEntity", "component": "Health", "field": "current" },
-              "right": { "type": "literal", "value": 0 }
-            }
-          },
-          "actions": [
-            {
-              "type": "emit",
-              "event": "CheckGameOver",
-              "fields": {}
-            }
-          ]
-        }
-      ],
-      "functions": [],
-      "trackers": [
-        { "id": 0, "component": "Health", "event": "DoAttack" },
-        { "id": 1, "component": "Character", "event": "DoAttack" },
-        { "id": 2, "component": "Health", "event": "Death" },
-        { "id": 3, "component": "Character", "event": "Death" },
-        { "id": 4, "component": "Character", "event": "LevelUp" },
-        { "id": 5, "component": "Skills", "event": "LevelUp" },
-        { "id": 6, "component": "GameState", "event": "EnemyDefeated" },
-        { "id": 7, "component": "GameState", "event": "GameVictory" }
-      ],
-      "initial_state": {
-        "entities": [
-          {
-            "id": 0,
-            "components": {
-              "Character": { "name": "Sir Braveheart", "class": "Warrior", "level": 1, "experience": 0, "experienceToLevel": 100 },
-              "Health": { "current": 120, "max": 120 },
-              "Mana": { "current": 30, "max": 30 },
-              "Combat": { "damage": 18, "defense": 10, "attackSpeed": 0.8 },
-              "Target": { "entity": null },
-              "Team": { "id": "player", "isPlayer": true },
-              "Skills": { "skill1": "power_strike", "skill2": "", "skillPoints": 0 },
-              "Buffs": { "damageBonus": 0 }
-            }
-          },
-          {
-            "id": 1,
-            "components": {
-              "Character": { "name": "Elara Flamecaster", "class": "Mage", "level": 1, "experience": 0, "experienceToLevel": 100 },
-              "Health": { "current": 70, "max": 70 },
-              "Mana": { "current": 100, "max": 100 },
-              "Combat": { "damage": 25, "defense": 4, "attackSpeed": 0.6 },
-              "Target": { "entity": null },
-              "Team": { "id": "player", "isPlayer": true },
-              "Skills": { "skill1": "fireball", "skill2": "", "skillPoints": 0 },
-              "Buffs": { "damageBonus": 0 }
-            }
-          },
-          {
-            "id": 2,
-            "components": {
-              "Character": { "name": "Shadow", "class": "Rogue", "level": 1, "experience": 0, "experienceToLevel": 100 },
-              "Health": { "current": 80, "max": 80 },
-              "Mana": { "current": 50, "max": 50 },
-              "Combat": { "damage": 22, "defense": 6, "attackSpeed": 1.4 },
-              "Target": { "entity": null },
-              "Team": { "id": "player", "isPlayer": true },
-              "Skills": { "skill1": "backstab", "skill2": "", "skillPoints": 0 },
-              "Buffs": { "damageBonus": 0 }
-            }
-          },
-          {
-            "id": 3,
-            "components": {
-              "Character": { "name": "Brother Aldric", "class": "Cleric", "level": 1, "experience": 0, "experienceToLevel": 100 },
-              "Health": { "current": 90, "max": 90 },
-              "Mana": { "current": 80, "max": 80 },
-              "Combat": { "damage": 12, "defense": 8, "attackSpeed": 0.7 },
-              "Target": { "entity": null },
-              "Team": { "id": "player", "isPlayer": true },
-              "Skills": { "skill1": "heal", "skill2": "", "skillPoints": 0 },
-              "Buffs": { "damageBonus": 0 }
-            }
-          },
-          {
-            "id": 99,
-            "components": {
-              "GameState": { "currentWave": 1, "enemiesDefeated": 0, "playerDeaths": 0, "bossDefeated": false, "gameOver": false, "victory": false }
-            }
-          }
-        ]
+        throw error;
       }
-        };
+    }
+    
+    // Load enemies from file
+    async function loadEnemies() {
+      try {
+        const response = await fetch('enemies.json');
+        const data = await response.json();
+        enemyTemplates = data.templates;
+        console.log('Loaded enemy templates from enemies.json');
+      } catch (error) {
+        console.error('Failed to load enemies.json:', error);
+        addLogEntry('system', '❌ ERROR: Failed to load enemies.json - ' + error.message);
+        throw error;
       }
     }
     
@@ -1174,17 +799,7 @@
       }
     });
     
-    // Enemy templates for pseudo-random generation
-    const enemyTemplates = [
-      { name: 'Goblin Scout', tier: 1, health: 60, damage: 8, speed: 1.0, exp: 25 },
-      { name: 'Orc Raider', tier: 2, health: 90, damage: 12, speed: 0.8, exp: 35 },
-      { name: 'Dark Wolf', tier: 2, health: 75, damage: 14, speed: 1.2, exp: 40 },
-      { name: 'Skeleton Warrior', tier: 3, health: 110, damage: 16, speed: 0.7, exp: 50 },
-      { name: 'Troll Berserker', tier: 4, health: 180, damage: 22, speed: 0.6, exp: 80 },
-      { name: 'Dark Mage', tier: 3, health: 80, damage: 25, speed: 0.5, exp: 75 },
-      { name: 'Demon Knight', tier: 5, health: 250, damage: 30, speed: 0.7, exp: 150 },
-      { name: 'Ancient Dragon', tier: 6, health: 400, damage: 40, speed: 0.8, exp: 300, boss: true },
-    ];
+    // Enemy templates - loaded from enemies.json file (no longer hardcoded)
     
     // Spawn a new enemy
     function spawnEnemy() {
@@ -1277,11 +892,24 @@
         await loadDefaultIR();
       }
       
+      // Load enemy templates if not already loaded
+      if (enemyTemplates.length === 0) {
+        await loadEnemies();
+      }
+      
       const ir = currentIR || classicRpgIR;
       
       if (!ir) {
         console.error('Failed to load IR');
         addLogEntry('system', '❌ ERROR: Failed to load game rules. Please refresh the page.');
+        gameStatusEl.textContent = 'Error';
+        gameStatusEl.style.color = '#f87171';
+        return;
+      }
+      
+      if (enemyTemplates.length === 0) {
+        console.error('Failed to load enemy templates');
+        addLogEntry('system', '❌ ERROR: Failed to load enemy data. Please refresh the page.');
         gameStatusEl.textContent = 'Error';
         gameStatusEl.style.color = '#f87171';
         return;
