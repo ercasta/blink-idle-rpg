@@ -1,0 +1,39 @@
+[package]
+name = "blink-compiler"
+version = "0.1.0"
+edition = "2021"
+description = "Compiler for Blink Rule Language (BRL) - produces IR for Blink engines"
+license = "MIT"
+repository = "https://github.com/ercasta/blink-idle-rpg"
+
+[lib]
+name = "blink_compiler"
+path = "src/lib.rs"
+
+[[bin]]
+name = "blink-compiler"
+path = "src/main.rs"
+
+[dependencies]
+# Parsing
+logos = "0.14"           # Fast lexer generator
+# Note: chumsky may be used in the future for more complex parsing with better error recovery
+# chumsky = "0.9"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# CLI
+clap = { version = "4.5", features = ["derive"] }
+
+# Error handling
+thiserror = "1.0"
+miette = { version = "7.2", features = ["fancy"] }
+
+# Utilities
+indexmap = { version = "2.2", features = ["serde"] }
+
+[dev-dependencies]
+pretty_assertions = "1.4"
+insta = { version = "1.38", features = ["json"] }
