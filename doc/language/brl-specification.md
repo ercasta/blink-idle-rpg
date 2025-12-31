@@ -536,18 +536,89 @@ import combat.{ DamageEvent, AttackEvent }
 
 ## 12. Trackers
 
-Trackers are special rules that capture information for user feedback without modifying game state:
+Trackers automatically capture component data for user feedback. They specify which component to track when specific events occur.
+
+### 12.1 Syntax
 
 ```brl
-tracker CombatLog on DamageEvent {
-    // Trackers can only READ, not modify
-    log("{source.Character.name} dealt {event.amount} damage to {target.Character.name}")
-}
-
-tracker HealthBar on HealthChanged {
-    display entity.Health.current / entity.Health.maximum
-}
+tracker ComponentName on EventName
 ```
+
+### 12.2 Behavior
+
+When a tracker fires:
+1. The engine collects all entities that have the specified component
+2. All field values of that component are captured for each entity
+3. The data is sent to the UI with timestamp and event context
+
+### 12.3 Examples
+
+```brl
+// Track all Health components whenever damage is taken
+tracker Health on DamageEvent
+
+// Track all Position components whenever entities move
+tracker Position on MoveEvent
+
+// Track all Character components when combat starts
+tracker Character on CombatStart
+
+// Track buff state changes
+tracker Buff on BuffApplied
+tracker Buff on BuffExpired
+```
+
+### 12.4 Output Format
+
+For each tracked entity, the output includes:
+- Event timestamp
+- Event type
+- Entity ID
+- Component name
+- All component field values
+
+### 12.5 Use Cases
+
+```brl
+// Combat log: track damage events
+tracker Health on DamageEvent
+tracker Character on DamageEvent  // Get character names for the log
+
+// Health bars: track on any health change
+tracker Health on DamageEvent
+tracker Health on HealEvent
+tracker Health on RegenerationTick
+
+// Position updates: track movement
+tracker Position on MoveEvent
+
+// Buff tracking: track status effects
+tracker Buff on BuffApplied
+tracker Buff on BuffExpired
+tracker Buff on BuffRefreshed
+```
+
+### 12.6 Multiple Trackers
+
+Multiple trackers can fire on the same event:
+
+```brl
+// On DamageEvent, track both Health and Character data
+tracker Health on DamageEvent
+tracker Character on DamageEvent
+
+// UI receives both:
+// - Health data (current, maximum) for all entities
+// - Character data (name, level, class) for all entities
+```
+
+### 12.7 Semantics
+
+- Trackers are **read-only** - they cannot modify game state
+- Trackers fire **after** the event is processed
+- Trackers capture **current state** at the time of firing
+- Multiple trackers on the same event fire in **definition order**
+- Trackers have **no side effects** on simulation
 
 ---
 

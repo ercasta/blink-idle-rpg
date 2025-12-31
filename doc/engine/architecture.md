@@ -420,7 +420,7 @@ rule on TurnStart {
 
 ### 7.1 Purpose
 
-Trackers observe game state and produce output for the UI, without modifying state.
+Trackers automatically capture component data for user feedback. They specify which component to track on which events, and the engine handles data collection.
 
 ### 7.2 Tracker Definition
 
@@ -429,56 +429,122 @@ struct Tracker {
     /// Tracker identifier
     id: TrackerId,
     
-    /// Event type(s) to observe
-    triggers: Vec<EventType>,
+    /// Component type to track
+    component_type: ComponentType,
     
-    /// Output generation logic
-    body: CompiledBlock,
+    /// Event type(s) that trigger tracking
+    triggers: Vec<EventType>,
 }
 ```
 
-### 7.3 Output Format
+### 7.3 Tracking Behavior
+
+When a tracker fires:
+1. Engine queries all entities with the specified component
+2. Captures all field values for each entity
+3. Packages as TrackerOutput with event context
+4. Sends to UI/output stream
+
+### 7.4 Output Format
 
 ```rust
 struct TrackerOutput {
     /// Timestamp when the tracker fired
     time: Decimal,
     
-    /// Tracker that produced this output
-    tracker_id: TrackerId,
+    /// Event that triggered this tracker
+    event_type: EventType,
     
-    /// Structured output data
-    data: TrackerData,
+    /// Component being tracked
+    component_type: ComponentType,
+    
+    /// All entities with this component and their data
+    entities: Vec<EntityComponentData>,
 }
 
-enum TrackerData {
-    /// Text message (combat log)
-    Message(String),
+struct EntityComponentData {
+    /// Entity ID
+    entity_id: EntityId,
     
-    /// Numeric value (health bar, progress)
-    Value { key: String, value: f64 },
-    
-    /// State change (buff added, position moved)
-    StateChange { entity: EntityId, change: StateChange },
-    
-    /// Custom structured data
-    Custom(serde_json::Value),
+    /// Component fields as key-value pairs
+    fields: HashMap<String, FieldValue>,
+}
+
+enum FieldValue {
+    String(String),
+    Integer(i64),
+    Float(f64),
+    Decimal(Decimal),
+    Boolean(bool),
+    EntityId(EntityId),
 }
 ```
 
-### 7.4 Examples
+### 7.5 Examples
 
+BRL syntax:
 ```brl
-tracker CombatLog on DamageEvent {
-    emit message("{event.source.name} hits {event.target.name} for {event.amount} damage!")
-}
+// Track Health component on damage events
+tracker Health on DamageEvent
 
-tracker HealthDisplay on HealthChanged {
-    emit value("health", event.target.id, event.new_value / event.max_value)
-}
+// Track Position on movement
+tracker Position on MoveEvent
 
-tracker BuffTracker on BuffApplied {
-    emit state_change(event.target, add_buff(event.buff, event.duration))
+// Track multiple components on same event
+tracker Health on DamageEvent
+tracker Character on DamageEvent
+```
+
+Engine behavior:
+```rust
+// When DamageEvent fires and Health tracker is active:
+// Output contains:
+{
+    time: 1.25,
+    event_type: "DamageEvent",
+    component_type: "Health",
+    entities: [
+        {
+            entity_id: EntityId(42),
+            fields: {
+                "current": Integer(75),
+                "maximum": Integer(100),
+                "regeneration": Float(1.5)
+            }
+        },
+        {
+            entity_id: EntityId(43),
+            fields: {
+                "current": Integer(100),
+                "maximum": Integer(100),
+                "regeneration": Float(2.0)
+            }
+        }
+    ]
+}
+```
+
+### 7.6 UI Integration
+
+The UI receives tracker output and can:
+- Build combat logs from Character + Health data
+- Update health bars from Health data
+- Animate movement from Position data
+- Display buff icons from Buff data
+
+Example combat log construction:
+```javascript
+// UI receives two tracker outputs from DamageEvent:
+// 1. Character data (names)
+// 2. Health data (health values)
+
+function buildCombatLog(characterData, healthData, event) {
+    const attacker = characterData.entities.find(e => e.entity_id === event.source);
+    const defender = characterData.entities.find(e => e.entity_id === event.target);
+    const defenderHealth = healthData.entities.find(e => e.entity_id === event.target);
+    
+    return `${attacker.fields.name} hits ${defender.fields.name} for ${event.amount} damage! ` +
+           `(${defenderHealth.fields.current}/${defenderHealth.fields.maximum} HP)`;
 }
 ```
 
