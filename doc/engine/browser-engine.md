@@ -9,7 +9,7 @@
 1. [Overview](#overview)
 2. [Architecture](#architecture)
 3. [JavaScript API](#javascript-api)
-4. [WASM Integration](#wasm-integration)
+4. [IR Loading](#ir-loading)
 5. [Game Client Integration](#game-client-integration)
 6. [Performance Optimization](#performance-optimization)
 7. [Development Setup](#development-setup)
@@ -19,7 +19,17 @@
 
 ## 1. Overview
 
-The Browser Engine is a JavaScript/WASM implementation of the Blink Engine that runs entirely in a web browser. This is the primary target for the game client.
+The Browser Engine is a **pure TypeScript/JavaScript** implementation of the Blink Engine that runs entirely in a web browser. This is the primary target for the game client.
+
+### Design Philosophy
+
+The Browser Engine is **completely independent** from the Rust Engine (Track 3). Both engines implement the same IR specification, but:
+
+- This engine is written in TypeScript from scratch
+- No WASM, no Rust compilation required
+- Enables JavaScript developers to contribute without Rust knowledge
+- Native debugging in browser DevTools
+- Easy integration with React, Vue, Svelte, etc.
 
 ### Goals
 
@@ -32,10 +42,10 @@ The Browser Engine is a JavaScript/WASM implementation of the Blink Engine that 
 
 | Layer | Technology | Purpose |
 |-------|------------|---------|
-| Core Engine | Rust → WASM | Performance-critical simulation |
-| JS Bindings | wasm-bindgen | Rust/JS interop |
+| Core Engine | TypeScript | Timeline, ECS, Rule execution |
+| IR Format | JSON | Compiled game rules |
 | API Layer | TypeScript | Developer-friendly interface |
-| Build | wasm-pack | WASM packaging |
+| Build | esbuild/rollup | Bundling |
 
 ---
 
@@ -68,12 +78,12 @@ The Browser Engine is a JavaScript/WASM implementation of the Blink Engine that 
 │                                 │                                   │
 │                                 ▼                                   │
 │  ┌─────────────────────────────────────────────────────────────┐   │
-│  │                   WASM MODULE (Rust)                        │   │
+│  │               BLINK ENGINE CORE (TypeScript)                │   │
 │  │  ┌─────────────┐  ┌──────────────┐  ┌──────────────────┐   │   │
-│  │  │  Timeline   │  │  ECS Store   │  │  Rule Engine     │   │   │
+│  │  │  Timeline   │  │  ECS Store   │  │  Rule Executor   │   │   │
 │  │  └─────────────┘  └──────────────┘  └──────────────────┘   │   │
 │  │  ┌─────────────┐  ┌──────────────┐  ┌──────────────────┐   │   │
-│  │  │  BCL Interp │  │  IR Executor │  │  Tracker Output  │   │   │
+│  │  │  BCL Interp │  │  IR Loader   │  │  Tracker Output  │   │   │
 │  │  └─────────────┘  └──────────────┘  └──────────────────┘   │   │
 │  └─────────────────────────────────────────────────────────────┘   │
 │                                                                     │
@@ -109,8 +119,14 @@ For simple games, simulation runs on the main thread. For complex simulations, a
 │   ├── components.ts
 │   ├── events.ts
 │   └── state.ts
-├── wasm/                 # WASM bindings
-│   └── blink_engine_bg.wasm
+├── ir/                   # IR loading
+│   └── loader.ts
+├── timeline/             # Event scheduling
+│   └── Timeline.ts
+├── ecs/                  # Entity-component storage
+│   └── Store.ts
+├── rules/                # Rule execution
+│   └── Executor.ts
 └── utils/                # Helper utilities
 ```
 
@@ -327,90 +343,80 @@ main().catch(console.error);
 
 ---
 
-## 4. WASM Integration
+## 4. IR Loading
 
-### 4.1 Rust-to-WASM Compilation
+### 4.1 IR Format
 
-Using `wasm-pack` and `wasm-bindgen`:
+The engine loads pre-compiled IR in JSON format:
 
-```rust
-// src/lib.rs
-use wasm_bindgen::prelude::*;
+```typescript
+// src/ir/loader.ts
+import { IRModule, IRComponent, IRRule, IRTracker } from './types';
 
-#[wasm_bindgen]
-pub struct WasmEngine {
-    engine: BlinkEngine,
+export async function loadIR(url: string): Promise<IRModule> {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to load IR: ${response.statusText}`);
+  }
+  const ir: IRModule = await response.json();
+  validateIR(ir);
+  return ir;
 }
 
-#[wasm_bindgen]
-impl WasmEngine {
-    #[wasm_bindgen(constructor)]
-    pub fn new() -> WasmEngine {
-        WasmEngine {
-            engine: BlinkEngine::new()
-        }
-    }
-    
-    pub fn load_rules(&mut self, ir_bytes: &[u8]) -> Result<(), JsValue> {
-        self.engine.load_rules_from_bytes(ir_bytes)
-            .map_err(|e| JsValue::from_str(&e.to_string()))
-    }
-    
-    pub fn step(&mut self) -> JsValue {
-        match self.engine.step() {
-            Some(result) => serde_wasm_bindgen::to_value(&result).unwrap(),
-            None => JsValue::NULL
-        }
-    }
-    
-    pub fn get_state(&self) -> JsValue {
-        serde_wasm_bindgen::to_value(&self.engine.get_state()).unwrap()
-    }
-    
-    pub fn drain_tracker_output(&mut self) -> JsValue {
-        let output = self.engine.drain_tracker_output();
-        serde_wasm_bindgen::to_value(&output).unwrap()
-    }
+export function loadIRFromString(json: string): IRModule {
+  const ir: IRModule = JSON.parse(json);
+  validateIR(ir);
+  return ir;
+}
+
+function validateIR(ir: IRModule): void {
+  if (!ir.version) throw new Error('IR missing version');
+  if (!ir.module) throw new Error('IR missing module name');
+  // Additional validation...
 }
 ```
 
-### 4.2 Memory Management
+### 4.2 IR Types
 
 ```typescript
-// TypeScript wrapper handles WASM memory
-class WasmBridge {
-  private engine: WasmEngine;
-  private memory: WebAssembly.Memory;
-  
-  async init(): Promise<void> {
-    const wasm = await import('./wasm/blink_engine');
-    this.engine = new wasm.WasmEngine();
-    this.memory = wasm.memory;
-  }
-  
-  destroy(): void {
-    this.engine.free();  // Release WASM memory
-  }
+// src/ir/types.ts
+export interface IRModule {
+  version: string;
+  module: string;
+  components: IRComponent[];
+  rules: IRRule[];
+  functions: IRFunction[];
+  trackers: IRTracker[];
+}
+
+export interface IRComponent {
+  name: string;
+  fields: IRField[];
+}
+
+export interface IRRule {
+  name: string;
+  trigger: IRTrigger;
+  condition?: IRExpression;
+  actions: IRAction[];
+}
+
+export interface IRTracker {
+  component: string;
+  event: string;
 }
 ```
 
-### 4.3 Data Transfer
-
-Minimize JS/WASM boundary crossings:
+### 4.3 Loading Example
 
 ```typescript
-// BAD: Many small calls
-for (const entity of entities) {
-  const health = engine.get_component(entity.id, 'Health');
-  // Process health...
-}
+// Load compiled game rules
+const game = await BlinkGame.create();
+await game.loadRules('./games/clicker/game.ir.json');
 
-// GOOD: Batch query
-const snapshot = engine.get_state();  // Single call
-for (const [id, entity] of snapshot.entities) {
-  const health = entity.components.get('Health');
-  // Process health...
-}
+// Or load from inline string
+const irJson = await fetchIRFromServer();
+await game.loadRulesFromString(irJson);
 ```
 
 ---
@@ -646,17 +652,13 @@ function runSimulation() {
 ### 7.1 Prerequisites
 
 - Node.js 18+
-- Rust 1.70+
-- wasm-pack
+- TypeScript 5+
 
 ### 7.2 Build Commands
 
 ```bash
 # Install dependencies
 npm install
-
-# Build WASM module
-wasm-pack build --target web
 
 # Build TypeScript
 npm run build
@@ -672,17 +674,23 @@ npm run dev
 
 ```
 packages/
-├── blink-engine-wasm/      # Rust WASM core
-│   ├── Cargo.toml
-│   └── src/
-│       └── lib.rs
-├── blink-engine/           # TypeScript API
+├── blink-engine/           # TypeScript engine
 │   ├── package.json
 │   ├── tsconfig.json
 │   └── src/
 │       ├── index.ts
 │       ├── BlinkGame.ts
-│       └── wasm/           # Generated WASM bindings
+│       ├── ir/             # IR loading
+│       │   ├── loader.ts
+│       │   └── types.ts
+│       ├── timeline/       # Event scheduling
+│       │   └── Timeline.ts
+│       ├── ecs/            # Entity-component storage
+│       │   └── Store.ts
+│       ├── rules/          # Rule execution
+│       │   └── Executor.ts
+│       └── trackers/       # State change tracking
+│           └── Tracker.ts
 └── example-client/         # Example game client
     ├── package.json
     └── src/
@@ -696,11 +704,11 @@ packages/
 ### Phase 1: Core Engine (MVP)
 **Target**: Minimal working simulation
 
+- [ ] IR loader implementation
 - [ ] Basic timeline implementation
 - [ ] Simple ECS store
 - [ ] Event scheduling (immediate + delayed)
 - [ ] Rule execution
-- [ ] WASM compilation setup
 
 **Deliverable**: Can run simple combat simulation
 
@@ -708,7 +716,6 @@ packages/
 **Target**: Usable from browser
 
 - [ ] TypeScript API design
-- [ ] wasm-bindgen integration
 - [ ] State snapshot API
 - [ ] Tracker event streaming
 - [ ] Basic documentation
@@ -757,7 +764,6 @@ packages/
 | Edge | 90+ | Full |
 
 Required features:
-- WebAssembly
 - ES2020
 - Optional: SharedArrayBuffer, Web Workers
 
@@ -768,3 +774,4 @@ Required features:
 | Version | Date | Changes |
 |---------|------|---------|
 | 0.1.0 | 2024-12-31 | Initial draft |
+| 0.1.1 | 2024-12-31 | Removed WASM, pure TypeScript implementation |

@@ -9,6 +9,7 @@ doc/
 ├── README.md                    # This file
 ├── summary.md                   # Project overview
 ├── DEVELOPMENT_TRACKS.md        # Parallel development guide
+├── ir-specification.md          # IR format specification (central contract)
 ├── language/                    # BRL & BCL Language Specification
 │   ├── README.md                # Language overview
 │   ├── brl-specification.md     # Blink Rule Language spec
@@ -17,8 +18,10 @@ doc/
 ├── engine/                      # Engine & Toolchain
 │   ├── README.md                # Engine overview
 │   ├── architecture.md          # Core architecture
-│   ├── browser-engine.md        # Browser implementation
+│   ├── browser-engine.md        # Browser implementation (TypeScript)
 │   └── api/                     # API documentation
+├── architecture/                # Architecture decisions
+│   └── ir-decision.md           # IR vs WASM analysis
 └── hie/                         # Hielements documentation
     ├── README.md                # Hielements overview
     ├── language-reference.md    # Hielements syntax
@@ -28,21 +31,25 @@ doc/
 
 ## Development Tracks
 
-The project is organized to allow parallel development:
+The project is organized to allow parallel development with **IR as the central contract**:
 
 | Track | Folder | Description | Dependencies |
 |-------|--------|-------------|--------------|
 | **Language Design** | `doc/language/` | BRL & BCL specification | None |
-| **Engine Core** | `doc/engine/` | Timeline, ECS, simulation | Language spec |
-| **Browser Runtime** | `doc/engine/browser-engine.md` | JS/WASM implementation | Engine core |
-| **Toolchain** | `doc/engine/` | Compiler, LSP, VSCode | Language spec |
-| **Architecture** | `doc/hie/` | Hielements specifications | None |
+| **Compiler** | `doc/engine/` | Parser, validator, IR gen | Language spec |
+| **Rust Engine** | `doc/engine/` | Native Rust simulation | IR spec only |
+| **JS Engine** | `doc/engine/browser-engine.md` | TypeScript implementation | IR spec only |
+| **Batch Engine** | `doc/engine/` | Headless testing engine | IR spec only |
+| **Dev Tools** | `doc/engine/` | LSP, VSCode extension | Language spec |
 
-See [DEVELOPMENT_TRACKS.md](DEVELOPMENT_TRACKS.md) for detailed coordination guidelines.
+All engines are **independent** - they depend only on the IR specification, not on each other.
+
+See [DEVELOPMENT_TRACKS.md](DEVELOPMENT_TRACKS.md) for detailed coordination guidelines.  
+See [architecture/ir-decision.md](architecture/ir-decision.md) for the architectural rationale.
 
 ## Getting Started
 
 - **Language Designers**: Start with [language/README.md](language/README.md)
-- **Engine Developers**: Start with [engine/README.md](engine/README.md)
+- **Engine Developers**: Start with [ir-specification.md](ir-specification.md) and [engine/README.md](engine/README.md)
 - **Game Designers**: See [summary.md](summary.md) for game concepts
 - **All Developers**: Read [hie/README.md](hie/README.md) to understand architecture enforcement

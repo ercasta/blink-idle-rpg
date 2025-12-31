@@ -2,46 +2,74 @@
 
 This document describes how different developers can work on Blink in parallel.
 
+## Architecture Overview
+
+The Blink system uses an **IR-centric architecture** where the compiler produces an Intermediate Representation that multiple independent engines can execute. This enables:
+- **Parallel development**: Engine teams don't depend on each other
+- **Centralized validation**: All errors caught at compile time
+- **Engine diversity**: Each engine optimized for its platform
+
+See [Architecture Decision: IR and Engine Independence](architecture/ir-decision.md) for detailed rationale.
+
 ## Track Overview
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                         BLINK DEVELOPMENT TRACKS                        │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│  ┌─────────────────┐                                                    │
-│  │ TRACK 1         │                                                    │
-│  │ Language Design │ ──────────────────────────────────────────────┐    │
-│  │ (BRL/BCL Spec)  │                                               │    │
-│  └────────┬────────┘                                               │    │
-│           │                                                        │    │
-│           │ defines                                                │    │
-│           ▼                                                        │    │
-│  ┌─────────────────┐      ┌─────────────────┐                      │    │
-│  │ TRACK 2         │      │ TRACK 3         │                      │    │
-│  │ Compiler        │      │ Core Engine     │                      │    │
-│  │ (BRL → IR)      │      │ (Rust)          │                      │    │
-│  └────────┬────────┘      └────────┬────────┘                      │    │
-│           │                        │                               │    │
-│           │ produces               │ implements                    │    │
-│           │                        │                               │    │
-│           └──────────┬─────────────┘                               │    │
-│                      │                                             │    │
-│                      ▼                                             │    │
-│             ┌─────────────────┐                                    │    │
-│             │ IR (Shared)     │ ◄──────────────────────────────────┘    │
-│             │ Interface       │   validates against                     │
-│             └────────┬────────┘                                         │
-│                      │                                                  │
-│                      ▼                                                  │
-│             ┌─────────────────┐      ┌─────────────────┐                │
-│             │ TRACK 4         │      │ TRACK 5         │                │
-│             │ Browser Runtime │      │ Dev Tools       │                │
-│             │ (JS/WASM)       │      │ (LSP, VSCode)   │                │
-│             └─────────────────┘      └─────────────────┘                │
-│                                                                         │
-└─────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          BLINK DEVELOPMENT TRACKS                           │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌─────────────────┐                                                        │
+│  │ TRACK 1         │                                                        │
+│  │ Language Design │                                                        │
+│  │ (BRL/BCL Spec)  │                                                        │
+│  └────────┬────────┘                                                        │
+│           │                                                                 │
+│           │ defines syntax & semantics                                      │
+│           ▼                                                                 │
+│  ┌─────────────────┐                                                        │
+│  │ TRACK 2         │                                                        │
+│  │ Compiler        │                                                        │
+│  │ (BRL → IR)      │                                                        │
+│  └────────┬────────┘                                                        │
+│           │                                                                 │
+│           │ produces                                                        │
+│           ▼                                                                 │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                         BLINK IR                                     │   │
+│  │  • Component definitions    • Rule instructions                      │   │
+│  │  • Tracker definitions      • BCL choice functions                   │   │
+│  │  • Format: JSON or Binary   • Versioned contract                     │   │
+│  └────────┬─────────────────────────┬─────────────────────┬────────────┘   │
+│           │                         │                     │                 │
+│           │ (independent)           │ (independent)       │ (independent)   │
+│           ▼                         ▼                     ▼                 │
+│  ┌─────────────────┐      ┌─────────────────┐    ┌─────────────────┐       │
+│  │ TRACK 3         │      │ TRACK 4         │    │ TRACK 5         │       │
+│  │ Rust Engine     │      │ JS Engine       │    │ Batch Engine    │       │
+│  │ (Native)        │      │ (Browser)       │    │ (Headless)      │       │
+│  └─────────────────┘      └─────────────────┘    └─────────────────┘       │
+│                                                                             │
+│  ┌─────────────────┐                                                        │
+│  │ TRACK 6         │◄─── Uses compiler AST                                  │
+│  │ Dev Tools       │                                                        │
+│  │ (LSP, VSCode)   │                                                        │
+│  └─────────────────┘                                                        │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
+
+## Key Insight: Engine Independence
+
+**Engines do NOT depend on each other.** Each engine:
+1. Takes IR as input (the contract)
+2. Implements execution semantics
+3. Provides platform-specific API
+
+This means:
+- Rust developers can build the Rust engine
+- JavaScript developers can build the JS engine
+- No blocking dependencies between engine teams
+- Same compiled IR runs on all engines
 
 ## Track 1: Language Design
 
@@ -116,9 +144,11 @@ src/compiler/
 - Track 1: Language specification (can start with draft)
 
 ### Interfaces Provided
-- IR format for Track 3 (Engine)
-- IR format for Track 4 (Browser Runtime)
-- AST/Parse info for Track 5 (LSP)
+- **IR format specification**: The contract for all engines
+- IR format for Track 3 (Rust Engine)
+- IR format for Track 4 (JS Engine)
+- IR format for Track 5 (Batch Engine)
+- AST/Parse info for Track 6 (Dev Tools)
 
 ### Getting Started
 ```bash
@@ -134,9 +164,9 @@ code src/compiler/lexer/mod.rs
 
 ---
 
-## Track 3: Core Engine
+## Track 3: Rust Engine
 
-**Focus**: Implement simulation runtime in Rust
+**Focus**: Native Rust implementation of the Blink engine
 
 ### Owner Requirements
 - Rust proficiency
@@ -144,16 +174,18 @@ code src/compiler/lexer/mod.rs
 - Game engine experience helpful
 
 ### Deliverables
-1. Timeline implementation
-2. ECS store
-3. Event system
-4. Rule executor
-5. Tracker system
-6. Core library (`blink-core`)
+1. IR loader (JSON/binary)
+2. Timeline implementation
+3. ECS store
+4. Event system
+5. Rule executor
+6. Tracker system
+7. Core library (`blink-engine-rust`)
 
 ### Files
 ```
-src/engine/
+src/engines/rust/
+├── ir/           # IR loader
 ├── timeline/
 ├── ecs/
 ├── events/
@@ -163,55 +195,78 @@ src/engine/
 ```
 
 ### Dependencies
-- Track 1: Semantic requirements (can start with draft)
-- Track 2: IR format (co-design)
+- **Track 2: IR specification only** (not the compiler implementation)
+- Track 1: For semantic understanding (optional)
 
 ### Interfaces Provided
-- Engine API for Track 4 (Browser Runtime)
-- Engine API for batch/server runtimes
+- Rust Engine API (can be used for dev server, batch processing)
+- Optional WASM compilation (but JS Engine is preferred for browser)
 
 ### Getting Started
 ```bash
 # Set up Rust project
-cargo new blink-engine --lib
+cargo new blink-engine-rust --lib
 
 # Read architecture doc
 cat doc/engine/architecture.md
 
-# Start with timeline
-code src/engine/timeline/mod.rs
+# Read IR specification
+cat doc/ir-specification.md
+
+# Start with IR loader
+code src/engines/rust/ir/mod.rs
 ```
 
 ---
 
-## Track 4: Browser Runtime
+## Track 4: JavaScript Engine
 
-**Focus**: JavaScript/WASM implementation for browsers
+**Focus**: Pure JavaScript/TypeScript implementation for browsers
+
+**Why pure JS instead of WASM?**
+- No dependency on Rust engine
+- Better debugging (browser DevTools)
+- Smaller bundle size
+- JavaScript developers can contribute
+- Framework integrations (React, Vue) are native
 
 ### Owner Requirements
 - TypeScript proficiency
-- WASM experience (wasm-bindgen)
+- Browser APIs knowledge
 - Frontend development experience
 
 ### Deliverables
-1. WASM bindings
-2. TypeScript API
-3. NPM package (`@blink/engine`)
-4. Example game client
+1. IR loader (JSON)
+2. Timeline implementation
+3. ECS store
+4. Rule executor
+5. Tracker system
+6. NPM package (`@blink/engine`)
+7. Example game client
+8. React/Vue integration examples
 
 ### Files
 ```
 packages/
-├── blink-engine-wasm/    # Rust → WASM
-├── blink-engine/         # TypeScript API
-└── example-client/       # Demo
+├── blink-engine/           # TypeScript engine implementation
+│   ├── src/
+│   │   ├── ir/            # IR loader
+│   │   ├── timeline/      # Event scheduling
+│   │   ├── ecs/           # Entity-Component storage
+│   │   ├── rules/         # Rule execution
+│   │   └── trackers/      # Tracker output
+│   └── package.json
+├── blink-engine-react/     # React bindings (optional)
+└── example-client/         # Demo application
 ```
 
 ### Dependencies
-- Track 3: Core Engine (can develop in parallel with mocks)
+- **Track 2: IR specification only** (not the compiler implementation)
+- No dependency on Track 3 (Rust Engine)
 
 ### Interfaces Provided
 - JavaScript API for game developers
+- React/Vue hooks
 - Integration examples
 
 ### Getting Started
@@ -219,18 +274,69 @@ packages/
 # Read browser engine doc
 cat doc/engine/browser-engine.md
 
-# Set up WASM project
-cd packages/blink-engine-wasm
-wasm-pack build --target web
+# Read IR specification
+cat doc/ir-specification.md
 
-# Set up TypeScript API
-cd ../blink-engine
-npm init
+# Set up TypeScript project
+cd packages/blink-engine
+npm init -y
+npm install typescript
+npx tsc --init
+
+# Start with IR loader
+code src/ir/loader.ts
 ```
 
 ---
 
-## Track 5: Developer Tools
+## Track 5: Batch Engine
+
+**Focus**: High-throughput headless engine for balance testing
+
+### Owner Requirements
+- Rust proficiency (or language of choice)
+- Performance optimization
+- Statistical analysis knowledge helpful
+
+### Deliverables
+1. Headless IR executor
+2. No tracker overhead mode
+3. Parallel simulation runner
+4. Statistics collection
+5. CLI tool (`blink-batch`)
+
+### Files
+```
+src/engines/batch/
+├── ir/
+├── runner/
+├── stats/
+└── cli/
+```
+
+### Dependencies
+- **Track 2: IR specification only**
+- Can share code with Track 3 (Rust Engine) but not required
+
+### Interfaces Provided
+- Batch simulation API
+- Statistics output (JSON, CSV)
+
+### Getting Started
+```bash
+# Set up Rust project
+cargo new blink-batch --bin
+
+# Read IR specification
+cat doc/ir-specification.md
+
+# Start with runner
+code src/engines/batch/runner/mod.rs
+```
+
+---
+
+## Track 6: Developer Tools
 
 **Focus**: LSP server and VS Code extension
 
@@ -278,45 +384,48 @@ cargo new blink-lsp --bin
 
 ## Interface Contracts
 
-### IR Format Contract (Track 2 ↔ Track 3 ↔ Track 4)
+### IR Format Contract (Track 2 → Tracks 3, 4, 5)
 
-```rust
-// Shared IR definition
-// Located in: src/ir/mod.rs
+The IR is the **central contract** between compiler and all engines.
+Engines do NOT depend on each other—each engine depends only on the IR specification.
 
-pub struct IRModule {
-    pub name: String,
-    pub version: String,
-    pub components: Vec<IRComponent>,
-    pub rules: Vec<IRRule>,
-    pub functions: Vec<IRFunction>,
-    pub trackers: Vec<IRTracker>,
-}
-
-// Full definition in doc/engine/architecture.md
-```
-
-### Engine API Contract (Track 3 ↔ Track 4)
-
-```rust
-// Shared engine trait
-// Located in: src/engine/traits.rs
-
-pub trait BlinkEngine {
-    fn load_rules(&mut self, rules: IRModule) -> Result<()>;
-    fn load_state(&mut self, state: GameState) -> Result<()>;
-    fn step(&mut self) -> Option<StepResult>;
-    fn get_state(&self) -> GameStateSnapshot;
-    fn drain_tracker_output(&mut self) -> Vec<TrackerOutput>;
+```json
+// IR Format (JSON)
+// Specification: doc/ir-specification.md
+{
+  "version": "1.0",
+  "module": "game",
+  "components": [...],
+  "rules": [...],
+  "functions": [...],
+  "trackers": [...]
 }
 ```
 
-### LSP Contract (Track 2 ↔ Track 5)
+All engines must implement identical semantics for the same IR.
+Test suite in `tests/ir/` validates engine consistency.
 
-Track 5 can use Track 2's parser crate:
+### Engine Implementation (Conceptual Interface)
+
+Each engine independently implements these concepts:
+
+```
+IR Loader       - Parse IR JSON, validate structure
+Timeline        - Event scheduling at 1/100s precision  
+ECS Store       - Entity-component storage
+Rule Executor   - Execute rules on events
+Tracker System  - Capture state changes for UI
+```
+
+Engines MAY share code (e.g., Rust Engine and Batch Engine)
+but are NOT required to.
+
+### LSP Contract (Track 2 ↔ Track 6)
+
+Track 6 can use Track 2's parser crate:
 
 ```rust
-// Track 2 exposes parsing for Track 5
+// Track 2 exposes parsing for Track 6
 pub fn parse(source: &str) -> Result<AST, Vec<ParseError>>;
 pub fn get_completions(source: &str, position: Position) -> Vec<Completion>;
 pub fn get_diagnostics(source: &str) -> Vec<Diagnostic>;
@@ -338,10 +447,11 @@ pub fn get_diagnostics(source: &str) -> Vec<Diagnostic>;
 4. Update shared definitions
 5. Implement changes
 
-### Shared Code
-- IR definitions: `src/ir/`
-- Type definitions: `src/types/`
+### Shared Resources
+- IR specification: `doc/ir-specification.md`
+- IR test suite: `tests/ir/`
 - Test fixtures: `tests/fixtures/`
+- Example games: `examples/`
 
 ---
 
@@ -349,19 +459,21 @@ pub fn get_diagnostics(source: &str) -> Vec<Diagnostic>;
 
 ### M1: Foundation (Week 1-2)
 - Track 1: BRL spec v0.1
-- Track 2: Basic parser
-- Track 3: Timeline + ECS skeleton
-- Track 4: WASM build setup
-- Track 5: Extension scaffold
+- Track 2: Basic parser + IR spec
+- Track 3: Timeline + ECS skeleton (Rust)
+- Track 4: Timeline + ECS skeleton (JS)
+- Track 5: Batch runner scaffold
+- Track 6: Extension scaffold
 
 ### M2: Integration (Week 3-4)
-- Track 2 + 3: IR format finalized
-- Track 3 + 4: Engine API finalized
-- Track 1 + 5: Syntax highlighting
+- Track 2: IR format finalized, test suite
+- Track 3, 4, 5: Pass IR test suite
+- Track 1 + 6: Syntax highlighting
 
 ### M3: MVP (Week 5-6)
 - All tracks: Basic working flow
-- End-to-end test: BRL → IR → Simulation → Browser
+- End-to-end test: BRL → IR → Simulation
+- All engines pass IR conformance tests
 
 ### M4: Polish (Week 7-8)
 - BCL support
