@@ -63,6 +63,7 @@ export class BlinkGame {
   private isPaused: boolean = false;
   private animationFrameId: number | null = null;
   private lastFrameTime: number = 0;
+  private currentSimulationTime: number = 0;
   
   private trackerCallbacks: Set<TrackerCallback> = new Set();
   private simulationCallbacks: Set<SimulationCallback> = new Set();
@@ -193,6 +194,7 @@ export class BlinkGame {
     this.isRunning = true;
     this.isPaused = false;
     this.lastFrameTime = performance.now();
+    this.currentSimulationTime = this.timeline.getTime();
     
     this.emitSimulationEvent({ type: 'started', time: this.timeline.getTime() });
     
@@ -228,6 +230,7 @@ export class BlinkGame {
     
     this.isPaused = false;
     this.lastFrameTime = performance.now();
+    this.currentSimulationTime = this.timeline.getTime();
     
     this.emitSimulationEvent({ type: 'resumed', time: this.timeline.getTime() });
     
@@ -256,6 +259,7 @@ export class BlinkGame {
     this.stop();
     this.store.clear();
     this.timeline.clear();
+    this.currentSimulationTime = 0;
     
     // Reload initial state
     if (this.ir?.initial_state) {
@@ -439,7 +443,8 @@ export class BlinkGame {
     
     // Calculate how much simulation time to advance
     const simulationDelta = deltaTime * this.options.timeScale;
-    const targetTime = this.timeline.getTime() + simulationDelta;
+    this.currentSimulationTime += simulationDelta;
+    const targetTime = this.currentSimulationTime;
     
     // Process events up to target time (or max events per frame)
     let eventsProcessed = 0;

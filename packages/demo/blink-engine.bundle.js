@@ -803,6 +803,7 @@
       this.isPaused = false;
       this.animationFrameId = null;
       this.lastFrameTime = 0;
+      this.currentSimulationTime = 0;
       
       this.trackerCallbacks = new Set();
       this.simulationCallbacks = new Set();
@@ -890,6 +891,7 @@
       this.isRunning = true;
       this.isPaused = false;
       this.lastFrameTime = performance.now();
+      this.currentSimulationTime = this.timeline.getTime();
       
       this.emitSimulationEvent({ type: 'started', time: this.timeline.getTime() });
       
@@ -918,6 +920,7 @@
       
       this.isPaused = false;
       this.lastFrameTime = performance.now();
+      this.currentSimulationTime = this.timeline.getTime();
       
       this.emitSimulationEvent({ type: 'resumed', time: this.timeline.getTime() });
       
@@ -940,6 +943,7 @@
       this.stop();
       this.store.clear();
       this.timeline.clear();
+      this.currentSimulationTime = 0;
       
       if (this.ir && this.ir.initial_state) {
         this.loadState(this.ir.initial_state.entities);
@@ -1065,7 +1069,8 @@
       this.lastFrameTime = currentTime;
       
       const simulationDelta = deltaTime * this.options.timeScale;
-      const targetTime = this.timeline.getTime() + simulationDelta;
+      this.currentSimulationTime += simulationDelta;
+      const targetTime = this.currentSimulationTime;
       
       let eventsProcessed = 0;
       
