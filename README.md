@@ -48,6 +48,14 @@ npx serve .
 
 ### For JavaScript Engine Development
 
+#### Prerequisites
+
+**All Platforms:**
+- Install Node.js from [https://nodejs.org/](https://nodejs.org/) (LTS version recommended)
+- Verify installation: `node --version` and `npm --version`
+
+#### Building
+
 ```bash
 cd packages/blink-engine
 npm install
@@ -66,6 +74,21 @@ game.start();
 
 ### For Compiler Development
 
+#### Prerequisites
+
+**Windows:**
+- Install Rust from [https://rustup.rs/](https://rustup.rs/)
+  - Download and run `rustup-init.exe`
+  - Follow the installer prompts (default options work fine)
+  - Restart your terminal after installation
+- Verify installation: `cargo --version`
+
+**Linux/macOS:**
+- Install Rust: `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
+- Verify installation: `cargo --version`
+
+#### Building
+
 ```bash
 cd src/compiler
 cargo build
@@ -75,7 +98,21 @@ cargo test
 cargo run -- compile -i ../../examples/brl/simple-clicker.brl --pretty
 ```
 
+**Windows Note:** Use backslashes for paths or forward slashes in quotes:
+```cmd
+cargo run -- compile -i ..\..\examples\brl\simple-clicker.brl --pretty
+rem OR
+cargo run -- compile -i "../../examples/brl/simple-clicker.brl" --pretty
+```
+
 ### For Testing Game Rules
+
+#### Prerequisites
+
+**All Platforms:**
+- Node.js and npm (see JavaScript Engine Development section above)
+
+#### Building
 
 The `@blink/test` package provides an integrated testing framework for BRL and BCL:
 
