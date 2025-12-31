@@ -915,7 +915,7 @@
               "Health": { "current": 120, "max": 120 },
               "Mana": { "current": 30, "max": 30 },
               "Combat": { "damage": 18, "defense": 10, "attackSpeed": 0.8 },
-              "Target": { "entity": 4 },
+              "Target": { "entity": null },
               "Team": { "id": "player", "isPlayer": true },
               "Skills": { "skill1": "power_strike", "skill2": "", "skillPoints": 0 },
               "Buffs": { "damageBonus": 0 }
@@ -928,7 +928,7 @@
               "Health": { "current": 70, "max": 70 },
               "Mana": { "current": 100, "max": 100 },
               "Combat": { "damage": 25, "defense": 4, "attackSpeed": 0.6 },
-              "Target": { "entity": 4 },
+              "Target": { "entity": null },
               "Team": { "id": "player", "isPlayer": true },
               "Skills": { "skill1": "fireball", "skill2": "", "skillPoints": 0 },
               "Buffs": { "damageBonus": 0 }
@@ -941,7 +941,7 @@
               "Health": { "current": 80, "max": 80 },
               "Mana": { "current": 50, "max": 50 },
               "Combat": { "damage": 22, "defense": 6, "attackSpeed": 1.4 },
-              "Target": { "entity": 4 },
+              "Target": { "entity": null },
               "Team": { "id": "player", "isPlayer": true },
               "Skills": { "skill1": "backstab", "skill2": "", "skillPoints": 0 },
               "Buffs": { "damageBonus": 0 }
@@ -954,74 +954,9 @@
               "Health": { "current": 90, "max": 90 },
               "Mana": { "current": 80, "max": 80 },
               "Combat": { "damage": 12, "defense": 8, "attackSpeed": 0.7 },
-              "Target": { "entity": 4 },
+              "Target": { "entity": null },
               "Team": { "id": "player", "isPlayer": true },
               "Skills": { "skill1": "heal", "skill2": "", "skillPoints": 0 },
-              "Buffs": { "damageBonus": 0 }
-            }
-          },
-          {
-            "id": 4,
-            "components": {
-              "Character": { "name": "Goblin Scout", "class": "Monster", "level": 1, "experience": 0, "experienceToLevel": 999 },
-              "Health": { "current": 60, "max": 60 },
-              "Mana": { "current": 0, "max": 0 },
-              "Combat": { "damage": 8, "defense": 2, "attackSpeed": 1.0 },
-              "Target": { "entity": 0 },
-              "Team": { "id": "enemy", "isPlayer": false },
-              "Enemy": { "tier": 1, "isBoss": false, "expReward": 25 },
-              "Buffs": { "damageBonus": 0 }
-            }
-          },
-          {
-            "id": 5,
-            "components": {
-              "Character": { "name": "Orc Warrior", "class": "Monster", "level": 3, "experience": 0, "experienceToLevel": 999 },
-              "Health": { "current": 120, "max": 120 },
-              "Mana": { "current": 0, "max": 0 },
-              "Combat": { "damage": 15, "defense": 6, "attackSpeed": 0.7 },
-              "Target": { "entity": 1 },
-              "Team": { "id": "enemy", "isPlayer": false },
-              "Enemy": { "tier": 2, "isBoss": false, "expReward": 50 },
-              "Buffs": { "damageBonus": 0 }
-            }
-          },
-          {
-            "id": 6,
-            "components": {
-              "Character": { "name": "Dark Mage", "class": "Monster", "level": 5, "experience": 0, "experienceToLevel": 999 },
-              "Health": { "current": 80, "max": 80 },
-              "Mana": { "current": 100, "max": 100 },
-              "Combat": { "damage": 22, "defense": 4, "attackSpeed": 0.5 },
-              "Target": { "entity": 3 },
-              "Team": { "id": "enemy", "isPlayer": false },
-              "Enemy": { "tier": 3, "isBoss": false, "expReward": 75 },
-              "Buffs": { "damageBonus": 0 }
-            }
-          },
-          {
-            "id": 7,
-            "components": {
-              "Character": { "name": "Troll Berserker", "class": "Monster", "level": 7, "experience": 0, "experienceToLevel": 999 },
-              "Health": { "current": 200, "max": 200 },
-              "Mana": { "current": 0, "max": 0 },
-              "Combat": { "damage": 25, "defense": 10, "attackSpeed": 0.5 },
-              "Target": { "entity": 0 },
-              "Team": { "id": "enemy", "isPlayer": false },
-              "Enemy": { "tier": 4, "isBoss": false, "expReward": 100 },
-              "Buffs": { "damageBonus": 0 }
-            }
-          },
-          {
-            "id": 8,
-            "components": {
-              "Character": { "name": "Dragon Lord Vexar", "class": "Boss", "level": 10, "experience": 0, "experienceToLevel": 999 },
-              "Health": { "current": 500, "max": 500 },
-              "Mana": { "current": 200, "max": 200 },
-              "Combat": { "damage": 40, "defense": 15, "attackSpeed": 0.8 },
-              "Target": { "entity": 0 },
-              "Team": { "id": "enemy", "isPlayer": false },
-              "Enemy": { "tier": 5, "isBoss": true, "expReward": 500 },
               "Buffs": { "damageBonus": 0 }
             }
           },
@@ -1173,8 +1108,16 @@
     
     // Spawn multiple enemies at start
     function spawnInitialEnemies(count) {
+      const spawnedIds = [];
       for (let i = 0; i < count; i++) {
-        spawnEnemy();
+        spawnedIds.push(spawnEnemy());
+      }
+      
+      // After spawning enemies, assign hero targets
+      // Each hero targets a random enemy
+      for (let heroId = 0; heroId <= 3; heroId++) {
+        const randomEnemy = spawnedIds[Math.floor(Math.random() * spawnedIds.length)];
+        game.setComponentField(heroId, 'Target', 'entity', randomEnemy);
       }
     }
     
@@ -1405,12 +1348,39 @@
             
             // Check if it's an enemy that died
             if (enemyCharacters[entity.entityId]) {
+              const deadEnemyId = entity.entityId;
+              
+              // Find all alive enemies first
+              const aliveEnemies = Object.keys(enemyCharacters)
+                .map(id => parseInt(id))
+                .filter(id => id !== deadEnemyId && game.hasEntity && game.hasEntity(id));
+              
+              // Retarget any hero that was targeting this dead enemy
+              for (let heroId = 0; heroId <= 3; heroId++) {
+                const target = game.getComponent(heroId, 'Target');
+                if (target && target.entity === deadEnemyId) {
+                  // Pick a random alive enemy, or the new one we'll spawn
+                  if (aliveEnemies.length > 0) {
+                    const newTarget = aliveEnemies[Math.floor(Math.random() * aliveEnemies.length)];
+                    game.setComponentField(heroId, 'Target', 'entity', newTarget);
+                  }
+                }
+              }
+              
               // Remove the dead enemy
-              game.removeEntity(entity.entityId);
+              game.removeEntity(deadEnemyId);
               
               // Spawn a new enemy to replace it (unless game is over)
               if (!gameState.gameOver && gameState.enemiesDefeated < 1000) {
-                spawnEnemy();
+                const newEnemyId = spawnEnemy();
+                
+                // If any hero has no valid target, give them this new enemy
+                for (let heroId = 0; heroId <= 3; heroId++) {
+                  const target = game.getComponent(heroId, 'Target');
+                  if (!target || !target.entity || target.entity === deadEnemyId) {
+                    game.setComponentField(heroId, 'Target', 'entity', newEnemyId);
+                  }
+                }
               }
               
               // Only log every 10th kill for summary
