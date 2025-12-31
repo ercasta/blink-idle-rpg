@@ -579,7 +579,7 @@
     <!-- Status Bar -->
     <div class="status-bar">
       <div class="status-item">
-        <span class="status-label">⏱️ Time:</span>
+        <span class="status-label">⏱️ Sim Time:</span>
         <span class="status-value" id="game-time">0.00s</span>
       </div>
       <div class="status-item">
@@ -883,9 +883,10 @@
               "value": { "type": "literal", "value": 30 }
             },
             {
-              "type": "emit",
+              "type": "schedule",
               "event": "CheckLevelUp",
-              "fields": { "character": { "type": "var", "name": "entity" } }
+              "source": { "type": "var", "name": "entity" },
+              "delay": { "type": "literal", "value": 0 }
             }
           ]
         },
@@ -958,9 +959,10 @@
               "value": { "type": "literal", "value": 1 }
             },
             {
-              "type": "emit",
+              "type": "schedule",
               "event": "LevelUp",
-              "fields": { "character": { "type": "var", "name": "character" } }
+              "source": { "type": "var", "name": "character" },
+              "delay": { "type": "literal", "value": 0 }
             }
           ]
         },
@@ -1640,6 +1642,14 @@
         for (const entity of output.entities) {
           if (entity.component === 'GameState') {
             gameState.enemiesDefeated = entity.fields.enemiesDefeated;
+            gameState.playerDeaths = entity.fields.playerDeaths || 0;
+          }
+        }
+      }
+      
+      if (output.eventType === 'PlayerDefeated') {
+        for (const entity of output.entities) {
+          if (entity.component === 'GameState') {
             gameState.playerDeaths = entity.fields.playerDeaths || 0;
           }
         }

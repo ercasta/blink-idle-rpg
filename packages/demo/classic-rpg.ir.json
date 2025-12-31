@@ -108,6 +108,7 @@
       "fields": [
         { "name": "currentWave", "type": "number", "default": 1 },
         { "name": "enemiesDefeated", "type": "number", "default": 0 },
+        { "name": "playerDeaths", "type": "number", "default": 0 },
         { "name": "bossDefeated", "type": "boolean", "default": false },
         { "name": "gameOver", "type": "boolean", "default": false },
         { "name": "victory", "type": "boolean", "default": false }
@@ -325,11 +326,10 @@
           "value": { "type": "literal", "value": 50 }
         },
         {
-          "type": "emit",
+          "type": "schedule",
           "event": "CheckLevelUp",
-          "fields": {
-            "character": { "type": "var", "name": "entity" }
-          }
+          "source": { "type": "var", "name": "entity" },
+          "delay": { "type": "literal", "value": 0 }
         }
       ]
     },
@@ -386,19 +386,16 @@
           "value": { "type": "literal", "value": 1 }
         },
         {
-          "type": "emit",
+          "type": "schedule",
           "event": "LevelUp",
-          "fields": {
-            "character": { "type": "var", "name": "character" },
-            "newLevel": { "type": "field", "entity": "character", "component": "Character", "field": "level" }
-          }
+          "source": { "type": "var", "name": "character" },
+          "delay": { "type": "literal", "value": 0 }
         },
         {
-          "type": "emit",
+          "type": "schedule",
           "event": "SkillChoice",
-          "fields": {
-            "character": { "type": "var", "name": "character" }
-          }
+          "source": { "type": "var", "name": "character" },
+          "delay": { "type": "literal", "value": 0 }
         }
       ]
     },
@@ -713,6 +710,27 @@
       ]
     },
     {
+      "id": 19,
+      "name": "count_player_death",
+      "trigger": {
+        "type": "event",
+        "event": "PlayerDefeated"
+      },
+      "filter": {
+        "components": ["GameState"]
+      },
+      "actions": [
+        {
+          "type": "modify",
+          "entity": { "type": "var", "name": "entity" },
+          "component": "GameState",
+          "field": "playerDeaths",
+          "op": "add",
+          "value": { "type": "literal", "value": 1 }
+        }
+      ]
+    },
+    {
       "id": 15,
       "name": "game_over_check",
       "trigger": {
@@ -898,7 +916,8 @@
     { "id": 9, "component": "Enemy", "event": "EnemySpawned" },
     { "id": 10, "component": "Mana", "event": "UseSkill" },
     { "id": 11, "component": "Skills", "event": "SkillAcquired" },
-    { "id": 12, "component": "ChoiceContext", "event": "SkillChoice" }
+    { "id": 12, "component": "ChoiceContext", "event": "SkillChoice" },
+    { "id": 13, "component": "GameState", "event": "PlayerDefeated" }
   ],
   "initial_state": {
     "entities": [
@@ -1039,7 +1058,7 @@
       {
         "id": 99,
         "components": {
-          "GameState": { "currentWave": 1, "enemiesDefeated": 0, "bossDefeated": false, "gameOver": false, "victory": false }
+          "GameState": { "currentWave": 1, "enemiesDefeated": 0, "playerDeaths": 0, "bossDefeated": false, "gameOver": false, "victory": false }
         }
       }
     ]
