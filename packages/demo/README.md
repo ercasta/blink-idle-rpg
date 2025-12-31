@@ -101,18 +101,36 @@ All demos are optimized for mobile devices with:
 
 ## Files
 
+### Source Files (in this directory)
+
 - `index.html` - Mobile-friendly demo launcher and landing page (default)
 - `combat-demo.html` - Simple combat demo UI
 - `rpg-demo.html` - Classic RPG demo UI
 - `blink-engine.bundle.js` - Standalone Blink engine bundle for browsers
-- **Game Files** (downloadable from demo pages):
-  - `simple-combat.brl` - BRL source for simple combat
-  - `simple-combat.ir.json` - Compiled IR for simple combat
-  - `simple-clicker.brl` - BRL source for clicker game
-  - `simple-clicker.ir.json` - Compiled IR for clicker game
-  - `classic-rpg.ir.json` - Compiled IR for classic RPG
-  - `party-config.bcl.zip` - ZIP containing all BCL strategy files
-  - Individual BCL files: `warrior-skills.bcl`, `mage-skills.bcl`, `rogue-skills.bcl`, `cleric-skills.bcl`, `party-config.bcl`
+
+### Game Files (built via CI/CD)
+
+Game files are sourced from `examples/` and bundled automatically via CI/CD:
+
+- **BRL Files** (from `examples/brl/`): `simple-combat.brl`, `simple-clicker.brl`
+- **IR Files** (from `examples/ir/`): `simple-combat.ir.json`, `simple-clicker.ir.json`, `classic-rpg.ir.json`
+- **BCL Files** (from `examples/bcl/`): `warrior-skills.bcl`, `mage-skills.bcl`, `rogue-skills.bcl`, `cleric-skills.bcl`, `party-config.bcl`
+- `party-config.bcl.zip` - ZIP archive of all BCL files (created during build)
+
+## Building the Demo Package
+
+The demo package is automatically built via GitHub Actions. You can:
+
+1. **Download from GitHub Actions**: Navigate to the "Build Demo Package" workflow run and download the `blink-demo-package` artifact
+2. **Build locally**: Run the following commands:
+   ```bash
+   mkdir demo-package
+   cp packages/demo/*.html packages/demo/*.js packages/demo/README.md demo-package/
+   cp examples/brl/*.brl demo-package/
+   cp examples/ir/*.ir.json demo-package/
+   cp examples/bcl/*.bcl demo-package/
+   cd examples/bcl && zip ../../demo-package/party-config.bcl.zip *.bcl
+   ```
 
 ## What's New
 

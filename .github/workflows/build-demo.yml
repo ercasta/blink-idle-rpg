@@ -1,0 +1,60 @@
+name: Build Demo Package
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-demo:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Create demo package directory
+        run: mkdir -p demo-package
+      
+      - name: Copy demo HTML and JS files
+        run: |
+          cp packages/demo/index.html demo-package/
+          cp packages/demo/combat-demo.html demo-package/
+          cp packages/demo/rpg-demo.html demo-package/
+          cp packages/demo/blink-engine.bundle.js demo-package/
+          cp packages/demo/README.md demo-package/
+      
+      - name: Copy game rule files from examples
+        run: |
+          # Copy BRL files
+          cp examples/brl/simple-combat.brl demo-package/
+          cp examples/brl/simple-clicker.brl demo-package/
+          
+          # Copy IR files
+          cp examples/ir/simple-combat.ir.json demo-package/
+          cp examples/ir/simple-clicker.ir.json demo-package/
+          cp examples/ir/classic-rpg.ir.json demo-package/
+          
+          # Copy BCL files
+          cp examples/bcl/warrior-skills.bcl demo-package/
+          cp examples/bcl/mage-skills.bcl demo-package/
+          cp examples/bcl/rogue-skills.bcl demo-package/
+          cp examples/bcl/cleric-skills.bcl demo-package/
+          cp examples/bcl/party-config.bcl demo-package/
+      
+      - name: Create BCL ZIP file
+        run: |
+          cd examples/bcl
+          zip ../../demo-package/party-config.bcl.zip *.bcl
+      
+      - name: List demo package contents
+        run: ls -la demo-package/
+      
+      - name: Upload demo package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: blink-demo-package
+          path: demo-package/
+          retention-days: 30

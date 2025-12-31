@@ -326,11 +326,10 @@
           "value": { "type": "literal", "value": 50 }
         },
         {
-          "type": "emit",
+          "type": "schedule",
           "event": "CheckLevelUp",
-          "fields": {
-            "character": { "type": "var", "name": "entity" }
-          }
+          "source": { "type": "var", "name": "entity" },
+          "delay": { "type": "literal", "value": 0 }
         }
       ]
     },
@@ -387,19 +386,16 @@
           "value": { "type": "literal", "value": 1 }
         },
         {
-          "type": "emit",
+          "type": "schedule",
           "event": "LevelUp",
-          "fields": {
-            "character": { "type": "var", "name": "character" },
-            "newLevel": { "type": "field", "entity": "character", "component": "Character", "field": "level" }
-          }
+          "source": { "type": "var", "name": "character" },
+          "delay": { "type": "literal", "value": 0 }
         },
         {
-          "type": "emit",
+          "type": "schedule",
           "event": "SkillChoice",
-          "fields": {
-            "character": { "type": "var", "name": "character" }
-          }
+          "source": { "type": "var", "name": "character" },
+          "delay": { "type": "literal", "value": 0 }
         }
       ]
     },
@@ -714,8 +710,8 @@
       ]
     },
     {
-      "id": 15,
-      "name": "game_over_check",
+      "id": 19,
+      "name": "count_player_death",
       "trigger": {
         "type": "event",
         "event": "PlayerDefeated"
@@ -731,7 +727,20 @@
           "field": "playerDeaths",
           "op": "add",
           "value": { "type": "literal", "value": 1 }
-        },
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "name": "game_over_check",
+      "trigger": {
+        "type": "event",
+        "event": "PlayerDefeated"
+      },
+      "filter": {
+        "components": ["GameState"]
+      },
+      "actions": [
         {
           "type": "modify",
           "entity": { "type": "var", "name": "entity" },
@@ -763,7 +772,7 @@
         "type": "binary",
         "op": "gte",
         "left": { "type": "field", "entity": "entity", "component": "GameState", "field": "enemiesDefeated" },
-        "right": { "type": "literal", "value": 2000 }
+        "right": { "type": "literal", "value": 5 }
       },
       "actions": [
         {
@@ -907,7 +916,8 @@
     { "id": 9, "component": "Enemy", "event": "EnemySpawned" },
     { "id": 10, "component": "Mana", "event": "UseSkill" },
     { "id": 11, "component": "Skills", "event": "SkillAcquired" },
-    { "id": 12, "component": "ChoiceContext", "event": "SkillChoice" }
+    { "id": 12, "component": "ChoiceContext", "event": "SkillChoice" },
+    { "id": 13, "component": "GameState", "event": "PlayerDefeated" }
   ],
   "initial_state": {
     "entities": [
