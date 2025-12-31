@@ -134,7 +134,7 @@ export class GameTest {
    * Set initial game state
    */
   setState(state: { entities: Array<{ id?: number | string; components: Record<string, ComponentData> }> }): this {
-    this.game.setInitialState(state as { entities: Array<{ id?: number | string; components: Record<string, ComponentData> }> });
+    this.game.setInitialState(state);
     return this;
   }
   

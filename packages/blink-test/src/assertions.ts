@@ -91,14 +91,6 @@ export class ExpectEntity {
    * Assert entity exists
    */
   toExist(): this {
-    const entities = this.game.query();
-    const exists = entities.some(id => {
-      // Check if the entity has any components
-      const state = this.game.getState();
-      return state.entities.has(this.entityId);
-    });
-    
-    // Actually we need to check via component access
     const state = this.game.getState();
     const entityExists = state.entities.has(this.entityId);
     

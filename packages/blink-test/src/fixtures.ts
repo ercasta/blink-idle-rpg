@@ -285,10 +285,9 @@ export function createCombatScenario(
   
   // Create party entities
   for (const fixture of partyFixtures) {
-    const id = fixture.id ?? test.createEntity();
-    if (fixture.id !== undefined) {
-      test.createEntity(fixture.id);
-    }
+    const id = fixture.id !== undefined 
+      ? test.createEntity(fixture.id) 
+      : test.createEntity();
     for (const [compName, compData] of Object.entries(fixture.components)) {
       test.addComponent(id, compName, compData);
     }
@@ -297,10 +296,9 @@ export function createCombatScenario(
   
   // Create enemy entities
   for (const fixture of enemyFixtures) {
-    const id = fixture.id ?? test.createEntity();
-    if (fixture.id !== undefined) {
-      test.createEntity(fixture.id);
-    }
+    const id = fixture.id !== undefined 
+      ? test.createEntity(fixture.id) 
+      : test.createEntity();
     for (const [compName, compData] of Object.entries(fixture.components)) {
       test.addComponent(id, compName, compData);
     }
