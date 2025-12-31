@@ -561,6 +561,15 @@ export class BlinkGame {
       eventsProcessed++;
     }
     
+    // If we hit the event limit and there are still events before targetTime,
+    // sync currentSimulationTime to where we actually got to prevent "hanging"
+    if (eventsProcessed >= this.options.maxEventsPerFrame && this.timeline.hasEvents()) {
+      const nextEvent = this.timeline.peek();
+      if (nextEvent && nextEvent.time <= targetTime) {
+        this.currentSimulationTime = this.timeline.getTime();
+      }
+    }
+    
     // Check if simulation is complete
     if (!this.timeline.hasEvents()) {
       this.isRunning = false;
