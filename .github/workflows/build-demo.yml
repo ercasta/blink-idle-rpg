@@ -7,6 +7,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build-demo:
     runs-on: ubuntu-latest
@@ -46,8 +49,13 @@ jobs:
       
       - name: Create BCL ZIP file
         run: |
+          set -e
           cd examples/bcl
           zip ../../demo-package/party-config.bcl.zip *.bcl
+          if [ ! -f ../../demo-package/party-config.bcl.zip ]; then
+            echo "Error: ZIP file was not created"
+            exit 1
+          fi
       
       - name: List demo package contents
         run: ls -la demo-package/
