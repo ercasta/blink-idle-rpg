@@ -1,7 +1,8 @@
 # Browser Compiler Evaluation: Making BRL/BCL Accessible to Players
 
 **Date**: 2025-12-31  
-**Status**: Proposal  
+**Status**: Accepted  
+**Decision**: Option 1 - Compile Rust Compiler to WebAssembly (WASM)  
 **Related**: [IR Decision](ir-decision.md), [Development Tracks](../DEVELOPMENT_TRACKS.md)
 
 ## Problem Statement
@@ -50,7 +51,7 @@ Currently, the BRL/BCL compiler is implemented in Rust. For players who want to:
 
 ## Options Evaluated
 
-### Option 1: Compile Rust Compiler to WebAssembly (WASM)
+### Option 1: Compile Rust Compiler to WebAssembly (WASM) ✅ CHOSEN
 
 Compile the existing Rust compiler to WASM and load it in the browser.
 
@@ -334,122 +335,148 @@ Implement TypeScript compiler for development/preview, use WASM for production c
 
 ---
 
-## Recommendation: Option 3 (BCL-Only TypeScript Compiler)
+## Decision: Option 1 (Compile Rust Compiler to WebAssembly)
+
+> **Decision made**: After evaluating all options, Option 1 (WASM compilation) was selected to avoid maintaining multiple compiler implementations.
 
 ### Rationale
 
-1. **Audience Separation**: Game developers (BRL) and players (BCL) have different needs
-   - Game developers: Full toolchain, IDE support, complex rules → Rust is fine
-   - Players: Browser-only, simple choices, build management → TypeScript is ideal
+1. **Single Codebase**: Maintaining one compiler (Rust) eliminates synchronization issues
+   - No risk of semantic divergence between implementations
+   - All bug fixes automatically apply to both native and browser
+   - One test suite validates all platforms
 
-2. **BCL is Simpler**: BCL is explicitly a subset of BRL
-   - No component definitions
-   - No entity creation/deletion
-   - No event scheduling
-   - Just read-only queries and choice functions
-   - Easier to implement correctly
+2. **BCL Context Awareness**: BCL must understand the calling BRL rule context
+   - BCL needs to know what types/interfaces the caller expects
+   - The Rust compiler already handles this context properly
+   - Duplicating this logic in TypeScript would be error-prone
 
-3. **Better Player Experience**: Can optimize error messages and UX for players
-   - "You cannot modify Health.current in BCL" vs generic parse error
-   - Auto-complete for valid BCL constructs
-   - Preview integration in browser
+3. **Guaranteed Correctness**: Same compiler = identical behavior
+   - No subtle differences in parsing or type checking
+   - Players and game developers see exactly the same errors
+   - IR output is byte-for-byte identical
 
-4. **Build Collection System**: Enables key player features
-   - Save/load builds locally
-   - Export/import build collections
-   - Share builds via URLs
-   - Offline build management
+4. **Future-Proof**: Language changes only need one implementation
+   - New BCL features automatically available in browser
+   - No lag between native and browser compiler capabilities
 
-5. **Maintenance Burden is Acceptable**: BCL grammar is stable and small
-   - Changes are infrequent
-   - Test suite ensures parity
-   - Clear contract (BCL spec)
+### Trade-offs Accepted
+
+- **Bundle Size**: ~500KB-2MB (acceptable for modern web)
+- **Initial Load**: WASM compilation delay (can be mitigated with caching)
+- **Debugging**: Less visibility in browser DevTools (acceptable trade-off)
 
 ### Implementation Plan
 
-#### Phase 1: Core BCL Compiler (Week 1-2)
+#### Phase 1: WASM Build Configuration (Days 1-3)
 
 ```
-packages/blink-compiler-bcl/
-├── package.json
-├── tsconfig.json
+src/compiler/
+├── Cargo.toml           # Add wasm-bindgen, cdylib target
 ├── src/
-│   ├── index.ts           # Public API
-│   ├── lexer/
-│   │   ├── Lexer.ts       # Token generation
-│   │   └── tokens.ts      # Token types
-│   ├── parser/
-│   │   ├── Parser.ts      # AST construction
-│   │   └── ast.ts         # AST types
-│   ├── analyzer/
-│   │   ├── Analyzer.ts    # BCL validation
-│   │   └── types.ts       # Type system
-│   ├── ir/
-│   │   ├── Generator.ts   # IR generation
-│   │   └── types.ts       # IR types
-│   └── errors/
-│       └── errors.ts      # Player-friendly errors
-├── tests/
-│   ├── lexer.test.ts
-│   ├── parser.test.ts
-│   ├── analyzer.test.ts
-│   └── integration.test.ts
+│   ├── lib.rs           # Add wasm_bindgen exports
+│   └── wasm.rs          # WASM-specific bindings (NEW)
 ```
 
-#### Phase 2: Build Collection System (Week 2-3)
+**Cargo.toml additions:**
+```toml
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wasm-bindgen = "0.2.95"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+console_error_panic_hook = "0.1"
+wee_alloc = "0.4"
+
+[profile.release]
+opt-level = "z"  # Optimize for size
+lto = true
+```
+
+#### Phase 2: JavaScript Bindings (Days 4-8)
+
+```typescript
+// packages/blink-compiler-wasm/src/index.ts
+export interface CompilerResult {
+  success: boolean;
+  ir?: IRModule;
+  errors?: CompileError[];
+}
+
+export async function initCompiler(): Promise<Compiler>;
+
+export interface Compiler {
+  compile(source: string): CompilerResult;
+  validate(source: string): ValidationResult;
+  getVersion(): string;
+}
+```
+
+#### Phase 3: Browser Integration (Days 9-13)
 
 ```
-packages/blink-builds/
+packages/blink-compiler-wasm/
 ├── package.json
 ├── src/
-│   ├── index.ts           # Public API
-│   ├── Collection.ts      # Build collection manager
-│   ├── Build.ts           # Individual build
-│   ├── storage/
-│   │   ├── LocalStorage.ts
-│   │   ├── IndexedDB.ts
-│   │   └── Export.ts
-│   └── sharing/
-│       ├── URLSharing.ts
-│       └── FileSharing.ts
+│   ├── index.ts         # Public API
+│   ├── loader.ts        # WASM loading/caching
+│   └── types.ts         # TypeScript types
+├── wasm/
+│   └── blink_compiler_bg.wasm  # Generated
+└── dist/
+    └── index.js         # Bundled output
 ```
 
-#### Phase 3: Integration & Demo (Week 3-4)
+#### Phase 4: Size Optimization & Testing (Days 14-18)
 
-- Integrate BCL compiler with JS engine
-- Create demo build editor
-- Add to existing demo page
-- Documentation
+- Apply `wasm-opt` for further size reduction
+- Implement lazy loading strategy
+- Add caching with Service Workers
+- Cross-browser testing
+- Performance benchmarking
 
 ### API Design
 
 ```typescript
-// BCL Compiler
-import { BCLCompiler, CompileResult } from '@blink/compiler-bcl';
+// Initialize compiler (async, loads WASM)
+import { initCompiler } from '@blink/compiler-wasm';
 
-const compiler = new BCLCompiler();
+const compiler = await initCompiler();
 
 // Compile BCL source
-const result: CompileResult = compiler.compile(`
+const result = compiler.compile(`
   choice fn select_target(attacker: Character, enemies: list): id {
     return find_weakest(enemies)
   }
 `);
 
 if (result.success) {
-  // Use with engine
+  // Use compiled IR with engine
   game.loadChoices(result.ir);
 } else {
   // Show errors to player
   console.log(result.errors);
 }
 
-// Build Collection
+// Validate without full compilation
+const validation = compiler.validate(source);
+```
+
+### Build Collection System
+
+The build collection system remains the same regardless of compiler implementation:
+
+```typescript
+// packages/blink-builds/
 import { BuildCollection } from '@blink/builds';
+import { initCompiler } from '@blink/compiler-wasm';
 
-const collection = new BuildCollection();
+const compiler = await initCompiler();
+const collection = new BuildCollection(compiler);
 
-// Add a build
+// Add a build (compiles and stores)
 const build = await collection.addBuild({
   name: "Aggressive Warrior",
   source: "choice fn select_target...",
@@ -458,18 +485,19 @@ const build = await collection.addBuild({
 // Export collection
 const exportData = collection.export();
 
-// Share via URL
+// Share via URL  
 const shareUrl = collection.getShareUrl(build.id);
 ```
 
 ### Success Criteria
 
-1. **Functional**: BCL compilation in browser produces valid IR
-2. **Performance**: Compilation < 100ms for typical builds
-3. **Bundle Size**: < 80KB gzipped
-4. **Error Quality**: Player-friendly error messages
-5. **Parity**: Same IR output as Rust compiler for valid BCL
-6. **Offline**: Works completely offline after initial load
+1. **Functional**: Full BRL/BCL compilation in browser produces valid IR
+2. **Performance**: Compilation < 200ms for typical builds (including WASM overhead)
+3. **Bundle Size**: < 1.5MB gzipped (acceptable for WASM)
+4. **Error Quality**: Same error messages as native compiler
+5. **Parity**: Identical IR output (guaranteed by single codebase)
+6. **Offline**: Works completely offline after initial WASM load
+7. **Caching**: WASM module cached for instant subsequent loads
 
 ---
 
@@ -510,34 +538,33 @@ Could provide UI to select from pre-built choices.
 
 ## Conclusion
 
-**Recommended Approach**: Option 3 - BCL-Only TypeScript Compiler
+**Chosen Approach**: Option 1 - Compile Rust Compiler to WebAssembly (WASM)
 
 This approach provides:
-- ✅ Browser-native compilation for players
-- ✅ Small bundle size
-- ✅ Excellent developer experience
-- ✅ Build collection system
-- ✅ Clear separation between game developer and player workflows
-- ✅ Manageable maintenance burden
+- ✅ Single codebase to maintain
+- ✅ Guaranteed identical behavior between native and browser
+- ✅ Automatic synchronization when compiler updates
+- ✅ BCL context awareness (understands caller BRL rules)
+- ✅ Reuse of existing test suite
+- ✅ No risk of semantic divergence
 
-The key insight is that **players only need BCL**, and BCL is simpler than BRL. By focusing on BCL only, we can deliver a great player experience with reasonable effort while keeping the full BRL compiler in Rust for game developers who already have tooling.
+The key insight is that **avoiding multiple implementations outweighs bundle size concerns**. Modern web applications regularly load larger assets, and WASM can be efficiently cached. The maintenance cost of keeping two compilers in sync would exceed the one-time effort of WASM integration.
 
 ---
 
 ## Next Steps
 
-If this proposal is accepted:
-
-1. [ ] Create `packages/blink-compiler-bcl` project structure
-2. [ ] Implement BCL lexer
-3. [ ] Implement BCL parser
-4. [ ] Implement BCL analyzer (with write-violation detection)
-5. [ ] Implement IR generator
-6. [ ] Create parity test suite (compare TS vs Rust output)
+1. [ ] Add WASM target configuration to `src/compiler/Cargo.toml`
+2. [ ] Add `wasm-bindgen` dependencies and exports
+3. [ ] Create WASM-specific bindings module (`src/compiler/src/wasm.rs`)
+4. [ ] Create `packages/blink-compiler-wasm` TypeScript wrapper
+5. [ ] Implement WASM loading and caching strategy
+6. [ ] Apply size optimizations (`wasm-opt`, LTO)
 7. [ ] Implement build collection system
 8. [ ] Create demo build editor
-9. [ ] Update documentation
-10. [ ] Integrate with demo page
+9. [ ] Cross-browser testing
+10. [ ] Update documentation
+11. [ ] Integrate with demo page
 
 ---
 
