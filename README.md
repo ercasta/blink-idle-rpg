@@ -27,7 +27,17 @@ This project is in early development with parallel work streams:
 
 ### Try the Demo
 
-Run the combat demo to see the engine in action:
+#### Option 1: Open directly in your browser (No setup required!)
+
+Simply open the demo file directly - works on mobile and desktop:
+
+1. Navigate to `packages/demo/`
+2. Open `demo.html` in your browser (double-click or right-click → Open with browser)
+3. Choose a demo and start playing!
+
+#### Option 2: Use a local web server
+
+If you prefer using a web server:
 
 ```bash
 cd packages/demo
