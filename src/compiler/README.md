@@ -30,10 +30,27 @@ The Blink Compiler parses Blink Rule Language (BRL) source code and produces an 
 
 ## Building
 
+### Prerequisites
+
+**Windows:**
+- Install Rust from [https://rustup.rs/](https://rustup.rs/)
+  - Download and run `rustup-init.exe`
+  - Follow the installer prompts (default options work fine)
+  - Restart your terminal/command prompt after installation
+- Verify installation: `cargo --version`
+
+**Linux/macOS:**
+- Install Rust: `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
+- Verify installation: `cargo --version`
+
+### Build Commands
+
 ```bash
 cd src/compiler
 cargo build
 ```
+
+**Windows users:** Commands work in both Command Prompt and PowerShell. Use the same syntax as shown above.
 
 ## Usage
 
@@ -51,6 +68,15 @@ blink-compiler tokens -i game.brl
 
 # Debug: view AST
 blink-compiler ast -i game.brl
+```
+
+**Windows Path Examples:**
+```cmd
+# Using backslashes (Command Prompt style)
+blink-compiler compile -i ..\..\examples\brl\simple-combat.brl -o output.ir.json --pretty
+
+# Using forward slashes (works in PowerShell and Command Prompt)
+blink-compiler compile -i ../../examples/brl/simple-combat.brl -o output.ir.json --pretty
 ```
 
 ### Library
