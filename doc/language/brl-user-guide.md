@@ -632,12 +632,12 @@ component Stats {
     constitution: integer
 }
 
-fn calculate_max_health(stats: Stats): integer {
-    return 100 + (stats.Stats.constitution * 10)
+fn calculate_max_health(character: Stats): integer {
+    return 100 + (character.Stats.constitution * 10)
 }
 
-fn calculate_damage(stats: Stats, weapon_damage: integer): integer {
-    let str_bonus = stats.Stats.strength / 2
+fn calculate_damage(character: Stats, weapon_damage: integer): integer {
+    let str_bonus = character.Stats.strength / 2
     return weapon_damage + str_bonus
 }
 
@@ -1111,9 +1111,9 @@ component ActionChosen {
 
 // === FUNCTIONS ===
 
-fn calculate_damage(attacker: Stats, defender: Stats): integer {
-    let base_damage = attacker.Stats.attack
-    let defense = defender.Stats.defense
+fn calculate_damage(attacker_entity: Stats, defender_entity: Stats): integer {
+    let base_damage = attacker_entity.Stats.attack
+    let defense = defender_entity.Stats.defense
     let damage = base_damage - (defense / 2)
     if damage < 1 {
         return 1
@@ -1230,9 +1230,9 @@ fn count_items(character: id): integer {
     return count
 }
 
-fn can_stack(item1: Item, item2: Item): boolean {
-    return item1.Item.name == item2.Item.name &&
-           item1.Item.type == item2.Item.type
+fn can_stack(first_item: Item, second_item: Item): boolean {
+    return first_item.Item.name == second_item.Item.name &&
+           first_item.Item.type == second_item.Item.type
 }
 
 // === RULES ===
