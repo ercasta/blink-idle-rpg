@@ -1159,9 +1159,14 @@
         eventsProcessed++;
       }
       
-      // Sync currentSimulationTime to where we actually got to, not where we wanted to go
-      // This prevents the "hanging" effect when hitting maxEventsPerFrame limit
-      this.currentSimulationTime = this.timeline.getTime();
+      // If we hit the event limit and there are still events before targetTime,
+      // sync currentSimulationTime to where we actually got to prevent "hanging"
+      if (eventsProcessed >= this.options.maxEventsPerFrame && this.timeline.hasEvents()) {
+        const nextEvent = this.timeline.peek();
+        if (nextEvent && nextEvent.time <= targetTime) {
+          this.currentSimulationTime = this.timeline.getTime();
+        }
+      }
       
       if (!this.timeline.hasEvents()) {
         this.isRunning = false;
