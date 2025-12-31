@@ -8,6 +8,7 @@ Example Blink Rule Language (BRL) source files demonstrating language features.
 |------|-------------|----------------------|
 | `simple-clicker.brl` | Minimal clicker game | Components, rules, trackers |
 | `simple-combat.brl` | Basic combat system | Functions, conditions, scheduling |
+| `classic-rpg.brl` | Classic RPG with classes and skills | Multiple components, complex rules, game state |
 
 ## Compiling Examples
 

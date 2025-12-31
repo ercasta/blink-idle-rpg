@@ -12,6 +12,7 @@ This directory contains example Intermediate Representation (IR) files that can 
 |------|-------------|------------|
 | `simple-clicker.ir.json` | Minimal clicker game | Beginner |
 | `simple-combat.ir.json` | Basic combat with attacks and health | Intermediate |
+| `classic-rpg.ir.json` | Classic RPG with classes, skills, and game state | Advanced |
 
 ## Usage
 
