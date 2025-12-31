@@ -466,18 +466,33 @@
             }
           },
           "filter": {
-            "components": ["Attack", "Target"]
+            "components": ["Attack", "Target", "Health"]
           },
           "condition": {
             "type": "binary",
-            "op": "neq",
-            "left": { 
-              "type": "field", 
-              "entity": "attacker", 
-              "component": "Target", 
-              "field": "entity" 
+            "op": "and",
+            "left": {
+              "type": "binary",
+              "op": "neq",
+              "left": { 
+                "type": "field", 
+                "entity": "attacker", 
+                "component": "Target", 
+                "field": "entity" 
+              },
+              "right": { "type": "literal", "value": null }
             },
-            "right": { "type": "literal", "value": null }
+            "right": {
+              "type": "binary",
+              "op": "gt",
+              "left": {
+                "type": "field",
+                "entity": "attacker",
+                "component": "Health",
+                "field": "current"
+              },
+              "right": { "type": "literal", "value": 0 }
+            }
           },
           "actions": [
             {
