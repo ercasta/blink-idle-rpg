@@ -1551,11 +1551,19 @@
                 const team = game.getComponent(enemyId, 'Team');
                 if (team && !team.isPlayer) {
                   const target = game.getComponent(enemyId, 'Target');
+                  const health = game.getComponent(enemyId, 'Health');
+                  const isEnemyAlive = health && health.current > 0;
+                  
                   if (target && target.entity === deadEntityId) {
                     // Retarget to a random alive hero if any exist
                     if (aliveHeroes.length > 0) {
                       const newTarget = aliveHeroes[Math.floor(Math.random() * aliveHeroes.length)];
                       game.setComponentField(enemyId, 'Target', 'entity', newTarget);
+                      
+                      // Schedule a new attack to prevent enemy from stopping
+                      if (isEnemyAlive) {
+                        game.scheduleEvent('DoAttack', 0.1, { source: enemyId });
+                      }
                     } else {
                       // No heroes left, game over
                       game.setComponentField(enemyId, 'Target', 'entity', null);
@@ -1585,30 +1593,35 @@
                 }
               }
               
-              // Retarget any hero that was targeting this dead enemy
-              for (let heroId = 0; heroId <= 3; heroId++) {
-                const target = game.getComponent(heroId, 'Target');
-                if (target && target.entity === deadEntityId) {
-                  // Pick a random alive enemy, or the new one we'll spawn
-                  if (aliveEnemies.length > 0) {
-                    const newTarget = aliveEnemies[Math.floor(Math.random() * aliveEnemies.length)];
-                    game.setComponentField(heroId, 'Target', 'entity', newTarget);
-                  }
-                }
-              }
-              
-              // Remove the dead enemy
+              // Remove the dead enemy first
               game.removeEntity(deadEntityId);
               
               // Spawn a new enemy to replace it (unless game is over)
+              let newEnemyId = null;
               if (!gameState.gameOver && gameState.enemiesDefeated < 1000) {
-                const newEnemyId = spawnEnemy();
+                newEnemyId = spawnEnemy();
+              }
+              
+              // Retarget any hero that was targeting this dead enemy
+              // Also schedule new attack events to prevent heroes from stopping
+              for (let heroId = 0; heroId <= 3; heroId++) {
+                const target = game.getComponent(heroId, 'Target');
+                const health = game.getComponent(heroId, 'Health');
+                const isAlive = health && health.current > 0;
                 
-                // If any hero has no valid target, give them this new enemy
-                for (let heroId = 0; heroId <= 3; heroId++) {
-                  const target = game.getComponent(heroId, 'Target');
-                  if (!target || !target.entity || target.entity === deadEntityId) {
+                if (target && target.entity === deadEntityId) {
+                  // Retarget to the new enemy if spawned, or a random alive enemy
+                  if (newEnemyId !== null) {
                     game.setComponentField(heroId, 'Target', 'entity', newEnemyId);
+                  } else if (aliveEnemies.length > 0) {
+                    const randomTarget = aliveEnemies[Math.floor(Math.random() * aliveEnemies.length)];
+                    game.setComponentField(heroId, 'Target', 'entity', randomTarget);
+                  }
+                  
+                  // Schedule a new attack to prevent hero from stopping
+                  // This ensures the attack chain continues even if the previous attack failed
+                  if (isAlive) {
+                    game.scheduleEvent('DoAttack', 0.1, { source: heroId });
                   }
                 }
               }
