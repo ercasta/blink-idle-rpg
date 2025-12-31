@@ -1401,10 +1401,12 @@
       
       if (output.eventType === 'LevelUp') {
         // Only log level ups, they're important milestones
+        // Update character data first to get the latest level
+        updateCharacterData();
         for (const entity of output.entities) {
           const char = playerCharacters[entity.entityId];
           if (char) {
-            addLogEntry('levelup', `🎉 ${char.name} leveled up to Level ${entity.fields.level}!`);
+            addLogEntry('levelup', `🎉 ${char.name} leveled up to Level ${char.level}!`);
           }
         }
       }
