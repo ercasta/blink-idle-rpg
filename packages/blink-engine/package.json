@@ -8,7 +8,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "test": "node --test dist/index.test.js",
+    "test": "node --test dist/index.test.js dist/classic-rpg.test.js",
     "lint": "tsc --noEmit"
   },
   "keywords": [

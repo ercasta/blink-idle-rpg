@@ -108,8 +108,13 @@ export class RuleExecutor {
     store: Store,
     event: ScheduledEvent
   ): EntityId[] {
-    // If we have a source entity from the event, use that
-    if (event.source !== undefined && store.hasEntity(event.source)) {
+    // Check if this rule binds the source entity explicitly
+    // If it does, we should only process the source entity
+    const bindsSource = rule.trigger.bindings && 
+      Object.values(rule.trigger.bindings).includes('source');
+    
+    // If we have a source entity and the rule binds from source, use that
+    if (bindsSource && event.source !== undefined && store.hasEntity(event.source)) {
       const components = rule.filter?.components || [];
       let hasAll = true;
       for (const comp of components) {
@@ -122,6 +127,34 @@ export class RuleExecutor {
         return [event.source];
       }
       return [];
+    }
+
+    // Check if the rule binds from event.fields
+    // If it does, we should only process the bound entity
+    if (rule.trigger.bindings && event.fields) {
+      for (const source of Object.values(rule.trigger.bindings)) {
+        // Skip standard bindings
+        if (source === 'source' || source === 'target') continue;
+        
+        // Check if this binding source exists in event.fields
+        if (source in event.fields) {
+          const boundEntityId = event.fields[source];
+          if (typeof boundEntityId === 'number' && store.hasEntity(boundEntityId)) {
+            const components = rule.filter?.components || [];
+            let hasAll = true;
+            for (const comp of components) {
+              if (!store.hasComponent(boundEntityId, comp)) {
+                hasAll = false;
+                break;
+              }
+            }
+            if (hasAll) {
+              return [boundEntityId];
+            }
+            return [];
+          }
+        }
+      }
     }
 
     // Otherwise query for entities with required components
@@ -150,6 +183,13 @@ export class RuleExecutor {
           bindings.set(varName, event.source);
         } else if (source === 'target' && event.target !== undefined) {
           bindings.set(varName, event.target);
+        } else if (event.fields && source in event.fields) {
+          // Also check event.fields for the binding source
+          // This allows emit actions with fields to work with trigger bindings
+          const fieldValue = event.fields[source];
+          if (typeof fieldValue === 'number') {
+            bindings.set(varName, fieldValue);
+          }
         }
       }
     }
