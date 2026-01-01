@@ -5,15 +5,15 @@ services:
       dockerfile: Dockerfile
     ports:
       - "3000:3000"
+    env_file:
+      - .env
     volumes:
-      # Map BRL files so you can edit them on the host
-      - ./examples/brl:/app/examples/brl
-      # Map BCL files so you can edit them on the host
-      - ./examples/bcl:/app/examples/bcl
-      # Map IR files so you can see the compiled output
-      - ./examples/ir:/app/examples/ir
-      # Optional: Map demos if you want to modify them
-      - ./examples/demos:/app/examples/demos
+      # Use a single project root to derive all example paths (configurable via $PROJECT_ROOT)
+      # Default PROJECT_ROOT is the compose file directory (.) so these fall back to ./examples/*
+      - ${PROJECT_ROOT:-.}/examples/brl:/app/examples/brl
+      - ${PROJECT_ROOT:-.}/examples/bcl:/app/examples/bcl
+      - ${PROJECT_ROOT:-.}/examples/ir:/app/examples/ir
+      - ${PROJECT_ROOT:-.}/examples/demos:/app/examples/demos
     environment:
       - NODE_ENV=production
     restart: unless-stopped

@@ -88,6 +88,32 @@ The Docker setup uses volume mapping to allow you to edit game files on your hos
 
 4. **Refresh your browser** to see the changes
 
+### Customizing Volume Paths (single project root)
+
+Instead of setting multiple host paths, you can define a single `PROJECT_ROOT` environment variable that points to the repository root (or any folder containing the `examples/` subfolder). The compose file derives the individual mounts from this root, so you don't need to edit `docker-compose.yml`.
+
+Create a `.env` file in the repository root with:
+
+```
+# Path to the project root containing the `examples/` folder. Default is the compose directory (.)
+PROJECT_ROOT=./
+
+# Example: on Windows use an absolute path
+# PROJECT_ROOT=C:/Users/you/path/to/blink-idle-rpg
+```
+
+Notes:
+- Docker Compose automatically loads a `.env` file located next to `docker-compose.yml`. You can also export `PROJECT_ROOT` in your shell before running `docker compose up`.
+- On Windows, prefer using absolute paths (e.g. `C:/path/to/repo`) to avoid path-translation issues.
+- After changing `.env`, restart the containers:
+
+```bash
+docker-compose down
+docker-compose up --build
+```
+
+Using `PROJECT_ROOT` keeps the shared `docker-compose.yml` unchanged across contributors while letting each user point to their preferred local checkout path.
+
 ### Example Workflow
 
 Here's a complete example of modifying a game rule:

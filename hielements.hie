@@ -1,0 +1,222 @@
+import files
+
+## ============================================================================
+## BLINK IDLE RPG - Architecture Specification
+## ============================================================================
+## 
+## This Hielements specification defines and enforces the structure of the
+## Blink Idle RPG project. It ensures documentation, code, and architecture
+## stay aligned.
+##
+## Run checks: hielements check hielements.hie
+## Run all:    hielements run hielements.hie
+##
+## ============================================================================
+
+element blink_project:
+    
+    ## Project root files
+    scope root = files.folder_selector('.')
+    check files.exists(root, 'README.md')
+    check files.exists(root, 'AGENTS.md')
+    check files.exists(root, 'LICENSE')
+    check files.exists(root, 'hielements.hie')
+    
+    ## ========================================================================
+    ## DOCUMENTATION
+    ## ========================================================================
+    ## All project documentation lives under doc/
+    
+    element documentation:
+        scope docs = files.folder_selector('doc/')
+        check files.exists(docs, 'summary.md')
+        check files.exists(docs, 'README.md')
+        check files.exists(docs, 'DEVELOPMENT_TRACKS.md')
+        
+        ## --------------------------------------------------------------------
+        ## Language Documentation
+        ## BRL and BCL language specifications
+        ## --------------------------------------------------------------------
+        element language_docs:
+            scope lang_docs = files.folder_selector('doc/language/')
+            check files.exists(lang_docs, 'README.md')
+            check files.exists(lang_docs, 'brl-specification.md')
+            check files.exists(lang_docs, 'bcl-specification.md')
+            
+            element examples:
+                scope examples = files.folder_selector('doc/language/examples/')
+                check files.exists(examples, 'README.md')
+        
+        ## --------------------------------------------------------------------
+        ## Engine Documentation
+        ## Core engine architecture and browser implementation
+        ## --------------------------------------------------------------------
+        element engine_docs:
+            scope eng_docs = files.folder_selector('doc/engine/')
+            check files.exists(eng_docs, 'README.md')
+            check files.exists(eng_docs, 'architecture.md')
+            check files.exists(eng_docs, 'browser-engine.md')
+            
+            element api_docs:
+                scope api_docs = files.folder_selector('doc/engine/api/')
+                # API docs will be added as implementation progresses
+        
+        ## --------------------------------------------------------------------
+        ## Architecture Documentation
+        ## Decision records and rationale
+        ## --------------------------------------------------------------------
+        element architecture_docs:
+            scope arch_docs = files.folder_selector('doc/architecture/')
+            check files.exists(arch_docs, 'ir-decision.md')
+        
+        ## --------------------------------------------------------------------
+        ## IR Specification
+        ## Central contract between compiler and all engines
+        ## --------------------------------------------------------------------
+        element ir_spec:
+            scope ir_doc = files.file_selector('doc/ir-specification.md')
+            check files.exists(ir_doc)
+        
+        ## --------------------------------------------------------------------
+        ## Hielements Documentation
+        ## How we use Hielements for this project
+        ## --------------------------------------------------------------------
+        element hielements_docs:
+            scope hie_docs = files.folder_selector('doc/hie/')
+            check files.exists(hie_docs, 'README.md')
+            check files.exists(hie_docs, 'language-reference.md')
+            check files.exists(hie_docs, 'blink-architecture.md')
+            check files.exists(hie_docs, 'writing-specs.md')
+    
+    ## ========================================================================
+    ## LANGUAGE SPECIFICATION
+    ## ========================================================================
+    ## Blink uses two domain-specific languages:
+    ## - BRL (Blink Rule Language) - for game developers
+    ## - BCL (Blink Choice Language) - for players (subset of BRL)
+    
+    element language:
+        
+        ## BRL - Blink Rule Language
+        ## Full language for game rules, components, events
+        element brl:
+            scope spec = files.file_selector('doc/language/brl-specification.md')
+            connection_point syntax_definition
+            check files.exists(spec)
+        
+        ## BCL - Blink Choice Language
+        ## Subset of BRL for player strategies
+        element bcl:
+            scope spec = files.file_selector('doc/language/bcl-specification.md')
+            connection_point syntax_definition
+            check files.exists(spec)
+    
+    ## ========================================================================
+    ## IMPLEMENTATION
+    ## ========================================================================
+    ## Source code for compiler, engine, runtime, and tools
+    ## Status: Planning phase - folders will be created as development starts
+    
+    ## --------------------------------------------------------------------
+    ## Blink IR Specification
+    ## Central contract between compiler and all engines
+    ## All engines depend ONLY on IR, not on each other
+    ## --------------------------------------------------------------------
+    element ir:
+        scope spec = files.file_selector('doc/ir-specification.md')
+        connection_point ir_contract
+        check files.exists(spec)
+    
+    ## --------------------------------------------------------------------
+    ## Compiler
+    ## Transforms BRL source code to Intermediate Representation
+    ## Technology: Rust
+    ## Depends on: BRL language spec
+    ## Outputs: Blink IR
+    ## --------------------------------------------------------------------
+    element compiler:
+        scope src = files.folder_selector('src/compiler/')
+        connection_point ir_output
+        # TODO: Enable when implementation starts
+        # check files.exists(src, 'Cargo.toml')
+        # check rust.compiles(src)
+    
+    ## --------------------------------------------------------------------
+    ## Rust Engine
+    ## Native Rust simulation runtime
+    ## Technology: Rust
+    ## Depends on: IR specification ONLY (not on compiler implementation)
+    ## --------------------------------------------------------------------
+    element rust_engine:
+        scope src = files.folder_selector('src/engines/rust/')
+        connection_point engine_api
+        
+        ## Timeline - event scheduling with hundredths precision
+        element timeline:
+            scope src = files.folder_selector('src/engines/rust/timeline/')
+        
+        ## ECS - Entity Component System storage
+        element ecs:
+            scope src = files.folder_selector('src/engines/rust/ecs/')
+        
+        ## Events - event types and processing
+        element events:
+            scope src = files.folder_selector('src/engines/rust/events/')
+        
+        ## Rules - rule matching and execution
+        element rules:
+            scope src = files.folder_selector('src/engines/rust/rules/')
+        
+        ## Trackers - game feedback for UI
+        element trackers:
+            scope src = files.folder_selector('src/engines/rust/trackers/')
+    
+    ## --------------------------------------------------------------------
+    ## JavaScript Engine
+    ## Pure TypeScript browser engine
+    ## Technology: TypeScript (NO WASM dependency on Rust Engine)
+    ## Depends on: IR specification ONLY
+    ## --------------------------------------------------------------------
+    element js_engine:
+        scope src = files.folder_selector('packages/blink-engine/')
+        connection_point js_api
+        # TODO: Enable when implementation starts
+        # check files.exists(src, 'package.json')
+        # check typescript.compiles(src)
+    
+    ## --------------------------------------------------------------------
+    ## Batch Engine
+    ## Headless high-throughput engine for testing and balance
+    ## Technology: Rust
+    ## Depends on: IR specification ONLY
+    ## --------------------------------------------------------------------
+    element batch_engine:
+        scope src = files.folder_selector('src/engines/batch/')
+        connection_point batch_api
+        # TODO: Enable when implementation starts
+        # check files.exists(src, 'Cargo.toml')
+    
+    ## --------------------------------------------------------------------
+    ## Developer Tools
+    ## LSP server and VS Code extension for BRL/BCL
+    ## Depends on: Language spec, compiler parser
+    ## --------------------------------------------------------------------
+    element devtools:
+        
+        ## Language Server Protocol implementation
+        element lsp:
+            scope src = files.folder_selector('tools/blink-lsp/')
+            connection_point lsp_api
+        
+        ## VS Code Extension
+        element vscode_extension:
+            scope src = files.folder_selector('tools/vscode-blink/')
+    
+    ## ========================================================================
+    ## CHANGE TRACKING
+    ## ========================================================================
+    ## Agent changelog for AI-assisted development
+    
+    element changelog:
+        scope logs = files.folder_selector('agent-changelog/')
+        # Changelog folder should exist for tracking changes
