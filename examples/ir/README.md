@@ -16,10 +16,11 @@ To generate the IR files locally, compile the BRL source files:
 cd src/compiler
 cargo build --release
 
-# Compile all examples
-./target/release/blink-compiler compile -i ../../examples/brl/simple-combat.brl -o ../../examples/ir/simple-combat.ir.json --pretty
-./target/release/blink-compiler compile -i ../../examples/brl/simple-clicker.brl -o ../../examples/ir/simple-clicker.ir.json --pretty
-./target/release/blink-compiler compile -i ../../examples/brl/classic-rpg.brl -o ../../examples/ir/classic-rpg.ir.json --pretty
+# Compile all BRL files
+for brl_file in ../../examples/brl/*.brl; do
+  filename=$(basename "$brl_file" .brl)
+  ./target/release/blink-compiler compile -i "$brl_file" -o "../../examples/ir/${filename}.ir.json" --pretty
+done
 ```
 
 **Windows:**
@@ -27,10 +28,10 @@ cargo build --release
 cd src\compiler
 cargo build --release
 
-REM Compile all examples
-.\target\release\blink-compiler.exe compile -i ..\..\examples\brl\simple-combat.brl -o ..\..\examples\ir\simple-combat.ir.json --pretty
-.\target\release\blink-compiler.exe compile -i ..\..\examples\brl\simple-clicker.brl -o ..\..\examples\ir\simple-clicker.ir.json --pretty
-.\target\release\blink-compiler.exe compile -i ..\..\examples\brl\classic-rpg.brl -o ..\..\examples\ir\classic-rpg.ir.json --pretty
+REM Compile all BRL files
+for %%f in (..\..\examples\brl\*.brl) do (
+  .\target\release\blink-compiler.exe compile -i "%%f" -o "..\..\examples\ir\%%~nf.ir.json" --pretty
+)
 ```
 
 ## Files
