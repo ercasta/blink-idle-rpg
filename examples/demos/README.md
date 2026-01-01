@@ -2,27 +2,14 @@
 
 Browser-based demos showcasing the Blink engine. **Works on mobile and desktop!**
 
-## 🚀 Quick Start (No Installation Required!)
+## 🚀 Quick Start
 
-**Simply open `index.html` in your browser!**
+To run the demos, you need to serve them using a local web server:
 
-1. Navigate to this folder (`packages/demo/`)
-2. Double-click `index.html` (or right-click → Open with your browser)
-3. Choose a demo and start playing!
-
-This works on:
-- 📱 Mobile phones (iOS, Android)
-- 💻 Desktop browsers (Chrome, Firefox, Safari, Edge)
-- 📟 Tablets
-
-## Alternative: Using a Web Server
-
-If you prefer running a local server:
-
-### Option 1: Using npx serve
+### Option 1: Using npx serve (Recommended)
 
 ```bash
-cd packages/demo
+cd examples/demos
 npx serve .
 ```
 
@@ -31,7 +18,7 @@ Then open http://localhost:3000 in your browser.
 ### Option 2: Using Python
 
 ```bash
-cd packages/demo
+cd examples/demos
 python -m http.server 8000
 ```
 
@@ -101,36 +88,26 @@ All demos are optimized for mobile devices with:
 
 ## Files
 
-### Source Files (in this directory)
+### Files in this directory
 
 - `index.html` - Mobile-friendly demo launcher and landing page (default)
 - `combat-demo.html` - Simple combat demo UI
 - `rpg-demo.html` - Classic RPG demo UI
 - `blink-engine.bundle.js` - Standalone Blink engine bundle for browsers
 
-### Game Files (built via CI/CD)
+### Game Files
 
-Game files are sourced from `examples/` and bundled automatically via CI/CD:
+The demos load game files from the sibling directories:
 
 - **BRL Files** (from `examples/brl/`): `simple-combat.brl`, `simple-clicker.brl`
 - **IR Files** (from `examples/ir/`): `simple-combat.ir.json`, `simple-clicker.ir.json`, `classic-rpg.ir.json`
 - **BCL Files** (from `examples/bcl/`): `warrior-skills.bcl`, `mage-skills.bcl`, `rogue-skills.bcl`, `cleric-skills.bcl`, `party-config.bcl`
-- `party-config.bcl.zip` - ZIP archive of all BCL files (created during build)
 
 ## Building the Demo Package
 
-The demo package is automatically built via GitHub Actions. You can:
+The demo package is automatically built via GitHub Actions for Windows and Linux. You can:
 
-1. **Download from GitHub Actions**: Navigate to the "Build Demo Package" workflow run and download the `blink-demo-package` artifact
-2. **Build locally**: Run the following commands:
-   ```bash
-   mkdir demo-package
-   cp packages/demo/*.html packages/demo/*.js packages/demo/README.md demo-package/
-   cp examples/brl/*.brl demo-package/
-   cp examples/ir/*.ir.json demo-package/
-   cp examples/bcl/*.bcl demo-package/
-   cd examples/bcl && zip ../../demo-package/party-config.bcl.zip *.bcl
-   ```
+1. **Download from GitHub Actions**: Navigate to the "Build Demo Package" workflow run and download the `blink-demo-package-windows` or `blink-demo-package-linux` artifact
 
 ## What's New
 
@@ -145,13 +122,14 @@ This makes it easy for interested players to learn how Blink games work and even
 
 ## Troubleshooting
 
-**Q: The demo doesn't work when I open it**
+**Q: The demo doesn't work when I serve it**
 - Make sure JavaScript is enabled in your browser
+- Check that you're accessing it through a web server (http://localhost:...) and not file://
 - Try opening in a different browser (Chrome, Firefox, Safari recommended)
 - Check the browser console for any errors (F12 → Console tab)
 
 **Q: Can I use these demos offline?**
-- Yes! The demo launcher and simple combat demo work completely offline
+- Yes, once you've served them locally with npx or python, they work offline
 - The RPG demo needs internet for the first load to fetch JSZip library, but works offline after that
 
 **Q: The game is too fast/slow**

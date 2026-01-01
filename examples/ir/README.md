@@ -1,10 +1,38 @@
 # Example IR Files
 
+**Note**: The IR files in this directory are **generated** from the corresponding BRL files in `examples/brl/`. They are not versioned in git and are created during the build process.
+
 This directory contains example Intermediate Representation (IR) files that can be used for:
 
 1. **Engine Development**: Test your engine implementation against known-good IR
 2. **Learning**: Understand the IR format by examining real examples
 3. **Integration Testing**: Verify engines produce consistent results
+
+## Generating IR Files
+
+To generate the IR files locally, compile the BRL source files:
+
+```bash
+cd src/compiler
+cargo build --release
+
+# Compile all BRL files
+for brl_file in ../../examples/brl/*.brl; do
+  filename=$(basename "$brl_file" .brl)
+  ./target/release/blink-compiler compile -i "$brl_file" -o "../../examples/ir/${filename}.ir.json" --pretty
+done
+```
+
+**Windows:**
+```cmd
+cd src\compiler
+cargo build --release
+
+REM Compile all BRL files
+for %%f in (..\..\examples\brl\*.brl) do (
+  .\target\release\blink-compiler.exe compile -i "%%f" -o "..\..\examples\ir\%%~nf.ir.json" --pretty
+)
+```
 
 ## Files
 

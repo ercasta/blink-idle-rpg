@@ -1,4 +1,4 @@
-name: Build Demo Package
+name: Build Demo Package (Linux)
 
 on:
   push:
@@ -13,23 +13,46 @@ permissions:
   contents: write
 
 jobs:
-  build-demo:
+  build-demo-linux:
     runs-on: ubuntu-latest
     
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
       
+      - name: Set up Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+      
+      - name: Build compiler
+        run: |
+          cd src/compiler
+          cargo build --release
+          echo "Compiler built successfully"
+      
+      - name: Compile BRL to IR
+        run: |
+          mkdir -p examples/ir
+          cd src/compiler
+          # Compile all BRL files to IR
+          for brl_file in ../../examples/brl/*.brl; do
+            filename=$(basename "$brl_file" .brl)
+            ./target/release/blink-compiler compile -i "$brl_file" -o "../../examples/ir/${filename}.ir.json" --pretty
+            echo "Compiled ${filename}.brl -> ${filename}.ir.json"
+          done
+          cd ../..
+          echo "IR files generated:"
+          ls -la examples/ir/*.ir.json
+      
       - name: Create demo package directory
         run: mkdir -p demo-package
       
       - name: Copy demo HTML and JS files
         run: |
-          cp packages/demo/index.html demo-package/
-          cp packages/demo/combat-demo.html demo-package/
-          cp packages/demo/rpg-demo.html demo-package/
-          cp packages/demo/blink-engine.bundle.js demo-package/
-          cp packages/demo/README.md demo-package/
+          cp examples/demos/index.html demo-package/
+          cp examples/demos/combat-demo.html demo-package/
+          cp examples/demos/rpg-demo.html demo-package/
+          cp examples/demos/blink-engine.bundle.js demo-package/
+          cp examples/demos/README.md demo-package/
       
       - name: Copy game rule files from examples
         run: |
@@ -65,14 +88,14 @@ jobs:
       - name: Create demo package ZIP
         run: |
           cd demo-package
-          zip -r ../blink-combat-demo.zip .
+          zip -r ../blink-demo-package-linux.zip .
           cd ..
-          ls -lh blink-combat-demo.zip
+          ls -lh blink-demo-package-linux.zip
       
       - name: Upload demo package artifact
         uses: actions/upload-artifact@v4
         with:
-          name: blink-demo-package
+          name: blink-demo-package-linux
           path: demo-package/
           retention-days: 30
       
@@ -80,22 +103,36 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
         with:
-          files: blink-combat-demo.zip
+          files: blink-demo-package-linux.zip
           draft: false
           prerelease: false
           generate_release_notes: true
           body: |
-            # Blink Idle RPG - Combat Demo Release
+            # Blink Idle RPG - Demo Package Release (Linux)
             
-            This release includes a ready-to-run combat demo package.
+            This release includes a ready-to-run demo package for Linux.
             
             ## Quick Start
-            1. Download `blink-combat-demo.zip`
+            1. Download `blink-demo-package-linux.zip`
             2. Extract the files to a folder
-            3. Open `index.html` in your web browser
-            4. Choose a demo and start playing!
+            3. Serve the demos using a web server (see README.md)
+            4. Open http://localhost:3000 in your browser
             
-            No installation or build process required - just download and play!
+            ## Running the Demos
+            
+            Use a local web server to run the demos:
+            
+            ```bash
+            cd demo-package
+            npx serve .
+            ```
+            
+            Or use Python:
+            
+            ```bash
+            cd demo-package
+            python -m http.server 8000
+            ```
             
             ## What's Included
             - Interactive combat demo (`combat-demo.html`)
