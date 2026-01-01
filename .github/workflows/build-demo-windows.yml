@@ -70,9 +70,9 @@ jobs:
       - name: Create demo package ZIP
         run: |
           Set-Location demo-package
-          Compress-Archive -Path * -DestinationPath ..\blink-combat-demo-windows.zip -Force
+          Compress-Archive -Path * -DestinationPath ..\blink-demo-package-windows.zip -Force
           Set-Location ..
-          Get-Item blink-combat-demo-windows.zip | Select-Object Name, Length
+          Get-Item blink-demo-package-windows.zip | Select-Object Name, Length
         shell: pwsh
       
       - name: Upload demo package artifact
@@ -86,17 +86,17 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
         with:
-          files: blink-combat-demo-windows.zip
+          files: blink-demo-package-windows.zip
           draft: false
           prerelease: false
           generate_release_notes: true
           body: |
-            # Blink Idle RPG - Combat Demo Release (Windows)
+            # Blink Idle RPG - Demo Package Release (Windows)
             
-            This release includes a ready-to-run combat demo package for Windows.
+            This release includes a ready-to-run demo package for Windows.
             
             ## Quick Start
-            1. Download `blink-combat-demo-windows.zip`
+            1. Download `blink-demo-package-windows.zip`
             2. Extract the files to a folder
             3. Serve the demos using a web server (see README.md)
             4. Open http://localhost:3000 in your browser

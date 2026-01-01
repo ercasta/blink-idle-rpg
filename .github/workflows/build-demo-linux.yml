@@ -65,9 +65,9 @@ jobs:
       - name: Create demo package ZIP
         run: |
           cd demo-package
-          zip -r ../blink-combat-demo-linux.zip .
+          zip -r ../blink-demo-package-linux.zip .
           cd ..
-          ls -lh blink-combat-demo-linux.zip
+          ls -lh blink-demo-package-linux.zip
       
       - name: Upload demo package artifact
         uses: actions/upload-artifact@v4
@@ -80,17 +80,17 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
         with:
-          files: blink-combat-demo-linux.zip
+          files: blink-demo-package-linux.zip
           draft: false
           prerelease: false
           generate_release_notes: true
           body: |
-            # Blink Idle RPG - Combat Demo Release (Linux)
+            # Blink Idle RPG - Demo Package Release (Linux)
             
-            This release includes a ready-to-run combat demo package for Linux.
+            This release includes a ready-to-run demo package for Linux.
             
             ## Quick Start
-            1. Download `blink-combat-demo-linux.zip`
+            1. Download `blink-demo-package-linux.zip`
             2. Extract the files to a folder
             3. Serve the demos using a web server (see README.md)
             4. Open http://localhost:3000 in your browser
