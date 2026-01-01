@@ -2,14 +2,18 @@
 
 This guide explains how to build and run Blink Idle RPG using Docker, allowing you to run the entire project in a container without installing Rust, Node.js, or other dependencies on your host machine.
 
+> **Note:** The Docker setup has been designed and validated structurally, but could not be fully tested in the CI environment due to SSL certificate issues with external package registries (crates.io and npmjs.org). The setup should work correctly in normal development environments with proper network access. If you encounter issues, please see the Troubleshooting section below.
+
 ## Quick Start
 
 ### Prerequisites
 
 - Docker Engine (20.10.0 or later)
-- Docker Compose (2.0.0 or later)
+- Docker Compose (2.0.0 or later) - included with Docker Desktop
 
 Install Docker Desktop from [https://www.docker.com/products/docker-desktop/](https://www.docker.com/products/docker-desktop/)
+
+**Note:** Modern Docker installations include Docker Compose as a plugin. Use `docker compose` (with a space) instead of `docker-compose` (with a hyphen) if you have the newer version.
 
 ### Running with Docker Compose (Recommended)
 
@@ -190,6 +194,32 @@ When the container starts, the `docker-entrypoint.sh` script automatically:
 This means if you modify a BRL file and restart the container, it will automatically recompile.
 
 ## Troubleshooting
+
+### Docker Build Fails with SSL/Network Errors
+
+If `docker build` fails with errors like "SSL certificate problem" or "failed to download from crates.io", this is usually due to network restrictions or proxy issues in certain environments (CI/CD, corporate networks, etc.).
+
+**Workaround:** Use the pre-built compiler script:
+
+```bash
+# Build the compiler locally first, then build Docker image with it
+./docker-build-with-prebuilt.sh
+```
+
+This script:
+1. Builds the Rust compiler locally on your machine
+2. Creates a Docker image that copies the pre-built binary instead of building in Docker
+3. Completes the rest of the Docker build normally
+
+**Alternative Workaround:** If you have a working network connection but Docker doesn't, you can:
+
+```bash
+# Build compiler locally
+cd src/compiler && cargo build --release && cd ../..
+
+# Create a simple Dockerfile that uses pre-built binary
+# (See docker-build-with-prebuilt.sh for an example)
+```
 
 ### Port Already in Use
 

@@ -34,14 +34,16 @@ The fastest way to get started without installing Rust, Node.js, or other depend
 
 ```bash
 # Start the project with Docker Compose
-docker-compose up --build
+docker compose up --build
 
 # Open http://localhost:3000 in your browser
 ```
 
+> **Note:** Use `docker compose` (with space) for Docker Compose v2, or `docker-compose` (with hyphen) for v1.
+
 **Volume Mapping:** The Docker setup maps local folders so you can edit BRL and BCL files on your host machine:
 - Edit files in `./examples/brl/` and `./examples/bcl/`
-- Recompile in the container: `docker-compose exec blink-app blink-compiler compile -i /app/examples/brl/YOUR_FILE.brl -o /app/examples/ir/YOUR_FILE.ir.json --pretty`
+- Recompile in the container: `docker compose exec blink-app blink-compiler compile -i /app/examples/brl/YOUR_FILE.brl -o /app/examples/ir/YOUR_FILE.ir.json --pretty`
 - Refresh your browser to see changes
 
 See the [Docker Setup Guide](DOCKER.md) for complete documentation on:
