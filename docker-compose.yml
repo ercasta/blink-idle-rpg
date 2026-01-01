@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  blink-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      # Map BRL files so you can edit them on the host
+      - ./examples/brl:/app/examples/brl
+      # Map BCL files so you can edit them on the host
+      - ./examples/bcl:/app/examples/bcl
+      # Map IR files so you can see the compiled output
+      - ./examples/ir:/app/examples/ir
+      # Optional: Map demos if you want to modify them
+      - ./examples/demos:/app/examples/demos
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+    command: serve
