@@ -1,10 +1,37 @@
 # Example IR Files
 
+**Note**: The IR files in this directory are **generated** from the corresponding BRL files in `examples/brl/`. They are not versioned in git and are created during the build process.
+
 This directory contains example Intermediate Representation (IR) files that can be used for:
 
 1. **Engine Development**: Test your engine implementation against known-good IR
 2. **Learning**: Understand the IR format by examining real examples
 3. **Integration Testing**: Verify engines produce consistent results
+
+## Generating IR Files
+
+To generate the IR files locally, compile the BRL source files:
+
+```bash
+cd src/compiler
+cargo build --release
+
+# Compile all examples
+./target/release/blink-compiler compile -i ../../examples/brl/simple-combat.brl -o ../../examples/ir/simple-combat.ir.json --pretty
+./target/release/blink-compiler compile -i ../../examples/brl/simple-clicker.brl -o ../../examples/ir/simple-clicker.ir.json --pretty
+./target/release/blink-compiler compile -i ../../examples/brl/classic-rpg.brl -o ../../examples/ir/classic-rpg.ir.json --pretty
+```
+
+**Windows:**
+```cmd
+cd src\compiler
+cargo build --release
+
+REM Compile all examples
+.\target\release\blink-compiler.exe compile -i ..\..\examples\brl\simple-combat.brl -o ..\..\examples\ir\simple-combat.ir.json --pretty
+.\target\release\blink-compiler.exe compile -i ..\..\examples\brl\simple-clicker.brl -o ..\..\examples\ir\simple-clicker.ir.json --pretty
+.\target\release\blink-compiler.exe compile -i ..\..\examples\brl\classic-rpg.brl -o ..\..\examples\ir\classic-rpg.ir.json --pretty
+```
 
 ## Files
 

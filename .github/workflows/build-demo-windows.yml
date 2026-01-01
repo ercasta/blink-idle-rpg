@@ -20,6 +20,32 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       
+      - name: Set up Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+      
+      - name: Build compiler
+        run: |
+          Set-Location src\compiler
+          cargo build --release
+          Write-Host "Compiler built successfully"
+          Set-Location ..\..
+        shell: pwsh
+      
+      - name: Compile BRL to IR
+        run: |
+          New-Item -ItemType Directory -Path examples\ir -Force
+          Set-Location src\compiler
+          # Compile simple-combat.brl
+          .\target\release\blink-compiler.exe compile -i ..\..\examples\brl\simple-combat.brl -o ..\..\examples\ir\simple-combat.ir.json --pretty
+          # Compile simple-clicker.brl
+          .\target\release\blink-compiler.exe compile -i ..\..\examples\brl\simple-clicker.brl -o ..\..\examples\ir\simple-clicker.ir.json --pretty
+          # Compile classic-rpg.brl
+          .\target\release\blink-compiler.exe compile -i ..\..\examples\brl\classic-rpg.brl -o ..\..\examples\ir\classic-rpg.ir.json --pretty
+          Set-Location ..\..
+          Write-Host "IR files generated:"
+          Get-ChildItem examples\ir\*.ir.json
+        shell: pwsh
+      
       - name: Create demo package directory
         run: New-Item -ItemType Directory -Path demo-package -Force
         shell: pwsh

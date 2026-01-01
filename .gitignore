@@ -27,3 +27,4 @@ build/
 
 # Generated files
 *.ir.generated.json
+*.ir.json
