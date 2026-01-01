@@ -1,34 +1,30 @@
 # Example Tests for Blink Idle RPG
 
-This directory contains example tests demonstrating how to use the `@blink/test` testing framework.
+This directory contains example tests demonstrating how to use the `@blink/test` testing framework and test game rules.
 
 ## Files
 
-- `combat-rules.test.ts` - Example tests for combat rules
-- `progression-rules.test.ts` - Example tests for leveling and progression
+- `combat-rules.test.ts` - Example tests demonstrating the testing framework usage patterns
+- `classic-rpg.test.ts` - Tests for the classic RPG game mechanics
+- `boss-spawn.test.ts` - Tests for boss spawn requirements (currently needs IR with init_entities)
 
 ## Running Examples
 
-First, build the test framework and engine:
+Use the Makefile from the project root:
 
 ```bash
-cd packages/blink-engine && npm install && npm run build
-cd packages/blink-test && npm install && npm run build
-```
+# Run all example tests
+make test-examples
 
-Then run the example tests:
-
-```bash
+# Or build and test manually
 cd examples/tests
-npx ts-node combat-rules.test.ts
+npm install
+npm test
 ```
 
-Or compile and run:
+## Known Issues
 
-```bash
-npx tsc *.ts
-node combat-rules.test.js
-```
+- `boss-spawn.test.ts`: Currently failing because the classic-rpg.ir.json doesn't include init_entities. This test was originally written with access to internal engine state and needs to be refactored to work with the public API.
 
 ## Writing Your Own Tests
 
@@ -41,3 +37,4 @@ See `combat-rules.test.ts` for a complete example of:
 5. Asserting game state
 6. Using the fluent assertion API
 7. Building test scenarios with the DSL
+

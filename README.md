@@ -28,6 +28,36 @@ This project is in early development with parallel work streams:
 
 ## Quick Start
 
+### Local Development Pipeline
+
+Use the `Makefile` to run the full build pipeline locally:
+
+```bash
+# See all available commands
+make help
+
+# Build everything (compiler, packages, compile BRL files)
+make all
+
+# Build and run all tests
+make test
+
+# Create a demo package for distribution
+make demo-package
+```
+
+Available targets:
+- `make build-compiler` - Build the Rust BRL compiler
+- `make compile-brl` - Compile all BRL files to IR
+- `make install-packages` - Install npm dependencies
+- `make build-packages` - Build TypeScript packages
+- `make test` - Run all tests (compiler + packages)
+- `make test-compiler` - Run compiler tests only
+- `make test-packages` - Run package tests only
+- `make test-examples` - Run example tests
+- `make demo-package` - Create demo distribution package
+- `make clean` - Clean all build artifacts
+
 ### Try the Demo
 
 To run the demos, serve them using a local web server:

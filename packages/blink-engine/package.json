@@ -3,12 +3,11 @@
   "version": "0.1.0",
   "description": "Blink Idle RPG - Browser Engine",
   "main": "dist/index.js",
-  "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "test": "node --test dist/index.test.js dist/classic-rpg.test.js",
+    "test": "node --test dist/index.test.js",
     "lint": "tsc --noEmit"
   },
   "keywords": [
@@ -28,7 +27,7 @@
   ],
   "exports": {
     ".": {
-      "import": "./dist/index.mjs",
+      "import": "./dist/index.js",
       "require": "./dist/index.js",
       "types": "./dist/index.d.ts"
     }
