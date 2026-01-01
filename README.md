@@ -30,23 +30,23 @@ This project is in early development with parallel work streams:
 
 ### Try the Demo
 
-#### Option 1: Open directly in your browser (No setup required!)
-
-Simply open the demo file directly - works on mobile and desktop:
-
-1. Navigate to `packages/demo/`
-2. Open `index.html` in your browser (double-click or right-click → Open with browser)
-3. Choose a demo and start playing!
-
-#### Option 2: Use a local web server
-
-If you prefer using a web server:
+To run the demos, serve them using a local web server:
 
 ```bash
-cd packages/demo
+cd examples/demos
 npx serve .
 # Open http://localhost:3000 in your browser
 ```
+
+Alternatively, use Python:
+
+```bash
+cd examples/demos
+python -m http.server 8000
+# Open http://localhost:8000 in your browser
+```
+
+See [examples/demos/README.md](examples/demos/README.md) for more details.
 
 ### For JavaScript Engine Development
 
