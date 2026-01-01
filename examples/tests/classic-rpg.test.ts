@@ -5,7 +5,7 @@
 
 import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert';
-import { BlinkGame } from './BlinkGame';
+import { BlinkGame } from '@blink/engine';
 
 // Simplified Classic RPG IR for testing
 const classicRpgIR = {

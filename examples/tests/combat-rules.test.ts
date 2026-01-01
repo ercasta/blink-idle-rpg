@@ -166,7 +166,7 @@ console.log("=".repeat(60));
 
 async function basicTestExample() {
   // Dynamic import for ESM compatibility
-  const { createTest, expect } = await import('../../packages/blink-test/dist/index.js');
+  const { createTest, expect } = await import('@blink/test');
   
   // Create a test instance and load rules
   const test = createTest({ verbose: false })
@@ -224,7 +224,7 @@ async function conditionTestExample() {
   console.log("Example 2: Running Until Condition");
   console.log("=".repeat(60));
   
-  const { createTest, expect } = await import('../../packages/blink-test/dist/index.js');
+  const { createTest, expect } = await import('@blink/test');
   
   const test = createTest()
     .loadRules(combatIR);
@@ -272,7 +272,7 @@ async function scenarioTestExample() {
   console.log("Example 3: Test Scenarios with DSL");
   console.log("=".repeat(60));
   
-  const { createTest, Scenario, ConsoleReporter } = await import('../../packages/blink-test/dist/index.js');
+  const { createTest, Scenario, ConsoleReporter } = await import('@blink/test');
   
   const test = createTest({ name: 'Combat Scenario Tests' })
     .loadRules(combatIR);
@@ -346,7 +346,7 @@ async function fixtureTestExample() {
     createEnemyFixture,
     createCombatScenario,
     expect 
-  } = await import('../../packages/blink-test/dist/index.js');
+  } = await import('@blink/test');
   
   const test = createTest()
     .loadRules(combatIR);

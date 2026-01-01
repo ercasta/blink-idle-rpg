@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "description": "Integrated testing framework for BRL and BCL - test game rules and player choices",
   "main": "dist/index.js",
-  "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
@@ -33,7 +32,7 @@
   ],
   "exports": {
     ".": {
-      "import": "./dist/index.mjs",
+      "import": "./dist/index.js",
       "require": "./dist/index.js",
       "types": "./dist/index.d.ts"
     }
