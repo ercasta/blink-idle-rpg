@@ -28,3 +28,6 @@ build/
 # Generated files
 *.ir.generated.json
 *.ir.json
+
+# Local environment overrides
+.env
