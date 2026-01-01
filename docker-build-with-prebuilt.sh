@@ -92,7 +92,7 @@ FROM node:20-slim
 # Install serve for serving static files
 RUN npm install -g serve
 
-WORKDIR /app
+WORKDIR /workspace
 
 # Copy pre-built compiler from host
 COPY src/compiler/target/release/blink-compiler /usr/local/bin/
@@ -136,4 +136,4 @@ echo ""
 echo "✅ Docker image 'blink-idle-rpg' built successfully!"
 echo ""
 echo "Run with: docker-compose up"
-echo "Or:       docker run -p 3000:3000 -v \$(pwd)/examples/brl:/app/examples/brl -v \$(pwd)/examples/bcl:/app/examples/bcl -v \$(pwd)/examples/ir:/app/examples/ir blink-idle-rpg"
+echo "Or:       docker run -p 3000:3000 -v \$(pwd)/examples/brl:/workspace/examples/brl -v \$(pwd)/examples/bcl:/workspace/examples/bcl -v \$(pwd)/examples/ir:/workspace/examples/ir blink-idle-rpg"

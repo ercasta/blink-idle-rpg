@@ -37,7 +37,7 @@ FROM node:20-slim
 # Install serve for serving static files
 RUN npm install -g serve
 
-WORKDIR /app
+WORKDIR /workspace
 
 # Copy built compiler from rust-builder
 COPY --from=rust-builder /build/src/compiler/target/release/blink-compiler /usr/local/bin/

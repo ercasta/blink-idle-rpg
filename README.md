@@ -43,7 +43,7 @@ docker compose up --build
 
 **Volume Mapping:** The Docker setup maps local folders so you can edit BRL and BCL files on your host machine:
 - Edit files in `./examples/brl/` and `./examples/bcl/`
-- Recompile in the container: `docker compose exec blink-app blink-compiler compile -i /app/examples/brl/YOUR_FILE.brl -o /app/examples/ir/YOUR_FILE.ir.json --pretty`
+- Recompile in the container: `docker compose exec blink-app blink-compiler compile -i /workspace/examples/brl/YOUR_FILE.brl -o /workspace/examples/ir/YOUR_FILE.ir.json --pretty`
 - Refresh your browser to see changes
 
 See the [Docker Setup Guide](DOCKER.md) for complete documentation on:

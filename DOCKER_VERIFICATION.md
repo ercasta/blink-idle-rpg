@@ -110,8 +110,8 @@ vim examples/brl/simple-combat.brl
 
 # 3. Recompile in container
 docker compose exec blink-app blink-compiler compile \
-  -i /app/examples/brl/simple-combat.brl \
-  -o /app/examples/ir/simple-combat.ir.json \
+  -i /workspace/examples/brl/simple-combat.brl \
+  -o /workspace/examples/ir/simple-combat.ir.json \
   --pretty
 
 # 4. See output on host
@@ -175,8 +175,8 @@ When testing in a normal development environment (not CI):
    
    # Recompile in container
    docker compose exec blink-app blink-compiler compile \
-     -i /app/examples/brl/simple-combat.brl \
-     -o /app/examples/ir/simple-combat.ir.json --pretty
+    -i /workspace/examples/brl/simple-combat.brl \
+    -o /workspace/examples/ir/simple-combat.ir.json --pretty
    
    # Verify IR file updated on host
    stat examples/ir/simple-combat.ir.json

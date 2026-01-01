@@ -47,10 +47,10 @@ docker build -t blink-idle-rpg .
 
 # Run the container
 docker run -p 3000:3000 \
-  -v $(pwd)/examples/brl:/app/examples/brl \
-  -v $(pwd)/examples/bcl:/app/examples/bcl \
-  -v $(pwd)/examples/ir:/app/examples/ir \
-  -v $(pwd)/examples/demos:/app/examples/demos \
+  -v $(pwd)/examples/brl:/workspace/examples/brl \
+  -v $(pwd)/examples/bcl:/workspace/examples/bcl \
+  -v $(pwd)/examples/ir:/workspace/examples/ir \
+  -v $(pwd)/examples/demos:/workspace/examples/demos \
   blink-idle-rpg
 
 # Access the demos at http://localhost:3000
@@ -64,10 +64,10 @@ The Docker setup uses volume mapping to allow you to edit game files on your hos
 
 | Host Directory | Container Directory | Purpose |
 |---------------|---------------------|---------|
-| `./examples/brl` | `/app/examples/brl` | **BRL files** - Edit game rules and logic |
-| `./examples/bcl` | `/app/examples/bcl` | **BCL files** - Edit player AI strategies |
-| `./examples/ir` | `/app/examples/ir` | **IR files** - View compiled game rules |
-| `./examples/demos` | `/app/examples/demos` | **Demo HTML/JS** - Modify demo pages |
+| `./examples/brl` | `/workspace/examples/brl` | **BRL files** - Edit game rules and logic |
+| `./examples/bcl` | `/workspace/examples/bcl` | **BCL files** - Edit player AI strategies |
+| `./examples/ir` | `/workspace/examples/ir` | **IR files** - View compiled game rules |
+| `./examples/demos` | `/workspace/examples/demos` | **Demo HTML/JS** - Modify demo pages |
 
 ### How to Edit Files
 
@@ -78,12 +78,12 @@ The Docker setup uses volume mapping to allow you to edit game files on your hos
 3. **Recompile** the BRL files:
    ```bash
    # Execute a command in the running container
-   docker-compose exec blink-app blink-compiler compile -i /app/examples/brl/simple-combat.brl -o /app/examples/ir/simple-combat.ir.json --pretty
+  docker-compose exec blink-app blink-compiler compile -i /workspace/examples/brl/simple-combat.brl -o /workspace/examples/ir/simple-combat.ir.json --pretty
    ```
    
    Or compile all BRL files at once:
    ```bash
-   docker-compose exec blink-app bash -c 'for f in /app/examples/brl/*.brl; do blink-compiler compile -i "$f" -o "/app/examples/ir/$(basename "$f" .brl).ir.json" --pretty; done'
+  docker-compose exec blink-app bash -c 'for f in /workspace/examples/brl/*.brl; do blink-compiler compile -i "$f" -o "/workspace/examples/ir/$(basename "$f" .brl).ir.json" --pretty; done'
    ```
 
 4. **Refresh your browser** to see the changes
@@ -126,9 +126,9 @@ docker-compose up -d
 # (Use any text editor to modify ./examples/brl/simple-combat.brl)
 
 # 3. Recompile the BRL file
-docker-compose exec blink-app blink-compiler compile \
-  -i /app/examples/brl/simple-combat.brl \
-  -o /app/examples/ir/simple-combat.ir.json \
+  docker-compose exec blink-app blink-compiler compile \
+  -i /workspace/examples/brl/simple-combat.brl \
+  -o /workspace/examples/ir/simple-combat.ir.json \
   --pretty
 
 # 4. Open http://localhost:3000/combat-demo.html in your browser
@@ -157,7 +157,7 @@ This starts a web server on port 3000 serving the demo files.
 ```bash
 # Start a bash shell in a new container
 docker run -it --rm \
-  -v $(pwd)/examples:/app/examples \
+  -v $(pwd)/examples:/workspace/examples \
   blink-idle-rpg bash
 
 # Or connect to a running container
@@ -165,7 +165,7 @@ docker-compose exec blink-app bash
 ```
 
 Once inside, you can:
-- Run `blink-compiler compile -i /app/examples/brl/simple-combat.brl -o /app/examples/ir/simple-combat.ir.json --pretty`
+- Run `blink-compiler compile -i /workspace/examples/brl/simple-combat.brl -o /workspace/examples/ir/simple-combat.ir.json --pretty`
 - Explore the filesystem
 - Debug compilation issues
 
@@ -173,15 +173,15 @@ Once inside, you can:
 
 ```bash
 # Compile a specific BRL file
-docker-compose exec blink-app blink-compiler compile \
-  -i /app/examples/brl/simple-combat.brl \
-  -o /app/examples/ir/simple-combat.ir.json \
+  docker-compose exec blink-app blink-compiler compile \
+  -i /workspace/examples/brl/simple-combat.brl \
+  -o /workspace/examples/ir/simple-combat.ir.json \
   --pretty
 
 # Compile all BRL files
-docker-compose exec blink-app bash -c \
-  'for f in /app/examples/brl/*.brl; do \
-    blink-compiler compile -i "$f" -o "/app/examples/ir/$(basename "$f" .brl).ir.json" --pretty; \
+  docker-compose exec blink-app bash -c \
+  'for f in /workspace/examples/brl/*.brl; do \
+    blink-compiler compile -i "$f" -o "/workspace/examples/ir/$(basename "$f" .brl).ir.json" --pretty; \
   done'
 ```
 
@@ -211,7 +211,7 @@ The Docker image is built in three stages for optimal size and build caching:
 
 When the container starts, the `docker-entrypoint.sh` script automatically:
 
-1. **Checks all BRL files** in `/app/examples/brl/`
+1. **Checks all BRL files** in `/workspace/examples/brl/`
 2. **Compiles modified BRL files** to IR if:
    - The IR file doesn't exist, OR
    - The BRL file is newer than the IR file
@@ -271,8 +271,8 @@ If you edit a BRL file but changes aren't reflected:
 2. **Manually recompile** in the container:
    ```bash
    docker-compose exec blink-app blink-compiler compile \
-     -i /app/examples/brl/YOUR_FILE.brl \
-     -o /app/examples/ir/YOUR_FILE.ir.json \
+    -i /workspace/examples/brl/YOUR_FILE.brl \
+    -o /workspace/examples/ir/YOUR_FILE.ir.json \
      --pretty
    ```
 3. **Check for compilation errors** in the output
@@ -323,7 +323,7 @@ docker run -d --name blink-1 -p 3000:3000 blink-idle-rpg
 
 # Instance 2 on port 3001 with different BRL files
 docker run -d --name blink-2 -p 3001:3000 \
-  -v $(pwd)/custom-brl:/app/examples/brl \
+  -v $(pwd)/custom-brl:/workspace/examples/brl \
   blink-idle-rpg
 ```
 

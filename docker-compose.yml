@@ -10,10 +10,10 @@ services:
     volumes:
       # Use a single project root to derive all example paths (configurable via $PROJECT_ROOT)
       # Default PROJECT_ROOT is the compose file directory (.) so these fall back to ./examples/*
-      - ${PROJECT_ROOT:-.}/examples/brl:/app/examples/brl
-      - ${PROJECT_ROOT:-.}/examples/bcl:/app/examples/bcl
-      - ${PROJECT_ROOT:-.}/examples/ir:/app/examples/ir
-      - ${PROJECT_ROOT:-.}/examples/demos:/app/examples/demos
+      - ${PROJECT_ROOT:-.}/examples/brl:/workspace/examples/brl
+      - ${PROJECT_ROOT:-.}/examples/bcl:/workspace/examples/bcl
+      - ${PROJECT_ROOT:-.}/examples/ir:/workspace/examples/ir
+      - ${PROJECT_ROOT:-.}/examples/demos:/workspace/examples/demos
     environment:
       - NODE_ENV=production
     restart: unless-stopped
