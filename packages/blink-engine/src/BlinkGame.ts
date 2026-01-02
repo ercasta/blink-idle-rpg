@@ -296,7 +296,12 @@ export class BlinkGame {
    * Step forward by one event
    */
   step(): StepResult | null {
-    // Process events in a loop to avoid recursion
+    // Process events in a loop to handle watchdog events transparently
+    // Watchdog events are processed internally and don't count as "steps"
+    // The loop continues until we find a non-watchdog event or run out of events
+    let watchdogProcessed = 0;
+    const maxWatchdogPerStep = 10; // Prevent infinite loop if watchdog keeps firing
+    
     while (true) {
       const event = this.timeline.pop();
       if (!event) {
@@ -305,6 +310,14 @@ export class BlinkGame {
       
       // Check if this is a watchdog event
       if (event.eventType === '__WATCHDOG__') {
+        watchdogProcessed++;
+        if (watchdogProcessed >= maxWatchdogPerStep) {
+          if (this.options.debug) {
+            console.warn(`[BlinkGame] Warning: Processed ${watchdogProcessed} watchdog events in one step, stopping to prevent infinite loop`);
+          }
+          return null;
+        }
+        
         this.handleWatchdogEvent();
         // Schedule next watchdog
         this.scheduleWatchdogEvent();
@@ -713,7 +726,9 @@ export class BlinkGame {
               console.log(`[BlinkGame] Watchdog: Generating recovery ${this.options.watchdogRecoveryEvent} event for entity ${entityId}`);
             }
             
-            this.timeline.scheduleImmediate(this.options.watchdogRecoveryEvent, { source: entityId });
+            // Use a tiny delay to ensure proper event ordering
+            // scheduleImmediate would put events at current time which might cause ordering issues
+            this.timeline.schedule(this.options.watchdogRecoveryEvent, 0.001, { source: entityId });
           }
         }
       }
