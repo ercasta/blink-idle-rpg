@@ -213,6 +213,35 @@ element blink_project:
             scope src = files.folder_selector('tools/vscode-blink/')
     
     ## ========================================================================
+    ## CI/CD WORKFLOWS
+    ## ========================================================================
+    ## GitHub Actions workflows for building, testing, and deploying
+    
+    element ci_cd:
+        scope workflows = files.folder_selector('.github/workflows/')
+        
+        ## --------------------------------------------------------------------
+        ## Build Workflows
+        ## Compile and package demos for different platforms
+        ## --------------------------------------------------------------------
+        element build_workflows:
+            check files.exists(workflows, 'build-demo-linux.yml')
+            check files.exists(workflows, 'build-demo-windows.yml')
+        
+        ## --------------------------------------------------------------------
+        ## Deployment Workflows
+        ## Deploy game to various hosting platforms
+        ## --------------------------------------------------------------------
+        element deploy_workflows:
+            ## SFTP deployment for web servers
+            element sftp_deploy:
+                scope sftp_workflow = files.file_selector('.github/workflows/deploy-sftp.yml')
+                check files.exists(sftp_workflow)
+                # Deploys game demos to web server via SFTP
+                # Requires secrets: SFTP_HOST, SFTP_USERNAME, SFTP_SSH_KEY
+                # Optional secrets: SFTP_PORT, SFTP_TARGET_FOLDER
+    
+    ## ========================================================================
     ## CHANGE TRACKING
     ## ========================================================================
     ## Agent changelog for AI-assisted development

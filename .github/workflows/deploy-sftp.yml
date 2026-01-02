@@ -1,0 +1,96 @@
+name: Deploy to SFTP Server
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      target_folder:
+        description: 'Target folder on SFTP server (e.g., /var/www/html/blink-game)'
+        required: true
+        default: '/var/www/html/blink-game'
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+      
+      - name: Build compiler
+        run: |
+          cd src/compiler
+          cargo build --release
+          echo "Compiler built successfully"
+      
+      - name: Compile BRL to IR
+        run: |
+          mkdir -p game/ir
+          cd src/compiler
+          # Compile all BRL files to IR
+          for brl_file in ../../game/brl/*.brl; do
+            if [ -f "$brl_file" ]; then
+              filename=$(basename "$brl_file" .brl)
+              ./target/release/blink-compiler compile -i "$brl_file" -o "../../game/ir/${filename}.ir.json" --pretty
+              echo "Compiled ${filename}.brl -> ${filename}.ir.json"
+            fi
+          done
+          cd ../..
+          echo "IR files generated:"
+          ls -la game/ir/*.ir.json 2>/dev/null || echo "No IR files generated"
+      
+      - name: Create deployment package
+        run: |
+          mkdir -p deploy-package
+          
+          # Copy demo HTML and JS files
+          cp game/demos/index.html deploy-package/ 2>/dev/null || echo "index.html not found"
+          cp game/demos/combat-demo.html deploy-package/ 2>/dev/null || echo "combat-demo.html not found"
+          cp game/demos/rpg-demo.html deploy-package/ 2>/dev/null || echo "rpg-demo.html not found"
+          cp game/demos/blink-engine.bundle.js deploy-package/ 2>/dev/null || echo "blink-engine.bundle.js not found"
+          cp game/demos/README.md deploy-package/ 2>/dev/null || echo "README.md not found"
+          cp game/demos/party-config.bcl.zip deploy-package/ 2>/dev/null || echo "party-config.bcl.zip not found"
+          
+          echo "Deployment package contents:"
+          ls -la deploy-package/
+      
+      - name: Set target folder
+        id: set-target
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "target_folder=${{ inputs.target_folder }}" >> $GITHUB_OUTPUT
+          else
+            echo "target_folder=${{ secrets.SFTP_TARGET_FOLDER || '/var/www/html/blink-game' }}" >> $GITHUB_OUTPUT
+          fi
+          echo "Target folder: ${{ steps.set-target.outputs.target_folder }}"
+      
+      - name: Deploy to SFTP
+        uses: wlixcc/SFTP-Deploy-Action@v1.2.4
+        with:
+          username: ${{ secrets.SFTP_USERNAME }}
+          server: ${{ secrets.SFTP_HOST }}
+          port: ${{ secrets.SFTP_PORT || 22 }}
+          ssh_private_key: ${{ secrets.SFTP_SSH_KEY }}
+          local_path: './deploy-package/*'
+          remote_path: ${{ steps.set-target.outputs.target_folder }}
+          sftp_only: true
+          args: '-o ConnectTimeout=5'
+      
+      - name: Deployment summary
+        run: |
+          echo "✅ Deployment completed successfully!"
+          echo "📁 Files deployed to: ${{ steps.set-target.outputs.target_folder }}"
+          echo "🌐 SFTP Server: ${{ secrets.SFTP_HOST }}"
+          echo ""
+          echo "Deployed files:"
+          ls -la deploy-package/
