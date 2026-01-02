@@ -212,6 +212,16 @@ Engines depend only on the IR specification. Example IR files are available:
 
 See the [IR Specification](doc/ir-specification.md) for format details.
 
+## Deployment
+
+### SFTP Deployment
+
+The project includes a GitHub Actions workflow for automatic deployment to web servers via SFTP:
+
+- **[SFTP Deployment Guide](.github/workflows/SFTP_DEPLOYMENT.md)** - Complete setup and configuration guide
+
+The workflow automatically deploys game demos to your web server when you push to the main branch or create version tags. It can also be triggered manually with custom target folders.
+
 ## Documentation
 
 ### User Guides
@@ -230,6 +240,10 @@ See the [IR Specification](doc/ir-specification.md) for format details.
 - [Browser Engine](doc/engine/browser-engine.md) - JavaScript engine details
 - [JS Engine README](packages/blink-engine/README.md) - Engine API documentation
 - [Testing Framework](packages/blink-test/README.md) - Testing framework for BRL/BCL
+
+### Deployment & CI/CD
+
+- [SFTP Deployment](.github/workflows/SFTP_DEPLOYMENT.md) - Deploy game to web servers via SFTP
 
 ## License
 
