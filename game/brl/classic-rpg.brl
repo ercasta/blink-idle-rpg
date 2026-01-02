@@ -302,32 +302,26 @@ rule start_global_retargeting on EnemySpawned {
     }
 }
 
-// Check if entity needs retargeting and reschedule
+// Check if entity needs retargeting
 rule check_entity_target on CheckAllTargets {
-    // Rule fires for each entity with Target component
-    if entity.Health.current > 0 {
-        // Check if current target is invalid (dead or null)
-        if entity.Target.entity == null {
-            // Need a new target
+    // Rule fires for each entity with Target and Health components
+    if entity.Health.current > 0 && entity.Target.entity != null {
+        let target = entity.Target.entity
+        // Verify target entity exists and is dead
+        if target != null && target.Health.current <= 0 {
+            // Target is dead, need new target
+            entity.Target.entity = null
             schedule FindNewTarget {
                 seeker: entity.id
-            }
-        } else {
-            let target = entity.Target.entity
-            if target.Health.current <= 0 {
-                // Target is dead, need new target
-                entity.Target.entity = null
-                schedule FindNewTarget {
-                    seeker: entity.id
-                }
             }
         }
     }
 }
 
 // Reschedule the next retargeting check (makes it recurring)
+// Only reschedule once per CheckAllTargets event using GameState entity
 rule reschedule_retargeting on CheckAllTargets {
-    if entity.GameState.gameOver == false {
+    if entity.GameState.gameOver == false && entity.GameState.currentWave > 0 {
         // Schedule next check in 2 seconds
         schedule [delay: 2.0] CheckAllTargets {
         }
