@@ -14,7 +14,7 @@ doc/
 │   ├── README.md                # Language overview
 │   ├── brl-specification.md     # Blink Rule Language spec
 │   ├── bcl-specification.md     # Blink Choice Language spec
-│   └── examples/                # Language examples
+│   └── game/                # Language examples
 ├── engine/                      # Engine & Toolchain
 │   ├── README.md                # Engine overview
 │   ├── architecture.md          # Core architecture
@@ -42,7 +42,7 @@ src/
         ├── analyzer/           # Semantic analysis
         └── ir/                 # IR generator
 
-examples/
+game/
 ├── brl/                        # BRL source examples
 │   ├── simple-clicker.brl
 │   └── simple-combat.brl
@@ -73,6 +73,6 @@ See [architecture/ir-decision.md](architecture/ir-decision.md) for the architect
 
 - **Language Designers**: Start with [language/README.md](language/README.md)
 - **Compiler Developers**: Start with [../src/compiler/README.md](../src/compiler/README.md)
-- **Engine Developers**: Start with [ir-specification.md](ir-specification.md) and use examples in [../examples/ir/](../examples/ir/)
+- **Engine Developers**: Start with [ir-specification.md](ir-specification.md) and use examples in [../game/ir/](../game/ir/)
 - **Game Designers**: See [summary.md](summary.md) for game concepts
 - **All Developers**: Read [hie/README.md](hie/README.md) to understand architecture enforcement

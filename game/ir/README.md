@@ -1,6 +1,6 @@
 # Example IR Files
 
-**Note**: The IR files in this directory are **generated** from the corresponding BRL files in `examples/brl/`. They are not versioned in git and are created during the build process.
+**Note**: The IR files in this directory are **generated** from the corresponding BRL files in `game/brl/`. They are not versioned in git and are created during the build process.
 
 This directory contains example Intermediate Representation (IR) files that can be used for:
 
@@ -17,9 +17,9 @@ cd src/compiler
 cargo build --release
 
 # Compile all BRL files
-for brl_file in ../../examples/brl/*.brl; do
+for brl_file in ../../game/brl/*.brl; do
   filename=$(basename "$brl_file" .brl)
-  ./target/release/blink-compiler compile -i "$brl_file" -o "../../examples/ir/${filename}.ir.json" --pretty
+  ./target/release/blink-compiler compile -i "$brl_file" -o "../../game/ir/${filename}.ir.json" --pretty
 done
 ```
 
@@ -50,7 +50,7 @@ Load these IR files in your engine to test core functionality:
 
 ```typescript
 // JavaScript Engine
-const ir = await fetch('./examples/ir/simple-clicker.ir.json').then(r => r.json());
+const ir = await fetch('./game/ir/simple-clicker.ir.json').then(r => r.json());
 const engine = new BlinkEngine();
 engine.loadIR(ir);
 engine.start();
@@ -58,7 +58,7 @@ engine.start();
 
 ```rust
 // Rust Engine
-let ir_json = include_str!("../../examples/ir/simple-clicker.ir.json");
+let ir_json = include_str!("../../game/ir/simple-clicker.ir.json");
 let ir: IRModule = serde_json::from_str(ir_json)?;
 let mut engine = BlinkEngine::new();
 engine.load_ir(ir)?;

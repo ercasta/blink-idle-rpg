@@ -43,15 +43,15 @@ build-compiler:
 # Compile all BRL files to IR
 compile-brl: build-compiler
 	@echo "Compiling BRL files to IR..."
-	mkdir -p examples/ir
+	mkdir -p game/ir
 	cd src/compiler && \
-	for brl_file in ../../examples/brl/*.brl; do \
+	for brl_file in ../../game/brl/*.brl; do \
 		filename=$$(basename "$$brl_file" .brl); \
-		./target/release/blink-compiler compile -i "$$brl_file" -o "../../examples/ir/$${filename}.ir.json" --pretty; \
+		./target/release/blink-compiler compile -i "$$brl_file" -o "../../game/ir/$${filename}.ir.json" --pretty; \
 		echo "Compiled $${filename}.brl -> $${filename}.ir.json"; \
 	done
 	@echo "IR files generated:"
-	ls -la examples/ir/*.ir.json
+	ls -la game/ir/*.ir.json
 
 # Install npm dependencies
 install-packages:
@@ -88,9 +88,9 @@ test-packages: build-packages compile-brl
 # Run example tests
 test-examples: build-packages compile-brl
 	@echo "Running example tests..."
-	cd examples/tests && npm install
+	cd game/tests && npm install
 	@echo "Note: boss-spawn.test.ts may fail - it requires IR with init_entities"
-	-cd examples/tests && npm test
+	-cd game/tests && npm test
 	@echo "Example tests complete (some may have failed - check output above)"
 
 # Create demo package for distribution
@@ -99,26 +99,26 @@ demo-package: compile-brl
 	mkdir -p demo-package
 	
 	@echo "Copying demo HTML and JS files..."
-	cp examples/demos/index.html demo-package/
-	cp examples/demos/combat-demo.html demo-package/
-	cp examples/demos/rpg-demo.html demo-package/
-	cp examples/demos/blink-engine.bundle.js demo-package/
-	cp examples/demos/README.md demo-package/
+	cp game/demos/index.html demo-package/
+	cp game/demos/combat-demo.html demo-package/
+	cp game/demos/rpg-demo.html demo-package/
+	cp game/demos/blink-engine.bundle.js demo-package/
+	cp game/demos/README.md demo-package/
 	
 	@echo "Copying game rule files..."
-	cp examples/brl/simple-combat.brl demo-package/
-	cp examples/brl/simple-clicker.brl demo-package/
-	cp examples/ir/simple-combat.ir.json demo-package/
-	cp examples/ir/simple-clicker.ir.json demo-package/
-	cp examples/ir/classic-rpg.ir.json demo-package/
-	cp examples/bcl/warrior-skills.bcl demo-package/
-	cp examples/bcl/mage-skills.bcl demo-package/
-	cp examples/bcl/rogue-skills.bcl demo-package/
-	cp examples/bcl/cleric-skills.bcl demo-package/
-	cp examples/bcl/party-config.bcl demo-package/
+	cp game/brl/simple-combat.brl demo-package/
+	cp game/brl/simple-clicker.brl demo-package/
+	cp game/ir/simple-combat.ir.json demo-package/
+	cp game/ir/simple-clicker.ir.json demo-package/
+	cp game/ir/classic-rpg.ir.json demo-package/
+	cp game/bcl/warrior-skills.bcl demo-package/
+	cp game/bcl/mage-skills.bcl demo-package/
+	cp game/bcl/rogue-skills.bcl demo-package/
+	cp game/bcl/cleric-skills.bcl demo-package/
+	cp game/bcl/party-config.bcl demo-package/
 	
 	@echo "Creating BCL ZIP file..."
-	cd examples/bcl && zip ../../demo-package/party-config.bcl.zip *.bcl
+	cd game/bcl && zip ../../demo-package/party-config.bcl.zip *.bcl
 	
 	@echo "Demo package contents:"
 	ls -la demo-package/

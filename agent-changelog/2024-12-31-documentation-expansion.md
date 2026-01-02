@@ -21,7 +21,7 @@ Created comprehensive documentation structure to enable parallel development on:
 - `README.md` - Language overview, relationship between BRL and BCL
 - `brl-specification.md` - Complete BRL language specification
 - `bcl-specification.md` - Complete BCL language specification  
-- `examples/README.md` - Example code with combat system
+- `game/README.md` - Example code with combat system
 
 #### Engine Documentation (`doc/engine/`)
 - `README.md` - Engine overview and development tracks
@@ -51,7 +51,7 @@ doc/
 │   ├── README.md               # Language overview
 │   ├── brl-specification.md    # BRL spec (full)
 │   ├── bcl-specification.md    # BCL spec (full)
-│   └── examples/
+│   └── game/
 │       └── README.md           # Combat example
 ├── engine/
 │   ├── README.md               # Engine overview

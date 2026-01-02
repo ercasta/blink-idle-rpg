@@ -17,7 +17,7 @@ Use the Makefile from the project root:
 make test-examples
 
 # Or build and test manually
-cd examples/tests
+cd game/tests
 npm install
 npm test
 ```
