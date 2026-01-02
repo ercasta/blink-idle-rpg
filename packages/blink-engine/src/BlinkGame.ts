@@ -371,6 +371,31 @@ export class BlinkGame {
   }
 
   /**
+   * Schedule a recurring event
+   * The event will automatically reschedule itself after each execution
+   * Returns the event ID which can be used with cancelEvent() to stop the recurring event
+   */
+  scheduleRecurringEvent(
+    eventType: string,
+    interval: number,
+    options: {
+      delay?: number;
+      source?: EntityId;
+      target?: EntityId;
+      fields?: Record<string, IRFieldValue>;
+    } = {}
+  ): number {
+    return this.timeline.scheduleRecurring(eventType, interval, options);
+  }
+
+  /**
+   * Cancel a scheduled event (including recurring events)
+   */
+  cancelEvent(eventId: number): boolean {
+    return this.timeline.cancel(eventId);
+  }
+
+  /**
    * Subscribe to tracker events
    */
   onTracker(callback: TrackerCallback): Unsubscribe {

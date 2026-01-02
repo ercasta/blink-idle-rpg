@@ -73,10 +73,28 @@ The main game class that coordinates all engine subsystems.
 - `query(...componentNames)` - Query entities with components
 - `getComponent(entityId, componentName)` - Get component data
 - `scheduleEvent(eventType, delay?, options?)` - Schedule an event
+- `scheduleRecurringEvent(eventType, interval, options?)` - Schedule a recurring event
+- `cancelEvent(eventId)` - Cancel a scheduled or recurring event
 - `onTracker(callback)` - Subscribe to tracker events
 - `onSimulation(callback)` - Subscribe to simulation events
 - `setTimeScale(scale)` - Set simulation speed
 - `destroy()` - Clean up resources
+
+## Recurring Events
+
+The engine supports recurring events that automatically reschedule themselves:
+
+```typescript
+// Schedule a health regeneration event every 2 seconds
+const regenId = game.scheduleRecurringEvent('Regeneration', 2.0, {
+  source: playerId
+});
+
+// Later, cancel the recurring event
+game.cancelEvent(regenId);
+```
+
+This feature aligns with BRL's native `recurring` keyword for scheduled events.
 
 ### GameOptions
 
