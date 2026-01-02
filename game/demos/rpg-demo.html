@@ -4191,11 +4191,8 @@
             const charName = charComp ? charComp.name : 'Unknown';
             
             if (isPlayer) {
-              // Player hero died - CRITICAL: Retarget all enemies that were targeting this hero
-              addLogEntry('death', `💀 ${charName} has been defeated!`);
-              
-              // Apply death penalty
-              handleDeath();
+              // Player hero died - penalties applied in BRL
+              addLogEntry('death', `💀 ${charName} has been defeated! (+50s penalty)`);
               
               // Find all alive heroes
               const aliveHeroes = [];
@@ -4523,23 +4520,35 @@
     }
     
     function updateRunStatsUI() {
-      runState.simulationTime = game ? game.getTime() : 0;
-      runState.totalTime = runState.simulationTime + runState.retreatPenalty + runState.deathPenalty;
+      // Read run stats from BRL components
+      const runStatsEntities = game ? game.query('RunStats') : [];
+      if (runStatsEntities.length === 0) return;
       
-      totalTimeEl.textContent = runState.totalTime.toFixed(2) + 's';
-      retreatCountEl.textContent = runState.retreatCount;
-      retreatPenaltyEl.textContent = runState.retreatPenalty.toFixed(0) + 's';
-      deathPenaltyEl.textContent = runState.deathPenalty.toFixed(0) + 's';
-      totalPenaltiesEl.textContent = (runState.retreatPenalty + runState.deathPenalty).toFixed(0) + 's';
+      const runStatsEntity = runStatsEntities[0];
+      const runStats = game.getComponent(runStatsEntity, 'RunStats');
+      if (!runStats) return;
       
-      // Update flee button cooldown
+      runState.simulationTime = game.getTime();
+      runState.totalTime = runStats.totalTime;
+      runState.retreatCount = runStats.retreatCount;
+      runState.retreatPenalty = runStats.retreatPenalty;
+      runState.deathPenalty = runStats.deathPenalty;
+      runState.canFlee = runStats.canFlee;
+      
+      totalTimeEl.textContent = runStats.totalTime.toFixed(2) + 's';
+      retreatCountEl.textContent = runStats.retreatCount;
+      retreatPenaltyEl.textContent = runStats.retreatPenalty.toFixed(0) + 's';
+      deathPenaltyEl.textContent = runStats.deathPenalty.toFixed(0) + 's';
+      totalPenaltiesEl.textContent = (runStats.retreatPenalty + runStats.deathPenalty).toFixed(0) + 's';
+      
+      // Update flee button state
       if (game && game.getIsRunning()) {
-        const timeSinceFlee = runState.simulationTime - runState.lastFleeTime;
-        runState.canFlee = timeSinceFlee >= FLEE_COOLDOWN;
-        fleeBtn.disabled = !runState.canFlee || gameState.gameOver;
+        fleeBtn.disabled = !runStats.canFlee || gameState.gameOver;
         
-        if (!runState.canFlee && !gameState.gameOver) {
-          const remaining = Math.ceil(FLEE_COOLDOWN - timeSinceFlee);
+        if (!runStats.canFlee && !gameState.gameOver) {
+          const timeSinceFlee = runState.simulationTime - runStats.lastFleeTime;
+          const fleeCooldown = 5; // Should match BRL FleeConfig
+          const remaining = Math.ceil(fleeCooldown - timeSinceFlee);
           fleeBtn.innerHTML = `🏃 Flee Battle <span class="flee-cooldown">(${remaining}s)</span>`;
         } else {
           fleeBtn.innerHTML = '🏃 Flee Battle';
@@ -4547,46 +4556,23 @@
       }
     }
     
-    function handleDeath() {
-      const penalty = RETREAT_TIME_PENALTY * DEATH_TIME_MULTIPLIER;
-      runState.deathPenalty += penalty;
-      addLogEntry('system', `💀 Death penalty: +${penalty}s to total time`);
-      updateRunStatsUI();
-    }
-    
     function handleFlee() {
-      if (!game || !runState.canFlee || gameState.gameOver) return;
+      if (!game || gameState.gameOver) return;
       
-      runState.retreatCount++;
-      runState.retreatPenalty += RETREAT_TIME_PENALTY;
-      runState.lastFleeTime = runState.simulationTime;
-      runState.canFlee = false;
+      // Check if can flee from BRL RunStats
+      const runStatsEntity = game.query('RunStats')[0];
+      if (!runStatsEntity) return;
       
-      // Pause the game
-      if (game.getIsRunning()) {
-        game.pause();
+      const runStats = game.getComponent(runStatsEntity, 'RunStats');
+      if (!runStats || !runStats.canFlee) {
+        addLogEntry('system', '⏳ Flee on cooldown...');
+        return;
       }
       
-      // Remove all current enemies
-      const allEntities = game.query('Team');
-      for (const entityId of allEntities) {
-        const team = game.getComponent(entityId, 'Team');
-        if (team && !team.isPlayer) {
-          game.removeEntity(entityId);
-        }
-      }
+      // Trigger BRL flee event - game logic handled in BRL
+      game.scheduleEvent('FleeFromBattle', 0, { source: runStatsEntity });
       
-      // Spawn new enemies after a brief delay
-      setTimeout(() => {
-        if (game && !gameState.gameOver) {
-          spawnInitialEnemies(5);
-          renderParties();
-          game.resume();
-          addLogEntry('system', `🏃 Party retreated! Time penalty: +${RETREAT_TIME_PENALTY}s. New enemies approach...`);
-        }
-      }, 500);
-      
-      updateRunStatsUI();
+      addLogEntry('system', `🏃 Initiating tactical retreat...`);
     }
     
     // ========================================================================

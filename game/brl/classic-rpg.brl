@@ -87,6 +87,24 @@ component GameState {
     retargetingActive: boolean
 }
 
+// Run tracking for leaderboard
+component RunStats {
+    simulationTime: float
+    retreatCount: integer
+    retreatPenalty: float
+    deathPenalty: float
+    totalTime: float
+    canFlee: boolean
+    lastFleeTime: float
+}
+
+// Flee constants (defined as component for easy tuning)
+component FleeConfig {
+    retreatTimePenalty: float      // 10 seconds
+    deathTimePenaltyMultiplier: float  // 5x = 50 seconds
+    fleeCooldown: float            // 5 seconds between flees
+}
+
 // Skill cooldown tracking
 component SkillCooldown {
     skill1Cooldown: float
@@ -264,8 +282,18 @@ rule count_player_death on PlayerDefeated {
     entity.GameState.playerDeaths += 1
 }
 
-// Game over on player death
+// Apply death penalty to run stats
+rule apply_death_penalty on PlayerDefeated {
+    entity.RunStats.deathPenalty += entity.FleeConfig.retreatTimePenalty * entity.FleeConfig.deathTimePenaltyMultiplier
+    entity.RunStats.totalTime = entity.RunStats.simulationTime + entity.RunStats.retreatPenalty + entity.RunStats.deathPenalty
+    schedule UpdateRunStats {
+    }
+}
+
+// Game over on all players dead
 rule game_over_check on PlayerDefeated {
+    // Check if all players are dead
+    // Note: This is simplified - real check would query all player entities
     entity.GameState.gameOver = true
     schedule GameOver {
         victory: false
@@ -291,6 +319,63 @@ rule acquire_skill on AcquireSkill {
         schedule SkillAcquired {
             character: entity.id
         }
+    }
+}
+
+// Flee from battle - player initiates retreat
+rule flee_battle on FleeFromBattle {
+    // Check cooldown
+    let timeSinceFlee = entity.RunStats.simulationTime - entity.RunStats.lastFleeTime
+    if timeSinceFlee >= entity.FleeConfig.fleeCooldown {
+        // Apply retreat penalty
+        entity.RunStats.retreatCount += 1
+        entity.RunStats.retreatPenalty += entity.FleeConfig.retreatTimePenalty
+        entity.RunStats.lastFleeTime = entity.RunStats.simulationTime
+        entity.RunStats.canFlee = false
+        entity.RunStats.totalTime = entity.RunStats.simulationTime + entity.RunStats.retreatPenalty + entity.RunStats.deathPenalty
+        
+        // Mark all enemies for despawn
+        schedule DespawnAllEnemies {
+        }
+        
+        // Spawn new wave after retreat
+        schedule [delay: 0.5] SpawnEnemyWave {
+        }
+        
+        schedule UpdateRunStats {
+        }
+    }
+}
+
+// Despawn all enemies on flee
+rule despawn_enemies on DespawnAllEnemies {
+    if entity.Enemy.tier > 0 {
+        // Remove enemy entity (handled by engine)
+        entity.Health.current = 0
+        schedule RemoveEntity {
+            target: entity.id
+        }
+    }
+}
+
+// Update flee cooldown timer
+rule update_flee_cooldown on UpdateRunStats {
+    let timeSinceFlee = entity.RunStats.simulationTime - entity.RunStats.lastFleeTime
+    if timeSinceFlee >= entity.FleeConfig.fleeCooldown {
+        entity.RunStats.canFlee = true
+    }
+}
+
+// Complete run and save to leaderboard
+rule complete_run on GameOver {
+    schedule SaveRunToLeaderboard {
+        completionTime: entity.RunStats.totalTime
+        enemiesDefeated: entity.GameState.enemiesDefeated
+        playerDeaths: entity.GameState.playerDeaths
+        retreats: entity.RunStats.retreatCount
+        retreatPenalty: entity.RunStats.retreatPenalty
+        deathPenalty: entity.RunStats.deathPenalty
+        victory: entity.GameState.victory
     }
 }
 
@@ -349,3 +434,6 @@ tracker Mana on UseSkill
 tracker Skills on SkillAcquired
 tracker ChoiceContext on SkillChoice
 tracker GameState on PlayerDefeated
+tracker RunStats on UpdateRunStats
+tracker RunStats on FleeFromBattle
+tracker GameState on SaveRunToLeaderboard
