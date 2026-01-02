@@ -722,6 +722,143 @@
       border-radius: 5px;
       font-size: 0.85rem;
     }
+    
+    /* Leaderboard Styles */
+    .leaderboard-panel {
+      background: rgba(255,255,255,0.05);
+      border-radius: 15px;
+      padding: 15px;
+      margin-bottom: 15px;
+      border: 2px solid rgba(201, 149, 107, 0.3);
+    }
+    
+    .leaderboard-panel h2 {
+      color: #c9956b;
+      margin-top: 0;
+      font-size: 1.2rem;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .leaderboard-content {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+    
+    .leaderboard-content.expanded {
+      max-height: 600px;
+      overflow-y: auto;
+    }
+    
+    .leaderboard-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      margin-top: 10px;
+    }
+    
+    .leaderboard-table th {
+      background: rgba(0,0,0,0.3);
+      color: #c9956b;
+      padding: 8px;
+      text-align: left;
+      border-bottom: 2px solid rgba(201, 149, 107, 0.3);
+    }
+    
+    .leaderboard-table td {
+      padding: 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .leaderboard-table tr:hover {
+      background: rgba(255,255,255,0.05);
+    }
+    
+    .leaderboard-rank {
+      font-weight: bold;
+      color: #c9956b;
+    }
+    
+    .leaderboard-rank.gold { color: #fbbf24; }
+    .leaderboard-rank.silver { color: #d1d5db; }
+    .leaderboard-rank.bronze { color: #f59e0b; }
+    
+    .leaderboard-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    
+    .leaderboard-empty {
+      text-align: center;
+      color: #8a7a68;
+      padding: 20px;
+      font-style: italic;
+    }
+    
+    /* Run Statistics */
+    .run-stats {
+      background: rgba(139, 92, 246, 0.1);
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 15px;
+    }
+    
+    .run-stats h3 {
+      margin: 0 0 10px 0;
+      color: #c4b5fd;
+      font-size: 0.9rem;
+    }
+    
+    .run-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 8px;
+    }
+    
+    .run-stat-item {
+      background: rgba(0,0,0,0.3);
+      padding: 8px;
+      border-radius: 5px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .run-stat-label {
+      color: #8a7a68;
+      font-size: 0.75rem;
+    }
+    
+    .run-stat-value {
+      color: #c9956b;
+      font-weight: bold;
+      font-size: 0.85rem;
+    }
+    
+    .run-stat-penalty {
+      color: #f87171;
+    }
+    
+    /* Flee Button */
+    button.flee {
+      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+      color: #2d2520;
+    }
+    
+    button.flee:hover:not(:disabled) {
+      box-shadow: 0 5px 20px rgba(251, 191, 36, 0.4);
+    }
+    
+    .flee-cooldown {
+      font-size: 0.7rem;
+      color: #888;
+      margin-left: 5px;
+    }
   </style>
 </head>
 <body>
@@ -802,6 +939,10 @@
         <span class="status-value" id="game-time">0.00s</span>
       </div>
       <div class="status-item">
+        <span class="status-label">⏳ Total Time:</span>
+        <span class="status-value" id="total-time">0.00s</span>
+      </div>
+      <div class="status-item">
         <span class="status-label">📊 Wave:</span>
         <span class="status-value" id="current-wave">1</span>
       </div>
@@ -816,6 +957,29 @@
       <div class="status-item">
         <span class="status-label">🎮 Status:</span>
         <span class="status-value" id="game-status">Ready</span>
+      </div>
+    </div>
+    
+    <!-- Run Statistics -->
+    <div class="run-stats">
+      <h3>📊 Current Run Statistics</h3>
+      <div class="run-stats-grid">
+        <div class="run-stat-item">
+          <span class="run-stat-label">🏃 Retreats:</span>
+          <span class="run-stat-value" id="retreat-count">0</span>
+        </div>
+        <div class="run-stat-item">
+          <span class="run-stat-label">⏱️ Retreat Penalty:</span>
+          <span class="run-stat-value run-stat-penalty" id="retreat-penalty">0s</span>
+        </div>
+        <div class="run-stat-item">
+          <span class="run-stat-label">💀 Death Penalty:</span>
+          <span class="run-stat-value run-stat-penalty" id="death-penalty">0s</span>
+        </div>
+        <div class="run-stat-item">
+          <span class="run-stat-label">⏳ Total Penalties:</span>
+          <span class="run-stat-value run-stat-penalty" id="total-penalties">0s</span>
+        </div>
       </div>
     </div>
     
@@ -866,6 +1030,7 @@
     <div class="controls">
       <button id="start-btn">▶️ Start Battle</button>
       <button id="pause-btn" class="secondary" disabled>⏸️ Pause</button>
+      <button id="flee-btn" class="flee" disabled>🏃 Flee Battle</button>
       <button id="reset-btn" class="secondary">🔄 Reset</button>
     </div>
     
@@ -880,6 +1045,26 @@
           <div class="log-entry system">
             <span class="log-time">[0.00s]</span>
             <span>Waiting for battle to start...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Leaderboard -->
+    <div class="leaderboard-panel">
+      <h2 onclick="toggleAccordion('leaderboard-content')">
+        <span>🏆 Leaderboard - Best Party Builds</span>
+        <span class="accordion-toggle" id="leaderboard-content-toggle">▼</span>
+      </h2>
+      <div class="leaderboard-content" id="leaderboard-content">
+        <div class="leaderboard-actions">
+          <button class="secondary" onclick="refreshLeaderboard()">🔄 Refresh</button>
+          <button class="secondary" onclick="clearLeaderboard()">🗑️ Clear All</button>
+          <button class="secondary" onclick="exportLeaderboard()">💾 Export</button>
+        </div>
+        <div id="leaderboard-table-container">
+          <div class="leaderboard-empty">
+            No runs recorded yet. Complete a game to see your build on the leaderboard!
           </div>
         </div>
       </div>
@@ -1098,6 +1283,33 @@
     let nextEnemyId = 100; // Start enemy IDs from 100 to avoid conflicts
     let lastLoggedKills = 0; // Track kills for summary logging
     let updateCounter = 0; // Counter for batched UI updates
+    
+    // ========================================================================
+    // RUN TRACKING STATE
+    // ========================================================================
+    const RETREAT_TIME_PENALTY = 10; // X seconds penalty for fleeing
+    const DEATH_TIME_MULTIPLIER = 5; // N times X for death penalty (50 seconds)
+    const FLEE_COOLDOWN = 5; // Seconds cooldown between flee attempts
+    
+    let runState = {
+      runId: null,
+      startTime: null,
+      simulationTime: 0,
+      totalTime: 0, // Simulation time + penalties
+      retreatCount: 0,
+      retreatPenalty: 0,
+      deathPenalty: 0,
+      lastFleeTime: -999, // Last time flee was used
+      canFlee: true
+    };
+    
+    // DOM elements for run tracking
+    const totalTimeEl = document.getElementById('total-time');
+    const retreatCountEl = document.getElementById('retreat-count');
+    const retreatPenaltyEl = document.getElementById('retreat-penalty');
+    const deathPenaltyEl = document.getElementById('death-penalty');
+    const totalPenaltiesEl = document.getElementById('total-penalties');
+    const fleeBtn = document.getElementById('flee-btn');
     
     // DOM elements
     const irFileInput = document.getElementById('ir-file');
@@ -3680,6 +3892,9 @@
       // Initialize character data
       updateCharacterData();
       
+      // Initialize run tracking
+      initializeRun();
+      
       // Subscribe to tracker events
       game.onTracker((output) => {
         handleTrackerOutput(output);
@@ -3702,6 +3917,7 @@
       spawnInitialEnemies(5);
       
       renderParties();
+      refreshLeaderboard();
       addLogEntry('system', `⚔️ ${selectedCharacters.map(c => c.name).join(', ')} are ready for battle!`);
       addLogEntry('system', 'Press Start to begin the adventure!');
     }
@@ -3978,6 +4194,9 @@
               // Player hero died - CRITICAL: Retarget all enemies that were targeting this hero
               addLogEntry('death', `💀 ${charName} has been defeated!`);
               
+              // Apply death penalty
+              handleDeath();
+              
               // Find all alive heroes
               const aliveHeroes = [];
               for (let heroId = 0; heroId <= 3; heroId++) {
@@ -4170,6 +4389,10 @@
       bannerText.textContent = victory ? '🎉 Victory! Dragon Lord Vexar Defeated! 🎉' : '💀 Defeat! Your party has fallen... 💀';
       gameBanner.style.display = 'block';
       addLogEntry('system', victory ? '🏆 VICTORY! All enemies defeated!' : '☠️ GAME OVER! Your party was wiped out.');
+      
+      // Save run to leaderboard
+      updateRunStatsUI(); // Final update
+      saveRunToLeaderboard();
     }
     
     function updateUI() {
@@ -4179,6 +4402,7 @@
       if (game) {
         gameTimeEl.textContent = game.getTime().toFixed(2) + 's';
       }
+      updateRunStatsUI();
     }
     
     function updateButtons() {
@@ -4190,6 +4414,9 @@
       startBtn.disabled = isRunning && !isPaused;
       pauseBtn.disabled = !isRunning || isPaused;
       pauseBtn.textContent = isPaused ? '▶️ Resume' : '⏸️ Pause';
+      
+      // Update flee button state
+      fleeBtn.disabled = !isRunning || isPaused || gameState.gameOver || !runState.canFlee;
     }
     
     function addLogEntry(type, message) {
@@ -4249,6 +4476,8 @@
     
     resetBtn.addEventListener('click', resetGame);
     
+    fleeBtn.addEventListener('click', handleFlee);
+    
     speedSlider.addEventListener('input', (e) => {
       const speed = parseFloat(e.target.value);
       speedValue.textContent = `${speed}x`;
@@ -4271,6 +4500,249 @@
       if (element && toggle) {
         element.classList.toggle('expanded');
         toggle.classList.toggle('expanded');
+      }
+    }
+    
+    // ========================================================================
+    // RUN TRACKING FUNCTIONS
+    // ========================================================================
+    
+    function initializeRun() {
+      runState = {
+        runId: `run_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        startTime: Date.now(),
+        simulationTime: 0,
+        totalTime: 0,
+        retreatCount: 0,
+        retreatPenalty: 0,
+        deathPenalty: 0,
+        lastFleeTime: -999,
+        canFlee: true
+      };
+      updateRunStatsUI();
+    }
+    
+    function updateRunStatsUI() {
+      runState.simulationTime = game ? game.getTime() : 0;
+      runState.totalTime = runState.simulationTime + runState.retreatPenalty + runState.deathPenalty;
+      
+      totalTimeEl.textContent = runState.totalTime.toFixed(2) + 's';
+      retreatCountEl.textContent = runState.retreatCount;
+      retreatPenaltyEl.textContent = runState.retreatPenalty.toFixed(0) + 's';
+      deathPenaltyEl.textContent = runState.deathPenalty.toFixed(0) + 's';
+      totalPenaltiesEl.textContent = (runState.retreatPenalty + runState.deathPenalty).toFixed(0) + 's';
+      
+      // Update flee button cooldown
+      if (game && game.getIsRunning()) {
+        const timeSinceFlee = runState.simulationTime - runState.lastFleeTime;
+        runState.canFlee = timeSinceFlee >= FLEE_COOLDOWN;
+        fleeBtn.disabled = !runState.canFlee || gameState.gameOver;
+        
+        if (!runState.canFlee && !gameState.gameOver) {
+          const remaining = Math.ceil(FLEE_COOLDOWN - timeSinceFlee);
+          fleeBtn.innerHTML = `🏃 Flee Battle <span class="flee-cooldown">(${remaining}s)</span>`;
+        } else {
+          fleeBtn.innerHTML = '🏃 Flee Battle';
+        }
+      }
+    }
+    
+    function handleDeath() {
+      const penalty = RETREAT_TIME_PENALTY * DEATH_TIME_MULTIPLIER;
+      runState.deathPenalty += penalty;
+      addLogEntry('system', `💀 Death penalty: +${penalty}s to total time`);
+      updateRunStatsUI();
+    }
+    
+    function handleFlee() {
+      if (!game || !runState.canFlee || gameState.gameOver) return;
+      
+      runState.retreatCount++;
+      runState.retreatPenalty += RETREAT_TIME_PENALTY;
+      runState.lastFleeTime = runState.simulationTime;
+      runState.canFlee = false;
+      
+      // Pause the game
+      if (game.getIsRunning()) {
+        game.pause();
+      }
+      
+      // Remove all current enemies
+      const allEntities = game.query('Team');
+      for (const entityId of allEntities) {
+        const team = game.getComponent(entityId, 'Team');
+        if (team && !team.isPlayer) {
+          game.removeEntity(entityId);
+        }
+      }
+      
+      // Spawn new enemies after a brief delay
+      setTimeout(() => {
+        if (game && !gameState.gameOver) {
+          spawnInitialEnemies(5);
+          renderParties();
+          game.resume();
+          addLogEntry('system', `🏃 Party retreated! Time penalty: +${RETREAT_TIME_PENALTY}s. New enemies approach...`);
+        }
+      }, 500);
+      
+      updateRunStatsUI();
+    }
+    
+    // ========================================================================
+    // LEADERBOARD FUNCTIONS
+    // ========================================================================
+    
+    const STORAGE_KEY = 'blink_rpg_runs';
+    const MAX_STORED_RUNS = 100;
+    
+    function saveRunToLeaderboard() {
+      if (!runState.runId) return;
+      
+      const runData = {
+        runId: runState.runId,
+        timestamp: runState.startTime,
+        completionTime: runState.totalTime,
+        simulationTime: runState.simulationTime,
+        partyComposition: {
+          characters: selectedCharacters.map(c => c.name),
+          characterIds: selectedCharacters.map(c => c.id),
+          bclFiles: loadedBCLFiles.map(f => f.name)
+        },
+        statistics: {
+          enemiesDefeated: gameState.enemiesDefeated,
+          playerDeaths: gameState.playerDeaths,
+          retreats: runState.retreatCount,
+          retreatPenalty: runState.retreatPenalty,
+          deathPenalty: runState.deathPenalty,
+          totalPenalties: runState.retreatPenalty + runState.deathPenalty
+        },
+        victory: gameState.victory
+      };
+      
+      // Load existing runs
+      let runs = [];
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          runs = JSON.parse(stored);
+        }
+      } catch (e) {
+        console.error('Failed to load runs from storage:', e);
+      }
+      
+      // Add new run
+      runs.push(runData);
+      
+      // Sort by completion time (fastest first)
+      runs.sort((a, b) => a.completionTime - b.completionTime);
+      
+      // Keep only top MAX_STORED_RUNS
+      if (runs.length > MAX_STORED_RUNS) {
+        runs = runs.slice(0, MAX_STORED_RUNS);
+      }
+      
+      // Save back to storage
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(runs));
+        addLogEntry('system', `🏆 Run saved to leaderboard! Rank: #${runs.findIndex(r => r.runId === runState.runId) + 1}`);
+      } catch (e) {
+        console.error('Failed to save run to storage:', e);
+        addLogEntry('system', '⚠️ Failed to save run to leaderboard (storage error)');
+      }
+      
+      refreshLeaderboard();
+    }
+    
+    function refreshLeaderboard() {
+      const container = document.getElementById('leaderboard-table-container');
+      
+      let runs = [];
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          runs = JSON.parse(stored);
+        }
+      } catch (e) {
+        console.error('Failed to load runs:', e);
+      }
+      
+      if (runs.length === 0) {
+        container.innerHTML = '<div class="leaderboard-empty">No runs recorded yet. Complete a game to see your build on the leaderboard!</div>';
+        return;
+      }
+      
+      // Build table HTML
+      let html = '<table class="leaderboard-table">';
+      html += '<thead><tr>';
+      html += '<th>Rank</th>';
+      html += '<th>Time</th>';
+      html += '<th>Party</th>';
+      html += '<th>Kills</th>';
+      html += '<th>Deaths</th>';
+      html += '<th>Retreats</th>';
+      html += '<th>Penalties</th>';
+      html += '<th>Date</th>';
+      html += '</tr></thead><tbody>';
+      
+      runs.forEach((run, index) => {
+        const rank = index + 1;
+        const rankClass = rank === 1 ? 'gold' : rank === 2 ? 'silver' : rank === 3 ? 'bronze' : '';
+        const date = new Date(run.timestamp).toLocaleDateString();
+        const time = new Date(run.timestamp).toLocaleTimeString();
+        
+        html += '<tr>';
+        html += `<td><span class="leaderboard-rank ${rankClass}">#${rank}</span></td>`;
+        html += `<td><strong>${run.completionTime.toFixed(2)}s</strong></td>`;
+        html += `<td>${run.partyComposition.characters.join(', ')}</td>`;
+        html += `<td>${run.statistics.enemiesDefeated}</td>`;
+        html += `<td>${run.statistics.playerDeaths}</td>`;
+        html += `<td>${run.statistics.retreats}</td>`;
+        html += `<td>+${run.statistics.totalPenalties.toFixed(0)}s</td>`;
+        html += `<td>${date} ${time}</td>`;
+        html += '</tr>';
+      });
+      
+      html += '</tbody></table>';
+      container.innerHTML = html;
+    }
+    
+    function clearLeaderboard() {
+      if (!confirm('Are you sure you want to clear all leaderboard data? This cannot be undone.')) {
+        return;
+      }
+      
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+        refreshLeaderboard();
+        addLogEntry('system', '🗑️ Leaderboard cleared');
+      } catch (e) {
+        console.error('Failed to clear leaderboard:', e);
+      }
+    }
+    
+    function exportLeaderboard() {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (!stored) {
+          alert('No leaderboard data to export');
+          return;
+        }
+        
+        const blob = new Blob([stored], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `blink_rpg_leaderboard_${Date.now()}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        addLogEntry('system', '💾 Leaderboard exported');
+      } catch (e) {
+        console.error('Failed to export leaderboard:', e);
+        alert('Failed to export leaderboard');
       }
     }
   </script>
