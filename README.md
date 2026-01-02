@@ -102,6 +102,22 @@ python -m http.server 8000
 
 See [game/demos/README.md](game/demos/README.md) for more details.
 
+### Try the Live Demo (GitHub Pages)
+
+The demos are automatically deployed to GitHub Pages on every push to the main branch. You can play them directly in your browser without any local setup!
+
+🎮 **[Play Now on GitHub Pages](https://ercasta.github.io/blink-idle-rpg/)**
+
+The GitHub Pages deployment includes:
+- All interactive demos (combat demo, RPG demo)
+- Pre-compiled game files (IR)
+- Downloadable source files (BRL, BCL)
+
+**Note:** The first deployment requires enabling GitHub Pages in the repository settings:
+1. Go to repository Settings → Pages
+2. Set Source to "GitHub Actions"
+3. The workflow will automatically deploy on the next push to main
+
 ### For JavaScript Engine Development
 
 #### Prerequisites
@@ -211,6 +227,27 @@ Engines depend only on the IR specification. Example IR files are available:
 - `examples/ir/simple-combat.ir.json` - Basic combat system
 
 See the [IR Specification](doc/ir-specification.md) for format details.
+
+## CI/CD
+
+The project uses GitHub Actions for automated builds and deployment:
+
+### Workflows
+
+- **GitHub Pages Deployment** - Automatically deploys demos to GitHub Pages on push to main
+  - Builds the compiler and compiles BRL files to IR
+  - Builds the JavaScript engine packages
+  - Deploys demos to GitHub Pages at https://ercasta.github.io/blink-idle-rpg/
+  
+- **Build Demo Package (Linux)** - Creates a distributable demo package for Linux
+  - Triggered on push to main, tags, and PRs
+  - Uploads artifact and creates GitHub releases on tags
+
+- **Build Demo Package (Windows)** - Creates a distributable demo package for Windows
+  - Triggered on push to main, tags, and PRs
+  - Uploads artifact and creates GitHub releases on tags
+
+All workflows can be manually triggered using the "workflow_dispatch" event.
 
 ## Documentation
 

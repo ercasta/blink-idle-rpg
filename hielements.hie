@@ -213,6 +213,32 @@ element blink_project:
             scope src = files.folder_selector('tools/vscode-blink/')
     
     ## ========================================================================
+    ## CI/CD
+    ## ========================================================================
+    ## GitHub Actions workflows for automated builds, tests, and deployment
+    
+    element ci_cd:
+        scope workflows = files.folder_selector('.github/workflows/')
+        
+        ## Build Demo Package (Linux)
+        ## Builds compiler, compiles BRL to IR, creates demo package
+        element build_demo_linux:
+            scope workflow = files.file_selector('.github/workflows/build-demo-linux.yml')
+            check files.exists(workflow)
+        
+        ## Build Demo Package (Windows)
+        ## Builds compiler, compiles BRL to IR, creates demo package for Windows
+        element build_demo_windows:
+            scope workflow = files.file_selector('.github/workflows/build-demo-windows.yml')
+            check files.exists(workflow)
+        
+        ## GitHub Pages Deployment
+        ## Builds and deploys game demos to GitHub Pages
+        ## Triggers: Push to main, manual dispatch
+        ## Artifacts: Built demo site published to gh-pages branch
+        element github_pages:
+            scope workflow = files.file_selector('.github/workflows/github-pages.yml')
+            check files.exists(workflow)
     ## GAME CONTENT
     ## ========================================================================
     ## Game data including character definitions and BCL strategies

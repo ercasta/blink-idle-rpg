@@ -1,0 +1,275 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
+# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: |
+            packages/blink-engine/package-lock.json
+            packages/blink-test/package-lock.json
+      
+      - name: Build compiler
+        run: |
+          cd src/compiler
+          cargo build --release
+          echo "Compiler built successfully"
+      
+      - name: Compile BRL to IR
+        run: |
+          mkdir -p game/ir
+          cd src/compiler
+          # Compile all BRL files to IR
+          for brl_file in ../../game/brl/*.brl; do
+            if [ -f "$brl_file" ]; then
+              filename=$(basename "$brl_file" .brl)
+              ./target/release/blink-compiler compile -i "$brl_file" -o "../../game/ir/${filename}.ir.json" --pretty
+              echo "Compiled ${filename}.brl -> ${filename}.ir.json"
+            fi
+          done
+          cd ../..
+          echo "IR files generated:"
+          ls -la game/ir/*.ir.json || echo "No IR files found"
+      
+      - name: Install package dependencies
+        run: |
+          cd packages/blink-engine
+          npm ci
+          cd ../blink-test
+          npm ci
+      
+      - name: Build packages
+        run: |
+          echo "Building blink-engine..."
+          cd packages/blink-engine
+          npm run build
+          cd ../..
+          
+          echo "Building blink-test..."
+          cd packages/blink-test
+          npm run build
+          cd ../..
+      
+      - name: Prepare deployment directory
+        run: |
+          mkdir -p _site
+          
+          # Copy demo HTML and JS files
+          echo "Copying demo files..."
+          cp game/demos/index.html _site/
+          cp game/demos/combat-demo.html _site/
+          cp game/demos/rpg-demo.html _site/
+          cp game/demos/blink-engine.bundle.js _site/
+          
+          # Copy README if it exists
+          if [ -f game/demos/README.md ]; then
+            cp game/demos/README.md _site/
+          fi
+          
+          # Copy game files (BRL, BCL, IR) for users to download
+          echo "Copying game files..."
+          mkdir -p _site/game-files
+          
+          # Copy BRL files if they exist
+          if ls game/brl/*.brl 1> /dev/null 2>&1; then
+            cp game/brl/*.brl _site/game-files/
+          fi
+          
+          # Copy BCL files if they exist
+          if ls game/bcl/*.bcl 1> /dev/null 2>&1; then
+            cp game/bcl/*.bcl _site/game-files/
+          fi
+          
+          # Copy IR files if they exist
+          if ls game/ir/*.ir.json 1> /dev/null 2>&1; then
+            cp game/ir/*.ir.json _site/game-files/
+          fi
+          
+          # Create a simple index for game files
+          echo "Creating game files index..."
+          cat > _site/game-files/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Blink Idle RPG - Game Files</title>
+            <style>
+              body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+                background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+                color: #eee;
+                padding: 20px;
+                line-height: 1.6;
+              }
+              .container {
+                max-width: 800px;
+                margin: 0 auto;
+              }
+              h1 {
+                color: #e94560;
+                text-align: center;
+              }
+              .section {
+                background: rgba(255,255,255,0.05);
+                border-radius: 10px;
+                padding: 20px;
+                margin: 20px 0;
+              }
+              h2 {
+                color: #4ade80;
+                border-bottom: 2px solid #4ade80;
+                padding-bottom: 10px;
+              }
+              ul {
+                list-style: none;
+                padding: 0;
+              }
+              li {
+                padding: 8px 0;
+              }
+              a {
+                color: #60a5fa;
+                text-decoration: none;
+                padding: 5px 10px;
+                background: rgba(96, 165, 250, 0.1);
+                border-radius: 5px;
+                display: inline-block;
+              }
+              a:hover {
+                background: rgba(96, 165, 250, 0.2);
+              }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <h1>🎮 Blink Idle RPG - Game Files</h1>
+              <p style="text-align: center; color: #888;">Download game rule files, intermediate representation, and player strategies</p>
+              
+              <div class="section">
+                <h2>📜 BRL Files (Game Rules)</h2>
+                <p>Blink Rule Language files define game mechanics and systems.</p>
+                <ul id="brl-files"></ul>
+              </div>
+              
+              <div class="section">
+                <h2>🎯 BCL Files (Player Strategies)</h2>
+                <p>Blink Choice Language files define how players make decisions.</p>
+                <ul id="bcl-files"></ul>
+              </div>
+              
+              <div class="section">
+                <h2>⚙️ IR Files (Intermediate Representation)</h2>
+                <p>Compiled game rules ready for execution by the game engine.</p>
+                <ul id="ir-files"></ul>
+              </div>
+              
+              <div style="text-align: center; margin-top: 40px;">
+                <a href="../index.html" style="background: rgba(233, 69, 96, 0.2);">← Back to Demos</a>
+              </div>
+            </div>
+            
+            <script>
+              // Populate file lists
+              fetch('.')
+                .then(r => r.text())
+                .then(html => {
+                  const parser = new DOMParser();
+                  const doc = parser.parseFromString(html, 'text/html');
+                  const links = doc.querySelectorAll('a');
+                  
+                  const brlList = document.getElementById('brl-files');
+                  const bclList = document.getElementById('bcl-files');
+                  const irList = document.getElementById('ir-files');
+                  
+                  links.forEach(link => {
+                    const href = link.getAttribute('href');
+                    if (!href || href === '../' || href === 'index.html') return;
+                    
+                    const li = document.createElement('li');
+                    const a = document.createElement('a');
+                    a.href = href;
+                    a.textContent = href;
+                    a.download = href;
+                    li.appendChild(a);
+                    
+                    if (href.endsWith('.brl')) {
+                      brlList.appendChild(li);
+                    } else if (href.endsWith('.bcl')) {
+                      bclList.appendChild(li);
+                    } else if (href.endsWith('.ir.json')) {
+                      irList.appendChild(li);
+                    }
+                  });
+                  
+                  // Add "No files" messages if empty
+                  if (brlList.children.length === 0) {
+                    brlList.innerHTML = '<li style="color: #666;">No BRL files available</li>';
+                  }
+                  if (bclList.children.length === 0) {
+                    bclList.innerHTML = '<li style="color: #666;">No BCL files available</li>';
+                  }
+                  if (irList.children.length === 0) {
+                    irList.innerHTML = '<li style="color: #666;">No IR files available</li>';
+                  }
+                })
+                .catch(err => {
+                  console.error('Error loading file list:', err);
+                  // Fallback: just show a message
+                  document.querySelectorAll('ul').forEach(ul => {
+                    if (ul.children.length === 0) {
+                      ul.innerHTML = '<li style="color: #666;">Files available in this directory</li>';
+                    }
+                  });
+                });
+            </script>
+          </body>
+          </html>
+          EOF
+          
+          echo "Deployment directory prepared:"
+          ls -laR _site/
+      
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+      
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '_site'
+      
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
