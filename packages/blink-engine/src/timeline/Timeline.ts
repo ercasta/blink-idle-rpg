@@ -5,7 +5,6 @@
 
 import { EntityId } from '../ecs/Store';
 import { IRFieldValue } from '../ir/types';
-import { WATCHDOG_EVENT_TYPE } from '../constants';
 
 export interface ScheduledEvent {
   /** Unique event ID */
@@ -22,6 +21,10 @@ export interface ScheduledEvent {
   fields?: Record<string, IRFieldValue>;
   /** Ordering for same-time events (lower = earlier) */
   sequence: number;
+  /** If true, this event will automatically reschedule itself */
+  recurring?: boolean;
+  /** Interval for recurring events (in seconds) */
+  interval?: number;
 }
 
 /**
@@ -58,6 +61,8 @@ export class Timeline {
       source?: EntityId;
       target?: EntityId;
       fields?: Record<string, IRFieldValue>;
+      recurring?: boolean;
+      interval?: number;
     } = {}
   ): number {
     return this.scheduleAt(eventType, this.currentTime + delay, options);
@@ -73,6 +78,8 @@ export class Timeline {
       source?: EntityId;
       target?: EntityId;
       fields?: Record<string, IRFieldValue>;
+      recurring?: boolean;
+      interval?: number;
     } = {}
   ): number {
     const event: ScheduledEvent = {
@@ -83,6 +90,8 @@ export class Timeline {
       target: options.target,
       fields: options.fields,
       sequence: this.nextSequence++,
+      recurring: options.recurring,
+      interval: options.interval,
     };
 
     this.insert(event);
@@ -101,6 +110,31 @@ export class Timeline {
     } = {}
   ): number {
     return this.scheduleAt(eventType, this.currentTime, options);
+  }
+
+  /**
+   * Schedule a recurring event
+   * The event will automatically reschedule itself after each execution
+   * Returns the event ID which can be used to cancel the recurring event
+   */
+  scheduleRecurring(
+    eventType: string,
+    interval: number,
+    options: {
+      delay?: number;
+      source?: EntityId;
+      target?: EntityId;
+      fields?: Record<string, IRFieldValue>;
+    } = {}
+  ): number {
+    const startTime = this.currentTime + (options.delay ?? 0);
+    return this.scheduleAt(eventType, startTime, {
+      source: options.source,
+      target: options.target,
+      fields: options.fields,
+      recurring: true,
+      interval,
+    });
   }
 
   /**
@@ -128,6 +162,22 @@ export class Timeline {
 
     // Advance time to this event
     this.currentTime = result.time;
+
+    // If this is a recurring event, reschedule it with the SAME ID
+    if (result.recurring && result.interval && result.interval > 0) {
+      const nextEvent: ScheduledEvent = {
+        id: result.id, // Reuse the same ID
+        eventType: result.eventType,
+        time: result.time + result.interval,
+        source: result.source,
+        target: result.target,
+        fields: result.fields,
+        sequence: this.nextSequence++,
+        recurring: true,
+        interval: result.interval,
+      };
+      this.insert(nextEvent);
+    }
 
     return result;
   }
@@ -184,19 +234,6 @@ export class Timeline {
       if (a.time !== b.time) return a.time - b.time;
       return a.sequence - b.sequence;
     });
-  }
-
-  /**
-   * Check if there are any non-watchdog events
-   * More efficient than filtering all events
-   */
-  hasNonWatchdogEvents(): boolean {
-    for (const event of this.events) {
-      if (event.eventType !== WATCHDOG_EVENT_TYPE) {
-        return true;
-      }
-    }
-    return false;
   }
 
   // ===== Heap operations =====
