@@ -84,7 +84,11 @@ jobs:
           cp game/demos/README.md deploy-package/
           
           # Copy optional files if they exist
-          [ -f game/demos/party-config.bcl.zip ] && cp game/demos/party-config.bcl.zip deploy-package/ || echo "Note: party-config.bcl.zip not found, skipping"
+          if [ -f game/demos/party-config.bcl.zip ]; then
+            cp game/demos/party-config.bcl.zip deploy-package/
+          else
+            echo "Note: party-config.bcl.zip not found, skipping"
+          fi
           
           echo "Deployment package contents:"
           ls -la deploy-package/
@@ -103,12 +107,22 @@ jobs:
           echo "target_folder=$TARGET_FOLDER" >> $GITHUB_OUTPUT
           echo "Target folder: $TARGET_FOLDER"
       
+      - name: Set SFTP port
+        id: set-port
+        run: |
+          PORT="${{ secrets.SFTP_PORT }}"
+          if [ -z "$PORT" ]; then
+            PORT="22"
+          fi
+          echo "port=$PORT" >> $GITHUB_OUTPUT
+          echo "SFTP port: $PORT"
+      
       - name: Deploy to SFTP
         uses: wlixcc/SFTP-Deploy-Action@v1.2.4
         with:
           username: ${{ secrets.SFTP_USERNAME }}
           server: ${{ secrets.SFTP_HOST }}
-          port: ${{ secrets.SFTP_PORT || 22 }}
+          port: ${{ steps.set-port.outputs.port }}
           ssh_private_key: ${{ secrets.SFTP_SSH_KEY }}
           local_path: './deploy-package/*'
           remote_path: ${{ steps.set-target.outputs.target_folder }}

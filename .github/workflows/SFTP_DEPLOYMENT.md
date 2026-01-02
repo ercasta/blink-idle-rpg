@@ -85,7 +85,7 @@ The deployment package includes:
 - `rpg-demo.html` - Classic RPG demo
 - `blink-engine.bundle.js` - Blink JavaScript engine
 - `README.md` - Documentation
-- `party-config.bcl.zip` - Example BCL configuration files
+- `party-config.bcl.zip` - Example BCL configuration files (optional, included if available)
 
 ## Security Best Practices
 
