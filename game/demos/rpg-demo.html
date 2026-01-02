@@ -1150,7 +1150,7 @@
     // ========================================================================
     async function loadCharacterData() {
       try {
-        const response = await fetch('characters.json');
+        const response = await fetch('../data/characters.json');
         const data = await response.json();
         availableCharacters = data.characters;
         renderCharacterSelection();
@@ -1346,11 +1346,15 @@
         </div>
       `;
       
-      // Auto-select this hero for the slot if it's not already selected elsewhere
+      // Update the selection state for this slot
+      // Only set as selected if not already selected elsewhere
       if (!isAlreadySelected) {
         partySlots[slotIndex] = hero;
       } else {
-        partySlots[slotIndex] = null;
+        // If the currently displayed hero is already selected elsewhere, clear this slot
+        if (partySlots[slotIndex] && partySlots[slotIndex].id === hero.id) {
+          partySlots[slotIndex] = null;
+        }
       }
     }
     
@@ -1363,13 +1367,6 @@
       
       // Re-render this slot
       renderHeroInSlot(slotIndex);
-      
-      // Update all other slots to check for duplicate selections
-      for (let i = 0; i < MAX_PARTY_SIZE; i++) {
-        if (i !== slotIndex) {
-          renderHeroInSlot(i);
-        }
-      }
       
       updatePartyCounter();
     }
