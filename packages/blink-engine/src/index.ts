@@ -50,3 +50,10 @@ export type { ExecutionContext } from './rules';
 // Trackers
 export { TrackerSystem } from './trackers';
 export type { TrackerOutput, EntityComponentData } from './trackers';
+
+// Constants
+export { 
+  WATCHDOG_EVENT_TYPE, 
+  MAX_WATCHDOG_PER_STEP, 
+  RECOVERY_EVENT_DELAY 
+} from './constants';

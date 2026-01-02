@@ -8,6 +8,11 @@ import { Timeline, ScheduledEvent } from './timeline/Timeline';
 import { RuleExecutor } from './rules/Executor';
 import { TrackerSystem, TrackerOutput } from './trackers/Tracker';
 import { loadIRFromString, loadIRFromObject, IRModule, IRFieldValue } from './ir';
+import { 
+  WATCHDOG_EVENT_TYPE, 
+  MAX_WATCHDOG_PER_STEP, 
+  RECOVERY_EVENT_DELAY 
+} from './constants';
 
 export interface GameOptions {
   /** Enable debug mode */
@@ -56,10 +61,6 @@ export interface SimulationEvent {
 type Unsubscribe = () => void;
 type TrackerCallback = (event: TrackerOutput) => void;
 type SimulationCallback = (event: SimulationEvent) => void;
-
-// Constants for watchdog system
-const MAX_WATCHDOG_PER_STEP = 10; // Maximum watchdog events processed per step
-const RECOVERY_EVENT_DELAY = 0.001; // Delay in seconds for recovery events (1ms)
 
 /**
  * Main game engine class
@@ -312,7 +313,7 @@ export class BlinkGame {
       }
       
       // Check if this is a watchdog event
-      if (event.eventType === '__WATCHDOG__') {
+      if (event.eventType === WATCHDOG_EVENT_TYPE) {
         watchdogProcessed++;
         if (watchdogProcessed >= MAX_WATCHDOG_PER_STEP) {
           if (this.options.debug) {
@@ -666,7 +667,7 @@ export class BlinkGame {
 
     // Schedule new watchdog event
     this.watchdogEventId = this.timeline.schedule(
-      '__WATCHDOG__',
+      WATCHDOG_EVENT_TYPE,
       this.options.watchdogInterval,
       {}
     );

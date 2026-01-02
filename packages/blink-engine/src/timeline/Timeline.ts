@@ -5,6 +5,7 @@
 
 import { EntityId } from '../ecs/Store';
 import { IRFieldValue } from '../ir/types';
+import { WATCHDOG_EVENT_TYPE } from '../constants';
 
 export interface ScheduledEvent {
   /** Unique event ID */
@@ -191,7 +192,7 @@ export class Timeline {
    */
   hasNonWatchdogEvents(): boolean {
     for (const event of this.events) {
-      if (event.eventType !== '__WATCHDOG__') {
+      if (event.eventType !== WATCHDOG_EVENT_TYPE) {
         return true;
       }
     }
