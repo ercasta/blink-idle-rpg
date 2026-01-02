@@ -84,6 +84,7 @@ component GameState {
     bossDefeated: boolean
     gameOver: boolean
     victory: boolean
+    retargetingActive: boolean
 }
 
 // Skill cooldown tracking
@@ -295,7 +296,9 @@ rule acquire_skill on AcquireSkill {
 
 // Start global recurring retargeting when game begins
 rule start_global_retargeting on EnemySpawned {
-    if entity.GameState.currentWave == 1 {
+    // Only start retargeting once, when first enemy spawns
+    if entity.GameState.currentWave == 1 && entity.GameState.retargetingActive == false {
+        entity.GameState.retargetingActive = true
         // Schedule first retargeting check in 2 seconds
         schedule [delay: 2.0] CheckAllTargets {
         }
@@ -307,8 +310,9 @@ rule check_entity_target on CheckAllTargets {
     // Rule fires for each entity with Target and Health components
     if entity.Health.current > 0 && entity.Target.entity != null {
         let target = entity.Target.entity
-        // Verify target entity exists and is dead
-        if target != null && target.Health.current <= 0 {
+        // Check if target is dead
+        // NOTE: BRL engine should handle the case where target entity no longer exists
+        if target.Health.current <= 0 {
             // Target is dead, need new target
             entity.Target.entity = null
             schedule FindNewTarget {
@@ -319,9 +323,11 @@ rule check_entity_target on CheckAllTargets {
 }
 
 // Reschedule the next retargeting check (makes it recurring)
-// Only reschedule once per CheckAllTargets event using GameState entity
+// REQUIRES: An entity with GameState component must exist in the game
+// This rule only fires for the GameState entity to ensure single reschedule
 rule reschedule_retargeting on CheckAllTargets {
-    if entity.GameState.gameOver == false && entity.GameState.currentWave > 0 {
+    // Only fire for entity with GameState component
+    if entity.GameState.retargetingActive && entity.GameState.gameOver == false {
         // Schedule next check in 2 seconds
         schedule [delay: 2.0] CheckAllTargets {
         }
