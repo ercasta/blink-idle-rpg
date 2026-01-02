@@ -213,6 +213,34 @@ element blink_project:
             scope src = files.folder_selector('tools/vscode-blink/')
     
     ## ========================================================================
+    ## GAME CONTENT
+    ## ========================================================================
+    ## Game data including character definitions and BCL strategies
+    
+    element game_content:
+        scope game = files.folder_selector('game/')
+        
+        ## Game data files
+        element data:
+            scope data = files.folder_selector('game/data/')
+            check files.exists(data, 'characters.json')
+        
+        ## BRL game rules
+        element brl:
+            scope brl = files.folder_selector('game/brl/')
+            check files.exists(brl, 'README.md')
+        
+        ## BCL player strategies
+        element bcl:
+            scope bcl = files.folder_selector('game/bcl/')
+            check files.exists(bcl, 'README.md')
+        
+        ## Game demos
+        element demos:
+            scope demos = files.folder_selector('game/demos/')
+            check files.exists(demos, 'README.md')
+    
+    ## ========================================================================
     ## CHANGE TRACKING
     ## ========================================================================
     ## Agent changelog for AI-assisted development
