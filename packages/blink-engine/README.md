@@ -85,8 +85,14 @@ interface GameOptions {
   debug?: boolean;        // Enable debug logging
   timeScale?: number;     // Simulation speed multiplier
   maxEventsPerFrame?: number;  // Max events per frame
+  watchdogEnabled?: boolean;   // Enable hang prevention (default: true)
+  watchdogInterval?: number;   // Watchdog check interval in seconds (default: 5.0)
 }
 ```
+
+## Watchdog System
+
+The engine includes an automatic watchdog system that prevents games from hanging mid-battle. When enabled (default), it periodically checks if the game has stalled and generates recovery events. See [WATCHDOG.md](./WATCHDOG.md) for details.
 
 ## Architecture
 

@@ -95,7 +95,7 @@ const combatIR = {
 async function testWatchdogEnabledByDefault() {
   console.log("\n=== Test 1: Watchdog Enabled By Default ===");
   
-  const game = BlinkGame.createSync({ debug: true });
+  const game = BlinkGame.createSync();
   game.loadRulesFromObject(combatIR);
   
   // Start the game - watchdog should be scheduled
@@ -140,7 +140,6 @@ async function testWatchdogRecovery() {
   console.log("\n=== Test 3: Watchdog Recovery from Hang ===");
   
   const game = BlinkGame.createSync({ 
-    debug: true,
     watchdogEnabled: true,
     watchdogInterval: 2.0 // 2 seconds
   });
@@ -167,28 +166,17 @@ async function testWatchdogRecovery() {
   // At this point, timeline should only have the watchdog event
   let events = (game as any).timeline.getAllEvents();
   let nonWatchdogEvents = events.filter((e: any) => e.eventType !== '__WATCHDOG__');
-  console.log(`\nNon-watchdog events in timeline: ${nonWatchdogEvents.length}`);
+  console.log(`Non-watchdog events in timeline: ${nonWatchdogEvents.length}`);
   console.assert(nonWatchdogEvents.length === 0, "Should have no non-watchdog events (hang condition)");
   
-  // Run until watchdog fires (process multiple steps)
-  console.log("\nProcessing events until watchdog fires...");
+  // Run until watchdog fires and generates recovery events
+  console.log("Processing events until watchdog generates recovery...");
   let stepsProcessed = 0;
   const maxSteps = 10;
   
-  console.log(`Timeline has ${(game as any).timeline.getEventCount()} events`);
-  const allEvents = (game as any).timeline.getAllEvents();
-  console.log(`All events:`, allEvents.map((e: any) => `${e.eventType} at ${e.time}`));
-  
   while (stepsProcessed < maxSteps && (game as any).timeline.hasEvents()) {
-    console.log(`\n  Before step ${stepsProcessed + 1}, timeline has ${(game as any).timeline.getEventCount()} events`);
-    const result = game.step();
-    if (result) {
-      stepsProcessed++;
-      console.log(`  Step ${stepsProcessed}: ${result.event.eventType} at ${result.time}`);
-    } else {
-      console.log(`  Step returned null, but timeline still has ${(game as any).timeline.getEventCount()} events`);
-      stepsProcessed++; // Count the step even if it returned null
-    }
+    game.step();
+    stepsProcessed++;
   }
   
   // Check if health changed (indicating watchdog generated recovery event)
@@ -209,7 +197,6 @@ async function testWatchdogRescheduling() {
   console.log("\n=== Test 4: Watchdog Rescheduling ===");
   
   const game = BlinkGame.createSync({ 
-    debug: true,
     watchdogEnabled: true,
     watchdogInterval: 1.0
   });
