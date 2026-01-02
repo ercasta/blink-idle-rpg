@@ -57,6 +57,10 @@ type Unsubscribe = () => void;
 type TrackerCallback = (event: TrackerOutput) => void;
 type SimulationCallback = (event: SimulationEvent) => void;
 
+// Constants for watchdog system
+const MAX_WATCHDOG_PER_STEP = 10; // Maximum watchdog events processed per step
+const RECOVERY_EVENT_DELAY = 0.001; // Delay in seconds for recovery events (1ms)
+
 /**
  * Main game engine class
  */
@@ -300,7 +304,6 @@ export class BlinkGame {
     // Watchdog events are processed internally and don't count as "steps"
     // The loop continues until we find a non-watchdog event or run out of events
     let watchdogProcessed = 0;
-    const maxWatchdogPerStep = 10; // Prevent infinite loop if watchdog keeps firing
     
     while (true) {
       const event = this.timeline.pop();
@@ -311,7 +314,7 @@ export class BlinkGame {
       // Check if this is a watchdog event
       if (event.eventType === '__WATCHDOG__') {
         watchdogProcessed++;
-        if (watchdogProcessed >= maxWatchdogPerStep) {
+        if (watchdogProcessed >= MAX_WATCHDOG_PER_STEP) {
           if (this.options.debug) {
             console.warn(`[BlinkGame] Warning: Processed ${watchdogProcessed} watchdog events in one step, stopping to prevent infinite loop`);
           }
@@ -728,7 +731,7 @@ export class BlinkGame {
             
             // Use a tiny delay to ensure proper event ordering
             // scheduleImmediate would put events at current time which might cause ordering issues
-            this.timeline.schedule(this.options.watchdogRecoveryEvent, 0.001, { source: entityId });
+            this.timeline.schedule(this.options.watchdogRecoveryEvent, RECOVERY_EVENT_DELAY, { source: entityId });
           }
         }
       }
