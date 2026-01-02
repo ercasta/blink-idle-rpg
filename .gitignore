@@ -1,7 +1,9 @@
 # Rust
 **/target/
 **/*.rs.bk
-Cargo.lock
+# Note: Cargo.lock should be tracked for binary crates but not for library crates
+# We're keeping it tracked for the blink-compiler binary
+# Cargo.lock
 
 # Node.js
 node_modules/
