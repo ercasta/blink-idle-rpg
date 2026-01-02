@@ -293,11 +293,43 @@ rule acquire_skill on AcquireSkill {
     }
 }
 
-// Retarget after enemy death
-rule retarget_after_enemy_death on EnemyDefeated {
-    if entity.Team.isPlayer {
-        schedule FindNewTarget {
-            seeker: entity.id
+// Start global recurring retargeting when game begins
+rule start_global_retargeting on EnemySpawned {
+    if entity.GameState.currentWave == 1 {
+        // Schedule first retargeting check in 2 seconds
+        schedule [delay: 2.0] CheckAllTargets {
+        }
+    }
+}
+
+// Check if entity needs retargeting and reschedule
+rule check_entity_target on CheckAllTargets {
+    // Rule fires for each entity with Target component
+    if entity.Health.current > 0 {
+        // Check if current target is invalid (dead or null)
+        if entity.Target.entity == null {
+            // Need a new target
+            schedule FindNewTarget {
+                seeker: entity.id
+            }
+        } else {
+            let target = entity.Target.entity
+            if target.Health.current <= 0 {
+                // Target is dead, need new target
+                entity.Target.entity = null
+                schedule FindNewTarget {
+                    seeker: entity.id
+                }
+            }
+        }
+    }
+}
+
+// Reschedule the next retargeting check (makes it recurring)
+rule reschedule_retargeting on CheckAllTargets {
+    if entity.GameState.gameOver == false {
+        // Schedule next check in 2 seconds
+        schedule [delay: 2.0] CheckAllTargets {
         }
     }
 }
