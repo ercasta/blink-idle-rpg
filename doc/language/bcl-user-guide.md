@@ -706,6 +706,114 @@ choice fn select_position(character, available_positions): Position {
 }
 ```
 
+### Pattern 7: Flee Decision Strategy
+
+**Goal**: Decide when to retreat from battle to minimize time penalties.
+
+**Important Notes**:
+- Fleeing incurs a 10-second time penalty
+- Player death incurs a 50-second time penalty (5x flee penalty)
+- Strategic fleeing can save time in the long run
+- The game tracks total time = simulation time + penalties
+
+```bcl
+// Conservative flee strategy - retreat when party is in danger
+choice fn should_flee(party, enemies): boolean {
+    // Calculate average party health percentage
+    let total_health = 0.0
+    let total_max_health = 0.0
+    
+    for hero in party {
+        total_health += hero.Health.current
+        total_max_health += hero.Health.max
+    }
+    
+    let avg_health_pct = total_health / total_max_health
+    
+    // Flee if average party health drops below 30%
+    // This avoids the higher death penalty (50s vs 10s)
+    return avg_health_pct < 0.3
+}
+
+// Aggressive flee strategy - only flee when imminent defeat
+choice fn should_flee(party, enemies): boolean {
+    let alive_count = 0
+    
+    for hero in party {
+        if hero.Health.current > 0 {
+            alive_count += 1
+        }
+    }
+    
+    // Only flee if we're down to 1 hero
+    // Risk higher death penalties for faster clears
+    return alive_count <= 1
+}
+
+// Balanced flee strategy - consider multiple factors
+choice fn should_flee(party, enemies): boolean {
+    let avg_party_health = calculate_avg_health(party)
+    let enemy_count = count_alive_enemies(enemies)
+    let healer_alive = has_alive_healer(party)
+    
+    // Flee if:
+    // - Low health AND many enemies
+    // - Healer dead AND health below 50%
+    if (avg_party_health < 0.25 && enemy_count >= 3) {
+        return true
+    }
+    
+    if (!healer_alive && avg_party_health < 0.5) {
+        return true
+    }
+    
+    return false
+}
+
+// Helper functions for flee decisions
+fn calculate_avg_health(party): float {
+    let total = 0.0
+    let max_total = 0.0
+    
+    for hero in party {
+        total += hero.Health.current
+        max_total += hero.Health.max
+    }
+    
+    return total / max_total
+}
+
+fn count_alive_enemies(enemies): int {
+    let count = 0
+    for enemy in enemies {
+        if enemy.Health.current > 0 {
+            count += 1
+        }
+    }
+    return count
+}
+
+fn has_alive_healer(party): boolean {
+    for hero in party {
+        if hero.Character.class == "Cleric" && 
+           hero.Health.current > 0 {
+            return true
+        }
+    }
+    return false
+}
+```
+
+**Flee Strategy Tradeoffs**:
+- **Conservative** (30% health): Safer, more retreats, medium total time
+- **Aggressive** (1 hero): Riskier, fewer retreats, potentially faster if you avoid deaths
+- **Balanced**: Considers team composition and situation
+
+**Time Math**:
+- Flee penalty: 10s per retreat
+- Death penalty: 50s per death
+- If you might lose 3 heroes, it's worth fleeing (150s death vs 10s flee)
+
 ---
 
 ## Best Practices

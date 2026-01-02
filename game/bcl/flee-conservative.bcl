@@ -1,0 +1,46 @@
+// Conservative Flee Strategy for Classic RPG
+// Prioritizes survival - flees early to minimize death penalties
+
+module conservative_flee
+
+// Helper: Calculate average party health percentage
+fn calculate_avg_party_health(party: list): float {
+    let total_health = 0.0
+    let total_max_health = 0.0
+    
+    for hero in party {
+        total_health += hero.Health.current
+        total_max_health += hero.Health.max
+    }
+    
+    if total_max_health == 0 {
+        return 0.0
+    }
+    
+    return total_health / total_max_health
+}
+
+// Conservative flee decision - retreat at 40% avg health
+// Minimizes death risk but incurs more flee penalties
+// Best for: Difficult content, learning phase
+// Expected: More retreats (10-15), fewer deaths (0-2)
+choice fn should_flee_from_battle(
+    party: list,
+    enemies: list,
+    runStats: RunStats
+): boolean {
+    // Never flee if on cooldown
+    if !runStats.canFlee {
+        return false
+    }
+    
+    let avg_health = calculate_avg_party_health(party)
+    
+    // Conservative threshold - flee when average health drops below 40%
+    // This leaves a safety margin before deaths occur
+    if avg_health < 0.4 {
+        return true
+    }
+    
+    return false
+}

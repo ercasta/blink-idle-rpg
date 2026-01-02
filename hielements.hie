@@ -265,6 +265,20 @@ element blink_project:
         element demos:
             scope demos = files.folder_selector('game/demos/')
             check files.exists(demos, 'README.md')
+            
+            ## Leaderboard System
+            ## Browser-based local storage for tracking best party builds
+            ## Features:
+            ## - Run tracking with completion times
+            ## - Flee/retreat mechanism with time penalties
+            ## - Death penalties (5x retreat penalty)
+            ## - localStorage persistence for run history
+            ## - Leaderboard display sorted by completion time
+            element leaderboard_system:
+                # Implemented in rpg-demo.html
+                # Uses localStorage with key: 'blink_rpg_runs'
+                # Stores up to 100 best runs
+                pass
     
     ## ========================================================================
     ## CHANGE TRACKING
