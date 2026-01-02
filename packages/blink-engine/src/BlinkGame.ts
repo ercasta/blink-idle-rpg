@@ -22,6 +22,8 @@ export interface GameOptions {
   watchdogEnabled?: boolean;
   /** Watchdog check interval in seconds (default: 5.0) */
   watchdogInterval?: number;
+  /** Event type to generate for watchdog recovery (default: 'DoAttack') */
+  watchdogRecoveryEvent?: string;
 }
 
 export interface GameState {
@@ -88,6 +90,7 @@ export class BlinkGame {
       discreteTimeStep: options.discreteTimeStep ?? 0,
       watchdogEnabled: options.watchdogEnabled ?? true,
       watchdogInterval: options.watchdogInterval ?? 5.0,
+      watchdogRecoveryEvent: options.watchdogRecoveryEvent ?? 'DoAttack',
     };
     
     this.store = new Store();
@@ -711,10 +714,10 @@ export class BlinkGame {
           // If target is also alive, generate attack event
           if (targetHealth && (targetHealth.current as number) > 0) {
             if (this.options.debug) {
-              console.log(`[BlinkGame] Watchdog: Generating recovery DoAttack event for entity ${entityId}`);
+              console.log(`[BlinkGame] Watchdog: Generating recovery ${this.options.watchdogRecoveryEvent} event for entity ${entityId}`);
             }
             
-            this.timeline.scheduleImmediate('DoAttack', { source: entityId });
+            this.timeline.scheduleImmediate(this.options.watchdogRecoveryEvent, { source: entityId });
           }
         }
       }

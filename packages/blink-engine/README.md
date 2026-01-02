@@ -87,6 +87,7 @@ interface GameOptions {
   maxEventsPerFrame?: number;  // Max events per frame
   watchdogEnabled?: boolean;   // Enable hang prevention (default: true)
   watchdogInterval?: number;   // Watchdog check interval in seconds (default: 5.0)
+  watchdogRecoveryEvent?: string; // Recovery event type (default: 'DoAttack')
 }
 ```
 

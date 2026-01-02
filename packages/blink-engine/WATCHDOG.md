@@ -48,6 +48,11 @@ const game = BlinkGame.createSync({
   - Larger values = less overhead but slower hang recovery
   - Set to `0` or negative value to disable (same as `watchdogEnabled: false`)
 
+- **`watchdogRecoveryEvent`** (string, default: `'DoAttack'`)
+  - The event type to generate when recovering from a hang
+  - Useful for games that use different event names for combat actions
+  - Example: `'Attack'`, `'PerformAction'`, `'CombatTick'`, etc.
+
 ## Usage Examples
 
 ### Basic Usage (Default Settings)
@@ -65,6 +70,15 @@ game.start();
 // Check every 2 seconds for faster hang detection
 const game = BlinkGame.createSync({
   watchdogInterval: 2.0
+});
+```
+
+### Custom Recovery Event
+
+```typescript
+// Use a different event type for recovery
+const game = BlinkGame.createSync({
+  watchdogRecoveryEvent: 'CombatAction'
 });
 ```
 
