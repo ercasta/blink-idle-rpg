@@ -185,6 +185,19 @@ export class Timeline {
     });
   }
 
+  /**
+   * Check if there are any non-watchdog events
+   * More efficient than filtering all events
+   */
+  hasNonWatchdogEvents(): boolean {
+    for (const event of this.events) {
+      if (event.eventType !== '__WATCHDOG__') {
+        return true;
+      }
+    }
+    return false;
+  }
+
   // ===== Heap operations =====
 
   private insert(event: ScheduledEvent): void {
