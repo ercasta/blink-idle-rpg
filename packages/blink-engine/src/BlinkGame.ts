@@ -18,6 +18,10 @@ export interface GameOptions {
   maxEventsPerFrame?: number;
   /** Discrete time step in seconds (e.g., 0.01 for 1/100th second steps) */
   discreteTimeStep?: number;
+  /** Enable watchdog timer to prevent hangs (default: true) */
+  watchdogEnabled?: boolean;
+  /** Watchdog check interval in seconds (default: 5.0) */
+  watchdogInterval?: number;
 }
 
 export interface GameState {
@@ -71,6 +75,10 @@ export class BlinkGame {
   private simulationCallbacks: Set<SimulationCallback> = new Set();
   
   private ir: IRModule | null = null;
+  
+  // Watchdog event tracking
+  private watchdogEventId: number | null = null;
+  private lastWatchdogTime: number = 0;
 
   private constructor(options: GameOptions = {}) {
     this.options = {
@@ -78,6 +86,8 @@ export class BlinkGame {
       timeScale: options.timeScale ?? 1.0,
       maxEventsPerFrame: options.maxEventsPerFrame ?? 100,
       discreteTimeStep: options.discreteTimeStep ?? 0,
+      watchdogEnabled: options.watchdogEnabled ?? true,
+      watchdogInterval: options.watchdogInterval ?? 5.0,
     };
     
     this.store = new Store();
@@ -201,6 +211,9 @@ export class BlinkGame {
     
     this.emitSimulationEvent({ type: 'started', time: this.timeline.getTime() });
     
+    // Schedule first watchdog event if enabled
+    this.scheduleWatchdogEvent();
+    
     // Start the game loop
     this.scheduleNextFrame();
   }
@@ -237,6 +250,9 @@ export class BlinkGame {
     
     this.emitSimulationEvent({ type: 'resumed', time: this.timeline.getTime() });
     
+    // Reschedule watchdog if needed
+    this.scheduleWatchdogEvent();
+    
     this.scheduleNextFrame();
   }
 
@@ -251,6 +267,9 @@ export class BlinkGame {
       cancelAnimationFrame(this.animationFrameId);
       this.animationFrameId = null;
     }
+    
+    // Cancel watchdog event
+    this.cancelWatchdogEvent();
     
     this.emitSimulationEvent({ type: 'stopped', time: this.timeline.getTime() });
   }
@@ -276,6 +295,23 @@ export class BlinkGame {
   step(): StepResult | null {
     const event = this.timeline.pop();
     if (!event) {
+      return null;
+    }
+    
+    // Check if this is a watchdog event
+    if (event.eventType === '__WATCHDOG__') {
+      this.handleWatchdogEvent();
+      // Schedule next watchdog
+      this.scheduleWatchdogEvent();
+      
+      // Check if the watchdog generated any recovery events
+      const nextEvent = this.timeline.peek();
+      if (nextEvent && nextEvent.eventType !== '__WATCHDOG__') {
+        // Process the recovery event
+        return this.step();
+      }
+      
+      // No recovery event generated, return null (but watchdog still processed)
       return null;
     }
     
@@ -597,6 +633,90 @@ export class BlinkGame {
         callback(event);
       } catch (error) {
         console.error('[BlinkGame] Error in simulation callback:', error);
+      }
+    }
+  }
+
+  /**
+   * Schedule a watchdog event
+   */
+  private scheduleWatchdogEvent(): void {
+    if (!this.options.watchdogEnabled || this.options.watchdogInterval <= 0) {
+      return;
+    }
+
+    // Cancel existing watchdog if any
+    this.cancelWatchdogEvent();
+
+    // Schedule new watchdog event
+    this.watchdogEventId = this.timeline.schedule(
+      '__WATCHDOG__',
+      this.options.watchdogInterval,
+      {}
+    );
+    this.lastWatchdogTime = this.timeline.getTime();
+
+    if (this.options.debug) {
+      console.log(`[BlinkGame] Scheduled watchdog event ${this.watchdogEventId} at ${this.lastWatchdogTime + this.options.watchdogInterval}`);
+    }
+  }
+
+  /**
+   * Cancel the current watchdog event
+   */
+  private cancelWatchdogEvent(): void {
+    if (this.watchdogEventId !== null) {
+      this.timeline.cancel(this.watchdogEventId);
+      this.watchdogEventId = null;
+    }
+  }
+
+  /**
+   * Handle watchdog event - check game state and generate recovery events if needed
+   */
+  private handleWatchdogEvent(): void {
+    const currentTime = this.timeline.getTime();
+    
+    if (this.options.debug) {
+      console.log(`[BlinkGame] Watchdog check at time ${currentTime}`);
+      console.log(`[BlinkGame] Timeline has ${this.timeline.getEventCount()} events`);
+    }
+
+    // Count non-watchdog events
+    const allEvents = this.timeline.getAllEvents();
+    const nonWatchdogEvents = allEvents.filter(e => e.eventType !== '__WATCHDOG__');
+
+    if (this.options.debug) {
+      console.log(`[BlinkGame] Non-watchdog events: ${nonWatchdogEvents.length}`);
+    }
+
+    // If there are no non-watchdog events, check if we should generate recovery events
+    if (nonWatchdogEvents.length === 0) {
+      // Check if there are entities with Attack and Target components (active combatants)
+      const combatants = this.store.query('Attack', 'Target', 'Health');
+      
+      if (this.options.debug) {
+        console.log(`[BlinkGame] Found ${combatants.length} potential combatants`);
+      }
+
+      // Check if any combatants are alive and have valid targets
+      for (const entityId of combatants) {
+        const health = this.store.getComponent(entityId, 'Health');
+        const target = this.store.getComponent(entityId, 'Target');
+        
+        // If entity is alive and has a target
+        if (health && (health.current as number) > 0 && target && target.entity !== null) {
+          const targetHealth = this.store.getComponent(target.entity as EntityId, 'Health');
+          
+          // If target is also alive, generate attack event
+          if (targetHealth && (targetHealth.current as number) > 0) {
+            if (this.options.debug) {
+              console.log(`[BlinkGame] Watchdog: Generating recovery DoAttack event for entity ${entityId}`);
+            }
+            
+            this.timeline.scheduleImmediate('DoAttack', { source: entityId });
+          }
+        }
       }
     }
   }
