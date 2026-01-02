@@ -1,0 +1,142 @@
+{
+  "characters": [
+    {
+      "id": "warrior",
+      "name": "Sir Braveheart",
+      "class": "Warrior",
+      "description": "A stalwart defender with unmatched strength. Wields heavy armor and weapons, protecting allies while dealing devastating melee damage.",
+      "stats": {
+        "strength": 16,
+        "dexterity": 10,
+        "intelligence": 8,
+        "constitution": 14,
+        "wisdom": 8
+      },
+      "baseHealth": 120,
+      "baseMana": 30,
+      "baseDamage": 18,
+      "baseDefense": 10,
+      "attackSpeed": 0.8,
+      "skills": ["power_strike"],
+      "bcl": "warrior-skills.bcl",
+      "difficulty": "Easy",
+      "role": "Tank / Melee DPS",
+      "playstyle": "Get in close and deal consistent damage while absorbing enemy attacks"
+    },
+    {
+      "id": "mage",
+      "name": "Elara Flamecaster",
+      "class": "Mage",
+      "description": "A master of elemental magic who rains destruction from afar. High damage output but fragile - positioning and mana management are key.",
+      "stats": {
+        "strength": 6,
+        "dexterity": 12,
+        "intelligence": 18,
+        "constitution": 8,
+        "wisdom": 14
+      },
+      "baseHealth": 70,
+      "baseMana": 100,
+      "baseDamage": 25,
+      "baseDefense": 4,
+      "attackSpeed": 0.6,
+      "skills": ["fireball"],
+      "bcl": "mage-skills.bcl",
+      "difficulty": "Medium",
+      "role": "Ranged DPS / AoE",
+      "playstyle": "Maximize spell damage while managing mana and staying out of danger"
+    },
+    {
+      "id": "rogue",
+      "name": "Shadow",
+      "class": "Rogue",
+      "description": "Swift and deadly, striking from the shadows. Relies on critical hits and burst damage to eliminate high-priority targets quickly.",
+      "stats": {
+        "strength": 10,
+        "dexterity": 18,
+        "intelligence": 10,
+        "constitution": 10,
+        "wisdom": 8
+      },
+      "baseHealth": 80,
+      "baseMana": 50,
+      "baseDamage": 22,
+      "baseDefense": 6,
+      "attackSpeed": 1.4,
+      "skills": ["backstab"],
+      "bcl": "rogue-skills.bcl",
+      "difficulty": "Medium",
+      "role": "Melee DPS / Assassin",
+      "playstyle": "Focus on eliminating priority targets with high burst damage and crits"
+    },
+    {
+      "id": "cleric",
+      "name": "Brother Aldric",
+      "class": "Cleric",
+      "description": "A divine healer who supports allies with healing and protective magic. Keeps the party alive through the toughest battles.",
+      "stats": {
+        "strength": 10,
+        "dexterity": 8,
+        "intelligence": 12,
+        "constitution": 12,
+        "wisdom": 18
+      },
+      "baseHealth": 90,
+      "baseMana": 80,
+      "baseDamage": 12,
+      "baseDefense": 8,
+      "attackSpeed": 0.7,
+      "skills": ["heal"],
+      "bcl": "cleric-skills.bcl",
+      "difficulty": "Easy",
+      "role": "Healer / Support",
+      "playstyle": "Keep allies alive with healing while contributing moderate damage"
+    },
+    {
+      "id": "ranger",
+      "name": "Aria Swiftarrow",
+      "class": "Ranger",
+      "description": "An expert marksman with deadly precision. Excels at dealing consistent damage from range with high critical strike chance.",
+      "stats": {
+        "strength": 12,
+        "dexterity": 16,
+        "intelligence": 10,
+        "constitution": 10,
+        "wisdom": 12
+      },
+      "baseHealth": 85,
+      "baseMana": 60,
+      "baseDamage": 20,
+      "baseDefense": 5,
+      "attackSpeed": 1.2,
+      "skills": ["aimed_shot"],
+      "bcl": "rogue-skills.bcl",
+      "difficulty": "Medium",
+      "role": "Ranged DPS / Single Target",
+      "playstyle": "Maintain distance and deliver precise, high-damage attacks from range"
+    },
+    {
+      "id": "paladin",
+      "name": "Dame Lightbringer",
+      "class": "Paladin",
+      "description": "A holy warrior who balances offense and defense. Can heal allies while dealing respectable damage to enemies.",
+      "stats": {
+        "strength": 14,
+        "dexterity": 10,
+        "intelligence": 10,
+        "constitution": 14,
+        "wisdom": 12
+      },
+      "baseHealth": 110,
+      "baseMana": 70,
+      "baseDamage": 16,
+      "baseDefense": 9,
+      "attackSpeed": 0.9,
+      "skills": ["divine_strike"],
+      "bcl": "cleric-skills.bcl",
+      "difficulty": "Easy",
+      "role": "Hybrid Tank / Support",
+      "playstyle": "Balance between dealing damage, tanking, and supporting allies"
+    }
+  ]
+}
