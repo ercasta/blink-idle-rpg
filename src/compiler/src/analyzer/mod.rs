@@ -82,7 +82,6 @@ impl Type {
 pub struct SymbolTable {
     components: HashMap<String, ComponentInfo>,
     functions: HashMap<String, FunctionInfo>,
-    events: HashMap<String, ComponentInfo>, // Events are just components
     trackers: Vec<TrackerInfo>,
 }
 
@@ -110,7 +109,6 @@ impl SymbolTable {
         Self {
             components: HashMap::new(),
             functions: HashMap::new(),
-            events: HashMap::new(),
             trackers: Vec::new(),
         }
     }
