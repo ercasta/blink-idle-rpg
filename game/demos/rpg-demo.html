@@ -1150,7 +1150,7 @@
     // ========================================================================
     async function loadCharacterData() {
       try {
-        const response = await fetch('../data/characters.json');
+        const response = await fetch('characters.json');
         const data = await response.json();
         availableCharacters = data.characters;
         renderCharacterSelection();
