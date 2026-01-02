@@ -14,8 +14,8 @@
     
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(135deg, #2d2520 0%, #3d3028 100%);
-      color: #d4c4b0;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      color: #eee;
       margin: 0;
       padding: 10px;
       min-height: 100vh;
@@ -28,7 +28,7 @@
     
     h1 {
       text-align: center;
-      color: #c9956b;
+      color: #e94560;
       margin-bottom: 5px;
       font-size: 1.8rem;
       text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
@@ -36,7 +36,7 @@
     
     .subtitle {
       text-align: center;
-      color: #8a7a68;
+      color: #888;
       margin-bottom: 15px;
       font-size: 0.9rem;
     }
@@ -148,11 +148,11 @@
     }
     
     .team-section.player-team {
-      border-color: rgba(156, 168, 115, 0.4);
+      border-color: rgba(74, 222, 128, 0.3);
     }
     
     .team-section.enemy-team {
-      border-color: rgba(168, 94, 82, 0.4);
+      border-color: rgba(248, 113, 113, 0.3);
     }
     
     .team-section h2 {
@@ -167,7 +167,7 @@
     
     .team-summary {
       font-size: 0.85rem;
-      color: #8a7a68;
+      color: #aaa;
       margin-bottom: 8px;
     }
     
@@ -183,11 +183,11 @@
     }
     
     .player-team h2 {
-      color: #9ca873;
+      color: #4ade80;
     }
     
     .enemy-team h2 {
-      color: #a85e52;
+      color: #f87171;
     }
     
     /* Character cards */
@@ -279,15 +279,15 @@
     }
     
     .health-bar {
-      background: linear-gradient(90deg, #9ca873 0%, #b0bd8a 100%);
+      background: linear-gradient(90deg, #22c55e 0%, #4ade80 100%);
     }
     
     .mana-bar {
-      background: linear-gradient(90deg, #7b93a8 0%, #8fa5b8 100%);
+      background: linear-gradient(90deg, #3b82f6 0%, #60a5fa 100%);
     }
     
     .exp-bar {
-      background: linear-gradient(90deg, #c9956b 0%, #d4a77d 100%);
+      background: linear-gradient(90deg, #f59e0b 0%, #fbbf24 100%);
     }
     
     .char-stats {
@@ -326,8 +326,8 @@
     }
     
     button {
-      background: linear-gradient(135deg, #c9956b 0%, #a8845f 100%);
-      color: #2d2520;
+      background: linear-gradient(135deg, #e94560 0%, #c23a51 100%);
+      color: white;
       border: none;
       padding: 8px 20px;
       font-size: 0.9rem;
@@ -342,7 +342,7 @@
     
     button:hover:not(:disabled) {
       transform: translateY(-2px);
-      box-shadow: 0 5px 20px rgba(201, 149, 107, 0.4);
+      box-shadow: 0 5px 20px rgba(233, 69, 96, 0.4);
     }
     
     button:disabled {
@@ -351,17 +351,15 @@
     }
     
     button.secondary {
-      background: linear-gradient(135deg, #8a7a68 0%, #6b5e52 100%);
-      color: #d4c4b0;
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
     }
     
     button.secondary:hover:not(:disabled) {
-      box-shadow: 0 5px 20px rgba(138, 122, 104, 0.4);
+      box-shadow: 0 5px 20px rgba(59, 130, 246, 0.4);
     }
     
     button.success {
-      background: linear-gradient(135deg, #9ca873 0%, #8a9565 100%);
-      color: #2d2520;
+      background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
     }
     
     /* Status bar */
@@ -384,12 +382,12 @@
     }
     
     .status-label {
-      color: #8a7a68;
+      color: #888;
     }
     
     .status-value {
       font-weight: bold;
-      color: #c9956b;
+      color: #4ade80;
     }
     
     /* Game state banner */
@@ -501,200 +499,6 @@
       accent-color: #e94560;
     }
     
-    /* Party Selection Screen */
-    #party-selection-screen {
-      background: rgba(0,0,0,0.3);
-      border-radius: 15px;
-      padding: 20px;
-      margin-bottom: 20px;
-    }
-    
-    #party-selection-screen h2 {
-      color: #c9956b;
-      text-align: center;
-      margin-top: 0;
-      font-size: 1.4rem;
-    }
-    
-    .selection-instructions {
-      text-align: center;
-      color: #8a7a68;
-      margin-bottom: 20px;
-      font-size: 0.9rem;
-    }
-    
-    .character-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 15px;
-      margin-bottom: 20px;
-    }
-    
-    @media (max-width: 640px) {
-      .character-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-    
-    .selectable-character {
-      background: rgba(0,0,0,0.4);
-      border: 2px solid rgba(201, 149, 107, 0.3);
-      border-radius: 10px;
-      padding: 15px;
-      cursor: pointer;
-      transition: all 0.3s ease;
-    }
-    
-    .selectable-character:hover {
-      border-color: rgba(201, 149, 107, 0.6);
-      background: rgba(0,0,0,0.5);
-      transform: translateY(-2px);
-    }
-    
-    .selectable-character.selected {
-      border-color: #c9956b;
-      background: rgba(201, 149, 107, 0.15);
-    }
-    
-    .selectable-character.disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-    }
-    
-    .selectable-character.disabled:hover {
-      transform: none;
-    }
-    
-    .character-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 10px;
-    }
-    
-    .character-title {
-      flex: 1;
-    }
-    
-    .character-title h3 {
-      margin: 0;
-      color: #c9956b;
-      font-size: 1.1rem;
-    }
-    
-    .character-title .character-class {
-      color: #8a7a68;
-      font-size: 0.85rem;
-    }
-    
-    .selection-checkbox {
-      width: 24px;
-      height: 24px;
-      border: 2px solid #c9956b;
-      border-radius: 4px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(0,0,0,0.3);
-    }
-    
-    .selectable-character.selected .selection-checkbox {
-      background: #c9956b;
-    }
-    
-    .selection-checkbox::after {
-      content: '✓';
-      color: #2d2520;
-      font-weight: bold;
-      font-size: 18px;
-      opacity: 0;
-    }
-    
-    .selectable-character.selected .selection-checkbox::after {
-      opacity: 1;
-    }
-    
-    .character-description {
-      color: #a99885;
-      font-size: 0.85rem;
-      line-height: 1.4;
-      margin-bottom: 10px;
-    }
-    
-    .character-role {
-      display: inline-block;
-      background: rgba(201, 149, 107, 0.2);
-      color: #c9956b;
-      padding: 3px 8px;
-      border-radius: 4px;
-      font-size: 0.75rem;
-      margin-right: 5px;
-      margin-bottom: 5px;
-    }
-    
-    .character-stats-preview {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 5px;
-      margin-top: 10px;
-      font-size: 0.8rem;
-    }
-    
-    .stat-preview {
-      display: flex;
-      justify-content: space-between;
-      padding: 3px 0;
-      color: #8a7a68;
-    }
-    
-    .stat-preview-value {
-      color: #c9956b;
-      font-weight: bold;
-    }
-    
-    .party-counter {
-      text-align: center;
-      font-size: 1.1rem;
-      margin-bottom: 15px;
-      color: #c9956b;
-    }
-    
-    .start-game-btn {
-      display: block;
-      width: 100%;
-      max-width: 400px;
-      margin: 0 auto;
-      padding: 15px;
-      font-size: 1.1rem;
-      background: linear-gradient(135deg, #c9956b 0%, #a8845f 100%);
-      color: #2d2520;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-      font-weight: bold;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      transition: all 0.3s ease;
-    }
-    
-    .start-game-btn:hover:not(:disabled) {
-      transform: translateY(-2px);
-      box-shadow: 0 5px 20px rgba(201, 149, 107, 0.4);
-    }
-    
-    .start-game-btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-    
-    #game-screen {
-      display: none;
-    }
-    
-    #game-screen.active {
-      display: block;
-    }
-    
     /* BCL info panel */
     .bcl-info {
       background: rgba(139, 92, 246, 0.1);
@@ -729,31 +533,8 @@
     <h1>⚔️ Blink Idle RPG</h1>
     <p class="subtitle">Classic RPG Demo - Heroes vs Monsters Battle!</p>
     
-    <!-- Party Selection Screen -->
-    <div id="party-selection-screen">
-      <h2>⚔️ Choose Your Party ⚔️</h2>
-      <p class="selection-instructions">
-        Select 4 characters for your adventuring party. Each hero has unique abilities and playstyles.
-      </p>
-      
-      <div class="party-counter">
-        Selected: <span id="selected-count">0</span> / 4
-      </div>
-      
-      <div class="character-grid" id="character-grid">
-        <!-- Characters will be loaded dynamically -->
-      </div>
-      
-      <button class="start-game-btn" id="confirm-party-btn" disabled>
-        🎮 Start Adventure
-      </button>
-    </div>
-    
-    <!-- Game Screen (hidden until party selected) -->
-    <div id="game-screen">
-    
     <!-- File Upload Section -->
-    <div class="upload-section" style="display: none;">
+    <div class="upload-section">
       <h2 onclick="toggleAccordion('upload-content')">
         <span>📁 Load Game Files</span>
         <span class="accordion-toggle" id="upload-content-toggle">▼</span>
@@ -778,17 +559,17 @@
         
         <!-- Download Links -->
         <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
-          <h3 style="color: #c9956b; margin-bottom: 8px; font-size: 0.9rem;">📦 Download Example Files</h3>
-          <p style="color: #8a7a68; font-size: 0.75rem; margin-bottom: 8px;">Study or modify these game files:</p>
+          <h3 style="color: #c4b5fd; margin-bottom: 8px; font-size: 0.9rem;">📦 Download Example Files</h3>
+          <p style="color: #aaa; font-size: 0.75rem; margin-bottom: 8px;">Study or modify these game files:</p>
           <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px;">
-            <a href="classic-rpg.ir.json" download style="background: rgba(0,0,0,0.3); padding: 6px 10px; border-radius: 5px; text-decoration: none; color: #7b93a8; font-size: 0.75rem; border: 1px solid rgba(123, 147, 168, 0.3); transition: all 0.3s; display: inline-block;">
+            <a href="classic-rpg.ir.json" download style="background: rgba(0,0,0,0.3); padding: 6px 10px; border-radius: 5px; text-decoration: none; color: #60a5fa; font-size: 0.75rem; border: 1px solid rgba(59, 130, 246, 0.3); transition: all 0.3s; display: inline-block;">
               📋 classic-rpg.ir.json
             </a>
-            <a href="party-config.bcl.zip" download style="background: rgba(0,0,0,0.3); padding: 6px 10px; border-radius: 5px; text-decoration: none; color: #9ca873; font-size: 0.75rem; border: 1px solid rgba(156, 168, 115, 0.3); transition: all 0.3s; display: inline-block;">
+            <a href="party-config.bcl.zip" download style="background: rgba(0,0,0,0.3); padding: 6px 10px; border-radius: 5px; text-decoration: none; color: #4ade80; font-size: 0.75rem; border: 1px solid rgba(74, 222, 128, 0.3); transition: all 0.3s; display: inline-block;">
               📦 party-config.bcl.zip
             </a>
           </div>
-          <p style="color: #8a7a68; font-size: 0.7rem; margin-top: 8px; margin-bottom: 0;">
+          <p style="color: #888; font-size: 0.7rem; margin-top: 8px; margin-bottom: 0;">
             💡 <strong>IR files</strong> define game rules. <strong>BCL files</strong> define AI strategies.
           </p>
         </div>
@@ -884,9 +665,7 @@
         </div>
       </div>
     </div>
-    
-    </div><!-- End of game-screen -->
-  </div><!-- End of container -->
+  </div>
 
   <!-- Load the Blink Engine bundle -->
   <script src="blink-engine.bundle.js"></script>
@@ -895,200 +674,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" integrity="sha384-OLBgp1GsljhM2TJ+sbHjaiH9txEUvgdDTAzHv2P24donTt6/529l+9Ua0vFImLlb" crossorigin="anonymous"></script>
   
   <script>
-    // ========================================================================
-    // PARTY SELECTION STATE
-    // ========================================================================
-    let availableCharacters = [];
-    let selectedCharacters = [];
-    const MAX_PARTY_SIZE = 4;
-    
-    // DOM elements for party selection
-    const partySelectionScreen = document.getElementById('party-selection-screen');
-    const gameScreen = document.getElementById('game-screen');
-    const characterGrid = document.getElementById('character-grid');
-    const selectedCountEl = document.getElementById('selected-count');
-    const confirmPartyBtn = document.getElementById('confirm-party-btn');
-    
-    // ========================================================================
-    // LOAD CHARACTER DATA
-    // ========================================================================
-    async function loadCharacterData() {
-      try {
-        const response = await fetch('../data/characters.json');
-        const data = await response.json();
-        availableCharacters = data.characters;
-        renderCharacterSelection();
-      } catch (error) {
-        console.error('Failed to load character data:', error);
-        // Fallback to basic characters if data file fails
-        availableCharacters = [
-          {
-            id: 'warrior',
-            name: 'Sir Braveheart',
-            class: 'Warrior',
-            description: 'A stalwart defender with unmatched strength.',
-            role: 'Tank / Melee DPS',
-            difficulty: 'Easy',
-            baseHealth: 120,
-            baseMana: 30,
-            baseDamage: 18,
-            baseDefense: 10,
-            attackSpeed: 0.8,
-            stats: { strength: 16, dexterity: 10, intelligence: 8 }
-          },
-          {
-            id: 'mage',
-            name: 'Elara Flamecaster',
-            class: 'Mage',
-            description: 'A master of elemental magic who rains destruction from afar.',
-            role: 'Ranged DPS / AoE',
-            difficulty: 'Medium',
-            baseHealth: 70,
-            baseMana: 100,
-            baseDamage: 25,
-            baseDefense: 4,
-            attackSpeed: 0.6,
-            stats: { strength: 6, dexterity: 12, intelligence: 18 }
-          },
-          {
-            id: 'rogue',
-            name: 'Shadow',
-            class: 'Rogue',
-            description: 'Swift and deadly, striking from the shadows.',
-            role: 'Melee DPS / Assassin',
-            difficulty: 'Medium',
-            baseHealth: 80,
-            baseMana: 50,
-            baseDamage: 22,
-            baseDefense: 6,
-            attackSpeed: 1.4,
-            stats: { strength: 10, dexterity: 18, intelligence: 10 }
-          },
-          {
-            id: 'cleric',
-            name: 'Brother Aldric',
-            class: 'Cleric',
-            description: 'A divine healer who supports allies.',
-            role: 'Healer / Support',
-            difficulty: 'Easy',
-            baseHealth: 90,
-            baseMana: 80,
-            baseDamage: 12,
-            baseDefense: 8,
-            attackSpeed: 0.7,
-            stats: { strength: 10, dexterity: 8, intelligence: 12 }
-          }
-        ];
-        renderCharacterSelection();
-      }
-    }
-    
-    // ========================================================================
-    // RENDER CHARACTER SELECTION
-    // ========================================================================
-    function renderCharacterSelection() {
-      characterGrid.innerHTML = '';
-      
-      availableCharacters.forEach(char => {
-        const isSelected = selectedCharacters.some(c => c.id === char.id);
-        const isDisabled = !isSelected && selectedCharacters.length >= MAX_PARTY_SIZE;
-        
-        const card = document.createElement('div');
-        card.className = 'selectable-character';
-        if (isSelected) card.classList.add('selected');
-        if (isDisabled) card.classList.add('disabled');
-        
-        const difficultyColor = {
-          'Easy': '#9ca873',
-          'Medium': '#c9956b',
-          'Hard': '#a85e52'
-        }[char.difficulty] || '#8a7a68';
-        
-        card.innerHTML = `
-          <div class="character-header">
-            <div class="character-title">
-              <h3>${char.name}</h3>
-              <div class="character-class">${char.class}</div>
-            </div>
-            <div class="selection-checkbox"></div>
-          </div>
-          
-          <div class="character-description">${char.description}</div>
-          
-          <div style="margin-bottom: 8px;">
-            <span class="character-role">${char.role}</span>
-            <span class="character-role" style="background: rgba(${difficultyColor === '#9ca873' ? '156, 168, 115' : difficultyColor === '#c9956b' ? '201, 149, 107' : '168, 94, 82'}, 0.2); color: ${difficultyColor};">${char.difficulty}</span>
-          </div>
-          
-          <div class="character-stats-preview">
-            <div class="stat-preview">
-              <span>❤️ Health:</span>
-              <span class="stat-preview-value">${char.baseHealth}</span>
-            </div>
-            <div class="stat-preview">
-              <span>⚔️ Damage:</span>
-              <span class="stat-preview-value">${char.baseDamage}</span>
-            </div>
-            <div class="stat-preview">
-              <span>💧 Mana:</span>
-              <span class="stat-preview-value">${char.baseMana}</span>
-            </div>
-            <div class="stat-preview">
-              <span>🛡️ Defense:</span>
-              <span class="stat-preview-value">${char.baseDefense}</span>
-            </div>
-          </div>
-        `;
-        
-        if (!isDisabled) {
-          card.addEventListener('click', () => toggleCharacterSelection(char));
-        }
-        
-        characterGrid.appendChild(card);
-      });
-      
-      updatePartyCounter();
-    }
-    
-    // ========================================================================
-    // TOGGLE CHARACTER SELECTION
-    // ========================================================================
-    function toggleCharacterSelection(char) {
-      const index = selectedCharacters.findIndex(c => c.id === char.id);
-      
-      if (index >= 0) {
-        // Deselect
-        selectedCharacters.splice(index, 1);
-      } else if (selectedCharacters.length < MAX_PARTY_SIZE) {
-        // Select
-        selectedCharacters.push(char);
-      }
-      
-      renderCharacterSelection();
-    }
-    
-    // ========================================================================
-    // UPDATE PARTY COUNTER
-    // ========================================================================
-    function updatePartyCounter() {
-      selectedCountEl.textContent = selectedCharacters.length;
-      confirmPartyBtn.disabled = selectedCharacters.length !== MAX_PARTY_SIZE;
-    }
-    
-    // ========================================================================
-    // START GAME WITH SELECTED PARTY
-    // ========================================================================
-    confirmPartyBtn.addEventListener('click', () => {
-      if (selectedCharacters.length === MAX_PARTY_SIZE) {
-        partySelectionScreen.style.display = 'none';
-        gameScreen.classList.add('active');
-        initGameWithParty();
-      }
-    });
-    
-    // ========================================================================
-    // GAME STATE
-    // ========================================================================
+    // Game state
     let game = null;
     let currentIR = null;
     let loadedBCLFiles = [];
@@ -3570,142 +3156,6 @@
     }
     
     // Initialize game
-    // ========================================================================
-    // INIT GAME WITH SELECTED PARTY
-    // ========================================================================
-    async function initGameWithParty() {
-      // Load default IR if not already loaded
-      if (!classicRpgIR && !currentIR) {
-        await loadDefaultIR();
-      }
-      
-      const ir = currentIR || classicRpgIR;
-      
-      if (!ir) {
-        console.error('Failed to load IR');
-        addLogEntry('system', '❌ ERROR: Failed to load game rules. Please refresh the page.');
-        gameStatusEl.textContent = 'Error';
-        gameStatusEl.style.color = '#a85e52';
-        return;
-      }
-      
-      if (enemyTemplates.length === 0) {
-        console.error('Failed to load enemy templates');
-        addLogEntry('system', '❌ ERROR: Failed to load enemy data. Please refresh the page.');
-        gameStatusEl.textContent = 'Error';
-        gameStatusEl.style.color = '#a85e52';
-        return;
-      }
-      
-      // Modify IR to use selected characters
-      const modifiedIR = JSON.parse(JSON.stringify(ir));
-      
-      // Update initial state with selected characters
-      modifiedIR.initial_state.entities = modifiedIR.initial_state.entities.filter(e => !e.components.Team || !e.components.Team.isPlayer);
-      
-      // Add selected characters as player entities
-      selectedCharacters.forEach((char, index) => {
-        const entityId = index;
-        modifiedIR.initial_state.entities.unshift({
-          id: entityId,
-          components: {
-            Character: {
-              name: char.name,
-              class: char.class,
-              level: 1,
-              experience: 0,
-              experienceToLevel: 100
-            },
-            Health: {
-              current: char.baseHealth,
-              max: char.baseHealth
-            },
-            Mana: {
-              current: char.baseMana,
-              max: char.baseMana
-            },
-            Stats: char.stats,
-            Combat: {
-              damage: char.baseDamage,
-              defense: char.baseDefense,
-              attackSpeed: char.attackSpeed,
-              critChance: 0.05,
-              critMultiplier: 1.5
-            },
-            Target: {
-              entity: 4 + index // Will be updated when enemies spawn
-            },
-            Team: {
-              id: 'player',
-              isPlayer: true
-            },
-            Skills: {
-              skill1: char.skills ? char.skills[0] : '',
-              skill2: '',
-              skill3: '',
-              skill4: '',
-              skillPoints: 0
-            },
-            Buffs: {
-              damageBonus: 0,
-              defenseBonus: 0,
-              hasteBonus: 0,
-              shieldAmount: 0,
-              regenAmount: 0
-            },
-            SkillCooldown: {
-              skill1Cooldown: 0,
-              skill2Cooldown: 0,
-              skill3Cooldown: 0,
-              skill4Cooldown: 0
-            },
-            ChoiceContext: {
-              pendingChoice: '',
-              options: '',
-              chosen: ''
-            }
-          }
-        });
-      });
-      
-      game = BlinkEngine.BlinkGame.createSync({
-        debug: false,
-        timeScale: parseFloat(speedSlider.value),
-        discreteTimeStep: 0.01,
-        maxEventsPerFrame: 1000
-      });
-      
-      game.loadRulesFromObject(modifiedIR);
-      
-      // Initialize character data
-      updateCharacterData();
-      
-      // Subscribe to tracker events
-      game.onTracker((output) => {
-        handleTrackerOutput(output);
-      });
-      
-      // Subscribe to simulation events
-      game.onSimulation((event) => {
-        handleSimulationEvent(event);
-      });
-      
-      // Schedule initial attack events for selected heroes
-      for (let i = 0; i < selectedCharacters.length; i++) {
-        const health = game.getComponent(i, 'Health');
-        if (health && health.current > 0) {
-          game.scheduleEvent('DoAttack', i * 0.1, { source: i });
-        }
-      }
-      
-      // Spawn initial set of enemies
-      spawnInitialEnemies(5);
-      
-      renderParties();
-      addLogEntry('system', `⚔️ ${selectedCharacters.map(c => c.name).join(', ')} are ready for battle!`);
-      addLogEntry('system', 'Press Start to begin the adventure!');
-    }
-    
     async function initGame() {
       // Load default IR if not already loaded
       if (!classicRpgIR && !currentIR) {
@@ -4258,10 +3708,9 @@
     });
     
     // Initialize on load
+    // Initialize on load
     window.addEventListener('load', async () => {
-      // Load character data and wait for party selection
-      await loadCharacterData();
-      await loadDefaultIR();
+      await initGame();
     });
     
     // Accordion toggle function
