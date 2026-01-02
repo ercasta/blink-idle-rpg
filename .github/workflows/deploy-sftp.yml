@@ -51,15 +51,40 @@ jobs:
       
       - name: Create deployment package
         run: |
+          set -e
           mkdir -p deploy-package
           
+          # Verify required files exist
+          required_files=(
+            "game/demos/index.html"
+            "game/demos/combat-demo.html"
+            "game/demos/rpg-demo.html"
+            "game/demos/blink-engine.bundle.js"
+            "game/demos/README.md"
+          )
+          
+          missing_files=()
+          for file in "${required_files[@]}"; do
+            if [ ! -f "$file" ]; then
+              missing_files+=("$file")
+            fi
+          done
+          
+          if [ ${#missing_files[@]} -gt 0 ]; then
+            echo "Error: Required files not found:"
+            printf '  - %s\n' "${missing_files[@]}"
+            exit 1
+          fi
+          
           # Copy demo HTML and JS files
-          cp game/demos/index.html deploy-package/ 2>/dev/null || echo "index.html not found"
-          cp game/demos/combat-demo.html deploy-package/ 2>/dev/null || echo "combat-demo.html not found"
-          cp game/demos/rpg-demo.html deploy-package/ 2>/dev/null || echo "rpg-demo.html not found"
-          cp game/demos/blink-engine.bundle.js deploy-package/ 2>/dev/null || echo "blink-engine.bundle.js not found"
-          cp game/demos/README.md deploy-package/ 2>/dev/null || echo "README.md not found"
-          cp game/demos/party-config.bcl.zip deploy-package/ 2>/dev/null || echo "party-config.bcl.zip not found"
+          cp game/demos/index.html deploy-package/
+          cp game/demos/combat-demo.html deploy-package/
+          cp game/demos/rpg-demo.html deploy-package/
+          cp game/demos/blink-engine.bundle.js deploy-package/
+          cp game/demos/README.md deploy-package/
+          
+          # Copy optional files if they exist
+          [ -f game/demos/party-config.bcl.zip ] && cp game/demos/party-config.bcl.zip deploy-package/ || echo "Note: party-config.bcl.zip not found, skipping"
           
           echo "Deployment package contents:"
           ls -la deploy-package/
@@ -68,11 +93,15 @@ jobs:
         id: set-target
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "target_folder=${{ inputs.target_folder }}" >> $GITHUB_OUTPUT
+            TARGET_FOLDER="${{ inputs.target_folder }}"
           else
-            echo "target_folder=${{ secrets.SFTP_TARGET_FOLDER || '/var/www/html/blink-game' }}" >> $GITHUB_OUTPUT
+            TARGET_FOLDER="${{ secrets.SFTP_TARGET_FOLDER }}"
+            if [ -z "$TARGET_FOLDER" ]; then
+              TARGET_FOLDER="/var/www/html/blink-game"
+            fi
           fi
-          echo "Target folder: ${{ steps.set-target.outputs.target_folder }}"
+          echo "target_folder=$TARGET_FOLDER" >> $GITHUB_OUTPUT
+          echo "Target folder: $TARGET_FOLDER"
       
       - name: Deploy to SFTP
         uses: wlixcc/SFTP-Deploy-Action@v1.2.4
