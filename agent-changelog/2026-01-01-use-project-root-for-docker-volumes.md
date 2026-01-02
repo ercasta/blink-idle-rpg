@@ -5,7 +5,7 @@ Summary
 - Updated `DOCKER.md` to document the `PROJECT_ROOT` usage and provide a `.env` example.
 
 Files changed
-- `docker-compose.yml` - now mounts host directories using `${PROJECT_ROOT:-.}/examples/...` instead of multiple per-directory env vars.
+- `docker-compose.yml` - now mounts host directories using `${PROJECT_ROOT:-.}/game/...` instead of multiple per-directory env vars.
 - `DOCKER.md` - removed the per-directory env var docs and added the single `PROJECT_ROOT` section.
 
 Rationale

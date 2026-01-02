@@ -55,7 +55,7 @@ BCL is a **subset** of BRL. The key differences:
 
 | Document | Description | Status |
 |----------|-------------|--------|
-| [examples/](examples/) | Code examples | Planned |
+| [game/](game/) | Code examples | Planned |
 
 ## Quick Start
 
@@ -65,7 +65,7 @@ Creating game rules? Start here:
 
 1. Read the [BRL User Guide](brl-user-guide.md)
 2. Follow the tutorials in order
-3. Check out [BRL examples](../../examples/brl/)
+3. Check out [BRL examples](../../game/brl/)
 4. Reference the [BRL Specification](brl-specification.md) when needed
 
 ### For Players (BCL)
@@ -73,7 +73,7 @@ Creating game rules? Start here:
 Customizing your party? Start here:
 
 1. Read the [BCL User Guide](bcl-user-guide.md)
-2. Copy and modify [BCL examples](../../examples/bcl/)
+2. Copy and modify [BCL examples](../../game/bcl/)
 3. Test your strategies in the game
 4. Reference the [BCL Specification](bcl-specification.md) for syntax details
 

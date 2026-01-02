@@ -89,7 +89,7 @@ This means:
 ### Files
 - `doc/language/brl-specification.md`
 - `doc/language/bcl-specification.md`
-- `doc/language/examples/`
+- `doc/language/game/`
 
 ### Dependencies
 - None (can start immediately)
@@ -172,10 +172,10 @@ cargo build
 cargo test
 
 # Use the CLI (after building)
-cargo run -- compile -i ../../examples/brl/simple-clicker.brl --pretty
+cargo run -- compile -i ../../game/brl/simple-clicker.brl --pretty
 
 # Or check a file for errors
-cargo run -- check -i ../../examples/brl/simple-combat.brl
+cargo run -- check -i ../../game/brl/simple-combat.brl
 ```
 
 ### Next Steps
@@ -237,8 +237,8 @@ cat doc/engine/architecture.md
 cat doc/ir-specification.md
 
 # Use example IR files for testing
-# examples/ir/simple-clicker.ir.json - minimal test case
-# examples/ir/simple-combat.ir.json  - more complex test case
+# game/ir/simple-clicker.ir.json - minimal test case
+# game/ir/simple-combat.ir.json  - more complex test case
 
 # Start with IR loader
 mkdir -p src/engines/rust/src/ir
@@ -306,8 +306,8 @@ cat doc/engine/browser-engine.md
 cat doc/ir-specification.md
 
 # Use example IR files for testing
-# examples/ir/simple-clicker.ir.json - minimal test case
-# examples/ir/simple-combat.ir.json  - more complex test case
+# game/ir/simple-clicker.ir.json - minimal test case
+# game/ir/simple-combat.ir.json  - more complex test case
 
 # Set up TypeScript project
 mkdir -p packages/blink-engine/src
@@ -366,8 +366,8 @@ cargo init --name blink-batch
 cat doc/ir-specification.md
 
 # Use example IR files for testing
-# examples/ir/simple-clicker.ir.json - minimal test case
-# examples/ir/simple-combat.ir.json  - more complex test case
+# game/ir/simple-clicker.ir.json - minimal test case
+# game/ir/simple-combat.ir.json  - more complex test case
 
 # Start with runner
 mkdir -p src/runner
@@ -491,7 +491,7 @@ pub fn get_diagnostics(source: &str) -> Vec<Diagnostic>;
 - IR specification: `doc/ir-specification.md`
 - IR test suite: `tests/ir/`
 - Test fixtures: `tests/fixtures/`
-- Example games: `examples/`
+- Example games: `game/`
 
 ---
 

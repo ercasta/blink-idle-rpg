@@ -5,7 +5,7 @@ Summary
 - Documented how to override mappings in `DOCKER.md` using a `.env` file or shell environment variables.
 
 Files changed
-- `docker-compose.yml` - now uses `${BRL_DIR:-./examples/brl}`, `${BCL_DIR:-./examples/bcl}`, `${IR_DIR:-./examples/ir}`, `${DEMOS_DIR:-./examples/demos}` and adds `env_file: .env`.
+- `docker-compose.yml` - now uses `${BRL_DIR:-./game/brl}`, `${BCL_DIR:-./game/bcl}`, `${IR_DIR:-./game/ir}`, `${DEMOS_DIR:-./game/demos}` and adds `env_file: .env`.
 - `DOCKER.md` - added `Customizing Volume Paths` section with `.env` example and notes for Windows users.
 
 Rationale

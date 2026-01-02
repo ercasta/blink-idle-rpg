@@ -14,8 +14,8 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Load the actual classic RPG IR from the examples directory
-const classicRpgPath = path.join(__dirname, '../../ir/classic-rpg.ir.json');
+// Load the actual classic RPG IR from the game directory
+const classicRpgPath = path.join(__dirname, '../ir/classic-rpg.ir.json');
 const classicRpgIR = JSON.parse(fs.readFileSync(classicRpgPath, 'utf-8'));
 
 describe('Boss Spawn Requirements', () => {

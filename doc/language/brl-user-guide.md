@@ -1308,14 +1308,14 @@ tracker Item on PickupItem
 ### Example Projects
 
 Check out complete example projects:
-- `examples/brl/simple-clicker.brl` - Minimal clicker
-- `examples/brl/simple-combat.brl` - Combat system
-- `examples/bcl/` - Player strategy examples
+- `game/brl/simple-clicker.brl` - Minimal clicker
+- `game/brl/simple-combat.brl` - Combat system
+- `game/bcl/` - Player strategy examples
 
 ### Getting Help
 
 - **Documentation**: Check the [language specification](brl-specification.md)
-- **Examples**: Browse `examples/brl/` directory
+- **Examples**: Browse `game/brl/` directory
 - **Issues**: Report bugs on GitHub
 
 ### Contributing

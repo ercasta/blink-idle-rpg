@@ -970,7 +970,7 @@ choice fn select_attack_target(character, enemies): id {
 
 ### Getting Help
 
-- Check example BCL files in `examples/bcl/`
+- Check example BCL files in `game/bcl/`
 - Read the [BCL Specification](bcl-specification.md)
 - Look at strategy patterns in this guide
 - Ask in community forums
@@ -1432,7 +1432,7 @@ The best way to learn is to try different strategies:
 
 - [BCL Specification](bcl-specification.md) - Complete language reference
 - [BRL User Guide](brl-user-guide.md) - For creating game rules
-- [Example BCL Files](../../examples/bcl/) - More complete examples
+- [Example BCL Files](../../game/bcl/) - More complete examples
 
 ### Share Your Strategies
 
