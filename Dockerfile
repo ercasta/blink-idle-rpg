@@ -46,11 +46,11 @@ COPY --from=rust-builder /build/src/compiler/target/release/blink-compiler /usr/
 COPY --from=node-builder /build/packages ./packages
 
 # Copy example files and demos
-COPY examples ./examples
+COPY game ./game
 COPY Makefile ./
 
 # Create directories for IR files if they don't exist
-RUN mkdir -p examples/ir
+RUN mkdir -p game/ir
 
 # Copy entrypoint script
 COPY docker-entrypoint.sh /usr/local/bin/

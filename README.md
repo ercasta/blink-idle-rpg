@@ -42,8 +42,8 @@ docker compose up --build
 ```
 
 **Volume Mapping:** The Docker setup maps local folders so you can edit BRL and BCL files on your host machine:
-- Edit files in `./examples/brl/` and `./examples/bcl/`
-- Recompile in the container: `docker compose exec blink-app blink-compiler compile -i /workspace/examples/brl/YOUR_FILE.brl -o /workspace/examples/ir/YOUR_FILE.ir.json --pretty`
+- Edit files in `./game/brl/` and `./game/bcl/`
+- Recompile in the container: `docker compose exec blink-app blink-compiler compile -i /workspace/game/brl/YOUR_FILE.brl -o /workspace/game/ir/YOUR_FILE.ir.json --pretty`
 - Refresh your browser to see changes
 
 See the [Docker Setup Guide](DOCKER.md) for complete documentation on:
@@ -87,7 +87,7 @@ Available targets:
 To run the demos, serve them using a local web server:
 
 ```bash
-cd examples/demos
+cd game/demos
 npx serve .
 # Open http://localhost:3000 in your browser
 ```
@@ -95,12 +95,12 @@ npx serve .
 Alternatively, use Python:
 
 ```bash
-cd examples/demos
+cd game/demos
 python -m http.server 8000
 # Open http://localhost:8000 in your browser
 ```
 
-See [examples/demos/README.md](examples/demos/README.md) for more details.
+See [game/demos/README.md](game/demos/README.md) for more details.
 
 ### For JavaScript Engine Development
 

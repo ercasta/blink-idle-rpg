@@ -9,7 +9,7 @@ To run the demos, you need to serve them using a local web server:
 ### Option 1: Using npx serve (Recommended)
 
 ```bash
-cd examples/demos
+cd game/demos
 npx serve .
 ```
 
@@ -18,7 +18,7 @@ Then open http://localhost:3000 in your browser.
 ### Option 2: Using Python
 
 ```bash
-cd examples/demos
+cd game/demos
 python -m http.server 8000
 ```
 
@@ -99,9 +99,9 @@ All demos are optimized for mobile devices with:
 
 The demos load game files from the sibling directories:
 
-- **BRL Files** (from `examples/brl/`): `simple-combat.brl`, `simple-clicker.brl`
-- **IR Files** (from `examples/ir/`): `simple-combat.ir.json`, `simple-clicker.ir.json`, `classic-rpg.ir.json`
-- **BCL Files** (from `examples/bcl/`): `warrior-skills.bcl`, `mage-skills.bcl`, `rogue-skills.bcl`, `cleric-skills.bcl`, `party-config.bcl`
+- **BRL Files** (from `game/brl/`): `simple-combat.brl`, `simple-clicker.brl`
+- **IR Files** (from `game/ir/`): `simple-combat.ir.json`, `simple-clicker.ir.json`, `classic-rpg.ir.json`
+- **BCL Files** (from `game/bcl/`): `warrior-skills.bcl`, `mage-skills.bcl`, `rogue-skills.bcl`, `cleric-skills.bcl`, `party-config.bcl`
 
 ## Building the Demo Package
 

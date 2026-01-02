@@ -8,12 +8,12 @@ services:
     env_file:
       - .env
     volumes:
-      # Use a single project root to derive all example paths (configurable via $PROJECT_ROOT)
-      # Default PROJECT_ROOT is the compose file directory (.) so these fall back to ./examples/*
-      - ${PROJECT_ROOT:-.}/examples/brl:/workspace/examples/brl
-      - ${PROJECT_ROOT:-.}/examples/bcl:/workspace/examples/bcl
-      - ${PROJECT_ROOT:-.}/examples/ir:/workspace/examples/ir
-      - ${PROJECT_ROOT:-.}/examples/demos:/workspace/examples/demos
+      # Use a single project root to derive all game paths (configurable via $PROJECT_ROOT)
+      # Default PROJECT_ROOT is the compose file directory (.) so these fall back to ./game/*
+      - ${PROJECT_ROOT:-.}/game/brl:/workspace/game/brl
+      - ${PROJECT_ROOT:-.}/game/bcl:/workspace/game/bcl
+      - ${PROJECT_ROOT:-.}/game/ir:/workspace/game/ir
+      - ${PROJECT_ROOT:-.}/game/demos:/workspace/game/demos
     environment:
       - NODE_ENV=production
     restart: unless-stopped

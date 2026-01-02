@@ -3,19 +3,19 @@ set -e
 
 # Compile BRL files to IR if not already compiled or if BRL files are newer
 echo "Checking BRL files..."
-# Determine examples directory (support mounted /workspace/examples or plain /examples)
-if [ -d "/workspace/examples" ]; then
-    EXAMPLES_DIR="/workspace/examples"
-elif [ -d "/examples" ]; then
-    EXAMPLES_DIR="/examples"
+# Determine game directory (support mounted /workspace/game or plain /game)
+if [ -d "/workspace/game" ]; then
+    GAME_DIR="/workspace/game"
+elif [ -d "/game" ]; then
+    GAME_DIR="/game"
 else
-    EXAMPLES_DIR="/workspace/examples"
+    GAME_DIR="/workspace/game"
 fi
 
-for brl_file in "$EXAMPLES_DIR"/brl/*.brl; do
+for brl_file in "$GAME_DIR"/brl/*.brl; do
     if [ -f "$brl_file" ]; then
         filename=$(basename "$brl_file" .brl)
-        ir_file="$EXAMPLES_DIR/ir/${filename}.ir.json"
+        ir_file="$GAME_DIR/ir/${filename}.ir.json"
         
         # Check if IR file doesn't exist or if BRL file is newer
         if [ ! -f "$ir_file" ] || [ "$brl_file" -nt "$ir_file" ]; then
@@ -37,10 +37,9 @@ if [ "$1" = "serve" ]; then
     echo ""
     echo "Available demos:"
     echo "  - http://localhost:3000/index.html (Demo launcher - start here!)"
-    echo "  - http://localhost:3000/combat-demo.html (Simple combat)"
     echo "  - http://localhost:3000/rpg-demo.html (Classic RPG)"
     echo ""
-    cd /workspace/examples/demos
+    cd /workspace/game/demos
     exec serve -l 3000 .
 elif [ "$1" = "bash" ]; then
     exec /bin/bash

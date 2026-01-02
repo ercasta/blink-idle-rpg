@@ -32,7 +32,7 @@ This document describes the Docker setup testing performed and expected behavior
 - **Binary created**: 1.6MB executable at `src/compiler/target/release/blink-compiler`
 - **Functionality verified**: Successfully compiles BRL to IR
   ```bash
-  blink-compiler compile -i examples/brl/simple-combat.brl -o /tmp/test.ir.json --pretty
+  blink-compiler compile -i game/brl/simple-combat.brl -o /tmp/test.ir.json --pretty
   # Output: Valid 4.3KB IR JSON file
   ```
 
@@ -106,16 +106,16 @@ docker compose up --build
 docker compose up -d
 
 # 2. Edit BRL file on host machine
-vim examples/brl/simple-combat.brl
+vim game/brl/simple-combat.brl
 
 # 3. Recompile in container
 docker compose exec blink-app blink-compiler compile \
-  -i /workspace/examples/brl/simple-combat.brl \
-  -o /workspace/examples/ir/simple-combat.ir.json \
+  -i /workspace/game/brl/simple-combat.brl \
+  -o /workspace/game/ir/simple-combat.ir.json \
   --pretty
 
 # 4. See output on host
-cat examples/ir/simple-combat.ir.json
+cat game/ir/simple-combat.ir.json
 
 # 5. Refresh browser to see changes
 ```
@@ -171,15 +171,15 @@ When testing in a normal development environment (not CI):
 3. **Test volume mapping**:
    ```bash
    # Modify a BRL file on host
-   echo "// test comment" >> examples/brl/simple-combat.brl
+   echo "// test comment" >> game/brl/simple-combat.brl
    
    # Recompile in container
    docker compose exec blink-app blink-compiler compile \
-    -i /workspace/examples/brl/simple-combat.brl \
-    -o /workspace/examples/ir/simple-combat.ir.json --pretty
+    -i /workspace/game/brl/simple-combat.brl \
+    -o /workspace/game/ir/simple-combat.ir.json --pretty
    
    # Verify IR file updated on host
-   stat examples/ir/simple-combat.ir.json
+   stat game/ir/simple-combat.ir.json
    ```
 
 4. **Test web access**:
