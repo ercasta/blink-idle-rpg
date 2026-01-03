@@ -1202,11 +1202,15 @@
     }
     
     .choice-item.customized::after {
-      content: '✏️';
+      content: '✏️ Customized';
       position: absolute;
       top: 8px;
       right: 8px;
-      font-size: 0.8rem;
+      font-size: 0.7rem;
+      color: #4ade80;
+      background: rgba(74, 222, 128, 0.1);
+      padding: 2px 6px;
+      border-radius: 3px;
     }
     
     .choice-item-name {
@@ -1624,16 +1628,16 @@
   </div><!-- End of container -->
 
   <!-- BCL Customization Modal -->
-  <div class="bcl-modal-overlay" id="bcl-modal-overlay">
+  <div class="bcl-modal-overlay" id="bcl-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="bcl-modal-title">
     <div class="bcl-modal">
       <div class="bcl-modal-header">
-        <h2>🎯 Customize <span id="bcl-modal-hero-name">Hero</span> Strategy</h2>
-        <button class="bcl-modal-close" onclick="closeBclModal()">×</button>
+        <h2 id="bcl-modal-title">🎯 Customize <span id="bcl-modal-hero-name">Hero</span> Strategy</h2>
+        <button class="bcl-modal-close" onclick="closeBclModal()" aria-label="Close modal">×</button>
       </div>
       <div class="bcl-modal-body">
         <div class="bcl-choices-list">
           <h3>📋 Available Choices</h3>
-          <div id="bcl-choices-container">
+          <div id="bcl-choices-container" role="listbox" aria-label="Available choice points">
             <!-- Choice items will be populated here -->
           </div>
         </div>
@@ -1643,10 +1647,10 @@
             <div class="bcl-editor-signature" id="bcl-editor-signature" style="display: none;"></div>
             <div class="bcl-editor-docstring" id="bcl-editor-docstring" style="display: none;"></div>
           </div>
-          <textarea class="bcl-editor-textarea" id="bcl-editor-textarea" placeholder="Select a choice from the list to start editing..."></textarea>
+          <textarea class="bcl-editor-textarea" id="bcl-editor-textarea" placeholder="Select a choice from the list to start editing..." aria-label="BCL code editor"></textarea>
           <div class="bcl-editor-actions">
-            <button class="success" onclick="saveBclChoice()">💾 Save Choice</button>
-            <button class="secondary" onclick="resetBclChoice()">🔄 Reset to Default</button>
+            <button class="success" onclick="saveBclChoice()" aria-label="Save current choice customization">💾 Save Choice</button>
+            <button class="secondary" onclick="resetBclChoice()" aria-label="Reset choice to default implementation">🔄 Reset to Default</button>
           </div>
           <div class="bcl-editor-default" id="bcl-editor-default" style="display: none;">
             <div class="bcl-editor-default-label">Default Behavior:</div>
@@ -1659,8 +1663,8 @@
           <span id="bcl-customization-count">0</span> customization(s) saved
         </div>
         <div class="bcl-footer-actions">
-          <button class="secondary" onclick="downloadBclDelta()">📥 Download BCL Delta</button>
-          <button onclick="closeBclModal()">✅ Done</button>
+          <button class="secondary" onclick="downloadBclDelta()" aria-label="Download BCL delta file">📥 Download BCL Delta</button>
+          <button onclick="closeBclModal()" aria-label="Close and apply customizations">✅ Done</button>
         </div>
       </div>
     </div>
@@ -1847,10 +1851,22 @@
         </div>
         
         <button class="hero-customize-btn ${hasHeroCustomizations(hero.id) ? 'has-customizations' : ''}" 
-                onclick="openBclModal('${hero.id}', '${hero.name}', '${hero.class}')">
+                data-hero-id="${escapeHtml(hero.id)}"
+                data-hero-name="${escapeHtml(hero.name)}"
+                data-hero-class="${escapeHtml(hero.class)}"
+                aria-label="${hasHeroCustomizations(hero.id) ? 'Edit Strategy for ' + escapeHtml(hero.name) : 'Customize Strategy for ' + escapeHtml(hero.name)}">
           ${hasHeroCustomizations(hero.id) ? '✏️ Edit Strategy' : '🎯 Customize Strategy'}
         </button>
       `;
+      
+      // Add event listener for customize button
+      const customizeBtn = heroCardDiv.querySelector('.hero-customize-btn');
+      if (customizeBtn) {
+        customizeBtn.addEventListener('click', (e) => {
+          const btn = e.currentTarget;
+          openBclModal(btn.dataset.heroId, btn.dataset.heroName, btn.dataset.heroClass);
+        });
+      }
       
       // Update the selection state for this slot
       // Only set as selected if not already selected elsewhere
@@ -1919,6 +1935,14 @@
       }
     }
     
+    // HTML escape helper to prevent XSS
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+    
     // Get customizations from localStorage
     function getBclCustomizations() {
       try {
@@ -1974,14 +1998,27 @@
         const isCustomized = heroCustomizations[cp.id] !== undefined;
         return `
           <div class="choice-item ${isCustomized ? 'customized' : ''}" 
-               data-choice-id="${cp.id}"
-               onclick="selectBclChoice('${cp.id}')">
-            <div class="choice-item-name">${cp.name}</div>
-            <span class="choice-item-category">${cp.category}</span>
-            <div class="choice-item-description">${cp.docstring}</div>
+               data-choice-id="${escapeHtml(cp.id)}"
+               role="button"
+               tabindex="0"
+               aria-label="${escapeHtml(cp.name)}: ${escapeHtml(cp.docstring)}">
+            <div class="choice-item-name">${escapeHtml(cp.name)}</div>
+            <span class="choice-item-category">${escapeHtml(cp.category)}</span>
+            <div class="choice-item-description">${escapeHtml(cp.docstring)}</div>
           </div>
         `;
       }).join('');
+      
+      // Add event listeners for choice items (event delegation)
+      choicesContainer.querySelectorAll('.choice-item').forEach(item => {
+        item.addEventListener('click', () => selectBclChoice(item.dataset.choiceId));
+        item.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            selectBclChoice(item.dataset.choiceId);
+          }
+        });
+      });
       
       // Update customization count
       updateBclCustomizationCount();
