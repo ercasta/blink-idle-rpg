@@ -1154,14 +1154,14 @@
       
       for (const path of paths) {
         try {
-          console.log(`Attempting to load characters from: ${path}`);
+          console.debug(`Attempting to load characters from: ${path}`);
           const response = await fetch(path);
           if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
           }
           const data = await response.json();
           availableCharacters = data.characters;
-          console.log(`Successfully loaded ${availableCharacters.length} characters from ${path}`);
+          console.info(`Successfully loaded ${availableCharacters.length} characters from ${path}`);
           renderCharacterSelection();
           return; // Success, exit function
         } catch (error) {
