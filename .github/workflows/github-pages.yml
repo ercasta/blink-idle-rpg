@@ -105,6 +105,12 @@ jobs:
             cp game/data/characters.json _site/data/
           fi
           
+          # Copy IR files for runtime use (demos need these)
+          if ls game/ir/*.ir.json 1> /dev/null 2>&1; then
+            cp game/ir/*.ir.json _site/data/
+            echo "Copied IR files to _site/data/"
+          fi
+          
           # Copy game files (BRL, BCL, IR) for users to download
           echo "Copying game files..."
           mkdir -p _site/game-files

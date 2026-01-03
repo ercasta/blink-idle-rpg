@@ -1910,28 +1910,16 @@
     let currentBclChoice = null;
     let choicePointsData = [];
     
-    // Load choice points from characters.json (they're stored alongside character data)
+    // Load choice points from IR (when available in future IR format)
+    // For now, this returns empty since IR doesn't yet contain choice_points
     async function loadChoicePoints() {
-      try {
-        const paths = ['data/characters.json', '../data/characters.json'];
-        for (const path of paths) {
-          try {
-            const response = await fetch(path);
-            if (response.ok) {
-              const data = await response.json();
-              if (data.choicePoints) {
-                choicePointsData = data.choicePoints;
-                console.info(`Loaded ${choicePointsData.length} choice points`);
-              }
-              return;
-            }
-          } catch (e) {
-            // Try next path
-          }
-        }
-      } catch (error) {
-        console.warn('Failed to load choice points:', error);
+      if (classicRpgIR && classicRpgIR.choice_points) {
+        choicePointsData = classicRpgIR.choice_points;
+        console.info(`Loaded ${choicePointsData.length} choice points from IR`);
+      } else {
+        console.warn('No choice points found in IR (not yet implemented in compiler)');
         choicePointsData = [];
+        // TODO: Once compiler adds choice_points to IR, this will work automatically
       }
     }
     
@@ -2439,22 +2427,33 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
     
     // Load IR from file (fail-fast; no embedded fallback)
     async function loadDefaultIR() {
-      try {
-        const response = await fetch('../data/classic-rpg.ir.json');
-        if (!response.ok) {
-          throw new Error(`Failed to fetch classic-rpg.ir.json (status: ${response.status})`);
+      // Try GitHub Pages path first, then local dev path
+      const paths = ['data/classic-rpg.ir.json', '../ir/classic-rpg.ir.json'];
+      
+      for (const path of paths) {
+        try {
+          console.debug(`Attempting to load IR from: ${path}`);
+          const response = await fetch(path);
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          classicRpgIR = await response.json();
+          console.info(`Successfully loaded IR from ${path}`);
+          irStatus.textContent = `Loaded from ${path}`;
+          irStatus.className = 'file-status loaded';
+          return; // Success, exit function
+        } catch (error) {
+          console.warn(`Failed to load from ${path}:`, error.message);
+          // Try next path
         }
-        classicRpgIR = await response.json();
-        console.log('Loaded IR from classic-rpg.ir.json');
-        irStatus.textContent = 'Loaded from classic-rpg.ir.json';
-        irStatus.className = 'file-status loaded';
-      } catch (error) {
-        console.error('ERROR: Unable to load classic-rpg.ir.json. Stopping execution.', error);
-        irStatus.textContent = `Error loading game rules: ${error.message}`;
-        irStatus.className = 'file-status error';
-        // Rethrow so initialization halts
-        throw error;
       }
+      
+      // If we get here, all paths failed
+      const errorMsg = 'Failed to load classic-rpg.ir.json. Please check that the file is deployed correctly.';
+      console.error('ERROR: Failed to load IR from all paths:', paths);
+      irStatus.textContent = errorMsg;
+      irStatus.className = 'file-status error';
+      throw new Error(errorMsg);
     }
 
     
@@ -3322,6 +3321,7 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
       await loadCharacterData();
       await loadEnemyData();
       await loadDefaultIR();
+      loadSourceFilesFromIR(); // Load source from IR if available
       await initBclSystem();
     });
     
@@ -3344,8 +3344,9 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
     let highlightedLine = -1;
     let lastDebugEvent = null;
     
-    // Sample source content (these would be loaded from source_map in actual use)
-    const sourceFiles = {
+    // Source files - will be populated from IR source_map when IR is loaded
+    // For now showing placeholder since IR format doesn't yet include source_map
+    let sourceFiles = {
       brl: `// =============================================================================
 // CLASSIC RPG - Blink Rule Language (BRL)
 // =============================================================================
@@ -3568,6 +3569,21 @@ entity @mage {
     }
 }`
     };
+    
+    // Function to load source files from IR (when compiler adds source_map field)
+    function loadSourceFilesFromIR() {
+      if (classicRpgIR && classicRpgIR.source_map) {
+        sourceFiles = {
+          brl: classicRpgIR.source_map.brl || '// BRL source not included in IR',
+          bcl: classicRpgIR.source_map.bcl || '// BCL source not included in IR',
+          bdl: classicRpgIR.source_map.bdl || '// BDL source not included in IR'
+        };
+        console.info('Loaded source files from IR source_map');
+      } else {
+        console.warn('IR does not contain source_map (not yet implemented in compiler)');
+        // Keep placeholder source for demonstration
+      }
+    }
     
     // Dev mode DOM elements
     const devModeBtn = document.getElementById('dev-mode-btn');
