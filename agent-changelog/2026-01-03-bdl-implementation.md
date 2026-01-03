@@ -41,14 +41,25 @@ Updated `hielements.hie`:
 - Added BDL element to game_content section with file existence checks
 - Updated language documentation references
 
+### 5. JSON Data Files
+Created/updated JSON files as runtime representations of BDL data:
+- Created `game/data/enemies.json` - Enemy templates from enemies.bdl
+- Updated `game/data/characters.json` - Added comment noting it's generated from heroes.bdl
+
+### 6. Game Demo Updates
+Updated `game/demos/rpg-demo.html`:
+- Added `loadEnemyData()` function to load enemies from JSON file
+- Updated initialization to load enemy data from external JSON
+- Kept fallback to embedded data if JSON load fails
+
 ## Migration Path
 
-The BDL files contain all the data previously in:
-- `game/data/characters.json` - Now in `game/bdl/heroes.bdl`
-- Embedded enemy templates in HTML - Now in `game/bdl/enemies.bdl`
-- Game configuration constants - Now in `game/bdl/game-config.bdl`
+The BDL files are now the source of truth for game data:
+- `game/bdl/heroes.bdl` → `game/data/characters.json` (runtime format)
+- `game/bdl/enemies.bdl` → `game/data/enemies.json` (runtime format)
+- `game/bdl/game-config.bdl` → Used by BRL rules
 
-The original `characters.json` is retained for backward compatibility until the game demo is updated to load from BDL.
+Until the compiler supports BDL parsing directly, JSON files serve as an intermediate runtime format.
 
 ## Loading Order
 
@@ -61,8 +72,8 @@ BDL files must be loaded AFTER BRL files:
 
 1. Implement BDL parser in the compiler (reuse BRL lexer/parser with restrictions)
 2. Update IR generation to include BDL entities in `initial_state`
-3. Update game demo to load character data from BDL instead of JSON
-4. Eventually deprecate `game/data/characters.json`
+3. Create tooling to auto-generate JSON from BDL for runtime use
+4. Eventually load BDL directly in the browser
 
 ## File Structure
 
@@ -70,13 +81,16 @@ BDL files must be loaded AFTER BRL files:
 game/
 ├── bdl/
 │   ├── README.md
-│   ├── heroes.bdl       # 30 hero definitions
-│   ├── enemies.bdl      # 9 enemy templates
-│   └── game-config.bdl  # Game configuration
+│   ├── heroes.bdl       # 30 hero definitions (source of truth)
+│   ├── enemies.bdl      # 9 enemy templates (source of truth)
+│   └── game-config.bdl  # Game configuration (source of truth)
 ├── brl/
 │   └── classic-rpg.brl  # Updated with HeroInfo, SpawnConfig components
 ├── bcl/
 │   └── ...              # Player strategies (unchanged)
-└── data/
-    └── characters.json  # Legacy (retained for compatibility)
+├── data/
+│   ├── characters.json  # Runtime format (from heroes.bdl)
+│   └── enemies.json     # Runtime format (from enemies.bdl)
+└── demos/
+    └── rpg-demo.html    # Updated to load enemy data from JSON
 ```
