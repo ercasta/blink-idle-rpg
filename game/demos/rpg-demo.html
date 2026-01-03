@@ -909,6 +909,173 @@
       color: #888;
       margin-left: 5px;
     }
+    
+    /* Dev Mode Styles */
+    .dev-mode-panel {
+      background: rgba(139, 92, 246, 0.1);
+      border: 2px solid rgba(139, 92, 246, 0.4);
+      border-radius: 15px;
+      padding: 15px;
+      margin-bottom: 15px;
+      display: none;
+    }
+    
+    .dev-mode-panel.active {
+      display: block;
+    }
+    
+    .dev-mode-panel h2 {
+      color: #c4b5fd;
+      margin-top: 0;
+      font-size: 1.2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+    }
+    
+    .dev-mode-toggle {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    
+    .dev-mode-toggle button {
+      background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+      color: white;
+    }
+    
+    .dev-mode-toggle button.active {
+      background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+    }
+    
+    .source-viewer {
+      background: #1a1a2e;
+      border-radius: 10px;
+      padding: 15px;
+      font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+      font-size: 0.85rem;
+      max-height: 400px;
+      overflow-y: auto;
+      margin-top: 10px;
+    }
+    
+    .source-viewer pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    
+    .source-line {
+      display: flex;
+      align-items: flex-start;
+      padding: 2px 0;
+      transition: background 0.2s;
+    }
+    
+    .source-line.highlighted {
+      background: rgba(251, 191, 36, 0.3);
+      border-left: 3px solid #fbbf24;
+      padding-left: 5px;
+      margin-left: -8px;
+    }
+    
+    .source-line.active {
+      background: rgba(74, 222, 128, 0.3);
+      border-left: 3px solid #4ade80;
+      padding-left: 5px;
+      margin-left: -8px;
+    }
+    
+    .line-number {
+      color: #666;
+      min-width: 40px;
+      text-align: right;
+      padding-right: 15px;
+      user-select: none;
+    }
+    
+    .line-content {
+      color: #e2e8f0;
+    }
+    
+    .source-file-tabs {
+      display: flex;
+      gap: 5px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    
+    .source-file-tab {
+      background: rgba(0,0,0,0.3);
+      color: #8a7a68;
+      padding: 5px 10px;
+      border-radius: 5px 5px 0 0;
+      border: none;
+      cursor: pointer;
+      font-size: 0.8rem;
+      transition: all 0.3s;
+    }
+    
+    .source-file-tab.active {
+      background: #1a1a2e;
+      color: #c4b5fd;
+    }
+    
+    .source-file-tab:hover {
+      color: #c4b5fd;
+    }
+    
+    .debug-controls {
+      display: flex;
+      gap: 10px;
+      margin: 10px 0;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    
+    .debug-controls button {
+      padding: 6px 12px;
+      font-size: 0.8rem;
+    }
+    
+    .debug-info {
+      background: rgba(0,0,0,0.3);
+      padding: 10px;
+      border-radius: 5px;
+      margin-top: 10px;
+      font-size: 0.8rem;
+    }
+    
+    .debug-info-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 3px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .debug-info-item:last-child {
+      border-bottom: none;
+    }
+    
+    .debug-info-label {
+      color: #8a7a68;
+    }
+    
+    .debug-info-value {
+      color: #c4b5fd;
+      font-family: 'Consolas', 'Monaco', monospace;
+    }
+    
+    /* Syntax highlighting */
+    .keyword { color: #c792ea; }
+    .string { color: #c3e88d; }
+    .number { color: #f78c6c; }
+    .comment { color: #6a737d; font-style: italic; }
+    .component { color: #82aaff; }
+    .rule { color: #ffcb6b; }
+    .entity { color: #89ddff; }
   </style>
 </head>
 <body>
@@ -1082,6 +1249,49 @@
       <button id="pause-btn" class="secondary" disabled>⏸️ Pause</button>
       <button id="flee-btn" class="flee" disabled>🏃 Flee Battle</button>
       <button id="reset-btn" class="secondary">🔄 Reset</button>
+      <button id="dev-mode-btn" class="secondary">🛠️ Dev Mode</button>
+    </div>
+    
+    <!-- Dev Mode Panel -->
+    <div class="dev-mode-panel" id="dev-mode-panel">
+      <h2 onclick="toggleAccordion('dev-mode-content')">
+        <span>🛠️ Dev Mode - Integrated IDE</span>
+        <span class="accordion-toggle expanded" id="dev-mode-content-toggle">▼</span>
+      </h2>
+      <div class="dev-mode-content expanded" id="dev-mode-content">
+        <div class="debug-controls">
+          <button id="step-btn" class="secondary">⏭️ Step</button>
+          <button id="step-10-btn" class="secondary">⏭️ x10</button>
+          <button id="step-100-btn" class="secondary">⏭️ x100</button>
+          <span style="color: #8a7a68; font-size: 0.85rem;">| Step through BRL/BCL/BDL execution</span>
+        </div>
+        
+        <div class="debug-info" id="debug-info">
+          <div class="debug-info-item">
+            <span class="debug-info-label">Current Rule:</span>
+            <span class="debug-info-value" id="debug-rule">-</span>
+          </div>
+          <div class="debug-info-item">
+            <span class="debug-info-label">Event Type:</span>
+            <span class="debug-info-value" id="debug-event">-</span>
+          </div>
+          <div class="debug-info-item">
+            <span class="debug-info-label">Source Location:</span>
+            <span class="debug-info-value" id="debug-location">-</span>
+          </div>
+        </div>
+        
+        <div class="source-file-tabs" id="source-file-tabs">
+          <button class="source-file-tab active" data-file="brl">📋 BRL Rules</button>
+          <button class="source-file-tab" data-file="bcl">📜 BCL Strategy</button>
+          <button class="source-file-tab" data-file="bdl">📦 BDL Data</button>
+        </div>
+        
+        <div class="source-viewer" id="source-viewer">
+          <pre id="source-code">// Select a file tab above to view source code
+// Enable dev mode and step through execution to see highlighted lines</pre>
+        </div>
+      </div>
     </div>
     
     <!-- Combat Log -->
@@ -4027,6 +4237,18 @@
         handleSimulationEvent(event);
       });
       
+      // Subscribe to debug events for dev mode
+      game.onDebug((event) => {
+        if (devModeEnabled) {
+          handleDebugEvent(event);
+        }
+      });
+      
+      // Set dev mode if already enabled
+      if (devModeEnabled) {
+        game.setDevMode(true);
+      }
+      
       // Schedule initial attack events for heroes (0-3)
       for (let i = 0; i <= 3; i++) {
         const health = game.getComponent(i, 'Health');
@@ -4557,6 +4779,409 @@
       if (element && toggle) {
         element.classList.toggle('expanded');
         toggle.classList.toggle('expanded');
+      }
+    }
+    
+    // ========================================================================
+    // DEV MODE / INTEGRATED IDE FUNCTIONALITY
+    // ========================================================================
+    
+    let devModeEnabled = false;
+    let currentSourceFile = 'brl';
+    let highlightedLine = -1;
+    let lastDebugEvent = null;
+    
+    // Sample source content (these would be loaded from source_map in actual use)
+    const sourceFiles = {
+      brl: `// =============================================================================
+// CLASSIC RPG - Blink Rule Language (BRL)
+// =============================================================================
+// This file defines game components, rules, trackers, and functions
+
+// -----------------------------------------------------------------------------
+// COMPONENTS - Define the data structures
+// -----------------------------------------------------------------------------
+
+component Character {
+    name: string
+    class: string
+    level: integer = 1
+    experience: integer = 0
+    experienceToLevel: integer = 100
+}
+
+component Health {
+    current: integer = 100
+    max: integer = 100
+}
+
+component Mana {
+    current: integer = 50
+    max: integer = 50
+}
+
+component Combat {
+    damage: integer = 10
+    defense: integer = 5
+    attackSpeed: decimal = 1.0
+    critChance: decimal = 0.1
+    critMultiplier: decimal = 2.0
+}
+
+component Target {
+    entity: entity_id = null
+}
+
+component Team {
+    id: string = "neutral"
+    isPlayer: boolean = false
+}
+
+component Enemy {
+    tier: integer = 1
+    isBoss: boolean = false
+    expReward: integer = 25
+}
+
+// -----------------------------------------------------------------------------
+// RULES - Define the game logic
+// -----------------------------------------------------------------------------
+
+rule on DoAttack {
+    attacker = event.source
+    
+    // Check if attacker is alive and has a target
+    if attacker.Health.current <= 0 {
+        return  // Dead entities can't attack
+    }
+    
+    target = attacker.Target.entity
+    if target == null {
+        return  // No target to attack
+    }
+    
+    // Calculate damage
+    baseDamage = attacker.Combat.damage
+    defense = target.Combat.defense
+    finalDamage = max(1, baseDamage - defense)
+    
+    // Apply critical hit
+    if random() < attacker.Combat.critChance {
+        finalDamage = finalDamage * attacker.Combat.critMultiplier
+    }
+    
+    // Apply damage
+    target.Health.current -= finalDamage
+    
+    // Check for death
+    if target.Health.current <= 0 {
+        emit Death { victim: target }
+    }
+    
+    // Schedule next attack
+    attackDelay = 1.0 / attacker.Combat.attackSpeed
+    schedule DoAttack after attackDelay { source: attacker }
+}
+
+rule on Death {
+    victim = event.victim
+    
+    // Award experience if victim is an enemy
+    if !victim.Team.isPlayer {
+        expReward = victim.Enemy.expReward
+        // Award exp to all alive players (simplified)
+    }
+    
+    // Update game state
+    gameState = @gameState
+    if victim.Team.isPlayer {
+        gameState.GameState.playerDeaths += 1
+    } else {
+        gameState.GameState.enemiesDefeated += 1
+    }
+}
+
+// -----------------------------------------------------------------------------
+// TRACKERS - Monitor component changes
+// -----------------------------------------------------------------------------
+
+tracker Health on DoAttack
+tracker Health on Death
+tracker GameState on Death`,
+
+      bcl: `// =============================================================================
+// WARRIOR SKILLS - Blink Choice Language (BCL)
+// =============================================================================
+// This file defines AI/player strategies for warriors
+
+// Choice function for selecting attack target
+choice select_target(attacker: entity_id): entity_id {
+    // Get all enemies
+    enemies = query Team where Team.isPlayer == false
+    
+    // Filter alive enemies
+    alive = filter(enemies, e => e.Health.current > 0)
+    
+    // If no enemies, return null
+    if count(alive) == 0 {
+        return null
+    }
+    
+    // Prioritization: lowest health first (finish kills)
+    sorted = sort(alive, e => e.Health.current)
+    
+    return first(sorted)
+}
+
+// Choice function for using skills
+choice should_use_skill(hero: entity_id, skill: string): boolean {
+    // Power Strike - use when target health > 50%
+    if skill == "power_strike" {
+        target = hero.Target.entity
+        if target == null { return false }
+        healthPercent = target.Health.current / target.Health.max
+        return healthPercent > 0.5 && hero.Mana.current >= 20
+    }
+    
+    return false
+}`,
+
+      bdl: `// =============================================================================
+// HEROES - Blink Data Language (BDL)
+// =============================================================================
+// This file defines hero character data
+
+entity @warrior {
+    Character {
+        name: "Sir Braveheart"
+        class: "Warrior"
+        level: 1
+        experience: 0
+        experienceToLevel: 100
+    }
+    Health {
+        current: 120
+        max: 120
+    }
+    Mana {
+        current: 30
+        max: 30
+    }
+    Combat {
+        damage: 18
+        defense: 10
+        attackSpeed: 0.8
+        critChance: 0.1
+        critMultiplier: 1.5
+    }
+    Team {
+        id: "player"
+        isPlayer: true
+    }
+    HeroInfo {
+        id: "warrior"
+        description: "A stalwart defender with unmatched strength."
+        difficulty: "Easy"
+        role: "Tank / Melee DPS"
+    }
+}
+
+entity @mage {
+    Character {
+        name: "Elara Flamecaster"
+        class: "Mage"
+        level: 1
+        experience: 0
+        experienceToLevel: 100
+    }
+    Health {
+        current: 70
+        max: 70
+    }
+    Mana {
+        current: 100
+        max: 100
+    }
+    Combat {
+        damage: 25
+        defense: 4
+        attackSpeed: 0.6
+        critChance: 0.1
+        critMultiplier: 2.0
+    }
+    Team {
+        id: "player"
+        isPlayer: true
+    }
+}`
+    };
+    
+    // Dev mode DOM elements
+    const devModeBtn = document.getElementById('dev-mode-btn');
+    const devModePanel = document.getElementById('dev-mode-panel');
+    const stepBtn = document.getElementById('step-btn');
+    const step10Btn = document.getElementById('step-10-btn');
+    const step100Btn = document.getElementById('step-100-btn');
+    const debugRuleEl = document.getElementById('debug-rule');
+    const debugEventEl = document.getElementById('debug-event');
+    const debugLocationEl = document.getElementById('debug-location');
+    const sourceViewerEl = document.getElementById('source-viewer');
+    const sourceCodeEl = document.getElementById('source-code');
+    const sourceFileTabs = document.getElementById('source-file-tabs');
+    
+    // Toggle dev mode
+    devModeBtn.addEventListener('click', () => {
+      devModeEnabled = !devModeEnabled;
+      devModeBtn.classList.toggle('active', devModeEnabled);
+      devModePanel.classList.toggle('active', devModeEnabled);
+      
+      if (game) {
+        game.setDevMode(devModeEnabled);
+      }
+      
+      if (devModeEnabled) {
+        devModeBtn.textContent = '🛠️ Dev Mode ON';
+        updateSourceDisplay();
+        addLogEntry('system', '🛠️ Dev Mode enabled - step through execution to see source highlighting');
+      } else {
+        devModeBtn.textContent = '🛠️ Dev Mode';
+        addLogEntry('system', '🛠️ Dev Mode disabled');
+      }
+    });
+    
+    // Step buttons
+    stepBtn.addEventListener('click', () => {
+      if (game && game.hasEvents()) {
+        game.step();
+      }
+    });
+    
+    step10Btn.addEventListener('click', () => {
+      if (game) {
+        for (let i = 0; i < 10 && game.hasEvents(); i++) {
+          game.step();
+        }
+      }
+    });
+    
+    step100Btn.addEventListener('click', () => {
+      if (game) {
+        for (let i = 0; i < 100 && game.hasEvents(); i++) {
+          game.step();
+        }
+      }
+    });
+    
+    // Source file tab switching
+    sourceFileTabs.addEventListener('click', (e) => {
+      if (e.target.classList.contains('source-file-tab')) {
+        const file = e.target.dataset.file;
+        if (file) {
+          currentSourceFile = file;
+          // Update active tab
+          document.querySelectorAll('.source-file-tab').forEach(tab => {
+            tab.classList.toggle('active', tab.dataset.file === file);
+          });
+          updateSourceDisplay();
+        }
+      }
+    });
+    
+    // Update source display
+    function updateSourceDisplay() {
+      const source = sourceFiles[currentSourceFile] || '// No source available';
+      const lines = source.split('\n');
+      
+      let html = '';
+      lines.forEach((line, index) => {
+        const lineNum = index + 1;
+        const isHighlighted = lineNum === highlightedLine;
+        const highlightClass = isHighlighted ? 'highlighted' : '';
+        
+        // Apply syntax highlighting
+        const highlightedContent = applySyntaxHighlighting(line);
+        
+        html += `<div class="source-line ${highlightClass}" data-line="${lineNum}">
+          <span class="line-number">${lineNum}</span>
+          <span class="line-content">${highlightedContent}</span>
+        </div>`;
+      });
+      
+      sourceCodeEl.innerHTML = html;
+      
+      // Scroll to highlighted line if needed
+      if (highlightedLine > 0) {
+        const highlightedEl = sourceCodeEl.querySelector(`.source-line[data-line="${highlightedLine}"]`);
+        if (highlightedEl) {
+          highlightedEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
+    }
+    
+    // Pre-compiled regex patterns for syntax highlighting (performance optimization)
+    const KEYWORD_REGEX = /\b(component|rule|tracker|choice|fn|if|else|return|on|entity|schedule|emit|query|filter|sort|first|count|where)\b/g;
+    const COMMENT_REGEX = /(\/\/.*)$/gm;
+    const STRING_REGEX = /("([^"\\]|\\.)*")/g;
+    const NUMBER_REGEX = /\b(\d+\.?\d*)\b/g;
+    const ENTITY_REGEX = /@(\w+)/g;
+    
+    // Simple syntax highlighting
+    function applySyntaxHighlighting(line) {
+      // Escape HTML first
+      let escaped = line
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+      
+      // Comments
+      escaped = escaped.replace(COMMENT_REGEX, '<span class="comment">$1</span>');
+      
+      // Keywords - using pre-compiled regex
+      escaped = escaped.replace(KEYWORD_REGEX, '<span class="keyword">$1</span>');
+      
+      // Strings
+      escaped = escaped.replace(STRING_REGEX, '<span class="string">$1</span>');
+      
+      // Numbers
+      escaped = escaped.replace(NUMBER_REGEX, '<span class="number">$1</span>');
+      
+      // Entity references
+      escaped = escaped.replace(ENTITY_REGEX, '<span class="entity">@$1</span>');
+      
+      return escaped;
+    }
+    
+    // Handle debug events from engine
+    function handleDebugEvent(event) {
+      lastDebugEvent = event;
+      
+      if (event.type === 'rule_start' && event.rule) {
+        debugRuleEl.textContent = event.rule.name || 'anonymous';
+        
+        // Try to find source location
+        if (event.sourceLocation) {
+          debugLocationEl.textContent = `${event.sourceLocation.file}:${event.sourceLocation.line}`;
+          highlightedLine = event.sourceLocation.line;
+        } else {
+          // Simulate finding the rule in source (demo purposes)
+          // Use indexOf for better performance instead of dynamic regex
+          const eventName = event.rule.trigger?.event || event.rule.name;
+          if (eventName && currentSourceFile === 'brl') {
+            const searchPattern = `rule on ${eventName}`;
+            const matchIndex = sourceFiles.brl.indexOf(searchPattern);
+            if (matchIndex !== -1) {
+              const linesBefore = sourceFiles.brl.substring(0, matchIndex).split('\n');
+              highlightedLine = linesBefore.length;
+              debugLocationEl.textContent = `classic-rpg.brl:${highlightedLine}`;
+            }
+          }
+        }
+        
+        if (event.rule.trigger?.event) {
+          debugEventEl.textContent = event.rule.trigger.event;
+        }
+        
+        updateSourceDisplay();
       }
     }
     

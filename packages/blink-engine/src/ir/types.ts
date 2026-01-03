@@ -3,6 +3,35 @@
  * Based on the IR specification in doc/ir-specification.md
  */
 
+// ===== Source Mapping =====
+
+/**
+ * Source location for debugging and error reporting
+ */
+export interface SourceLocation {
+  file: string;
+  line: number;
+  column: number;
+  endLine?: number;
+  endColumn?: number;
+}
+
+/**
+ * Source file entry for source mapping
+ */
+export interface SourceFile {
+  path: string;
+  content: string;
+  language: 'brl' | 'bcl' | 'bdl';
+}
+
+/**
+ * Source map for the entire IR module
+ */
+export interface SourceMap {
+  files: SourceFile[];
+}
+
 // ===== Module Structure =====
 
 export interface IRModule {
@@ -14,12 +43,14 @@ export interface IRModule {
   functions: IRFunction[];
   trackers: IRTracker[];
   initial_state?: IRInitialState;
+  source_map?: SourceMap;
 }
 
 export interface IRMetadata {
   compiled_at?: string;
   compiler_version?: string;
   source_hash?: string;
+  include_source_map?: boolean;
 }
 
 // ===== Components =====
@@ -28,6 +59,7 @@ export interface IRComponent {
   id: number;
   name: string;
   fields: IRField[];
+  source_location?: SourceLocation;
 }
 
 export interface IRField {
@@ -61,6 +93,7 @@ export interface IRRule {
   filter?: IRFilter;
   condition?: IRExpression;
   actions: IRAction[];
+  source_location?: SourceLocation;
 }
 
 export interface IRTrigger {
@@ -85,6 +118,7 @@ export interface IRModifyAction {
   field: string;
   op: 'set' | 'add' | 'subtract' | 'multiply' | 'divide';
   value: IRExpression;
+  source_location?: SourceLocation;
 }
 
 export interface IRScheduleAction {
@@ -94,22 +128,26 @@ export interface IRScheduleAction {
   target?: IRExpression;
   delay?: IRExpression;
   fields?: Record<string, IRExpression>;
+  source_location?: SourceLocation;
 }
 
 export interface IREmitAction {
   type: 'emit';
   event: string;
   fields?: Record<string, IRExpression>;
+  source_location?: SourceLocation;
 }
 
 export interface IRSpawnAction {
   type: 'spawn';
   components: Record<string, Record<string, IRExpression>>;
+  source_location?: SourceLocation;
 }
 
 export interface IRDespawnAction {
   type: 'despawn';
   entity: IRExpression;
+  source_location?: SourceLocation;
 }
 
 // ===== Expressions =====
@@ -185,6 +223,7 @@ export interface IRFunction {
   params: IRParam[];
   return_type: IRReturnType;
   body: IRExpression;
+  source_location?: SourceLocation;
 }
 
 export interface IRParam {
