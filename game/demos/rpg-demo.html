@@ -1171,8 +1171,8 @@
       }
       
       // If we get here, all paths failed
-      const errorMsg = 'CRITICAL ERROR: Failed to load characters.json from all paths. Please ensure the file is deployed correctly.';
-      console.error(errorMsg);
+      const errorMsg = 'Failed to load characters.json. Please check that the file is deployed correctly.';
+      console.error('ERROR: Failed to load characters from all paths:', paths);
       alert(errorMsg);
       throw new Error(errorMsg);
     }
