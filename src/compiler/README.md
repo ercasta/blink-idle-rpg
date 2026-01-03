@@ -1,14 +1,14 @@
 # Blink Compiler
 
-The Blink Compiler parses Blink Rule Language (BRL) source code and produces an Intermediate Representation (IR) that can be executed by any Blink engine.
+The Blink Compiler parses Blink Rule Language (BRL), Blink Data Language (BDL), and Blink Choice Language (BCL) source code and produces an Intermediate Representation (IR) that can be executed by any Blink engine.
 
 ## Architecture
 
 ```
 ┌──────────────┐     ┌─────────────┐     ┌──────────────┐     ┌──────────────┐
-│  BRL Source  │ ──► │    Lexer    │ ──► │    Parser    │ ──► │   Analyzer   │
-└──────────────┘     └─────────────┘     └──────────────┘     └──────────────┘
-                                                                      │
+│ BRL/BDL/BCL  │ ──► │    Lexer    │ ──► │    Parser    │ ──► │   Analyzer   │
+│   Source     │     └─────────────┘     └──────────────┘     └──────────────┘
+└──────────────┘                                                      │
                                                                       ▼
                                                               ┌──────────────┐
                                                               │ IR Generator │
@@ -21,9 +21,17 @@ The Blink Compiler parses Blink Rule Language (BRL) source code and produces an 
                                                               └──────────────┘
 ```
 
+## Supported Languages
+
+| Language | Extension | Purpose | IR Output |
+|----------|-----------|---------|-----------|
+| BRL | `.brl` | Game rules, components, trackers | `components`, `rules`, `functions`, `trackers` |
+| BDL | `.bdl` | Entity data definitions | `initial_state.entities` |
+| BCL | `.bcl` | Player strategies (planned) | `choice_functions` (planned) |
+
 ## Components
 
-- **Lexer** (`src/lexer/`): Tokenizes BRL source code
+- **Lexer** (`src/lexer/`): Tokenizes BRL/BDL/BCL source code
 - **Parser** (`src/parser/`): Builds Abstract Syntax Tree (AST)
 - **Analyzer** (`src/analyzer/`): Semantic analysis and type checking
 - **IR Generator** (`src/ir/`): Produces the final IR output
@@ -60,6 +68,12 @@ cargo build
 # Compile BRL to IR
 blink-compiler compile -i game.brl -o game.ir.json --pretty
 
+# Compile BRL with BDL entity data included
+blink-compiler compile -i game.brl --include enemies.bdl --include heroes.bdl -o game.ir.json --pretty
+
+# Compile with source map for debugging
+blink-compiler compile -i game.brl --include data.bdl --source-map -o game.ir.json --pretty
+
 # Check syntax without generating IR
 blink-compiler check -i game.brl
 
@@ -69,6 +83,25 @@ blink-compiler tokens -i game.brl
 # Debug: view AST
 blink-compiler ast -i game.brl
 ```
+
+### Multi-File Compilation
+
+The `--include` flag allows combining multiple source files for compilation:
+
+```bash
+# Compile BRL with BDL files
+blink-compiler compile \
+  --input game/brl/classic-rpg.brl \
+  --include game/bdl/enemies.bdl \
+  --include game/bdl/heroes.bdl \
+  --output game/ir/classic-rpg.ir.json \
+  --pretty
+```
+
+The order matters:
+1. BRL files must define components first
+2. BDL files use those component definitions to create entities
+3. All included files are concatenated and compiled together
 
 **Windows Path Examples:**
 ```cmd
@@ -106,7 +139,7 @@ println!("{}", serde_json::to_string_pretty(&ir)?);
 
 The compiler produces IR conforming to the [IR Specification](../../doc/ir-specification.md).
 
-Example output:
+### Example: BRL Output
 
 ```json
 {
@@ -134,6 +167,38 @@ Example output:
 }
 ```
 
+### Example: BDL Entity Output
+
+When BDL files are included, entities appear in `initial_state`:
+
+```json
+{
+  "version": "1.0",
+  "initial_state": {
+    "entities": [
+      {
+        "id": 0,
+        "name": "goblin_scout",
+        "components": {
+          "Character": {
+            "name": "Goblin Scout",
+            "class": "Monster"
+          },
+          "Health": {
+            "current": 60,
+            "max": 60
+          },
+          "Enemy": {
+            "tier": 1,
+            "isBoss": false
+          }
+        }
+      }
+    ]
+  }
+}
+```
+
 ## Development
 
 ### Running Tests
@@ -154,5 +219,7 @@ cargo test
 ## Related Documentation
 
 - [BRL Specification](../../doc/language/brl-specification.md)
+- [BDL Specification](../../doc/language/bdl-specification.md)
+- [BCL Specification](../../doc/language/bcl-specification.md)
 - [IR Specification](../../doc/ir-specification.md)
 - [Development Tracks](../../doc/DEVELOPMENT_TRACKS.md)

@@ -1062,22 +1062,11 @@ impl Parser {
         
         let mut fields = Vec::new();
         while !self.check(&TokenKind::RBrace) && !self.is_at_end() {
-            // Allow certain keywords to be used as field names (entity, event, id)
-            let field_name_token = if let Some(token) = self.peek() {
-                match token.kind {
-                    TokenKind::Identifier 
-                    | TokenKind::Entity 
-                    | TokenKind::Event 
-                    | TokenKind::TypeId => {
-                        self.advance().ok_or_else(|| ParseError::UnexpectedEof { 
-                            expected: "field name".to_string() 
-                        })?.clone()
-                    }
-                    _ => self.consume(TokenKind::Identifier, "field name")?
-                }
-            } else {
-                return Err(ParseError::UnexpectedEof { expected: "field name".to_string() });
-            };
+            // Allow certain keywords to be used as field names in component initialization.
+            // This is needed because BDL/BRL commonly use "entity", "event", and "id" as field names
+            // (e.g., Target { entity: null }, Team { id: "player" }).
+            // These keywords are contextually allowed as field names but not as identifiers elsewhere.
+            let field_name_token = self.parse_field_name_token()?;
             
             self.consume(TokenKind::Colon, ":")?;
             let field_value = self.parse_expression()?;
@@ -1091,6 +1080,31 @@ impl Parser {
             fields,
             span: Span::new(start, end_token.span.end),
         })
+    }
+    
+    /// Parse a token that can be used as a field name.
+    /// Allows identifiers and certain keywords that are commonly used as field names.
+    fn parse_field_name_token(&mut self) -> Result<Token, ParseError> {
+        if let Some(token) = self.peek() {
+            match token.kind {
+                // Regular identifiers
+                TokenKind::Identifier 
+                // Keywords allowed as field names in component initialization:
+                // - entity: e.g., Target { entity: null }
+                // - event: e.g., EventInfo { event: "DamageEvent" }
+                // - id: e.g., Team { id: "player" }
+                | TokenKind::Entity 
+                | TokenKind::Event 
+                | TokenKind::TypeId => {
+                    self.advance().ok_or_else(|| ParseError::UnexpectedEof { 
+                        expected: "field name".to_string() 
+                    }).map(|t| t.clone())
+                }
+                _ => self.consume(TokenKind::Identifier, "field name")
+            }
+        } else {
+            Err(ParseError::UnexpectedEof { expected: "field name".to_string() })
+        }
     }
     
     fn parse_delete_statement(&mut self) -> Result<Statement, ParseError> {

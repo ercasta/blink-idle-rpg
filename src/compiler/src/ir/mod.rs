@@ -787,12 +787,19 @@ impl IRGenerator {
     }
     
     /// Convert a typed expression to an IRValue (for entity field initialization)
+    /// 
+    /// Note: BDL only allows literal values in entity field initialization.
+    /// If a non-literal expression is encountered, this indicates invalid BDL syntax
+    /// that wasn't caught by the parser. The analyzer should reject such cases.
     fn expression_to_value(&self, expr: &TypedExpr) -> IRValue {
         match &expr.kind {
             TypedExprKind::Literal(lit) => self.convert_literal(lit),
             _ => {
-                // For non-literal expressions in entity fields (which shouldn't happen in BDL),
-                // return null as a fallback
+                // BDL specification prohibits expressions in entity fields.
+                // This should be caught earlier in validation, but as a safety measure,
+                // we log a warning and return null rather than panicking.
+                // A stricter implementation could return an error here.
+                eprintln!("Warning: Non-literal expression in entity field (BDL violation). Using null.");
                 IRValue::Null
             }
         }

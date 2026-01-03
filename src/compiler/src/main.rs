@@ -8,6 +8,10 @@ use std::path::PathBuf;
 
 use blink_compiler::{compile, CompilerOptions};
 
+/// Separator used when concatenating multiple source files for compilation
+const SOURCE_FILE_SEPARATOR_PREFIX: &str = "\n\n// === ";
+const SOURCE_FILE_SEPARATOR_SUFFIX: &str = " ===\n";
+
 #[derive(Parser)]
 #[command(name = "blink-compiler")]
 #[command(author = "Blink Team")]
@@ -120,10 +124,10 @@ fn run_compile(
         };
         
         // Append the content to the main source for compilation
-        // Add a newline separator to prevent parsing issues
-        source.push_str("\n\n// === ");
+        // Uses separator constants for maintainability
+        source.push_str(SOURCE_FILE_SEPARATOR_PREFIX);
         source.push_str(&path_str);
-        source.push_str(" ===\n");
+        source.push_str(SOURCE_FILE_SEPARATOR_SUFFIX);
         source.push_str(&content);
         
         // Also track for source map
