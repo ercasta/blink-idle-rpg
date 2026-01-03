@@ -1416,74 +1416,51 @@
     // Classic RPG IR - will be loaded from file
     let classicRpgIR = null;
     
-    // Enemy templates - embedded from enemies.json
-    let enemyTemplates = [
-      {
-        "name": "Goblin Scout",
-        "tier": 1,
-        "health": 60,
-        "damage": 8,
-        "speed": 1.0,
-        "exp": 25
-      },
-      {
-        "name": "Orc Raider",
-        "tier": 2,
-        "health": 90,
-        "damage": 12,
-        "speed": 0.8,
-        "exp": 35
-      },
-      {
-        "name": "Dark Wolf",
-        "tier": 2,
-        "health": 75,
-        "damage": 14,
-        "speed": 1.2,
-        "exp": 40
-      },
-      {
-        "name": "Skeleton Warrior",
-        "tier": 3,
-        "health": 110,
-        "damage": 16,
-        "speed": 0.7,
-        "exp": 50
-      },
-      {
-        "name": "Troll Berserker",
-        "tier": 4,
-        "health": 180,
-        "damage": 22,
-        "speed": 0.6,
-        "exp": 80
-      },
-      {
-        "name": "Dark Mage",
-        "tier": 3,
-        "health": 80,
-        "damage": 25,
-        "speed": 0.5,
-        "exp": 75
-      },
-      {
-        "name": "Demon Knight",
-        "tier": 5,
-        "health": 250,
-        "damage": 30,
-        "speed": 0.7,
-        "exp": 150
-      },
-      {
-        "name": "Ancient Dragon",
-        "tier": 6,
-        "health": 400,
-        "damage": 40,
-        "speed": 0.8,
-        "exp": 300,
-        "boss": true
+    // Enemy templates - loaded from enemies.json (generated from enemies.bdl)
+    let enemyTemplates = [];
+    
+    // Load enemy templates from JSON file
+    async function loadEnemyData() {
+      const paths = ['data/enemies.json', '../data/enemies.json'];
+      
+      for (const path of paths) {
+        try {
+          console.debug(`Attempting to load enemies from: ${path}`);
+          const response = await fetch(path);
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          const data = await response.json();
+          // Map JSON properties to internal format (attackSpeed -> speed for legacy compatibility)
+          enemyTemplates = data.enemies.map(e => ({
+            name: e.name,
+            tier: e.tier,
+            health: e.health,
+            damage: e.damage,
+            speed: e.attackSpeed,  // Maps to 'attackSpeed' in JSON/BDL
+            exp: e.expReward,
+            boss: e.isBoss
+          }));
+          console.info(`Successfully loaded ${enemyTemplates.length} enemy templates from ${path}`);
+          return; // Success
+        } catch (error) {
+          console.warn(`Failed to load enemies from ${path}:`, error.message);
+        }
       }
-    ];
+      
+      // Fallback to embedded data if all paths fail
+      console.warn('Using fallback embedded enemy data');
+      enemyTemplates = [
+        { name: "Goblin Scout", tier: 1, health: 60, damage: 8, speed: 1.0, exp: 25 },
+        { name: "Orc Raider", tier: 2, health: 90, damage: 12, speed: 0.8, exp: 35 },
+        { name: "Dark Wolf", tier: 2, health: 75, damage: 14, speed: 1.2, exp: 40 },
+        { name: "Skeleton Warrior", tier: 3, health: 110, damage: 16, speed: 0.7, exp: 50 },
+        { name: "Troll Berserker", tier: 4, health: 180, damage: 22, speed: 0.6, exp: 80 },
+        { name: "Dark Mage", tier: 3, health: 80, damage: 25, speed: 0.5, exp: 75 },
+        { name: "Demon Knight", tier: 5, health: 250, damage: 30, speed: 0.7, exp: 150 },
+        { name: "Ancient Dragon", tier: 6, health: 400, damage: 40, speed: 0.8, exp: 300, boss: true }
+      ];
+    }
     
     // Embedded classic-rpg.ir.json data
     const EMBEDDED_CLASSIC_RPG_IR = {
@@ -4567,8 +4544,9 @@
     
     // Initialize on load
     window.addEventListener('load', async () => {
-      // Load character data and wait for party selection
+      // Load character data and enemy data, then wait for party selection
       await loadCharacterData();
+      await loadEnemyData();
       await loadDefaultIR();
     });
     
