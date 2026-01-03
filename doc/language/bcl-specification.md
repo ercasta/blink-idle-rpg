@@ -216,7 +216,31 @@ tracker on HealthChanged {
 
 ## 5. Choice Functions
 
-### 5.1 Syntax
+### 5.1 Overview
+
+Choice functions are the core of BCL - they implement decision points declared in BRL. BRL declares **choice points** that define what decisions are available for customization; BCL provides the implementations.
+
+### 5.2 Relationship to BRL Choice Points
+
+BRL declares choice points with signatures and documentation:
+
+```brl
+// In BRL (game rules)
+choice fn select_attack_target(attacker: Character, enemies: list): id
+/// "Choose which enemy to attack. Affects combat focus strategy."
+```
+
+BCL implements these choice points:
+
+```bcl
+// In BCL (player strategy)
+choice fn select_attack_target(attacker: Character, enemies: list): id {
+    // Custom implementation
+    return find_weakest(enemies)
+}
+```
+
+### 5.3 Syntax
 
 Choice functions are special BCL functions that the game engine calls to make decisions:
 
@@ -227,9 +251,9 @@ choice fn function_name(context_params...): return_type {
 }
 ```
 
-### 5.2 Common Choice Signatures
+### 5.4 Common Choice Signatures
 
-The game defines standard choice function signatures:
+The game defines standard choice function signatures (declared in BRL, implemented in BCL):
 
 ```bcl
 // Target selection for attacks
@@ -256,20 +280,52 @@ choice fn select_position(
     character: Character,
     available_positions: list
 ): Position
+
+// Flee decision
+choice fn should_flee_from_battle(
+    party: list,
+    enemies: list,
+    runStats: RunStats
+): boolean
 ```
 
-### 5.3 Default Choices
+### 5.5 Default Choices and Overrides
 
-If a choice function is not defined, the engine uses default behavior:
+Choice points declared in BRL can have default implementations. BCL can override any choice:
 
 ```bcl
-// Player can override any standard choice
+// Player can override any declared choice
 choice fn select_attack_target(attacker: Character, enemies: list): id {
     // Custom logic: always attack highest threat
     return find_highest_threat(enemies)
 }
 
-// Or rely on engine default (usually: attack nearest/random)
+// If not overridden, BRL's default implementation is used
+```
+
+### 5.6 Customization Deltas
+
+When players customize choice functions in the game UI:
+- Only the modified choice functions are saved
+- These are stored as "BCL deltas" - partial BCL that overrides specific choices
+- The delta is applied on top of the hero's base BCL file
+- Deltas can be downloaded and shared
+
+Example delta file:
+```bcl
+// custom-strategy.bcl - Player customization delta
+// Overrides: select_attack_target
+
+choice fn select_attack_target(attacker: Character, enemies: list): id {
+    // Always focus on bosses first
+    for enemy in enemies {
+        if enemy.Enemy.isBoss {
+            return enemy.id
+        }
+    }
+    // Fall back to lowest health
+    return find_weakest(enemies)
+}
 ```
 
 ---
