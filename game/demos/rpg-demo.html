@@ -1149,74 +1149,32 @@
     // LOAD CHARACTER DATA
     // ========================================================================
     async function loadCharacterData() {
-      try {
-        const response = await fetch('../data/characters.json');
-        const data = await response.json();
-        availableCharacters = data.characters;
-        renderCharacterSelection();
-      } catch (error) {
-        console.error('Failed to load character data:', error);
-        // Fallback to basic characters if data file fails
-        availableCharacters = [
-          {
-            id: 'warrior',
-            name: 'Sir Braveheart',
-            class: 'Warrior',
-            description: 'A stalwart defender with unmatched strength.',
-            role: 'Tank / Melee DPS',
-            difficulty: 'Easy',
-            baseHealth: 120,
-            baseMana: 30,
-            baseDamage: 18,
-            baseDefense: 10,
-            attackSpeed: 0.8,
-            stats: { strength: 16, dexterity: 10, intelligence: 8 }
-          },
-          {
-            id: 'mage',
-            name: 'Elara Flamecaster',
-            class: 'Mage',
-            description: 'A master of elemental magic who rains destruction from afar.',
-            role: 'Ranged DPS / AoE',
-            difficulty: 'Medium',
-            baseHealth: 70,
-            baseMana: 100,
-            baseDamage: 25,
-            baseDefense: 4,
-            attackSpeed: 0.6,
-            stats: { strength: 6, dexterity: 12, intelligence: 18 }
-          },
-          {
-            id: 'rogue',
-            name: 'Shadow',
-            class: 'Rogue',
-            description: 'Swift and deadly, striking from the shadows.',
-            role: 'Melee DPS / Assassin',
-            difficulty: 'Medium',
-            baseHealth: 80,
-            baseMana: 50,
-            baseDamage: 22,
-            baseDefense: 6,
-            attackSpeed: 1.4,
-            stats: { strength: 10, dexterity: 18, intelligence: 10 }
-          },
-          {
-            id: 'cleric',
-            name: 'Brother Aldric',
-            class: 'Cleric',
-            description: 'A divine healer who supports allies.',
-            role: 'Healer / Support',
-            difficulty: 'Easy',
-            baseHealth: 90,
-            baseMana: 80,
-            baseDamage: 12,
-            baseDefense: 8,
-            attackSpeed: 0.7,
-            stats: { strength: 10, dexterity: 8, intelligence: 12 }
+      // Try GitHub Pages path first, then local dev path
+      const paths = ['data/characters.json', '../data/characters.json'];
+      
+      for (const path of paths) {
+        try {
+          console.log(`Attempting to load characters from: ${path}`);
+          const response = await fetch(path);
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
           }
-        ];
-        renderCharacterSelection();
+          const data = await response.json();
+          availableCharacters = data.characters;
+          console.log(`Successfully loaded ${availableCharacters.length} characters from ${path}`);
+          renderCharacterSelection();
+          return; // Success, exit function
+        } catch (error) {
+          console.warn(`Failed to load from ${path}:`, error.message);
+          // Try next path
+        }
       }
+      
+      // If we get here, all paths failed
+      const errorMsg = 'CRITICAL ERROR: Failed to load characters.json from all paths. Please ensure the file is deployed correctly.';
+      console.error(errorMsg);
+      alert(errorMsg);
+      throw new Error(errorMsg);
     }
     
     // ========================================================================
