@@ -72,11 +72,26 @@ export function createTest(options: GameTestOptions = {}): GameTest {
 }
 
 /**
+ * Internal options type with all properties required
+ */
+interface ResolvedGameTestOptions {
+  name: string;
+  verbose: boolean;
+  maxSteps: number;
+  maxTime: number;
+  debug: boolean;
+  timeScale: number;
+  maxEventsPerFrame: number;
+  discreteTimeStep: number;
+  devMode: boolean;
+}
+
+/**
  * GameTest - Main test harness class
  */
 export class GameTest {
   private game: BlinkGame;
-  private options: Required<GameTestOptions>;
+  private options: ResolvedGameTestOptions;
   private scenarios: TestScenario[] = [];
   private trackerHistory: TrackerOutput[] = [];
   private eventHistory: StepResult[] = [];
@@ -92,6 +107,7 @@ export class GameTest {
       timeScale: options.timeScale ?? 1.0,
       maxEventsPerFrame: options.maxEventsPerFrame ?? 100,
       discreteTimeStep: options.discreteTimeStep ?? 0,
+      devMode: options.devMode ?? false,
     };
     
     this.game = BlinkGame.createSync({
@@ -99,6 +115,7 @@ export class GameTest {
       timeScale: this.options.timeScale,
       maxEventsPerFrame: this.options.maxEventsPerFrame,
       discreteTimeStep: this.options.discreteTimeStep,
+      devMode: this.options.devMode,
     });
     
     // Subscribe to tracker events
