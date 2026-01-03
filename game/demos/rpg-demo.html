@@ -2440,21 +2440,22 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
     // Load IR from file (fail-fast; no embedded fallback)
     async function loadDefaultIR() {
       try {
-        const response = await fetch('classic-rpg.ir.json');
+        const response = await fetch('../data/classic-rpg.ir.json');
+        if (!response.ok) {
+          throw new Error(`Failed to fetch classic-rpg.ir.json (status: ${response.status})`);
+        }
         classicRpgIR = await response.json();
         console.log('Loaded IR from classic-rpg.ir.json');
         irStatus.textContent = 'Loaded from classic-rpg.ir.json';
         irStatus.className = 'file-status loaded';
       } catch (error) {
-        // Fallback to embedded IR data when fetch fails (e.g., when opened via file://)
-        console.log('Failed to fetch classic-rpg.ir.json, using embedded data:', error.message);
-        classicRpgIR = EMBEDDED_CLASSIC_RPG_IR;
-        console.log('Using embedded IR data');
-        irStatus.textContent = 'Using embedded game rules';
-        irStatus.className = 'file-status loaded';
+        console.error('ERROR: Unable to load classic-rpg.ir.json. Stopping execution.', error);
+        irStatus.textContent = `Error loading game rules: ${error.message}`;
+        irStatus.className = 'file-status error';
+        // Rethrow so initialization halts
+        throw error;
       }
     }
-    
 
     
     // File upload handlers
