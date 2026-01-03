@@ -98,6 +98,13 @@ jobs:
             cp game/demos/README.md _site/
           fi
           
+          # Copy data files for runtime use
+          echo "Copying data files..."
+          mkdir -p _site/data
+          if [ -f game/data/characters.json ]; then
+            cp game/data/characters.json _site/data/
+          fi
+          
           # Copy game files (BRL, BCL, IR) for users to download
           echo "Copying game files..."
           mkdir -p _site/game-files
