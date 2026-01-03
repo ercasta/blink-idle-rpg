@@ -3572,15 +3572,32 @@ entity @mage {
     
     // Function to load source files from IR (when compiler adds source_map field)
     function loadSourceFilesFromIR() {
-      if (classicRpgIR && classicRpgIR.source_map) {
-        sourceFiles = {
-          brl: classicRpgIR.source_map.brl || '// BRL source not included in IR',
-          bcl: classicRpgIR.source_map.bcl || '// BCL source not included in IR',
-          bdl: classicRpgIR.source_map.bdl || '// BDL source not included in IR'
+      if (classicRpgIR && classicRpgIR.source_map && classicRpgIR.source_map.files) {
+        // Parse source files from the new source_map format
+        // source_map.files is an array of {path, content, language}
+        const newSourceFiles = {
+          brl: '// BRL source not included in IR',
+          bcl: '// BCL source not included in IR',
+          bdl: '// BDL source not included in IR'
         };
-        console.info('Loaded source files from IR source_map');
+        
+        for (const file of classicRpgIR.source_map.files) {
+          // Use the language field to determine the category
+          const lang = file.language || 'brl';
+          if (lang === 'brl' || lang === 'bcl' || lang === 'bdl') {
+            // If there are multiple files of the same language, concatenate them
+            if (newSourceFiles[lang] === `// ${lang.toUpperCase()} source not included in IR`) {
+              newSourceFiles[lang] = `// Source file: ${file.path}\n\n${file.content}`;
+            } else {
+              newSourceFiles[lang] += `\n\n// ============================================================================\n// Source file: ${file.path}\n// ============================================================================\n\n${file.content}`;
+            }
+          }
+        }
+        
+        sourceFiles = newSourceFiles;
+        console.info('Loaded source files from IR source_map:', classicRpgIR.source_map.files.map(f => f.path));
       } else {
-        console.warn('IR does not contain source_map (not yet implemented in compiler)');
+        console.warn('IR does not contain source_map, using placeholder source');
         // Keep placeholder source for demonstration
       }
     }

@@ -35,11 +35,24 @@ jobs:
         run: |
           New-Item -ItemType Directory -Path game\ir -Force
           Set-Location src\compiler
-          # Compile all BRL files to IR
+          # Build list of BCL files for inclusion in source map
+          $bclIncludes = @()
+          Get-ChildItem ..\..\game\bcl\*.bcl -ErrorAction SilentlyContinue | ForEach-Object {
+            $bclIncludes += "--include"
+            $bclIncludes += $_.FullName
+          }
+          # Build list of BDL files for inclusion in source map
+          $bdlIncludes = @()
+          Get-ChildItem ..\..\game\bdl\*.bdl -ErrorAction SilentlyContinue | ForEach-Object {
+            $bdlIncludes += "--include"
+            $bdlIncludes += $_.FullName
+          }
+          # Compile all BRL files to IR with source maps for debugging support
           Get-ChildItem ..\..\game\brl\*.brl | ForEach-Object {
             $filename = $_.BaseName
-            .\target\release\blink-compiler.exe compile -i $_.FullName -o "..\..\game\ir\$filename.ir.json" --pretty
-            Write-Host "Compiled $filename.brl -> $filename.ir.json"
+            $args = @("compile", "-i", $_.FullName, "-o", "..\..\game\ir\$filename.ir.json", "--pretty", "--source-map") + $bclIncludes + $bdlIncludes
+            & .\target\release\blink-compiler.exe $args
+            Write-Host "Compiled $filename.brl -> $filename.ir.json (with source map including BCL/BDL)"
           }
           Set-Location ..\..
           Write-Host "IR files generated:"
