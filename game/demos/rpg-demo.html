@@ -1076,6 +1076,300 @@
     .component { color: #82aaff; }
     .rule { color: #ffcb6b; }
     .entity { color: #89ddff; }
+    
+    /* BCL Customization Modal */
+    .bcl-modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      backdrop-filter: blur(5px);
+    }
+    
+    .bcl-modal-overlay.active {
+      display: flex;
+    }
+    
+    .bcl-modal {
+      background: linear-gradient(135deg, #2d2520 0%, #3d3028 100%);
+      border: 2px solid rgba(201, 149, 107, 0.4);
+      border-radius: 15px;
+      width: 90%;
+      max-width: 900px;
+      max-height: 90vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 10px 50px rgba(0, 0, 0, 0.5);
+    }
+    
+    .bcl-modal-header {
+      padding: 15px 20px;
+      border-bottom: 1px solid rgba(201, 149, 107, 0.3);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .bcl-modal-header h2 {
+      margin: 0;
+      color: #c9956b;
+      font-size: 1.3rem;
+    }
+    
+    .bcl-modal-close {
+      background: transparent;
+      border: none;
+      color: #8a7a68;
+      font-size: 1.5rem;
+      cursor: pointer;
+      padding: 5px 10px;
+      border-radius: 5px;
+      transition: all 0.3s;
+    }
+    
+    .bcl-modal-close:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #d4c4b0;
+    }
+    
+    .bcl-modal-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      gap: 20px;
+    }
+    
+    @media (max-width: 768px) {
+      .bcl-modal-body {
+        flex-direction: column;
+      }
+    }
+    
+    .bcl-choices-list {
+      width: 280px;
+      min-width: 280px;
+      border-right: 1px solid rgba(201, 149, 107, 0.2);
+      padding-right: 20px;
+    }
+    
+    @media (max-width: 768px) {
+      .bcl-choices-list {
+        width: 100%;
+        min-width: auto;
+        border-right: none;
+        border-bottom: 1px solid rgba(201, 149, 107, 0.2);
+        padding-right: 0;
+        padding-bottom: 15px;
+      }
+    }
+    
+    .bcl-choices-list h3 {
+      margin: 0 0 15px 0;
+      color: #c4b5fd;
+      font-size: 1rem;
+    }
+    
+    .choice-item {
+      padding: 12px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: all 0.3s;
+    }
+    
+    .choice-item:hover {
+      background: rgba(0, 0, 0, 0.4);
+      border-color: rgba(201, 149, 107, 0.3);
+    }
+    
+    .choice-item.selected {
+      border-color: #c9956b;
+      background: rgba(201, 149, 107, 0.1);
+    }
+    
+    .choice-item.customized {
+      position: relative;
+    }
+    
+    .choice-item.customized::after {
+      content: '✏️ Customized';
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      font-size: 0.7rem;
+      color: #4ade80;
+      background: rgba(74, 222, 128, 0.1);
+      padding: 2px 6px;
+      border-radius: 3px;
+    }
+    
+    .choice-item-name {
+      font-weight: bold;
+      color: #c9956b;
+      margin-bottom: 4px;
+    }
+    
+    .choice-item-category {
+      font-size: 0.75rem;
+      color: #8a7a68;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 2px 6px;
+      border-radius: 3px;
+      display: inline-block;
+      margin-bottom: 6px;
+    }
+    
+    .choice-item-description {
+      font-size: 0.8rem;
+      color: #a99885;
+      line-height: 1.4;
+    }
+    
+    .bcl-editor-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .bcl-editor-header {
+      margin-bottom: 15px;
+    }
+    
+    .bcl-editor-header h3 {
+      margin: 0 0 8px 0;
+      color: #c9956b;
+    }
+    
+    .bcl-editor-signature {
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 0.85rem;
+      color: #c4b5fd;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 10px;
+      border-radius: 5px;
+      margin-bottom: 10px;
+      overflow-x: auto;
+    }
+    
+    .bcl-editor-docstring {
+      font-size: 0.85rem;
+      color: #a99885;
+      font-style: italic;
+      margin-bottom: 15px;
+      padding: 10px;
+      background: rgba(139, 92, 246, 0.1);
+      border-left: 3px solid #8b5cf6;
+      border-radius: 0 5px 5px 0;
+    }
+    
+    .bcl-editor-textarea {
+      flex: 1;
+      min-height: 200px;
+      background: #1a1a2e;
+      border: 1px solid rgba(201, 149, 107, 0.3);
+      border-radius: 8px;
+      padding: 15px;
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 0.9rem;
+      color: #e2e8f0;
+      resize: vertical;
+      line-height: 1.5;
+    }
+    
+    .bcl-editor-textarea:focus {
+      outline: none;
+      border-color: #c9956b;
+      box-shadow: 0 0 10px rgba(201, 149, 107, 0.2);
+    }
+    
+    .bcl-editor-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+      flex-wrap: wrap;
+    }
+    
+    .bcl-editor-actions button {
+      padding: 8px 16px;
+      font-size: 0.85rem;
+    }
+    
+    .bcl-editor-default {
+      margin-top: 15px;
+      padding: 10px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 5px;
+    }
+    
+    .bcl-editor-default-label {
+      font-size: 0.75rem;
+      color: #8a7a68;
+      margin-bottom: 5px;
+    }
+    
+    .bcl-editor-default-text {
+      font-size: 0.8rem;
+      color: #a99885;
+    }
+    
+    .bcl-modal-footer {
+      padding: 15px 20px;
+      border-top: 1px solid rgba(201, 149, 107, 0.3);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    
+    .bcl-footer-info {
+      font-size: 0.8rem;
+      color: #8a7a68;
+    }
+    
+    .bcl-footer-actions {
+      display: flex;
+      gap: 10px;
+    }
+    
+    /* Customize button on hero card */
+    .hero-customize-btn {
+      display: block;
+      width: 100%;
+      margin-top: 10px;
+      padding: 8px;
+      background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: bold;
+      transition: all 0.3s;
+    }
+    
+    .hero-customize-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 3px 10px rgba(139, 92, 246, 0.4);
+    }
+    
+    .hero-customize-btn.has-customizations {
+      background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+    }
+    
+    .hero-customize-btn.has-customizations:hover {
+      box-shadow: 0 3px 10px rgba(74, 222, 128, 0.4);
+    }
   </style>
 </head>
 <body>
@@ -1333,6 +1627,49 @@
     </div><!-- End of game-screen -->
   </div><!-- End of container -->
 
+  <!-- BCL Customization Modal -->
+  <div class="bcl-modal-overlay" id="bcl-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="bcl-modal-title">
+    <div class="bcl-modal">
+      <div class="bcl-modal-header">
+        <h2 id="bcl-modal-title">🎯 Customize <span id="bcl-modal-hero-name">Hero</span> Strategy</h2>
+        <button class="bcl-modal-close" onclick="closeBclModal()" aria-label="Close modal">×</button>
+      </div>
+      <div class="bcl-modal-body">
+        <div class="bcl-choices-list">
+          <h3>📋 Available Choices</h3>
+          <div id="bcl-choices-container" role="listbox" aria-label="Available choice points">
+            <!-- Choice items will be populated here -->
+          </div>
+        </div>
+        <div class="bcl-editor-panel">
+          <div class="bcl-editor-header">
+            <h3 id="bcl-editor-title">Select a choice to customize</h3>
+            <div class="bcl-editor-signature" id="bcl-editor-signature" style="display: none;"></div>
+            <div class="bcl-editor-docstring" id="bcl-editor-docstring" style="display: none;"></div>
+          </div>
+          <textarea class="bcl-editor-textarea" id="bcl-editor-textarea" placeholder="Select a choice from the list to start editing..." aria-label="BCL code editor"></textarea>
+          <div class="bcl-editor-actions">
+            <button class="success" onclick="saveBclChoice()" aria-label="Save current choice customization">💾 Save Choice</button>
+            <button class="secondary" onclick="resetBclChoice()" aria-label="Reset choice to default implementation">🔄 Reset to Default</button>
+          </div>
+          <div class="bcl-editor-default" id="bcl-editor-default" style="display: none;">
+            <div class="bcl-editor-default-label">Default Behavior:</div>
+            <div class="bcl-editor-default-text" id="bcl-editor-default-text"></div>
+          </div>
+        </div>
+      </div>
+      <div class="bcl-modal-footer">
+        <div class="bcl-footer-info">
+          <span id="bcl-customization-count">0</span> customization(s) saved
+        </div>
+        <div class="bcl-footer-actions">
+          <button class="secondary" onclick="downloadBclDelta()" aria-label="Download BCL delta file">📥 Download BCL Delta</button>
+          <button onclick="closeBclModal()" aria-label="Close and apply customizations">✅ Done</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Load the Blink Engine bundle -->
   <script src="blink-engine.bundle.js"></script>
   
@@ -1512,7 +1849,24 @@
             <span class="stat-preview-value">${hero.baseDefense}</span>
           </div>
         </div>
+        
+        <button class="hero-customize-btn ${hasHeroCustomizations(hero.id) ? 'has-customizations' : ''}" 
+                data-hero-id="${escapeHtml(hero.id)}"
+                data-hero-name="${escapeHtml(hero.name)}"
+                data-hero-class="${escapeHtml(hero.class)}"
+                aria-label="${hasHeroCustomizations(hero.id) ? 'Edit Strategy for ' + escapeHtml(hero.name) : 'Customize Strategy for ' + escapeHtml(hero.name)}">
+          ${hasHeroCustomizations(hero.id) ? '✏️ Edit Strategy' : '🎯 Customize Strategy'}
+        </button>
       `;
+      
+      // Add event listener for customize button
+      const customizeBtn = heroCardDiv.querySelector('.hero-customize-btn');
+      if (customizeBtn) {
+        customizeBtn.addEventListener('click', (e) => {
+          const btn = e.currentTarget;
+          openBclModal(btn.dataset.heroId, btn.dataset.heroName, btn.dataset.heroClass);
+        });
+      }
       
       // Update the selection state for this slot
       // Only set as selected if not already selected elsewhere
@@ -1546,6 +1900,414 @@
       const selectedCount = partySlots.filter(hero => hero !== null).length;
       selectedCountEl.textContent = selectedCount;
       confirmPartyBtn.disabled = selectedCount !== MAX_PARTY_SIZE;
+    }
+    
+    // ========================================================================
+    // BCL CUSTOMIZATION SYSTEM
+    // ========================================================================
+    const BCL_STORAGE_KEY = 'blink_bcl_customizations';
+    let currentBclHeroId = null;
+    let currentBclChoice = null;
+    let choicePointsData = [];
+    
+    // Load choice points from characters.json (they're stored alongside character data)
+    async function loadChoicePoints() {
+      try {
+        const paths = ['data/characters.json', '../data/characters.json'];
+        for (const path of paths) {
+          try {
+            const response = await fetch(path);
+            if (response.ok) {
+              const data = await response.json();
+              if (data.choicePoints) {
+                choicePointsData = data.choicePoints;
+                console.info(`Loaded ${choicePointsData.length} choice points`);
+              }
+              return;
+            }
+          } catch (e) {
+            // Try next path
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to load choice points:', error);
+        choicePointsData = [];
+      }
+    }
+    
+    // HTML escape helper to prevent XSS
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+    
+    // Get customizations from localStorage
+    function getBclCustomizations() {
+      try {
+        const stored = localStorage.getItem(BCL_STORAGE_KEY);
+        return stored ? JSON.parse(stored) : {};
+      } catch (e) {
+        console.error('Failed to load BCL customizations:', e);
+        return {};
+      }
+    }
+    
+    // Save customizations to localStorage
+    function saveBclCustomizations(customizations) {
+      try {
+        localStorage.setItem(BCL_STORAGE_KEY, JSON.stringify(customizations));
+      } catch (e) {
+        console.error('Failed to save BCL customizations:', e);
+      }
+    }
+    
+    // Check if a hero has any customizations
+    function hasHeroCustomizations(heroId) {
+      const customizations = getBclCustomizations();
+      return customizations[heroId] && Object.keys(customizations[heroId]).length > 0;
+    }
+    
+    // Get customization count for a hero
+    function getHeroCustomizationCount(heroId) {
+      const customizations = getBclCustomizations();
+      return customizations[heroId] ? Object.keys(customizations[heroId]).length : 0;
+    }
+    
+    // Open the BCL customization modal
+    function openBclModal(heroId, heroName, heroClass) {
+      currentBclHeroId = heroId;
+      currentBclChoice = null;
+      
+      // Update modal title
+      document.getElementById('bcl-modal-hero-name').textContent = heroName;
+      
+      // Populate choices list
+      const choicesContainer = document.getElementById('bcl-choices-container');
+      const customizations = getBclCustomizations();
+      const heroCustomizations = customizations[heroId] || {};
+      
+      // Filter choice points that apply to this hero's class
+      const applicableChoices = choicePointsData.filter(cp => {
+        if (!cp.applicableClasses) return true;
+        return cp.applicableClasses.includes(heroClass);
+      });
+      
+      choicesContainer.innerHTML = applicableChoices.map(cp => {
+        const isCustomized = heroCustomizations[cp.id] !== undefined;
+        return `
+          <div class="choice-item ${isCustomized ? 'customized' : ''}" 
+               data-choice-id="${escapeHtml(cp.id)}"
+               role="button"
+               tabindex="0"
+               aria-label="${escapeHtml(cp.name)}: ${escapeHtml(cp.docstring)}">
+            <div class="choice-item-name">${escapeHtml(cp.name)}</div>
+            <span class="choice-item-category">${escapeHtml(cp.category)}</span>
+            <div class="choice-item-description">${escapeHtml(cp.docstring)}</div>
+          </div>
+        `;
+      }).join('');
+      
+      // Add event listeners for choice items (event delegation)
+      choicesContainer.querySelectorAll('.choice-item').forEach(item => {
+        item.addEventListener('click', () => selectBclChoice(item.dataset.choiceId));
+        item.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            selectBclChoice(item.dataset.choiceId);
+          }
+        });
+      });
+      
+      // Update customization count
+      updateBclCustomizationCount();
+      
+      // Reset editor
+      resetBclEditor();
+      
+      // Show modal
+      document.getElementById('bcl-modal-overlay').classList.add('active');
+    }
+    
+    // Close the BCL customization modal
+    function closeBclModal() {
+      document.getElementById('bcl-modal-overlay').classList.remove('active');
+      currentBclHeroId = null;
+      currentBclChoice = null;
+      
+      // Re-render all hero slots to update customize buttons
+      for (let i = 0; i < MAX_PARTY_SIZE; i++) {
+        renderHeroInSlot(i);
+      }
+    }
+    
+    // Select a choice point for editing
+    function selectBclChoice(choiceId) {
+      currentBclChoice = choiceId;
+      
+      // Update selection UI
+      document.querySelectorAll('.choice-item').forEach(item => {
+        item.classList.remove('selected');
+        if (item.dataset.choiceId === choiceId) {
+          item.classList.add('selected');
+        }
+      });
+      
+      // Get choice point data
+      const choicePoint = choicePointsData.find(cp => cp.id === choiceId);
+      if (!choicePoint) return;
+      
+      // Update editor header
+      document.getElementById('bcl-editor-title').textContent = `Edit: ${choicePoint.name}`;
+      
+      const signatureEl = document.getElementById('bcl-editor-signature');
+      signatureEl.textContent = choicePoint.signature;
+      signatureEl.style.display = 'block';
+      
+      const docstringEl = document.getElementById('bcl-editor-docstring');
+      docstringEl.textContent = choicePoint.docstring;
+      docstringEl.style.display = 'block';
+      
+      const defaultEl = document.getElementById('bcl-editor-default');
+      const defaultTextEl = document.getElementById('bcl-editor-default-text');
+      defaultTextEl.textContent = choicePoint.defaultBehavior || 'Uses engine default';
+      defaultEl.style.display = 'block';
+      
+      // Load existing customization or default template
+      const customizations = getBclCustomizations();
+      const heroCustomizations = customizations[currentBclHeroId] || {};
+      const existingCode = heroCustomizations[choiceId];
+      
+      const textarea = document.getElementById('bcl-editor-textarea');
+      if (existingCode) {
+        textarea.value = existingCode;
+      } else {
+        // Provide a template based on the choice point
+        textarea.value = generateBclTemplate(choicePoint);
+      }
+    }
+    
+    // Generate a BCL template for a choice point
+    function generateBclTemplate(choicePoint) {
+      const templates = {
+        'select_attack_target': `// Customize target selection
+// Return the id of the enemy to attack
+
+choice fn select_attack_target(character: Character, enemies: list): id {
+    // Example: Target enemy with lowest health
+    let target = enemies[0]
+    for enemy in enemies {
+        if enemy.Health.current < target.Health.current {
+            target = enemy
+        }
+    }
+    return target.id
+}`,
+        'select_combat_skill': `// Customize skill selection in combat
+// Return the name of the skill to use
+
+choice fn select_combat_skill(character: Character & Skills & Health & Mana, allies: list, enemies: list): string {
+    let hp_pct = character.Health.current / character.Health.max
+    let mana_pct = character.Mana.current / character.Mana.max
+    
+    // Example: Use defensive skill if low health
+    if hp_pct < 0.3 {
+        return "defensive_stance"
+    }
+    
+    // Default to basic attack
+    return "basic_attack"
+}`,
+        'select_skill_on_levelup': `// Customize skill progression on level up
+// Return the name of the skill to learn
+
+choice fn select_skill_on_levelup(character: Character & Skills, currentLevel: number): string {
+    // Example: Learn power_strike at level 2
+    if currentLevel == 2 {
+        return "power_strike"
+    }
+    
+    return "basic_attack"
+}`,
+        'select_heal_target': `// Customize heal target selection
+// Return the id of the ally to heal, or null if no one needs healing
+
+choice fn select_heal_target(character: Character, allies: list): id? {
+    let critical_threshold = 0.3
+    
+    // Find critically wounded ally
+    for ally in allies {
+        let hp_pct = ally.Health.current / ally.Health.max
+        if hp_pct < critical_threshold {
+            return ally.id
+        }
+    }
+    
+    return null
+}`,
+        'should_flee_from_battle': `// Customize flee decision
+// Return true to flee, false to continue fighting
+
+choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats): boolean {
+    // Calculate average party health
+    let total_health = 0.0
+    let total_max_health = 0.0
+    
+    for hero in party {
+        total_health += hero.Health.current
+        total_max_health += hero.Health.max
+    }
+    
+    let avg_health = total_health / total_max_health
+    
+    // Flee if party health is below 30%
+    if avg_health < 0.3 {
+        return true
+    }
+    
+    return false
+}`
+      };
+      
+      return templates[choicePoint.id] || `// Customize ${choicePoint.name}\n\n${choicePoint.signature} {\n    // Your code here\n}`;
+    }
+    
+    // Reset the BCL editor to empty state
+    function resetBclEditor() {
+      document.getElementById('bcl-editor-title').textContent = 'Select a choice to customize';
+      document.getElementById('bcl-editor-signature').style.display = 'none';
+      document.getElementById('bcl-editor-docstring').style.display = 'none';
+      document.getElementById('bcl-editor-default').style.display = 'none';
+      document.getElementById('bcl-editor-textarea').value = '';
+      
+      document.querySelectorAll('.choice-item').forEach(item => {
+        item.classList.remove('selected');
+      });
+    }
+    
+    // Save the current choice customization
+    function saveBclChoice() {
+      if (!currentBclHeroId || !currentBclChoice) {
+        alert('Please select a choice to save.');
+        return;
+      }
+      
+      const code = document.getElementById('bcl-editor-textarea').value.trim();
+      if (!code) {
+        alert('Please enter some code before saving.');
+        return;
+      }
+      
+      const customizations = getBclCustomizations();
+      if (!customizations[currentBclHeroId]) {
+        customizations[currentBclHeroId] = {};
+      }
+      customizations[currentBclHeroId][currentBclChoice] = code;
+      
+      saveBclCustomizations(customizations);
+      
+      // Update UI
+      updateBclCustomizationCount();
+      updateChoiceItemCustomized(currentBclChoice, true);
+      
+      alert('Choice saved successfully!');
+    }
+    
+    // Reset a choice to default (remove customization)
+    function resetBclChoice() {
+      if (!currentBclHeroId || !currentBclChoice) {
+        alert('Please select a choice to reset.');
+        return;
+      }
+      
+      if (!confirm('Reset this choice to default? Your customization will be removed.')) {
+        return;
+      }
+      
+      const customizations = getBclCustomizations();
+      if (customizations[currentBclHeroId]) {
+        delete customizations[currentBclHeroId][currentBclChoice];
+        
+        // Clean up empty hero entry
+        if (Object.keys(customizations[currentBclHeroId]).length === 0) {
+          delete customizations[currentBclHeroId];
+        }
+        
+        saveBclCustomizations(customizations);
+      }
+      
+      // Update UI
+      updateBclCustomizationCount();
+      updateChoiceItemCustomized(currentBclChoice, false);
+      
+      // Reset editor to template
+      const choicePoint = choicePointsData.find(cp => cp.id === currentBclChoice);
+      if (choicePoint) {
+        document.getElementById('bcl-editor-textarea').value = generateBclTemplate(choicePoint);
+      }
+    }
+    
+    // Update the customization count display
+    function updateBclCustomizationCount() {
+      const count = getHeroCustomizationCount(currentBclHeroId);
+      document.getElementById('bcl-customization-count').textContent = count;
+    }
+    
+    // Update a choice item's customized state
+    function updateChoiceItemCustomized(choiceId, isCustomized) {
+      const item = document.querySelector(`.choice-item[data-choice-id="${choiceId}"]`);
+      if (item) {
+        if (isCustomized) {
+          item.classList.add('customized');
+        } else {
+          item.classList.remove('customized');
+        }
+      }
+    }
+    
+    // Download BCL delta file for the current hero
+    function downloadBclDelta() {
+      if (!currentBclHeroId) {
+        alert('No hero selected.');
+        return;
+      }
+      
+      const customizations = getBclCustomizations();
+      const heroCustomizations = customizations[currentBclHeroId];
+      
+      if (!heroCustomizations || Object.keys(heroCustomizations).length === 0) {
+        alert('No customizations to download for this hero.');
+        return;
+      }
+      
+      // Build BCL delta content
+      let bclContent = `// BCL Delta for ${currentBclHeroId}\n`;
+      bclContent += `// Generated: ${new Date().toISOString()}\n`;
+      bclContent += `// Contains ${Object.keys(heroCustomizations).length} customized choice(s)\n\n`;
+      bclContent += `module ${currentBclHeroId}_customizations\n\n`;
+      
+      for (const [choiceId, code] of Object.entries(heroCustomizations)) {
+        const choicePoint = choicePointsData.find(cp => cp.id === choiceId);
+        bclContent += `// === ${choicePoint?.name || choiceId} ===\n`;
+        bclContent += code + '\n\n';
+      }
+      
+      // Create and download file
+      const blob = new Blob([bclContent], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${currentBclHeroId}-strategy.bcl`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+    
+    // Initialize BCL system when page loads
+    async function initBclSystem() {
+      await loadChoicePoints();
     }
     
     // ========================================================================
@@ -4770,6 +5532,7 @@
       await loadCharacterData();
       await loadEnemyData();
       await loadDefaultIR();
+      await initBclSystem();
     });
     
     // Accordion toggle function

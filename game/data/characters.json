@@ -1,5 +1,48 @@
 {
   "_comment": "This file is generated from game/bdl/heroes.bdl - Edit the BDL file, not this JSON",
+  "choicePoints": [
+    {
+      "id": "select_attack_target",
+      "name": "Target Selection",
+      "signature": "choice fn select_attack_target(character: Character, enemies: list): id",
+      "docstring": "Choose which enemy to attack. Affects combat focus strategy - target lowest health, highest threat, or priority targets like bosses.",
+      "category": "targeting",
+      "defaultBehavior": "Targets the enemy with the highest damage output (threat)"
+    },
+    {
+      "id": "select_combat_skill",
+      "name": "Skill Selection",
+      "signature": "choice fn select_combat_skill(character: Character & Skills & Health & Mana, allies: list, enemies: list): string",
+      "docstring": "Select which skill to use in combat. Controls your combat rotation - when to use abilities vs basic attacks, offensive vs defensive skills.",
+      "category": "combat",
+      "defaultBehavior": "Uses abilities based on mana and situation, falls back to basic attack"
+    },
+    {
+      "id": "select_skill_on_levelup",
+      "name": "Level-Up Skill Choice",
+      "signature": "choice fn select_skill_on_levelup(character: Character & Skills, currentLevel: number): string",
+      "docstring": "Choose which skill to learn when leveling up. Determines your character's progression path through the skill tree.",
+      "category": "progression",
+      "defaultBehavior": "Follows a predefined skill progression order"
+    },
+    {
+      "id": "select_heal_target",
+      "name": "Heal Target Selection",
+      "signature": "choice fn select_heal_target(character: Character, allies: list): id?",
+      "docstring": "Choose which ally to heal (for healers). Prioritize critically wounded, tanks taking damage, or keep everyone topped up.",
+      "category": "support",
+      "applicableClasses": ["Cleric"],
+      "defaultBehavior": "Heals the ally with lowest health percentage"
+    },
+    {
+      "id": "should_flee_from_battle",
+      "name": "Flee Decision",
+      "signature": "choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats): boolean",
+      "docstring": "Decide when to tactically retreat. Fleeing costs 10s penalty but prevents death (50s penalty). Consider party health, healer status, and enemy count.",
+      "category": "strategy",
+      "defaultBehavior": "Flees when party health is critically low"
+    }
+  ],
   "characters": [
     {
       "id": "warrior",

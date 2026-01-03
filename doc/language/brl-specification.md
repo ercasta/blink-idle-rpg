@@ -18,6 +18,7 @@
 10. [Functions](#functions)
 11. [Modules](#modules)
 12. [Trackers](#trackers)
+13. [Choice Points](#choice-points)
 
 ---
 
@@ -85,6 +86,7 @@ entity     if         else       for        while
 fn         return     true       false      null
 schedule   cancel     recurring  module     import
 tracker    when       create     delete     has
+choice
 ```
 
 ### 2.4 Literals
@@ -622,6 +624,107 @@ tracker Character on DamageEvent
 
 ---
 
+## 13. Choice Points
+
+Choice points are declarations that mark customizable decision points in the game logic. They specify where players can customize behavior through BCL (Blink Choice Language). BRL declares choice points; BCL implements them.
+
+### 13.1 Syntax
+
+```brl
+choice function_signature
+/// "Docstring describing what this choice controls"
+```
+
+Or with a default implementation:
+
+```brl
+choice function_signature {
+    /// "Docstring describing what this choice controls"
+    // default implementation
+}
+```
+
+### 13.2 Purpose
+
+Choice points serve three purposes:
+
+1. **Documentation**: They explicitly mark where player customization is allowed
+2. **Contract**: They define the interface between BRL game rules and BCL player strategies  
+3. **UI Integration**: The docstring is shown to players in customization interfaces
+
+### 13.3 Examples
+
+```brl
+// Simple choice point declaration (must be implemented in BCL)
+choice fn select_attack_target(attacker: Character, enemies: list): id
+/// "Choose which enemy to attack. Default targets lowest health enemy."
+
+// Choice point with default implementation
+choice fn select_combat_skill(
+    character: Character & Skills & Health,
+    allies: list,
+    enemies: list
+): string {
+    /// "Select which skill to use in combat. Controls your combat rotation."
+    
+    // Default: use basic attack
+    return "basic_attack"
+}
+
+// Choice point for flee decision
+choice fn should_flee_from_battle(
+    party: list,
+    enemies: list,
+    runStats: RunStats
+): boolean {
+    /// "Decide when to tactically retreat. Fleeing costs 10s penalty but prevents death (50s penalty)."
+    
+    // Default: never flee automatically
+    return false
+}
+```
+
+### 13.4 Semantics
+
+- Choice points are **pure functions** - they cannot modify game state
+- They are called by BRL rules when decisions are needed
+- BCL can override any declared choice point
+- If no BCL override exists, the default implementation is used
+- The docstring (starting with `///`) is required and shown to players
+
+### 13.5 Integration with BCL
+
+When a choice point is declared in BRL:
+
+```brl
+choice fn select_target(attacker: Character, enemies: list): id
+/// "Choose which enemy to target for attacks."
+```
+
+BCL can override it:
+
+```bcl
+choice fn select_target(attacker: Character, enemies: list): id {
+    // Custom targeting logic
+    for enemy in enemies {
+        if enemy.Enemy.isBoss {
+            return enemy.id
+        }
+    }
+    return enemies[0].id
+}
+```
+
+### 13.6 IDE/UI Support
+
+The game IDE can:
+1. List all available choice points from BRL declarations
+2. Show the docstring to help players understand each choice
+3. Provide an editor for customizing the choice function
+4. Save customizations as BCL deltas (only modified choices)
+
+---
+
 ## Appendix A: Grammar (EBNF)
 
 ```ebnf
@@ -633,7 +736,8 @@ declaration = component_def
             | rule_def
             | function_def
             | module_def
-            | tracker_def ;
+            | tracker_def
+            | choice_point_def ;
 
 component_def = "component" identifier "{" { field_def } "}" ;
 
@@ -643,6 +747,11 @@ type = "string" | "boolean" | "integer" | "float" | "decimal" | "id"
      | identifier    (* component type *)
      | type "?"      (* optional *)
      ;
+
+choice_point_def = "choice" function_signature [ "{" docstring { statement } "}" ]
+                 | "choice" function_signature docstring ;
+
+docstring = "///" string_literal ;
 ```
 
 ---
