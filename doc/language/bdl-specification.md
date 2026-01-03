@@ -461,7 +461,11 @@ entity @dragon_lord {
 
 ## 8. Loading Order
 
-BDL files are loaded **after** BRL and BCL files because they depend on component definitions from BRL:
+BDL files are loaded **after** BRL and BCL files because they depend on component definitions from BRL.
+
+### 8.1 Compilation Order
+
+During compilation, files are processed in this order:
 
 ```
 1. BRL files (component, rule, function, tracker definitions)
@@ -469,12 +473,22 @@ BDL files are loaded **after** BRL and BCL files because they depend on componen
 3. BDL files (entity data - requires component definitions)
 ```
 
-### 8.1 File Extensions
+This is the **compilation pipeline order**. The compiler validates BDL entity definitions against the components defined in BRL.
+
+### 8.2 Runtime Loading
+
+At runtime, the execution order depends on the target platform:
+- **Native engines**: Load compiled IR containing all entities
+- **Browser engines**: May load JSON representations of BDL data
+
+Currently, JSON files serve as an intermediate runtime format until browser-based BDL parsing is implemented.
+
+### 8.3 File Extensions
 
 - `.bdl` - Blink Data Language files
 - Located in `game/bdl/` directory
 
-### 8.2 Compilation
+### 8.4 Compilation
 
 BDL compiles to the `initial_state.entities` section of the IR:
 

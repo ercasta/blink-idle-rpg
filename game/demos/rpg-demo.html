@@ -1431,12 +1431,13 @@
             throw new Error(`HTTP error! status: ${response.status}`);
           }
           const data = await response.json();
+          // Map JSON properties to internal format (attackSpeed -> speed for legacy compatibility)
           enemyTemplates = data.enemies.map(e => ({
             name: e.name,
             tier: e.tier,
             health: e.health,
             damage: e.damage,
-            speed: e.attackSpeed,
+            speed: e.attackSpeed,  // Maps to 'attackSpeed' in JSON/BDL
             exp: e.expReward,
             boss: e.isBoss
           }));
