@@ -5118,6 +5118,13 @@ entity @mage {
       }
     }
     
+    // Pre-compiled regex patterns for syntax highlighting (performance optimization)
+    const KEYWORD_REGEX = /\b(component|rule|tracker|choice|fn|if|else|return|on|entity|schedule|emit|query|filter|sort|first|count|where)\b/g;
+    const COMMENT_REGEX = /(\/\/.*)$/gm;
+    const STRING_REGEX = /("([^"\\]|\\.)*")/g;
+    const NUMBER_REGEX = /\b(\d+\.?\d*)\b/g;
+    const ENTITY_REGEX = /@(\w+)/g;
+    
     // Simple syntax highlighting
     function applySyntaxHighlighting(line) {
       // Escape HTML first
@@ -5127,23 +5134,19 @@ entity @mage {
         .replace(/>/g, '&gt;');
       
       // Comments
-      escaped = escaped.replace(/(\/\/.*)$/gm, '<span class="comment">$1</span>');
+      escaped = escaped.replace(COMMENT_REGEX, '<span class="comment">$1</span>');
       
-      // Keywords
-      const keywords = ['component', 'rule', 'tracker', 'choice', 'fn', 'if', 'else', 'return', 'on', 'entity', 'schedule', 'emit', 'query', 'filter', 'sort', 'first', 'count', 'where'];
-      keywords.forEach(kw => {
-        const regex = new RegExp(`\\b(${kw})\\b`, 'g');
-        escaped = escaped.replace(regex, '<span class="keyword">$1</span>');
-      });
+      // Keywords - using pre-compiled regex
+      escaped = escaped.replace(KEYWORD_REGEX, '<span class="keyword">$1</span>');
       
       // Strings
-      escaped = escaped.replace(/("([^"\\]|\\.)*")/g, '<span class="string">$1</span>');
+      escaped = escaped.replace(STRING_REGEX, '<span class="string">$1</span>');
       
       // Numbers
-      escaped = escaped.replace(/\b(\d+\.?\d*)\b/g, '<span class="number">$1</span>');
+      escaped = escaped.replace(NUMBER_REGEX, '<span class="number">$1</span>');
       
       // Entity references
-      escaped = escaped.replace(/@(\w+)/g, '<span class="entity">@$1</span>');
+      escaped = escaped.replace(ENTITY_REGEX, '<span class="entity">@$1</span>');
       
       return escaped;
     }
@@ -5161,11 +5164,13 @@ entity @mage {
           highlightedLine = event.sourceLocation.line;
         } else {
           // Simulate finding the rule in source (demo purposes)
-          const ruleName = event.rule.name;
-          if (ruleName && currentSourceFile === 'brl') {
-            const ruleMatch = sourceFiles.brl.match(new RegExp(`rule on ${event.rule.trigger?.event || ruleName}`, 'm'));
-            if (ruleMatch) {
-              const linesBefore = sourceFiles.brl.substring(0, ruleMatch.index).split('\n');
+          // Use indexOf for better performance instead of dynamic regex
+          const eventName = event.rule.trigger?.event || event.rule.name;
+          if (eventName && currentSourceFile === 'brl') {
+            const searchPattern = `rule on ${eventName}`;
+            const matchIndex = sourceFiles.brl.indexOf(searchPattern);
+            if (matchIndex !== -1) {
+              const linesBefore = sourceFiles.brl.substring(0, matchIndex).split('\n');
               highlightedLine = linesBefore.length;
               debugLocationEl.textContent = `classic-rpg.brl:${highlightedLine}`;
             }
