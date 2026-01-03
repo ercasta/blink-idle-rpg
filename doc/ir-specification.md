@@ -2,7 +2,7 @@
 
 **Version**: 0.1.0-draft  
 **Status**: Draft  
-**Last Updated**: 2024-12-31
+**Last Updated**: 2026-01-03
 
 ## Table of Contents
 
@@ -15,8 +15,10 @@
 7. [Functions](#functions)
 8. [Trackers](#trackers)
 9. [Expressions](#expressions)
-10. [Serialization](#serialization)
-11. [Versioning](#versioning)
+10. [Choice Functions (BCL)](#choice-functions-bcl)
+11. [Source Map](#source-map)
+12. [Serialization](#serialization)
+13. [Versioning](#versioning)
 
 ---
 
@@ -94,8 +96,29 @@ The Blink Intermediate Representation (IR) is the **central contract** between t
   "functions": [...],
   "trackers": [...],
   "constants": {...},
-  "initial_state": {...}
+  "initial_state": {...},
+  "choice_functions": [...],
+  "choice_points": [...],
+  "source_map": {...}
 }
+```
+
+### 3.3 Field Descriptions
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `version` | Yes | IR format version |
+| `module` | Yes | Module name |
+| `metadata` | No | Compilation metadata |
+| `components` | Yes | Component type definitions (from BRL) |
+| `rules` | Yes | Game rules (from BRL) |
+| `functions` | Yes | Helper functions (from BRL) |
+| `trackers` | Yes | Tracker definitions (from BRL) |
+| `constants` | No | Named constants |
+| `initial_state` | No | Initial entities (from BDL) |
+| `choice_functions` | No | Player choice functions (from BCL) |
+| `choice_points` | No | Metadata about customizable choices |
+| `source_map` | No | Original source code for debugging |
 ```
 
 ---
@@ -374,13 +397,138 @@ When a tracker fires, engines output:
 
 ---
 
-## 10. Serialization
+## 10. Choice Functions (BCL)
 
-### 10.1 JSON Schema
+Choice functions are player-customizable decision points compiled from BCL (Blink Choice Language).
+
+### 10.1 Choice Function Definition
+
+```json
+{
+  "choice_functions": [
+    {
+      "id": 0,
+      "name": "select_target",
+      "params": [
+        { "name": "attacker", "type": "entity" },
+        { "name": "enemies", "type": "list" }
+      ],
+      "return_type": "entity",
+      "body": {
+        "type": "call",
+        "function": "first",
+        "args": [
+          { "type": "call", "function": "sort", "args": [...] }
+        ]
+      },
+      "source_location": { "file": "warrior-skills.bcl", "line": 15, "column": 1 }
+    }
+  ]
+}
+```
+
+### 10.2 Choice Points
+
+Choice points are metadata about customizable choices, used by UI editors:
+
+```json
+{
+  "choice_points": [
+    {
+      "id": "select_target",
+      "name": "Target Selection",
+      "signature": "choice fn select_target(attacker: entity_id, enemies: list): entity_id",
+      "docstring": "Choose which enemy to attack based on party strategy",
+      "category": "targeting",
+      "applicable_classes": ["Warrior", "Rogue", "Ranger"],
+      "default_behavior": "Targets the enemy with lowest health"
+    },
+    {
+      "id": "should_flee",
+      "name": "Flee Decision",
+      "signature": "choice fn should_flee(party: list, enemies: list): boolean",
+      "docstring": "Decide when to tactically retreat from combat",
+      "category": "strategy",
+      "applicable_classes": null,
+      "default_behavior": "Flees when party health drops below 30%"
+    }
+  ]
+}
+```
+
+---
+
+## 11. Source Map
+
+The source map contains original source code for debugging and development tools.
+
+### 11.1 Source Map Structure
+
+```json
+{
+  "source_map": {
+    "files": [
+      {
+        "path": "classic-rpg.brl",
+        "language": "brl",
+        "content": "// Classic RPG System\ncomponent Character { ... }"
+      },
+      {
+        "path": "warrior-skills.bcl",
+        "language": "bcl",
+        "content": "// Warrior targeting strategy\nchoice fn select_target(...)"
+      },
+      {
+        "path": "heroes.bdl",
+        "language": "bdl",
+        "content": "// Hero definitions\nentity @warrior { ... }"
+      }
+    ]
+  }
+}
+```
+
+### 11.2 Source Location References
+
+Rules, functions, and entities can reference their source location:
+
+```json
+{
+  "rules": [
+    {
+      "id": 0,
+      "name": "attack_rule",
+      "source_location": {
+        "file": "classic-rpg.brl",
+        "line": 153,
+        "column": 1,
+        "end_line": 173,
+        "end_column": 1
+      }
+    }
+  ]
+}
+```
+
+### 11.3 Usage
+
+Source maps are optional but recommended for:
+- Integrated development environments (IDE)
+- Step-through debugging
+- Error messages with source context
+- BCL editor showing original code
+
+To include source maps, compile with: `blink-compiler compile --source-map`
+
+---
+
+## 12. Serialization
+
+### 12.1 JSON Schema
 
 Full JSON Schema available at: `schemas/ir-v1.json`
 
-### 10.2 Example Complete IR
+### 12.2 Example Complete IR
 
 ```json
 {
@@ -432,22 +580,22 @@ Full JSON Schema available at: `schemas/ir-v1.json`
 
 ---
 
-## 11. Versioning
+## 13. Versioning
 
-### 11.1 Version Format
+### 13.1 Version Format
 
 `MAJOR.MINOR`
 
 - **MAJOR**: Breaking changes (engines must update)
 - **MINOR**: Additive changes (backwards compatible)
 
-### 11.2 Compatibility Matrix
+### 13.2 Compatibility Matrix
 
 | IR Version | Rust Engine | JS Engine | Batch Engine |
 |------------|-------------|-----------|--------------|
 | 1.0 | 0.1.0+ | 0.1.0+ | 0.1.0+ |
 
-### 11.3 Version Checking
+### 13.3 Version Checking
 
 Engines should check version and fail gracefully:
 
@@ -489,3 +637,4 @@ Test categories:
 | Version | Date | Changes |
 |---------|------|---------|
 | 0.1.0 | 2024-12-31 | Initial draft |
+| 0.1.1 | 2026-01-03 | Added choice_functions (BCL) and source_map sections |

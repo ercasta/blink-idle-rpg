@@ -9,7 +9,7 @@ use thiserror::Error;
 
 use crate::analyzer::{
     TypedModule, TypedItem, TypedComponent, TypedField, TypedRule, TypedFunction,
-    TypedTracker, TypedBlock, TypedStatement, TypedExpr, TypedExprKind,
+    TypedTracker, TypedEntity, TypedBlock, TypedStatement, TypedExpr, TypedExprKind,
     TypedElseClause, TypedComponentInit, Type,
 };
 use crate::parser::{Literal, BinaryOp, UnaryOp, AssignOp};
@@ -391,7 +391,12 @@ pub struct IRInitialState {
 /// Entity definition in initial state
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IREntity {
+    /// Numeric entity ID
     pub id: u32,
+    /// Optional entity name (e.g., "warrior", "goblin_scout")
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    /// Component data for this entity
     pub components: IndexMap<String, IndexMap<String, IRValue>>,
 }
 
@@ -401,6 +406,7 @@ struct IRGenerator {
     rule_id_counter: u32,
     function_id_counter: u32,
     tracker_id_counter: u32,
+    entity_id_counter: u32,
 }
 
 impl IRGenerator {
@@ -410,6 +416,7 @@ impl IRGenerator {
             rule_id_counter: 0,
             function_id_counter: 0,
             tracker_id_counter: 0,
+            entity_id_counter: 0,
         }
     }
     
@@ -437,11 +444,18 @@ impl IRGenerator {
         id
     }
     
+    fn next_entity_id(&mut self) -> u32 {
+        let id = self.entity_id_counter;
+        self.entity_id_counter += 1;
+        id
+    }
+    
     fn generate(&mut self, typed_module: TypedModule, options: &CompilerOptions, source: Option<&str>, source_path: Option<&str>, additional_sources: &[(String, String, String)]) -> Result<IRModule, IRError> {
         let mut components = Vec::new();
         let mut rules = Vec::new();
         let mut functions = Vec::new();
         let mut trackers = Vec::new();
+        let mut entities = Vec::new();
         
         for item in &typed_module.items {
             match item {
@@ -456,6 +470,9 @@ impl IRGenerator {
                 }
                 TypedItem::Tracker(tracker) => {
                     trackers.push(self.generate_tracker(tracker));
+                }
+                TypedItem::Entity(entity) => {
+                    entities.push(self.generate_entity(entity));
                 }
             }
         }
@@ -500,6 +517,13 @@ impl IRGenerator {
             None
         };
         
+        // Build initial_state from entities (BDL support)
+        let initial_state = if entities.is_empty() {
+            None
+        } else {
+            Some(IRInitialState { entities })
+        };
+        
         Ok(IRModule {
             version: "1.0".to_string(),
             module: "unnamed".to_string(),
@@ -513,7 +537,7 @@ impl IRGenerator {
             functions,
             trackers,
             constants: IndexMap::new(),
-            initial_state: None,
+            initial_state,
             source_map,
         })
     }
@@ -736,6 +760,48 @@ impl IRGenerator {
             id: self.next_tracker_id(),
             component: tracker.component.clone(),
             event: tracker.event.clone(),
+        }
+    }
+    
+    /// Generate an IR entity from a typed entity (BDL support)
+    fn generate_entity(&mut self, entity: &TypedEntity) -> IREntity {
+        let id = self.next_entity_id();
+        
+        // Build component data - each component is a map of field names to values
+        let mut components = IndexMap::new();
+        for comp in &entity.components {
+            let mut fields = IndexMap::new();
+            for (field_name, expr) in &comp.fields {
+                // Convert expression to IRValue (for entity definitions, we only support literals)
+                let value = self.expression_to_value(expr);
+                fields.insert(field_name.clone(), value);
+            }
+            components.insert(comp.name.clone(), fields);
+        }
+        
+        IREntity {
+            id,
+            name: entity.name.clone(),
+            components,
+        }
+    }
+    
+    /// Convert a typed expression to an IRValue (for entity field initialization)
+    /// 
+    /// Note: BDL only allows literal values in entity field initialization.
+    /// If a non-literal expression is encountered, this indicates invalid BDL syntax
+    /// that wasn't caught by the parser. The analyzer should reject such cases.
+    fn expression_to_value(&self, expr: &TypedExpr) -> IRValue {
+        match &expr.kind {
+            TypedExprKind::Literal(lit) => self.convert_literal(lit),
+            _ => {
+                // BDL specification prohibits expressions in entity fields.
+                // This should be caught earlier in validation, but as a safety measure,
+                // we log a warning and return null rather than panicking.
+                // A stricter implementation could return an error here.
+                eprintln!("Warning: Non-literal expression in entity field (BDL violation). Using null.");
+                IRValue::Null
+            }
         }
     }
     

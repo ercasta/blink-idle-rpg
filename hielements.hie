@@ -130,6 +130,16 @@ element blink_project:
     ## Blink IR Specification
     ## Central contract between compiler and all engines
     ## All engines depend ONLY on IR, not on each other
+    ##
+    ## IMPORTANT: IR is the single source of truth at runtime.
+    ## All data should flow through the IR:
+    ##   - BRL → IR.rules, IR.components, IR.trackers, IR.functions
+    ##   - BDL → IR.initial_state (entities with component data)
+    ##   - BCL → IR.choice_functions (player strategy functions)
+    ##
+    ## The IR also includes:
+    ##   - IR.source_map: Original source for debugging/dev tools
+    ##   - IR.choice_points: Metadata about customizable choices
     ## --------------------------------------------------------------------
     element ir:
         scope spec = files.file_selector('doc/ir-specification.md')
@@ -138,10 +148,23 @@ element blink_project:
     
     ## --------------------------------------------------------------------
     ## Compiler
-    ## Transforms BRL source code to Intermediate Representation
+    ## Transforms BRL/BCL/BDL source code to Intermediate Representation
     ## Technology: Rust
-    ## Depends on: BRL language spec
-    ## Outputs: Blink IR
+    ## 
+    ## Input Sources:
+    ##   - BRL files: Component definitions, rules, trackers, functions
+    ##   - BCL files: Choice functions (player strategies)
+    ##   - BDL files: Entity definitions (game data)
+    ##
+    ## Output: Single IR JSON file containing all game data:
+    ##   - components[]: Component schemas
+    ##   - rules[]: Game rules
+    ##   - trackers[]: Tracker definitions
+    ##   - functions[]: Helper functions
+    ##   - choice_functions[]: BCL choice functions (PLANNED)
+    ##   - initial_state: BDL entities
+    ##   - source_map: Original source (optional, for dev tools)
+    ##   - choice_points[]: Metadata about customizable choices (PLANNED)
     ## --------------------------------------------------------------------
     element compiler:
         scope src = files.folder_selector('src/compiler/')
@@ -251,32 +274,78 @@ element blink_project:
     ## GAME CONTENT
     ## ========================================================================
     ## Game data including character definitions, BCL strategies, and BDL data
+    ##
+    ## DATA FLOW ARCHITECTURE:
+    ## ────────────────────────────────────────────────────────────────────
+    ## 
+    ## SOURCE FILES (Development):
+    ##   game/brl/*.brl    → Rules, components, trackers
+    ##   game/bcl/*.bcl    → Player strategies (choice functions)
+    ##   game/bdl/*.bdl    → Entity data (heroes, enemies, config)
+    ##
+    ## COMPILATION (Build Time):
+    ##   All source files → blink-compiler → game/ir/*.ir.json
+    ##
+    ## RUNTIME (Browser):
+    ##   IR.json → BlinkEngine.loadRulesFromObject()
+    ##   All data comes from IR - no separate JSON files needed
+    ##
+    ## LEGACY DATA FILES (game/data/):
+    ##   characters.json and enemies.json are TEMPORARY fallbacks
+    ##   until compiler fully supports BDL → IR compilation.
+    ##   These should be removed once IR contains all entity data.
+    ##
+    ## BCL CUSTOMIZATION:
+    ##   Players can customize strategies via the BCL editor in the browser.
+    ##   Currently: Customizations stored in localStorage (text only)
+    ##   Future: Browser-based BCL compiler creates delta IR that merges
+    ##           with base IR for runtime execution.
+    ## ────────────────────────────────────────────────────────────────────
     
     element game_content:
         scope game = files.folder_selector('game/')
         
-        ## Game data files (legacy JSON - being migrated to BDL)
+        ## Game data files (LEGACY - being migrated to BDL → IR)
+        ## These JSON files are temporary fallbacks.
+        ## Once compiler supports BDL → IR, data should come from IR only.
         element data:
             scope data = files.folder_selector('game/data/')
             check files.exists(data, 'characters.json')
         
         ## BRL game rules
+        ## Contains component definitions, rules, trackers, functions
+        ## Compiled to: IR.components, IR.rules, IR.trackers, IR.functions
         element brl:
             scope brl = files.folder_selector('game/brl/')
             check files.exists(brl, 'README.md')
         
         ## BCL player strategies
+        ## Contains choice functions that players can customize
+        ## Compiled to: IR.choice_functions (PLANNED)
+        ## At runtime: Customizations stored in localStorage, 
+        ##             downloaded as .bcl delta files
+        ## Future: Browser-based compilation of customized BCL
         element bcl:
             scope bcl = files.folder_selector('game/bcl/')
             check files.exists(bcl, 'README.md')
         
         ## BDL game data (entity definitions for content creators)
+        ## Contains hero, enemy, and config entity definitions
+        ## Compiled to: IR.initial_state.entities (PLANNED)
+        ## Currently: Manually synced to JSON files as fallback
         element bdl:
             scope bdl = files.folder_selector('game/bdl/')
             check files.exists(bdl, 'README.md')
             check files.exists(bdl, 'heroes.bdl')
             check files.exists(bdl, 'enemies.bdl')
             check files.exists(bdl, 'game-config.bdl')
+        
+        ## IR output directory
+        ## Contains compiled IR files generated by the compiler
+        ## This is the SINGLE SOURCE OF TRUTH at runtime
+        element ir:
+            scope ir = files.folder_selector('game/ir/')
+            check files.exists(ir, 'README.md')
         
         ## Game demos
         element demos:

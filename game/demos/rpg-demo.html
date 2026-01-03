@@ -1693,7 +1693,16 @@
     const confirmPartyBtn = document.getElementById('confirm-party-btn');
     
     // ========================================================================
-    // LOAD CHARACTER DATA
+    // LOAD CHARACTER DATA (TEMPORARY - Should come from IR)
+    // ========================================================================
+    // This function loads hero definitions from characters.json.
+    //
+    // SOURCE: game/bdl/heroes.bdl → game/data/characters.json (manual sync)
+    // 
+    // FUTURE: When compiler supports BDL → IR compilation:
+    //   - Heroes will be in IR.initial_state with HeroInfo component
+    //   - This function will be replaced with extracting heroes from IR
+    //   - No separate JSON file needed
     // ========================================================================
     async function loadCharacterData() {
       // Try GitHub Pages path first, then local dev path
@@ -1903,15 +1912,51 @@
     }
     
     // ========================================================================
+    // ========================================================================
     // BCL CUSTOMIZATION SYSTEM
+    // ========================================================================
+    // BCL (Blink Choice Language) allows players to customize AI strategy.
+    //
+    // CURRENT STATE:
+    //   - Choice points metadata should come from IR.choice_points
+    //   - Player customizations stored in localStorage as text
+    //   - Can download customizations as .bcl delta file
+    //   - Customizations are NOT compiled/executed (cosmetic only)
+    //
+    // FUTURE STATE (with browser-based BCL compiler):
+    //   1. Choice points loaded from IR.choice_points (with signatures, docstrings)
+    //   2. Player edits BCL code in browser editor
+    //   3. Browser-based WASM compiler compiles BCL to choice_functions
+    //   4. Delta IR merged with base IR for runtime execution
+    //   5. Custom strategy actually affects gameplay
+    //
+    // For browser-based BRL/BDL editing (future release):
+    //   - Same WASM compiler can handle BRL/BDL edits
+    //   - Delta compilation: merge changes with base IR
+    //   - Hot reload without page refresh
     // ========================================================================
     const BCL_STORAGE_KEY = 'blink_bcl_customizations';
     let currentBclHeroId = null;
     let currentBclChoice = null;
     let choicePointsData = [];
     
-    // Load choice points from IR (when available in future IR format)
-    // For now, this returns empty since IR doesn't yet contain choice_points
+    // ========================================================================
+    // LOAD CHOICE POINTS (From IR.choice_points)
+    // ========================================================================
+    // Choice points are metadata about customizable player decisions.
+    // They define the signature and behavior of BCL choice functions.
+    //
+    // SOURCE: BCL files (*.bcl) → IR.choice_points (when compiler supports it)
+    //
+    // FUTURE: Compiler will extract choice point metadata from BCL:
+    //   - id: Unique identifier
+    //   - name: Human-readable name
+    //   - signature: Function signature for editor
+    //   - docstring: Documentation for player
+    //   - category: Grouping (targeting, combat, strategy, etc.)
+    //   - applicableClasses: Which hero classes can use this choice
+    //   - defaultBehavior: Description of default behavior
+    // ========================================================================
     async function loadChoicePoints() {
       if (classicRpgIR && classicRpgIR.choice_points) {
         choicePointsData = classicRpgIR.choice_points;
@@ -2377,9 +2422,22 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
     let classicRpgIR = null;
     
     // Enemy templates - loaded from enemies.json (generated from enemies.bdl)
+    // TEMPORARY: Should come from IR.initial_state when compiler supports BDL
     let enemyTemplates = [];
     
-    // Load enemy templates from JSON file
+    // ========================================================================
+    // LOAD ENEMY DATA (TEMPORARY - Should come from IR)
+    // ========================================================================
+    // This function loads enemy templates from enemies.json.
+    //
+    // SOURCE: game/bdl/enemies.bdl → game/data/enemies.json (manual sync)
+    //
+    // FUTURE: When compiler supports BDL → IR compilation:
+    //   - Enemy templates will be in IR.initial_state with Enemy component
+    //   - This function will be replaced with extracting enemies from IR
+    //   - Enemies can be entity templates (not spawned, used as templates)
+    //   - No separate JSON file needed
+    // ========================================================================
     async function loadEnemyData() {
       const paths = ['data/enemies.json', '../data/enemies.json'];
       
@@ -3315,13 +3373,46 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
       }
     });
     
+    // ========================================================================
+    // INITIALIZATION - DATA LOADING ORDER
+    // ========================================================================
+    // The proper data loading architecture should be:
+    //   1. Load IR (contains rules, components, trackers, initial_state)
+    //   2. All data comes from IR - no separate JSON files needed
+    //
+    // CURRENT STATE (Temporary):
+    //   - loadCharacterData() loads heroes from characters.json (should come from IR)
+    //   - loadEnemyData() loads enemies from enemies.json (should come from IR)
+    //   - loadDefaultIR() loads rules from classic-rpg.ir.json
+    //   - loadSourceFilesFromIR() loads BRL/BCL/BDL source for dev tools (from IR.source_map)
+    //   - initBclSystem() loads choice points for BCL editor (from IR.choice_points)
+    //
+    // FUTURE STATE (When compiler supports BDL/BCL compilation):
+    //   - Single loadDefaultIR() call loads everything from IR
+    //   - Characters extracted from IR.initial_state (compiled from heroes.bdl)
+    //   - Enemies extracted from IR.initial_state (compiled from enemies.bdl)
+    //   - Choice functions from IR.choice_functions (compiled from *.bcl)
+    //   - Source from IR.source_map (included with --source-map flag)
+    //
+    // When player customizes BCL:
+    //   - Current: Stored in localStorage as text, downloadable as .bcl delta
+    //   - Future: Browser-based BCL compiler creates updated IR for execution
+    // ========================================================================
+    
     // Initialize on load
     window.addEventListener('load', async () => {
       // Load character data and enemy data, then wait for party selection
-      await loadCharacterData();
-      await loadEnemyData();
+      // TODO: Once compiler supports BDL → IR, remove these and extract from IR.initial_state
+      await loadCharacterData();  // TEMPORARY: Should come from IR
+      await loadEnemyData();      // TEMPORARY: Should come from IR
+      
+      // Load IR (this is the source of truth for rules/components/trackers)
       await loadDefaultIR();
-      loadSourceFilesFromIR(); // Load source from IR if available
+      
+      // Load source files from IR for dev mode (if IR has source_map)
+      loadSourceFilesFromIR();
+      
+      // Initialize BCL system (loads choice points from IR if available)
       await initBclSystem();
     });
     
@@ -3570,7 +3661,28 @@ entity @mage {
 }`
     };
     
-    // Function to load source files from IR (when compiler adds source_map field)
+    // ========================================================================
+    // LOAD SOURCE FILES FROM IR (For Dev Mode / Integrated IDE)
+    // ========================================================================
+    // Source files are the original BRL/BCL/BDL source code.
+    // Used by the integrated IDE for debugging and step-through execution.
+    //
+    // SOURCE: IR.source_map.files[] (when compiled with --source-map flag)
+    //
+    // Each file in source_map has:
+    //   - path: Original file path (e.g., "classic-rpg.brl")
+    //   - language: "brl", "bcl", or "bdl"
+    //   - content: Original source code text
+    //
+    // CURRENT STATE:
+    //   - Uses placeholder source code (hardcoded above)
+    //   - Shows example BRL/BCL/BDL structure
+    //
+    // FUTURE STATE:
+    //   - Compiler includes source with: blink-compiler compile --source-map
+    //   - Actual source loaded from IR.source_map
+    //   - Line highlighting tied to rule execution via source_location
+    // ========================================================================
     function loadSourceFilesFromIR() {
       if (classicRpgIR && classicRpgIR.source_map && classicRpgIR.source_map.files) {
         // Parse source files from the new source_map format
