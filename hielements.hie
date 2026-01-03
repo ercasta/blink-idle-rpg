@@ -35,13 +35,14 @@ element blink_project:
         
         ## --------------------------------------------------------------------
         ## Language Documentation
-        ## BRL and BCL language specifications
+        ## BRL, BCL, and BDL language specifications
         ## --------------------------------------------------------------------
         element language_docs:
             scope lang_docs = files.folder_selector('doc/language/')
             check files.exists(lang_docs, 'README.md')
             check files.exists(lang_docs, 'brl-specification.md')
             check files.exists(lang_docs, 'bcl-specification.md')
+            check files.exists(lang_docs, 'bdl-specification.md')
             
             element examples:
                 scope examples = files.folder_selector('doc/language/examples/')
@@ -91,9 +92,10 @@ element blink_project:
     ## ========================================================================
     ## LANGUAGE SPECIFICATION
     ## ========================================================================
-    ## Blink uses two domain-specific languages:
+    ## Blink uses three domain-specific languages:
     ## - BRL (Blink Rule Language) - for game developers
     ## - BCL (Blink Choice Language) - for players (subset of BRL)
+    ## - BDL (Blink Data Language) - for content creators (subset of BRL)
     
     element language:
         
@@ -108,6 +110,13 @@ element blink_project:
         ## Subset of BRL for player strategies
         element bcl:
             scope spec = files.file_selector('doc/language/bcl-specification.md')
+            connection_point syntax_definition
+            check files.exists(spec)
+        
+        ## BDL - Blink Data Language
+        ## Subset of BRL for content creators (entity definitions only)
+        element bdl:
+            scope spec = files.file_selector('doc/language/bdl-specification.md')
             connection_point syntax_definition
             check files.exists(spec)
     
@@ -241,12 +250,12 @@ element blink_project:
             check files.exists(workflow)
     ## GAME CONTENT
     ## ========================================================================
-    ## Game data including character definitions and BCL strategies
+    ## Game data including character definitions, BCL strategies, and BDL data
     
     element game_content:
         scope game = files.folder_selector('game/')
         
-        ## Game data files
+        ## Game data files (legacy JSON - being migrated to BDL)
         element data:
             scope data = files.folder_selector('game/data/')
             check files.exists(data, 'characters.json')
@@ -260,6 +269,14 @@ element blink_project:
         element bcl:
             scope bcl = files.folder_selector('game/bcl/')
             check files.exists(bcl, 'README.md')
+        
+        ## BDL game data (entity definitions for content creators)
+        element bdl:
+            scope bdl = files.folder_selector('game/bdl/')
+            check files.exists(bdl, 'README.md')
+            check files.exists(bdl, 'heroes.bdl')
+            check files.exists(bdl, 'enemies.bdl')
+            check files.exists(bdl, 'game-config.bdl')
         
         ## Game demos
         element demos:

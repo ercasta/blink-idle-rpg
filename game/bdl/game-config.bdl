@@ -1,0 +1,72 @@
+// =============================================================================
+// BLINK IDLE RPG - Game Configuration
+// =============================================================================
+// This file contains game configuration entities:
+// - Game state tracking
+// - Run statistics
+// - Flee/retreat configuration
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// GAME STATE ENTITY
+// Tracks overall game progress
+// -----------------------------------------------------------------------------
+
+entity @game_state {
+    GameState {
+        currentWave: 1
+        enemiesDefeated: 0
+        playerDeaths: 0
+        bossDefeated: false
+        gameOver: false
+        victory: false
+        retargetingActive: false
+    }
+}
+
+// -----------------------------------------------------------------------------
+// RUN STATISTICS ENTITY
+// Tracks the current run for leaderboard
+// -----------------------------------------------------------------------------
+
+entity @run_stats {
+    RunStats {
+        simulationTime: 0.0
+        retreatCount: 0
+        retreatPenalty: 0.0
+        deathPenalty: 0.0
+        totalTime: 0.0
+        canFlee: true
+        lastFleeTime: -999.0
+    }
+}
+
+// -----------------------------------------------------------------------------
+// FLEE CONFIGURATION ENTITY
+// Defines penalties and cooldowns for the flee mechanic
+// -----------------------------------------------------------------------------
+
+entity @flee_config {
+    FleeConfig {
+        retreatTimePenalty: 10.0
+        deathTimePenaltyMultiplier: 5.0
+        fleeCooldown: 5.0
+    }
+}
+
+// -----------------------------------------------------------------------------
+// ENEMY SPAWN CONFIGURATION
+// Defines enemy spawn progression rules
+// These values are used by the spawn system
+// -----------------------------------------------------------------------------
+
+entity @spawn_config {
+    SpawnConfig {
+        bossEveryKills: 100
+        tierProgressionKills: 50
+        maxTier: 6
+        healthScaleRate: 200
+        damageScaleRate: 300
+        initialEnemyCount: 5
+    }
+}

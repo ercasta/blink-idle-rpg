@@ -4,35 +4,37 @@ This folder contains the specification for the Blink language family.
 
 ## Overview
 
-Blink uses two domain-specific languages:
+Blink uses three domain-specific languages:
 
 | Language | Full Name | Purpose | Users |
 |----------|-----------|---------|-------|
 | **BRL** | Blink Rule Language | Define game rules, components, events | Game developers |
 | **BCL** | Blink Choice Language | Define player choices and strategies | Players |
+| **BDL** | Blink Data Language | Define game data (entities) | Content creators |
 
 ## Relationship Between Languages
 
-BCL is a **subset** of BRL. The key differences:
+Both BCL and BDL are **subsets** of BRL with different restrictions:
 
 ```
-┌─────────────────────────────────────────────┐
-│               BRL (Full Language)           │
-│  ┌───────────────────────────────────────┐  │
-│  │  • Component definitions              │  │
-│  │  • Event scheduling                   │  │
-│  │  • Entity creation                    │  │
-│  │  • Component modification             │  │
-│  │  • Recurring events                   │  │
-│  │  ┌─────────────────────────────────┐  │  │
-│  │  │      BCL (Subset)               │  │  │
-│  │  │  • Read components/entities     │  │  │
-│  │  │  • Return values (choices)      │  │  │
-│  │  │  • Functions & modules          │  │  │
-│  │  │  • Expressions & conditions     │  │  │
-│  │  └─────────────────────────────────┘  │  │
-│  └───────────────────────────────────────┘  │
-└─────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│                   BRL (Full Language)                   │
+│  ┌────────────────────┐  ┌────────────────────────────┐ │
+│  │  Game Developer    │  │  Content Creation         │ │
+│  │  Features:         │  │  Features:                │ │
+│  │  • Components      │  │  ┌──────────────────────┐ │ │
+│  │  • Rules           │  │  │ BDL (Data Subset)    │ │ │
+│  │  • Trackers        │  │  │ • Entity creation    │ │ │
+│  │  • Events          │  │  │ • Component values   │ │ │
+│  │  ┌──────────────┐  │  │  │ • Literal values     │ │ │
+│  │  │BCL (Player   │  │  │  └──────────────────────┘ │ │
+│  │  │Subset)       │  │  │                          │ │
+│  │  │• Read data   │  │  └────────────────────────────┘ │
+│  │  │• Choice fns  │  │                                 │
+│  │  │• Pure fns    │  │                                 │
+│  │  └──────────────┘  │                                 │
+│  └────────────────────┘                                 │
+└─────────────────────────────────────────────────────────┘
 ```
 
 ## Documents in This Folder
@@ -50,6 +52,7 @@ BCL is a **subset** of BRL. The key differences:
 |----------|-------------|--------|
 | [brl-specification.md](brl-specification.md) | Complete BRL language spec | Draft |
 | [bcl-specification.md](bcl-specification.md) | BCL language spec (subset) | Draft |
+| [bdl-specification.md](bdl-specification.md) | BDL language spec (subset) | Draft |
 
 ### Examples
 
@@ -76,6 +79,15 @@ Customizing your party? Start here:
 2. Copy and modify [BCL examples](../../game/bcl/)
 3. Test your strategies in the game
 4. Reference the [BCL Specification](bcl-specification.md) for syntax details
+
+### For Content Creators (BDL)
+
+Defining game data? Start here:
+
+1. Read the [BDL Specification](bdl-specification.md)
+2. Check out [BDL examples](../../game/bdl/)
+3. Define heroes, enemies, and configuration
+4. BDL is simple - only entity creation with literal values!
 
 ## Core Concepts
 

@@ -1,0 +1,489 @@
+// =============================================================================
+// BLINK IDLE RPG - Enemy Definitions
+// =============================================================================
+// This file contains all enemy templates for the game.
+// Enemies are spawned dynamically based on game progression.
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// TIER 1 - Early Game Enemies
+// -----------------------------------------------------------------------------
+
+entity @goblin_scout {
+    Character {
+        name: "Goblin Scout"
+        class: "Monster"
+        level: 1
+        experience: 0
+        experienceToLevel: 999
+    }
+    Health {
+        current: 60
+        max: 60
+    }
+    Mana {
+        current: 0
+        max: 0
+    }
+    Stats {
+        strength: 8
+        dexterity: 12
+        intelligence: 4
+        constitution: 8
+        wisdom: 4
+    }
+    Combat {
+        damage: 8
+        defense: 2
+        attackSpeed: 1.0
+        critChance: 0.05
+        critMultiplier: 1.5
+    }
+    Target {
+        entity: null
+    }
+    Team {
+        id: "enemy"
+        isPlayer: false
+    }
+    Enemy {
+        tier: 1
+        isBoss: false
+        expReward: 25
+    }
+    Buffs {
+        damageBonus: 0
+        defenseBonus: 0
+        hasteBonus: 0
+        shieldAmount: 0
+        regenAmount: 0
+    }
+}
+
+// -----------------------------------------------------------------------------
+// TIER 2 - Early-Mid Game Enemies
+// -----------------------------------------------------------------------------
+
+entity @orc_raider {
+    Character {
+        name: "Orc Raider"
+        class: "Monster"
+        level: 2
+        experience: 0
+        experienceToLevel: 999
+    }
+    Health {
+        current: 90
+        max: 90
+    }
+    Mana {
+        current: 0
+        max: 0
+    }
+    Stats {
+        strength: 12
+        dexterity: 8
+        intelligence: 4
+        constitution: 12
+        wisdom: 4
+    }
+    Combat {
+        damage: 12
+        defense: 4
+        attackSpeed: 0.8
+        critChance: 0.05
+        critMultiplier: 1.5
+    }
+    Target {
+        entity: null
+    }
+    Team {
+        id: "enemy"
+        isPlayer: false
+    }
+    Enemy {
+        tier: 2
+        isBoss: false
+        expReward: 35
+    }
+    Buffs {
+        damageBonus: 0
+        defenseBonus: 0
+        hasteBonus: 0
+        shieldAmount: 0
+        regenAmount: 0
+    }
+}
+
+entity @dark_wolf {
+    Character {
+        name: "Dark Wolf"
+        class: "Monster"
+        level: 2
+        experience: 0
+        experienceToLevel: 999
+    }
+    Health {
+        current: 75
+        max: 75
+    }
+    Mana {
+        current: 0
+        max: 0
+    }
+    Stats {
+        strength: 10
+        dexterity: 16
+        intelligence: 4
+        constitution: 8
+        wisdom: 6
+    }
+    Combat {
+        damage: 14
+        defense: 3
+        attackSpeed: 1.2
+        critChance: 0.1
+        critMultiplier: 1.5
+    }
+    Target {
+        entity: null
+    }
+    Team {
+        id: "enemy"
+        isPlayer: false
+    }
+    Enemy {
+        tier: 2
+        isBoss: false
+        expReward: 40
+    }
+    Buffs {
+        damageBonus: 0
+        defenseBonus: 0
+        hasteBonus: 0
+        shieldAmount: 0
+        regenAmount: 0
+    }
+}
+
+// -----------------------------------------------------------------------------
+// TIER 3 - Mid Game Enemies
+// -----------------------------------------------------------------------------
+
+entity @skeleton_warrior {
+    Character {
+        name: "Skeleton Warrior"
+        class: "Monster"
+        level: 3
+        experience: 0
+        experienceToLevel: 999
+    }
+    Health {
+        current: 110
+        max: 110
+    }
+    Mana {
+        current: 0
+        max: 0
+    }
+    Stats {
+        strength: 14
+        dexterity: 10
+        intelligence: 4
+        constitution: 12
+        wisdom: 4
+    }
+    Combat {
+        damage: 16
+        defense: 6
+        attackSpeed: 0.7
+        critChance: 0.1
+        critMultiplier: 1.5
+    }
+    Target {
+        entity: null
+    }
+    Team {
+        id: "enemy"
+        isPlayer: false
+    }
+    Enemy {
+        tier: 3
+        isBoss: false
+        expReward: 50
+    }
+    Buffs {
+        damageBonus: 0
+        defenseBonus: 0
+        hasteBonus: 0
+        shieldAmount: 0
+        regenAmount: 0
+    }
+}
+
+entity @dark_mage {
+    Character {
+        name: "Dark Mage"
+        class: "Monster"
+        level: 5
+        experience: 0
+        experienceToLevel: 999
+    }
+    Health {
+        current: 80
+        max: 80
+    }
+    Mana {
+        current: 100
+        max: 100
+    }
+    Stats {
+        strength: 6
+        dexterity: 10
+        intelligence: 16
+        constitution: 8
+        wisdom: 12
+    }
+    Combat {
+        damage: 22
+        defense: 4
+        attackSpeed: 0.5
+        critChance: 0.15
+        critMultiplier: 2.0
+    }
+    Target {
+        entity: null
+    }
+    Team {
+        id: "enemy"
+        isPlayer: false
+    }
+    Enemy {
+        tier: 3
+        isBoss: false
+        expReward: 75
+    }
+    Buffs {
+        damageBonus: 0
+        defenseBonus: 0
+        hasteBonus: 0
+        shieldAmount: 0
+        regenAmount: 0
+    }
+}
+
+// -----------------------------------------------------------------------------
+// TIER 4 - Late Game Enemies
+// -----------------------------------------------------------------------------
+
+entity @troll_berserker {
+    Character {
+        name: "Troll Berserker"
+        class: "Monster"
+        level: 7
+        experience: 0
+        experienceToLevel: 999
+    }
+    Health {
+        current: 180
+        max: 180
+    }
+    Mana {
+        current: 0
+        max: 0
+    }
+    Stats {
+        strength: 18
+        dexterity: 8
+        intelligence: 4
+        constitution: 18
+        wisdom: 4
+    }
+    Combat {
+        damage: 22
+        defense: 8
+        attackSpeed: 0.6
+        critChance: 0.15
+        critMultiplier: 1.5
+    }
+    Target {
+        entity: null
+    }
+    Team {
+        id: "enemy"
+        isPlayer: false
+    }
+    Enemy {
+        tier: 4
+        isBoss: false
+        expReward: 80
+    }
+    Buffs {
+        damageBonus: 0
+        defenseBonus: 0
+        hasteBonus: 0
+        shieldAmount: 0
+        regenAmount: 0
+    }
+}
+
+// -----------------------------------------------------------------------------
+// TIER 5 - End Game Enemies
+// -----------------------------------------------------------------------------
+
+entity @demon_knight {
+    Character {
+        name: "Demon Knight"
+        class: "Monster"
+        level: 8
+        experience: 0
+        experienceToLevel: 999
+    }
+    Health {
+        current: 250
+        max: 250
+    }
+    Mana {
+        current: 50
+        max: 50
+    }
+    Stats {
+        strength: 18
+        dexterity: 12
+        intelligence: 10
+        constitution: 16
+        wisdom: 8
+    }
+    Combat {
+        damage: 30
+        defense: 10
+        attackSpeed: 0.7
+        critChance: 0.15
+        critMultiplier: 2.0
+    }
+    Target {
+        entity: null
+    }
+    Team {
+        id: "enemy"
+        isPlayer: false
+    }
+    Enemy {
+        tier: 5
+        isBoss: false
+        expReward: 150
+    }
+    Buffs {
+        damageBonus: 0
+        defenseBonus: 0
+        hasteBonus: 0
+        shieldAmount: 0
+        regenAmount: 0
+    }
+}
+
+// -----------------------------------------------------------------------------
+// TIER 6 - BOSS ENEMIES
+// -----------------------------------------------------------------------------
+
+entity @ancient_dragon {
+    Character {
+        name: "Ancient Dragon"
+        class: "Boss"
+        level: 10
+        experience: 0
+        experienceToLevel: 999
+    }
+    Health {
+        current: 400
+        max: 400
+    }
+    Mana {
+        current: 150
+        max: 150
+    }
+    Stats {
+        strength: 22
+        dexterity: 14
+        intelligence: 16
+        constitution: 22
+        wisdom: 14
+    }
+    Combat {
+        damage: 40
+        defense: 12
+        attackSpeed: 0.8
+        critChance: 0.2
+        critMultiplier: 2.0
+    }
+    Target {
+        entity: null
+    }
+    Team {
+        id: "enemy"
+        isPlayer: false
+    }
+    Enemy {
+        tier: 6
+        isBoss: true
+        expReward: 300
+    }
+    Buffs {
+        damageBonus: 0
+        defenseBonus: 0
+        hasteBonus: 0
+        shieldAmount: 0
+        regenAmount: 0
+    }
+}
+
+entity @dragon_lord_vexar {
+    Character {
+        name: "Dragon Lord Vexar"
+        class: "Boss"
+        level: 10
+        experience: 0
+        experienceToLevel: 999
+    }
+    Health {
+        current: 500
+        max: 500
+    }
+    Mana {
+        current: 200
+        max: 200
+    }
+    Stats {
+        strength: 25
+        dexterity: 15
+        intelligence: 20
+        constitution: 25
+        wisdom: 15
+    }
+    Combat {
+        damage: 40
+        defense: 15
+        attackSpeed: 0.8
+        critChance: 0.2
+        critMultiplier: 2.5
+    }
+    Target {
+        entity: null
+    }
+    Team {
+        id: "enemy"
+        isPlayer: false
+    }
+    Enemy {
+        tier: 6
+        isBoss: true
+        expReward: 500
+    }
+    Buffs {
+        damageBonus: 0
+        defenseBonus: 0
+        hasteBonus: 0
+        shieldAmount: 0
+        regenAmount: 0
+    }
+}

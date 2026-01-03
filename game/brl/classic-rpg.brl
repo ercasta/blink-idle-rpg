@@ -120,6 +120,25 @@ component ChoiceContext {
     chosen: string
 }
 
+// Hero information for party selection UI (used by BDL)
+component HeroInfo {
+    id: string
+    description: string
+    difficulty: string
+    role: string
+    playstyle: string
+}
+
+// Spawn configuration (used by BDL)
+component SpawnConfig {
+    bossEveryKills: integer
+    tierProgressionKills: integer
+    maxTier: integer
+    healthScaleRate: integer
+    damageScaleRate: integer
+    initialEnemyCount: integer
+}
+
 // Helper function to calculate damage
 fn calculate_damage(base: float, bonus: float): float {
     return base + bonus
