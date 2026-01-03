@@ -22,6 +22,24 @@ pub enum IRError {
     GenerationError(String),
 }
 
+/// Source file entry for source mapping
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SourceFile {
+    /// File path relative to project root
+    pub path: String,
+    /// Full source content
+    pub content: String,
+    /// Language type (brl, bcl, or bdl)
+    pub language: String,
+}
+
+/// Source map for the entire IR module
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SourceMap {
+    /// List of source files included in compilation
+    pub files: Vec<SourceFile>,
+}
+
 /// Blink IR Module - the central contract for all engines
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IRModule {
@@ -55,6 +73,10 @@ pub struct IRModule {
     /// Initial state (optional)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub initial_state: Option<IRInitialState>,
+    
+    /// Source map for debugging (optional, included when --source-map flag is used)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source_map: Option<SourceMap>,
 }
 
 /// Compiler metadata
@@ -415,7 +437,7 @@ impl IRGenerator {
         id
     }
     
-    fn generate(&mut self, typed_module: TypedModule, _options: &CompilerOptions) -> Result<IRModule, IRError> {
+    fn generate(&mut self, typed_module: TypedModule, options: &CompilerOptions, source: Option<&str>, source_path: Option<&str>, additional_sources: &[(String, String, String)]) -> Result<IRModule, IRError> {
         let mut components = Vec::new();
         let mut rules = Vec::new();
         let mut functions = Vec::new();
@@ -438,6 +460,46 @@ impl IRGenerator {
             }
         }
         
+        // Build source map if requested and source is provided
+        let source_map = if options.include_source_map {
+            let mut files = Vec::new();
+            
+            // Add main BRL source file
+            if let (Some(src), Some(path)) = (source, source_path) {
+                // Determine language from file extension
+                let language = if path.ends_with(".bcl") {
+                    "bcl".to_string()
+                } else if path.ends_with(".bdl") {
+                    "bdl".to_string()
+                } else {
+                    "brl".to_string()
+                };
+                
+                files.push(SourceFile {
+                    path: path.to_string(),
+                    content: src.to_string(),
+                    language,
+                });
+            }
+            
+            // Add additional source files (BCL, BDL, etc.)
+            for (path, content, language) in additional_sources {
+                files.push(SourceFile {
+                    path: path.clone(),
+                    content: content.clone(),
+                    language: language.clone(),
+                });
+            }
+            
+            if files.is_empty() {
+                None
+            } else {
+                Some(SourceMap { files })
+            }
+        } else {
+            None
+        };
+        
         Ok(IRModule {
             version: "1.0".to_string(),
             module: "unnamed".to_string(),
@@ -452,6 +514,7 @@ impl IRGenerator {
             trackers,
             constants: IndexMap::new(),
             initial_state: None,
+            source_map,
         })
     }
     
@@ -820,7 +883,32 @@ fn generate_timestamp() -> String {
 /// Generate IR from typed AST
 pub fn generate(typed_module: TypedModule, options: &CompilerOptions) -> Result<IRModule, String> {
     let mut generator = IRGenerator::new();
-    generator.generate(typed_module, options)
+    generator.generate(typed_module, options, None, None, &[])
+        .map_err(|e| e.to_string())
+}
+
+/// Generate IR from typed AST with source content for source maps
+pub fn generate_with_source(
+    typed_module: TypedModule,
+    options: &CompilerOptions,
+    source: &str,
+    source_path: &str,
+) -> Result<IRModule, String> {
+    let mut generator = IRGenerator::new();
+    generator.generate(typed_module, options, Some(source), Some(source_path), &[])
+        .map_err(|e| e.to_string())
+}
+
+/// Generate IR from typed AST with source content and additional source files for source maps
+pub fn generate_with_sources(
+    typed_module: TypedModule,
+    options: &CompilerOptions,
+    source: &str,
+    source_path: Option<&str>,
+    additional_sources: &[(String, String, String)],
+) -> Result<IRModule, String> {
+    let mut generator = IRGenerator::new();
+    generator.generate(typed_module, options, Some(source), source_path, additional_sources)
         .map_err(|e| e.to_string())
 }
 

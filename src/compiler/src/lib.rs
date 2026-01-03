@@ -103,6 +103,27 @@ pub struct CompilerOptions {
 /// let ir = compile(source, &CompilerOptions::default())?;
 /// ```
 pub fn compile(source: &str, options: &CompilerOptions) -> Result<ir::IRModule, CompileError> {
+    compile_with_path(source, options, None)
+}
+
+/// Compile BRL source code to IR with source path for source maps
+///
+/// This version includes the source path when generating source maps.
+///
+/// # Arguments
+///
+/// * `source` - BRL source code
+/// * `options` - Compiler configuration options
+/// * `source_path` - Path to the source file (used for source map)
+///
+/// # Returns
+///
+/// Returns the compiled IR module or a compilation error.
+pub fn compile_with_path(
+    source: &str,
+    options: &CompilerOptions,
+    source_path: Option<&str>,
+) -> Result<ir::IRModule, CompileError> {
     // Step 1: Tokenize
     let tokens = lexer::tokenize(source)
         .map_err(|e| CompileError::LexerError(e.to_string()))?;
@@ -115,9 +136,12 @@ pub fn compile(source: &str, options: &CompilerOptions) -> Result<ir::IRModule, 
     let typed_ast = analyzer::analyze(ast)
         .map_err(|e| CompileError::SemanticError(e.to_string()))?;
     
-    // Step 4: Generate IR
-    let ir = ir::generate(typed_ast, options)
-        .map_err(|e| CompileError::IRError(e.to_string()))?;
+    // Step 4: Generate IR (with source map support if path provided)
+    let ir = if let Some(path) = source_path {
+        ir::generate_with_source(typed_ast, options, source, path)
+    } else {
+        ir::generate(typed_ast, options)
+    }.map_err(|e| CompileError::IRError(e.to_string()))?;
     
     Ok(ir)
 }
@@ -126,7 +150,51 @@ pub fn compile(source: &str, options: &CompilerOptions) -> Result<ir::IRModule, 
 ///
 /// Convenience function that compiles and serializes to JSON in one step.
 pub fn compile_to_json(source: &str, options: &CompilerOptions) -> Result<String, CompileError> {
-    let ir = compile(source, options)?;
+    compile_to_json_with_path(source, options, None)
+}
+
+/// Compile BRL source and return JSON IR with source path for source maps
+///
+/// This version includes the source path when generating source maps.
+pub fn compile_to_json_with_path(
+    source: &str,
+    options: &CompilerOptions,
+    source_path: Option<&str>,
+) -> Result<String, CompileError> {
+    compile_to_json_with_sources(source, options, source_path, &[])
+}
+
+/// Compile BRL source and return JSON IR with source path and additional source files
+///
+/// This version includes the source path and additional BCL/BDL files in the source map.
+///
+/// # Arguments
+///
+/// * `source` - BRL source code
+/// * `options` - Compiler configuration options
+/// * `source_path` - Path to the main BRL source file (used for source map)
+/// * `additional_sources` - Additional source files to include in source map (path, content, language)
+pub fn compile_to_json_with_sources(
+    source: &str,
+    options: &CompilerOptions,
+    source_path: Option<&str>,
+    additional_sources: &[(String, String, String)],
+) -> Result<String, CompileError> {
+    // Step 1: Tokenize
+    let tokens = lexer::tokenize(source)
+        .map_err(|e| CompileError::LexerError(e.to_string()))?;
+    
+    // Step 2: Parse
+    let ast = parser::parse(tokens)
+        .map_err(|e| CompileError::ParserError(e.to_string()))?;
+    
+    // Step 3: Semantic analysis
+    let typed_ast = analyzer::analyze(ast)
+        .map_err(|e| CompileError::SemanticError(e.to_string()))?;
+    
+    // Step 4: Generate IR with source map support
+    let ir = ir::generate_with_sources(typed_ast, options, source, source_path, additional_sources)
+        .map_err(|e| CompileError::IRError(e.to_string()))?;
     
     let json = if options.pretty_print {
         serde_json::to_string_pretty(&ir)

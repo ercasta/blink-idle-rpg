@@ -6,7 +6,7 @@ use clap::{Parser, Subcommand};
 use std::fs;
 use std::path::PathBuf;
 
-use blink_compiler::{compile, compile_to_json, CompilerOptions};
+use blink_compiler::{compile, CompilerOptions};
 
 #[derive(Parser)]
 #[command(name = "blink-compiler")]
@@ -37,6 +37,11 @@ enum Commands {
         /// Include source map information
         #[arg(long, default_value = "false")]
         source_map: bool,
+        
+        /// Additional source files to include in source map (BCL, BDL files)
+        /// Can be specified multiple times or with glob patterns
+        #[arg(long = "include", value_name = "FILE")]
+        include_files: Vec<PathBuf>,
     },
     
     /// Check BRL source for errors without generating IR
@@ -65,8 +70,8 @@ fn main() {
     let cli = Cli::parse();
     
     let result = match cli.command {
-        Commands::Compile { input, output, pretty, source_map } => {
-            run_compile(&input, output.as_deref(), pretty, source_map)
+        Commands::Compile { input, output, pretty, source_map, include_files } => {
+            run_compile(&input, output.as_deref(), pretty, source_map, &include_files)
         }
         Commands::Check { input } => {
             run_check(&input)
@@ -90,6 +95,7 @@ fn run_compile(
     output: Option<&std::path::Path>,
     pretty: bool,
     source_map: bool,
+    include_files: &[PathBuf],
 ) -> Result<(), Box<dyn std::error::Error>> {
     let source = fs::read_to_string(input)?;
     
@@ -99,7 +105,42 @@ fn run_compile(
         optimize: true,
     };
     
-    let json = compile_to_json(&source, &options)?;
+    // Pass source path when source map is requested
+    let source_path = if source_map {
+        Some(input.to_string_lossy().to_string())
+    } else {
+        None
+    };
+    
+    // Collect additional source files for inclusion in source map
+    let additional_files: Vec<(String, String, String)> = if source_map {
+        include_files.iter().filter_map(|path| {
+            let content = fs::read_to_string(path).ok()?;
+            let path_str = path.to_string_lossy().to_string();
+            
+            // Determine language from file extension
+            let language = if path_str.ends_with(".bcl") {
+                "bcl".to_string()
+            } else if path_str.ends_with(".bdl") {
+                "bdl".to_string()
+            } else if path_str.ends_with(".brl") {
+                "brl".to_string()
+            } else {
+                "unknown".to_string()
+            };
+            
+            Some((path_str, content, language))
+        }).collect()
+    } else {
+        Vec::new()
+    };
+    
+    let json = blink_compiler::compile_to_json_with_sources(
+        &source,
+        &options,
+        source_path.as_deref(),
+        &additional_files,
+    )?;
     
     match output {
         Some(path) => {

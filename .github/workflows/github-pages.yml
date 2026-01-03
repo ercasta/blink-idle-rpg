@@ -51,12 +51,26 @@ jobs:
         run: |
           mkdir -p game/ir
           cd src/compiler
-          # Compile all BRL files to IR
+          # Build list of BCL files for inclusion in source map
+          BCL_INCLUDES=""
+          for bcl_file in ../../game/bcl/*.bcl; do
+            if [ -f "$bcl_file" ]; then
+              BCL_INCLUDES="$BCL_INCLUDES --include $bcl_file"
+            fi
+          done
+          # Build list of BDL files for inclusion in source map
+          BDL_INCLUDES=""
+          for bdl_file in ../../game/bdl/*.bdl; do
+            if [ -f "$bdl_file" ]; then
+              BDL_INCLUDES="$BDL_INCLUDES --include $bdl_file"
+            fi
+          done
+          # Compile all BRL files to IR with source maps for debugging support
           for brl_file in ../../game/brl/*.brl; do
             if [ -f "$brl_file" ]; then
               filename=$(basename "$brl_file" .brl)
-              ./target/release/blink-compiler compile -i "$brl_file" -o "../../game/ir/${filename}.ir.json" --pretty
-              echo "Compiled ${filename}.brl -> ${filename}.ir.json"
+              ./target/release/blink-compiler compile -i "$brl_file" -o "../../game/ir/${filename}.ir.json" --pretty --source-map $BCL_INCLUDES $BDL_INCLUDES
+              echo "Compiled ${filename}.brl -> ${filename}.ir.json (with source map including BCL/BDL)"
             fi
           done
           cd ../..
