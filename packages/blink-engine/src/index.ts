@@ -14,6 +14,7 @@ export type {
   GameStateSnapshot,
   StepResult,
   SimulationEvent,
+  DebugEvent,
 } from './BlinkGame';
 
 // IR types and loader
@@ -33,6 +34,9 @@ export type {
   IRFunction,
   IRTracker,
   IRFieldValue,
+  SourceLocation,
+  SourceFile,
+  SourceMap,
 } from './ir';
 
 // ECS

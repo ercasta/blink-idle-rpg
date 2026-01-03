@@ -793,6 +793,7 @@
         timeScale: options.timeScale || 1.0,
         maxEventsPerFrame: options.maxEventsPerFrame || 100,
         discreteTimeStep: options.discreteTimeStep || 0,
+        devMode: options.devMode || false,
       };
       
       this.store = new Store();
@@ -808,8 +809,10 @@
       
       this.trackerCallbacks = new Set();
       this.simulationCallbacks = new Set();
+      this.debugCallbacks = new Set();
       
       this.ir = null;
+      this.devMode = options.devMode || false;
     }
 
     static async create(options = {}) {
@@ -959,7 +962,12 @@
       
       const matchingRules = this.executor.getMatchingRules(event.eventType);
       for (const rule of matchingRules) {
-        this.executor.executeRule(rule, event, this.store, this.timeline);
+        // In dev mode, emit debug events for each rule
+        if (this.devMode) {
+          this.executeRuleWithDebug(rule, event);
+        } else {
+          this.executor.executeRule(rule, event, this.store, this.timeline);
+        }
       }
       
       const trackerOutput = this.trackerSystem.capture(event, this.store, this.timeline.getTime());
@@ -977,6 +985,27 @@
       this.emitSimulationEvent({ type: 'step', time: result.time, event });
       
       return result;
+    }
+
+    executeRuleWithDebug(rule, event) {
+      // Emit rule_start event
+      this.emitDebugEvent({
+        type: 'rule_start',
+        rule,
+        sourceLocation: rule.source_location,
+        time: this.timeline.getTime(),
+      });
+
+      // Execute the rule
+      this.executor.executeRule(rule, event, this.store, this.timeline);
+
+      // Emit rule_end event
+      this.emitDebugEvent({
+        type: 'rule_end',
+        rule,
+        sourceLocation: rule.source_location,
+        time: this.timeline.getTime(),
+      });
     }
 
     runUntilComplete(maxSteps = 10000) {
@@ -1029,6 +1058,28 @@
       return () => this.simulationCallbacks.delete(callback);
     }
 
+    onDebug(callback) {
+      this.debugCallbacks.add(callback);
+      return () => this.debugCallbacks.delete(callback);
+    }
+
+    setDevMode(enabled) {
+      this.devMode = enabled;
+      this.options.devMode = enabled;
+    }
+
+    getDevMode() {
+      return this.devMode;
+    }
+
+    getSourceMap() {
+      return this.ir && this.ir.source_map ? this.ir.source_map : null;
+    }
+
+    getRules() {
+      return this.ir ? this.ir.rules : [];
+    }
+
     setTimeScale(scale) {
       this.options.timeScale = scale;
     }
@@ -1049,6 +1100,7 @@
       this.stop();
       this.trackerCallbacks.clear();
       this.simulationCallbacks.clear();
+      this.debugCallbacks.clear();
       this.store.clear();
       this.timeline.clear();
     }
@@ -1192,6 +1244,16 @@
           callback(event);
         } catch (error) {
           console.error('[BlinkGame] Error in simulation callback:', error);
+        }
+      }
+    }
+
+    emitDebugEvent(event) {
+      for (const callback of this.debugCallbacks) {
+        try {
+          callback(event);
+        } catch (error) {
+          console.error('[BlinkGame] Error in debug callback:', error);
         }
       }
     }

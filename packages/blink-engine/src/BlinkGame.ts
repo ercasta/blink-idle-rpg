@@ -7,7 +7,7 @@ import { Store, EntityId, ComponentData } from './ecs/Store';
 import { Timeline, ScheduledEvent } from './timeline/Timeline';
 import { RuleExecutor } from './rules/Executor';
 import { TrackerSystem, TrackerOutput } from './trackers/Tracker';
-import { loadIRFromString, loadIRFromObject, IRModule, IRFieldValue } from './ir';
+import { loadIRFromString, loadIRFromObject, IRModule, IRFieldValue, IRRule, IRAction, SourceLocation, SourceFile } from './ir';
 
 export interface GameOptions {
   /** Enable debug mode */
@@ -18,6 +18,8 @@ export interface GameOptions {
   maxEventsPerFrame?: number;
   /** Discrete time step in seconds (e.g., 0.01 for 1/100th second steps) */
   discreteTimeStep?: number;
+  /** Enable dev mode for step-by-step debugging */
+  devMode?: boolean;
 }
 
 export interface GameState {
@@ -47,9 +49,24 @@ export interface SimulationEvent {
   event?: ScheduledEvent;
 }
 
+/**
+ * Debug event emitted during step-by-step execution
+ */
+export interface DebugEvent {
+  type: 'rule_start' | 'rule_end' | 'action_start' | 'action_end' | 'condition_eval';
+  rule?: IRRule;
+  action?: IRAction;
+  sourceLocation?: SourceLocation;
+  time: number;
+  entityId?: EntityId;
+  conditionResult?: boolean;
+  actionIndex?: number;
+}
+
 type Unsubscribe = () => void;
 type TrackerCallback = (event: TrackerOutput) => void;
 type SimulationCallback = (event: SimulationEvent) => void;
+type DebugCallback = (event: DebugEvent) => void;
 
 /**
  * Main game engine class
@@ -69,8 +86,10 @@ export class BlinkGame {
   
   private trackerCallbacks: Set<TrackerCallback> = new Set();
   private simulationCallbacks: Set<SimulationCallback> = new Set();
+  private debugCallbacks: Set<DebugCallback> = new Set();
   
   private ir: IRModule | null = null;
+  private devMode: boolean = false;
 
   private constructor(options: GameOptions = {}) {
     this.options = {
@@ -78,7 +97,9 @@ export class BlinkGame {
       timeScale: options.timeScale ?? 1.0,
       maxEventsPerFrame: options.maxEventsPerFrame ?? 100,
       discreteTimeStep: options.discreteTimeStep ?? 0,
+      devMode: options.devMode ?? false,
     };
+    this.devMode = this.options.devMode;
     
     this.store = new Store();
     this.timeline = new Timeline();
@@ -282,7 +303,12 @@ export class BlinkGame {
     // Execute matching rules
     const matchingRules = this.executor.getMatchingRules(event.eventType);
     for (const rule of matchingRules) {
-      this.executor.executeRule(rule, event, this.store, this.timeline);
+      // In dev mode, emit debug events for each rule and action
+      if (this.devMode) {
+        this.executeRuleWithDebug(rule, event);
+      } else {
+        this.executor.executeRule(rule, event, this.store, this.timeline);
+      }
     }
     
     // Capture tracker output
@@ -302,6 +328,30 @@ export class BlinkGame {
     this.emitSimulationEvent({ type: 'step', time: result.time, event });
     
     return result;
+  }
+
+  /**
+   * Execute a rule with debug events emitted
+   */
+  private executeRuleWithDebug(rule: IRRule, event: ScheduledEvent): void {
+    // Emit rule_start event
+    this.emitDebugEvent({
+      type: 'rule_start',
+      rule,
+      sourceLocation: rule.source_location,
+      time: this.timeline.getTime(),
+    });
+
+    // Execute the rule (this will also emit action events if executor supports it)
+    this.executor.executeRule(rule, event, this.store, this.timeline);
+
+    // Emit rule_end event
+    this.emitDebugEvent({
+      type: 'rule_end',
+      rule,
+      sourceLocation: rule.source_location,
+      time: this.timeline.getTime(),
+    });
   }
 
   /**
@@ -409,6 +459,43 @@ export class BlinkGame {
   onSimulation(callback: SimulationCallback): Unsubscribe {
     this.simulationCallbacks.add(callback);
     return () => this.simulationCallbacks.delete(callback);
+  }
+
+  /**
+   * Subscribe to debug events (for dev mode)
+   */
+  onDebug(callback: DebugCallback): Unsubscribe {
+    this.debugCallbacks.add(callback);
+    return () => this.debugCallbacks.delete(callback);
+  }
+
+  /**
+   * Enable or disable dev mode (step-by-step debugging)
+   */
+  setDevMode(enabled: boolean): void {
+    this.devMode = enabled;
+    this.options.devMode = enabled;
+  }
+
+  /**
+   * Check if dev mode is enabled
+   */
+  getDevMode(): boolean {
+    return this.devMode;
+  }
+
+  /**
+   * Get the source map from the loaded IR (if available)
+   */
+  getSourceMap(): { files: SourceFile[] } | null {
+    return this.ir?.source_map ?? null;
+  }
+
+  /**
+   * Get all loaded rules (for debugging/display)
+   */
+  getRules(): IRRule[] {
+    return this.ir?.rules ?? [];
   }
 
   /**
@@ -622,6 +709,16 @@ export class BlinkGame {
         callback(event);
       } catch (error) {
         console.error('[BlinkGame] Error in simulation callback:', error);
+      }
+    }
+  }
+
+  private emitDebugEvent(event: DebugEvent): void {
+    for (const callback of this.debugCallbacks) {
+      try {
+        callback(event);
+      } catch (error) {
+        console.error('[BlinkGame] Error in debug callback:', error);
       }
     }
   }
