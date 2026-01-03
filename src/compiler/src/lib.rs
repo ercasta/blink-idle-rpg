@@ -46,6 +46,8 @@ pub mod ir;
 
 use thiserror::Error;
 
+use crate::analyzer::TypedModule;
+
 /// Main compilation error type
 #[derive(Error, Debug)]
 pub enum CompileError {
@@ -73,6 +75,23 @@ pub struct CompilerOptions {
     
     /// Enable optimization passes
     pub optimize: bool,
+}
+
+/// Internal helper to perform tokenize, parse, and analyze steps
+fn compile_to_typed_ast(source: &str) -> Result<TypedModule, CompileError> {
+    // Step 1: Tokenize
+    let tokens = lexer::tokenize(source)
+        .map_err(|e| CompileError::LexerError(e.to_string()))?;
+    
+    // Step 2: Parse
+    let ast = parser::parse(tokens)
+        .map_err(|e| CompileError::ParserError(e.to_string()))?;
+    
+    // Step 3: Semantic analysis
+    let typed_ast = analyzer::analyze(ast)
+        .map_err(|e| CompileError::SemanticError(e.to_string()))?;
+    
+    Ok(typed_ast)
 }
 
 /// Compile BRL source code to IR
@@ -124,19 +143,9 @@ pub fn compile_with_path(
     options: &CompilerOptions,
     source_path: Option<&str>,
 ) -> Result<ir::IRModule, CompileError> {
-    // Step 1: Tokenize
-    let tokens = lexer::tokenize(source)
-        .map_err(|e| CompileError::LexerError(e.to_string()))?;
+    let typed_ast = compile_to_typed_ast(source)?;
     
-    // Step 2: Parse
-    let ast = parser::parse(tokens)
-        .map_err(|e| CompileError::ParserError(e.to_string()))?;
-    
-    // Step 3: Semantic analysis
-    let typed_ast = analyzer::analyze(ast)
-        .map_err(|e| CompileError::SemanticError(e.to_string()))?;
-    
-    // Step 4: Generate IR (with source map support if path provided)
+    // Generate IR (with source map support if path provided)
     let ir = if let Some(path) = source_path {
         ir::generate_with_source(typed_ast, options, source, path)
     } else {
@@ -180,19 +189,9 @@ pub fn compile_to_json_with_sources(
     source_path: Option<&str>,
     additional_sources: &[(String, String, String)],
 ) -> Result<String, CompileError> {
-    // Step 1: Tokenize
-    let tokens = lexer::tokenize(source)
-        .map_err(|e| CompileError::LexerError(e.to_string()))?;
+    let typed_ast = compile_to_typed_ast(source)?;
     
-    // Step 2: Parse
-    let ast = parser::parse(tokens)
-        .map_err(|e| CompileError::ParserError(e.to_string()))?;
-    
-    // Step 3: Semantic analysis
-    let typed_ast = analyzer::analyze(ast)
-        .map_err(|e| CompileError::SemanticError(e.to_string()))?;
-    
-    // Step 4: Generate IR with source map support
+    // Generate IR with source map support
     let ir = ir::generate_with_sources(typed_ast, options, source, source_path, additional_sources)
         .map_err(|e| CompileError::IRError(e.to_string()))?;
     
