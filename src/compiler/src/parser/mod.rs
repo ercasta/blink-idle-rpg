@@ -37,6 +37,18 @@ pub enum Item {
     Tracker(TrackerDef),
     Import(ImportDef),
     ModuleDef(ModuleItemDef),
+    /// Entity definition (BDL support)
+    Entity(EntityDef),
+}
+
+/// Entity definition (for BDL - entity data files)
+#[derive(Debug, Clone)]
+pub struct EntityDef {
+    /// Optional entity name (e.g., @warrior, @goblin_scout)
+    pub name: Option<String>,
+    /// Components initialized for this entity
+    pub components: Vec<ComponentInit>,
+    pub span: Span,
 }
 
 /// Component definition
@@ -409,9 +421,12 @@ impl Parser {
             TokenKind::Tracker => self.parse_tracker().map(Item::Tracker),
             TokenKind::Import => self.parse_import().map(Item::Import),
             TokenKind::Module => self.parse_module_def().map(Item::ModuleDef),
+            TokenKind::Entity => self.parse_entity().map(Item::Entity),
+            // Also handle entity refs like @warrior at top level (BDL syntax)
+            TokenKind::EntityRef => self.parse_entity().map(Item::Entity),
             _ => Err(ParseError::UnexpectedToken {
                 found: token.text.clone(),
-                expected: "component, rule, fn, tracker, import, or module".to_string(),
+                expected: "component, rule, fn, tracker, import, module, or entity".to_string(),
                 position: token.span.start,
             }),
         }
@@ -697,6 +712,51 @@ impl Parser {
         Ok(ModuleItemDef {
             name,
             items,
+            span: Span::new(start, end_token.span.end),
+        })
+    }
+    
+    /// Parse an entity definition (BDL support)
+    /// Syntax: entity { Component { ... } Component { ... } }
+    /// Or: entity @name { Component { ... } }
+    fn parse_entity(&mut self) -> Result<EntityDef, ParseError> {
+        // Check for entity keyword or @name
+        let (start, name) = if self.check(&TokenKind::EntityRef) {
+            // @name syntax without entity keyword
+            let ref_token = self.advance().unwrap().clone();
+            let name = ref_token.text[1..].to_string(); // Remove @ prefix
+            (ref_token.span.start, Some(name))
+        } else {
+            // entity keyword
+            let start = self.consume(TokenKind::Entity, "entity")?.span.start;
+            
+            // Optional @name after entity keyword
+            let name = if self.check(&TokenKind::EntityRef) {
+                let ref_token = self.advance().unwrap().clone();
+                Some(ref_token.text[1..].to_string()) // Remove @ prefix
+            } else if self.check(&TokenKind::Identifier) {
+                // Also allow entity name { ... } without @ for convenience
+                let name_token = self.advance().unwrap().clone();
+                Some(name_token.text)
+            } else {
+                None
+            };
+            
+            (start, name)
+        };
+        
+        self.consume(TokenKind::LBrace, "{")?;
+        
+        let mut components = Vec::new();
+        while !self.check(&TokenKind::RBrace) && !self.is_at_end() {
+            components.push(self.parse_component_init()?);
+        }
+        
+        let end_token = self.consume(TokenKind::RBrace, "}")?;
+        
+        Ok(EntityDef {
+            name,
+            components,
             span: Span::new(start, end_token.span.end),
         })
     }
@@ -1002,10 +1062,26 @@ impl Parser {
         
         let mut fields = Vec::new();
         while !self.check(&TokenKind::RBrace) && !self.is_at_end() {
-            let field_name = self.consume(TokenKind::Identifier, "field name")?;
+            // Allow certain keywords to be used as field names (entity, event, id)
+            let field_name_token = if let Some(token) = self.peek() {
+                match token.kind {
+                    TokenKind::Identifier 
+                    | TokenKind::Entity 
+                    | TokenKind::Event 
+                    | TokenKind::TypeId => {
+                        self.advance().ok_or_else(|| ParseError::UnexpectedEof { 
+                            expected: "field name".to_string() 
+                        })?.clone()
+                    }
+                    _ => self.consume(TokenKind::Identifier, "field name")?
+                }
+            } else {
+                return Err(ParseError::UnexpectedEof { expected: "field name".to_string() });
+            };
+            
             self.consume(TokenKind::Colon, ":")?;
             let field_value = self.parse_expression()?;
-            fields.push((field_name.text.clone(), field_value));
+            fields.push((field_name_token.text.clone(), field_value));
         }
         
         let end_token = self.consume(TokenKind::RBrace, "}")?;

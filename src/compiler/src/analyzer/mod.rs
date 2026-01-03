@@ -10,7 +10,7 @@ use thiserror::Error;
 use std::collections::HashMap;
 
 use crate::parser::{
-    Module, Item, ComponentDef, RuleDef, FunctionDef, TrackerDef,
+    Module, Item, ComponentDef, RuleDef, FunctionDef, TrackerDef, EntityDef,
     TypeExpr, Block, Statement, Expr, Literal, BinaryOp, UnaryOp,
 };
 
@@ -281,6 +281,7 @@ impl Analyzer {
                 Item::Rule(rule) => Some(TypedItem::Rule(self.analyze_rule(rule))),
                 Item::Function(func) => Some(TypedItem::Function(self.analyze_function(func))),
                 Item::Tracker(tracker) => Some(TypedItem::Tracker(self.analyze_tracker(tracker))),
+                Item::Entity(entity) => Some(TypedItem::Entity(self.analyze_entity(entity))),
                 Item::Import(_) => None, // Imports handled separately
                 Item::ModuleDef(_) => None, // Module defs handled separately
             }
@@ -299,6 +300,34 @@ impl Analyzer {
         TypedComponent {
             name: comp.name.clone(),
             fields,
+        }
+    }
+    
+    /// Analyze an entity definition (BDL support)
+    fn analyze_entity(&mut self, entity: &EntityDef) -> TypedEntity {
+        let scope = Scope::new();
+        
+        let components: Vec<_> = entity.components.iter().map(|comp| {
+            // Validate component exists
+            if self.symbols.get_component(&comp.name).is_none() {
+                self.errors.push(SemanticError::UndefinedComponent {
+                    name: comp.name.clone(),
+                });
+            }
+            
+            let fields: Vec<_> = comp.fields.iter()
+                .map(|(name, expr)| (name.clone(), self.analyze_expr(expr, &scope)))
+                .collect();
+            
+            TypedComponentInit {
+                name: comp.name.clone(),
+                fields,
+            }
+        }).collect();
+        
+        TypedEntity {
+            name: entity.name.clone(),
+            components,
         }
     }
     
@@ -732,6 +761,17 @@ pub enum TypedItem {
     Rule(TypedRule),
     Function(TypedFunction),
     Tracker(TypedTracker),
+    /// Entity definition (BDL support)
+    Entity(TypedEntity),
+}
+
+/// Typed entity (for BDL - entity data files)
+#[derive(Debug, Clone)]
+pub struct TypedEntity {
+    /// Optional entity name (e.g., warrior, goblin_scout)
+    pub name: Option<String>,
+    /// Components initialized for this entity
+    pub components: Vec<TypedComponentInit>,
 }
 
 /// Typed component

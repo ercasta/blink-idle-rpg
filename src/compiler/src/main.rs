@@ -20,9 +20,9 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Compile BRL source to IR
+    /// Compile BRL/BCL/BDL source to IR
     Compile {
-        /// Input BRL file
+        /// Input BRL file (primary source)
         #[arg(short, long)]
         input: PathBuf,
         
@@ -38,8 +38,9 @@ enum Commands {
         #[arg(long, default_value = "false")]
         source_map: bool,
         
-        /// Additional source files to include in source map (BCL, BDL files)
-        /// Can be specified multiple times or with glob patterns
+        /// Additional source files to include (BCL, BDL files)
+        /// These files will be combined with the main input for compilation
+        /// Can be specified multiple times
         #[arg(long = "include", value_name = "FILE")]
         include_files: Vec<PathBuf>,
     },
@@ -97,7 +98,37 @@ fn run_compile(
     source_map: bool,
     include_files: &[PathBuf],
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let source = fs::read_to_string(input)?;
+    // Read main source file
+    let mut source = fs::read_to_string(input)?;
+    
+    // Collect additional source files for compilation and source map
+    let mut additional_files: Vec<(String, String, String)> = Vec::new();
+    
+    for path in include_files {
+        let content = fs::read_to_string(path)?;
+        let path_str = path.to_string_lossy().to_string();
+        
+        // Determine language from file extension
+        let language = if path_str.ends_with(".bcl") {
+            "bcl".to_string()
+        } else if path_str.ends_with(".bdl") {
+            "bdl".to_string()
+        } else if path_str.ends_with(".brl") {
+            "brl".to_string()
+        } else {
+            "unknown".to_string()
+        };
+        
+        // Append the content to the main source for compilation
+        // Add a newline separator to prevent parsing issues
+        source.push_str("\n\n// === ");
+        source.push_str(&path_str);
+        source.push_str(" ===\n");
+        source.push_str(&content);
+        
+        // Also track for source map
+        additional_files.push((path_str, content, language));
+    }
     
     let options = CompilerOptions {
         include_source_map: source_map,
@@ -112,25 +143,9 @@ fn run_compile(
         None
     };
     
-    // Collect additional source files for inclusion in source map
-    let additional_files: Vec<(String, String, String)> = if source_map {
-        include_files.iter().filter_map(|path| {
-            let content = fs::read_to_string(path).ok()?;
-            let path_str = path.to_string_lossy().to_string();
-            
-            // Determine language from file extension
-            let language = if path_str.ends_with(".bcl") {
-                "bcl".to_string()
-            } else if path_str.ends_with(".bdl") {
-                "bdl".to_string()
-            } else if path_str.ends_with(".brl") {
-                "brl".to_string()
-            } else {
-                "unknown".to_string()
-            };
-            
-            Some((path_str, content, language))
-        }).collect()
+    // Filter additional_files for source map (only when requested)
+    let source_map_files: Vec<(String, String, String)> = if source_map {
+        additional_files
     } else {
         Vec::new()
     };
@@ -139,13 +154,19 @@ fn run_compile(
         &source,
         &options,
         source_path.as_deref(),
-        &additional_files,
+        &source_map_files,
     )?;
     
     match output {
         Some(path) => {
             fs::write(path, &json)?;
             eprintln!("Compiled {} -> {}", input.display(), path.display());
+            if !include_files.is_empty() {
+                eprintln!("  Included: {}", include_files.iter()
+                    .map(|p| p.display().to_string())
+                    .collect::<Vec<_>>()
+                    .join(", "));
+            }
         }
         None => {
             println!("{}", json);
