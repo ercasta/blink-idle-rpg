@@ -63,7 +63,6 @@ export interface DebugEvent {
 }
 
 type Unsubscribe = () => void;
-type TrackerCallback = (event: TrackerOutput) => void;
 type SimulationCallback = (event: SimulationEvent) => void;
 type DebugCallback = (event: DebugEvent) => void;
 
@@ -514,7 +513,6 @@ export class BlinkGame {
    */
   destroy(): void {
     this.stop();
-    this.trackerCallbacks.clear();
     this.simulationCallbacks.clear();
     this.store.clear();
     this.timeline.clear();

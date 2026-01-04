@@ -1,5 +1,5 @@
 // Simple Clicker Game
-// A minimal example demonstrating components, rules, and trackers
+// A minimal example demonstrating components and rules
 
 // Component for tracking click counts
 component Clicks {
@@ -10,6 +10,3 @@ component Clicks {
 rule handle_click on Click {
     entity.Clicks.count += 1
 }
-
-// Tracker: Report click count after each click event
-tracker Clicks on Click

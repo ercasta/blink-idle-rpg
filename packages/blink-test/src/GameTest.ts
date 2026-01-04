@@ -470,7 +470,6 @@ export class GameTest {
     }
     this.game.destroy();
     this.scenarios = [];
-    this.trackerHistory = [];
     this.eventHistory = [];
   }
 }
