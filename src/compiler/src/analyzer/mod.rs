@@ -336,7 +336,7 @@ impl Analyzer {
             .collect();
         
         TypedEntity {
-            name: entity.name.clone(),
+            variable: entity.variable.clone(),
             components,
             bound_functions,
         }
@@ -784,6 +784,19 @@ impl Analyzer {
             Expr::Paren(inner, _) => {
                 self.analyze_expr(inner, scope)
             }
+            Expr::EntitiesHaving(component, _) => {
+                // Validate that component exists
+                if self.symbols.get_component(component).is_none() {
+                    self.errors.push(SemanticError::UndefinedComponent {
+                        name: component.clone(),
+                    });
+                }
+                
+                TypedExpr {
+                    kind: TypedExprKind::EntitiesHaving(component.clone()),
+                    typ: Type::List(Box::new(Type::EntityId)),
+                }
+            }
         }
     }
 }
@@ -811,8 +824,9 @@ pub enum TypedItem {
 /// Typed entity (for BDL - entity data files)
 #[derive(Debug, Clone)]
 pub struct TypedEntity {
-    /// Optional entity name (e.g., warrior, goblin_scout)
-    pub name: Option<String>,
+    /// Variable name for the entity (e.g., "warrior" from `warrior = new entity`)
+    /// This replaces the old @name syntax. Entities are nameless; variables reference them.
+    pub variable: Option<String>,
     /// Components initialized for this entity
     pub components: Vec<TypedComponentInit>,
     /// Bound choice functions for this entity
@@ -975,6 +989,9 @@ pub enum TypedExprKind {
     HasComponent(Box<TypedExpr>, String),
     Cast(Box<TypedExpr>, Type),
     List(Vec<TypedExpr>),
+    /// Entity query: `entities having ComponentType`
+    /// Returns a list of entities that have the specified component
+    EntitiesHaving(String),
 }
 
 /// Perform semantic analysis on a parsed module
