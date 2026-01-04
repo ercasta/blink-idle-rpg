@@ -299,7 +299,8 @@ pub enum Expr {
     /// Variable or identifier reference
     Identifier(String, Span),
     
-    /// Entity reference (@name) - DEPRECATED: use variable assignment instead
+    /// Entity reference (@name) - DEPRECATED: use variable assignment (`warrior = new entity`) instead.
+    /// This syntax will be removed in a future version. Migrate to the new syntax as soon as possible.
     EntityRef(String, Span),
     
     /// Field access (a.b)
