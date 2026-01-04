@@ -47,8 +47,16 @@ compile-brl: build-compiler
 	cd src/compiler && \
 	for brl_file in ../../game/brl/*.brl; do \
 		filename=$$(basename "$$brl_file" .brl); \
-		./target/release/blink-compiler compile -i "$$brl_file" -o "../../game/ir/$${filename}.ir.json" --pretty; \
-		echo "Compiled $${filename}.brl -> $${filename}.ir.json"; \
+		if [ "$$filename" = "classic-rpg" ]; then \
+			./target/release/blink-compiler compile -i "$$brl_file" -o "../../game/ir/$${filename}.ir.json" --pretty \
+				--include ../../game/bdl/heroes.bdl \
+				--include ../../game/bdl/enemies.bdl \
+				--include ../../game/bdl/game-config.bdl; \
+			echo "Compiled $${filename}.brl with BDL files -> $${filename}.ir.json"; \
+		else \
+			./target/release/blink-compiler compile -i "$$brl_file" -o "../../game/ir/$${filename}.ir.json" --pretty; \
+			echo "Compiled $${filename}.brl -> $${filename}.ir.json"; \
+		fi; \
 	done
 	@echo "IR files generated:"
 	ls -la game/ir/*.ir.json
