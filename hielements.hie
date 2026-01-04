@@ -280,31 +280,38 @@ element blink_project:
     ## 
     ## SOURCE FILES (Development):
     ##   game/brl/*.brl    → Rules, components, trackers
-    ##   game/bcl/*.bcl    → Player strategies (choice functions)
+    ##   game/bcl/*.bcl    → Player strategies (reference implementations)
     ##   game/bdl/*.bdl    → Entity data (heroes, enemies, config)
+    ##                       + Bound choice functions (inline in entities)
     ##
     ## COMPILATION (Build Time):
     ##   BRL + BDL files → blink-compiler → game/ir/*.ir.json
-    ##   BCL files remain as source (not compiled yet)
+    ##   - BDL entities compiled to IR.initial_state.entities
+    ##   - Bound functions compiled to IR.initial_state.entities[].bound_functions
+    ##   - BCL files used as reference/templates for customization UI
     ##
     ## RUNTIME (Browser):
     ##   1. IR.json → BlinkEngine.loadRulesFromObject()
-    ##      - Contains compiled BRL rules, BDL entities from IR.initial_state
-    ##      - Contains BRL/BDL source in IR.source_map for dev mode
-    ##   2. BCL files → Loaded separately as text via fetch()
-    ##      - game/bcl/*.bcl loaded by rpg-demo.html
-    ##      - Made available in BCL customization UI
+    ##      - Contains compiled BRL rules
+    ##      - Contains BDL entities from IR.initial_state.entities
+    ##      - Contains bound choice functions in entity.bound_functions
+    ##      - Contains BRL/BDL/BCL source in IR.source_map for dev mode
+    ##   2. Bound functions execute directly from IR
+    ##      - No separate BCL file loading needed for gameplay
+    ##      - Engine calls entity.bound_functions[functionName]
+    ##   3. BCL files → Loaded for customization UI only
+    ##      - game/bcl/*.bcl provide default implementations for editor
     ##      - Player customizations stored in localStorage
-    ##
-    ## LEGACY DATA FILES (game/data/):
-    ##   characters.json and enemies.json are TEMPORARY fallbacks
-    ##   until compiler fully supports BDL → IR compilation.
-    ##   These should be removed once IR contains all entity data.
+    ##      - Future: Browser-based BCL compiler creates delta IR
     ##
     ## BCL RESOLUTION STRATEGY (per doc/architecture/bcl resolution rules.md):
-    ##   Phase 1 (CURRENT): BCL loaded as text, customizations in localStorage
-    ##   Phase 2 (FUTURE): Browser-based BCL compiler creates delta IR
-    ##                     that merges with base IR for runtime execution
+    ##   Phase 1 (CURRENT): 
+    ##     - Runtime uses bound functions from IR.initial_state.entities
+    ##     - Customization UI loads BCL files as templates
+    ##     - Player edits stored in localStorage
+    ##   Phase 2 (FUTURE): 
+    ##     - Browser-based BCL compiler creates delta IR
+    ##     - Updated IR loaded without page refresh
     ## ────────────────────────────────────────────────────────────────────
     
     element game_content:
@@ -325,10 +332,10 @@ element blink_project:
             check files.exists(brl, 'README.md')
         
         ## BCL player strategies
-        ## Contains choice functions that players can customize
-        ## Compiled to: IR.choice_functions (PLANNED)
-        ## At runtime: Customizations stored in localStorage, 
-        ##             downloaded as .bcl delta files
+        ## Contains reference choice functions for customization UI
+        ## Now: Bound functions defined inline in BDL entities
+        ## BCL files used as templates/examples for customization UI
+        ## At runtime: Bound functions execute from IR.initial_state.entities
         ## Future: Browser-based compilation of customized BCL
         element bcl:
             scope bcl = files.folder_selector('game/bcl/')
@@ -336,8 +343,8 @@ element blink_project:
         
         ## BDL game data (entity definitions for content creators)
         ## Contains hero, enemy, and config entity definitions
-        ## Compiled to: IR.initial_state.entities (PLANNED)
-        ## Currently: Manually synced to JSON files as fallback
+        ## NOW INCLUDES: Bound choice functions inline with entities
+        ## Compiled to: IR.initial_state.entities (with bound_functions field)
         element bdl:
             scope bdl = files.folder_selector('game/bdl/')
             check files.exists(bdl, 'README.md')
