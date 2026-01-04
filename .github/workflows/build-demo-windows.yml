@@ -157,7 +157,6 @@ jobs:
             ```
             
             ## What's Included
-            - Interactive combat demo (`combat-demo.html`)
             - Classic RPG demo (`rpg-demo.html`)
             - Demo launcher (`index.html`)
             - Blink engine bundle

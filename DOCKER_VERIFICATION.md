@@ -185,7 +185,7 @@ When testing in a normal development environment (not CI):
 4. **Test web access**:
    - Open http://localhost:3000
    - Verify demo launcher loads
-   - Click through to combat-demo.html
+   - Click through to demo
    - Verify game runs
 
 5. **Test cleanup**:

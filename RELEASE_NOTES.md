@@ -8,7 +8,7 @@ This is the first official release of Blink Idle RPG, featuring an interactive c
 
 ### Combat Demo
 - **Interactive browser-based combat simulation** between Hero and Goblin
-- **No installation required** - just open `combat-demo.html` in your browser!
+- **No installation required** - just open `index.html` in your browser!
 - Real-time health bars and visual combat feedback
 - Adjustable simulation speed (0.5x to 10x)
 - Detailed combat log
@@ -41,7 +41,7 @@ This is the first official release of Blink Idle RPG, featuring an interactive c
 
 1. **Download** the demo package from GitHub Actions or releases
 2. **Extract** the files to a folder
-3. **Open** `combat-demo.html` in your web browser
+3. **Open** `index.html` in your web browser
 4. **Click** "Start Battle" and watch the combat unfold!
 
 That's it! No build process, no installation, no server required.

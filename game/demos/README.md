@@ -33,15 +33,6 @@ A mobile-friendly landing page that provides:
 - Tips and usage instructions
 - **Best choice for first-time users and mobile devices**
 
-### ⚔️ combat-demo.html - Simple Combat Demo
-
-- **Two Combatants**: Hero (green) vs Goblin (red)
-- **Automatic Combat**: Battles run automatically based on attack speeds
-- **Real-time Updates**: Health bars update as damage is dealt
-- **Combat Log**: Shows all attacks and damage in real-time
-- **Speed Control**: Adjust simulation speed from 0.5x to 10x
-- **Perfect for**: Quick tests and understanding basic mechanics
-
 ### 🏰 rpg-demo.html - Classic RPG Demo
 
 - **4-Hero Party**: Warrior, Mage, Rogue, and Cleric
@@ -91,7 +82,6 @@ All demos are optimized for mobile devices with:
 ### Files in this directory
 
 - `index.html` - Mobile-friendly demo launcher and landing page (default)
-- `combat-demo.html` - Simple combat demo UI
 - `rpg-demo.html` - Classic RPG demo UI
 - `blink-engine.bundle.js` - Standalone Blink engine bundle for browsers
 

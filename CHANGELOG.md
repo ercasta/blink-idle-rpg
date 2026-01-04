@@ -63,7 +63,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Browser compatibility: Modern browsers with ES6+ support
 
 ### Installation
-No installation required! Download the demo package and open `combat-demo.html` in your browser.
+No installation required! Download the demo package and open `index.html` in your browser.
 
 For development:
 - Rust 2021 edition (cargo 1.70+)

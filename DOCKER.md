@@ -28,7 +28,6 @@ docker-compose up --build
 
 Open your browser and navigate to:
 - **http://localhost:3000** - Demo launcher (start here!)
-- **http://localhost:3000/combat-demo.html** - Simple combat demo
 - **http://localhost:3000/rpg-demo.html** - Classic RPG demo
 
 To stop the container:
