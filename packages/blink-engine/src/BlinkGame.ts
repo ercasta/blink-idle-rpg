@@ -676,7 +676,15 @@ export class BlinkGame {
     // First check if entity has ChoiceBindings component
     const choiceBindings = this.store.getComponent(entityId, 'ChoiceBindings');
     if (choiceBindings) {
-      return choiceBindings as unknown as IRChoiceBindings;
+      // Convert ComponentData to IRChoiceBindings
+      // ComponentData is Record<string, IRFieldValue>, IRChoiceBindings is Record<string, string>
+      const bindings: IRChoiceBindings = {};
+      for (const [key, value] of Object.entries(choiceBindings)) {
+        if (typeof value === 'string') {
+          bindings[key] = value;
+        }
+      }
+      return Object.keys(bindings).length > 0 ? bindings : null;
     }
     
     // Also check initial state for pre-defined bindings
