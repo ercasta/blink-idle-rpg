@@ -461,7 +461,7 @@ entity @dragon_lord {
 
 ## 7. Bound Choice Functions
 
-BDL supports **bound choice functions** - choice functions that are directly associated with an entity. This enables each hero to have their own decision-making logic defined inline in the BDL file.
+BDL supports **bound choice functions** - choice functions that are directly associated with an entity as first-class citizens. This enables each hero to have their own decision-making logic defined inline in the BDL file.
 
 ### 7.1 Syntax
 
@@ -490,10 +490,9 @@ entity @hero_name {
 2. **BCL Subset**: The function body follows BCL rules - no state modification, only pure logic
 3. **Assignment**: Choice functions can be copied from one entity to another: `a.chooseEnemy = b.chooseEnemy`
 4. **Explicit Parameters**: The function must include all parameters it needs - no implicit `self`
+5. **Required Binding**: If BRL code calls a choice function on an entity that doesn't have it bound, a runtime error is raised - there is no fallback mechanism
 
-### 7.3 ChoiceBindings Component
-
-Entities with bound choice functions automatically get a `ChoiceBindings` component that tracks which choice functions are bound:
+### 7.3 Complete Example
 
 ```bdl
 entity @warrior {
@@ -501,12 +500,12 @@ entity @warrior {
         name: "Sir Braveheart"
         class: "Warrior"
     }
-    ChoiceBindings {
-        // Automatically populated when choice functions are bound
-        // Map of choice_name -> function_id
+    Health {
+        current: 120
+        max: 120
     }
     
-    // Bind choice function
+    // Bind choice functions directly to the entity
     select_attack_target = choice (character: Character, enemies: list): id {
         return find_weakest(enemies)
     }
@@ -517,23 +516,9 @@ entity @warrior {
 }
 ```
 
-### 7.4 Roster Component
+### 7.4 Compilation
 
-Pre-made heroes can be collected into a `Roster` component on the game entity:
-
-```bdl
-entity @game {
-    Roster {
-        heroes: [@warrior, @mage, @rogue, @cleric, @ranger, @paladin]
-    }
-}
-```
-
-This allows the UI to query all available heroes for party selection.
-
-### 7.5 Compilation
-
-Bound choice functions compile to the IR with entity association:
+Bound choice functions compile to the IR with entity association. The functions are stored as first-class properties of the entity, not in a separate component:
 
 ```json
 {
@@ -542,20 +527,37 @@ Bound choice functions compile to the IR with entity association:
       {
         "id": "@warrior",
         "components": {
-          "Character": { "name": "Sir Braveheart" },
-          "ChoiceBindings": {
-            "select_attack_target": "warrior_select_attack_target",
-            "select_combat_skill": "warrior_select_combat_skill"
+          "Character": { "name": "Sir Braveheart", "class": "Warrior" },
+          "Health": { "current": 120, "max": 120 }
+        },
+        "bound_functions": {
+          "select_attack_target": {
+            "params": [
+              { "name": "character", "type": "entity" },
+              { "name": "enemies", "type": "list" }
+            ],
+            "return_type": { "type": "entity" },
+            "body": {
+              "type": "call",
+              "function": "find_weakest",
+              "args": [{ "type": "param", "name": "enemies" }]
+            },
+            "source": "choice (character: Character, enemies: list): id {\n    return find_weakest(enemies)\n}"
+          },
+          "select_combat_skill": {
+            "params": [
+              { "name": "character", "type": "entity" },
+              { "name": "allies", "type": "list" },
+              { "name": "enemies", "type": "list" }
+            ],
+            "return_type": { "type": "string" },
+            "body": {
+              "type": "literal",
+              "value": "power_strike"
+            },
+            "source": "choice (character: Character, allies: list, enemies: list): string {\n    return \"power_strike\"\n}"
           }
         }
-      }
-    ],
-    "bound_choice_functions": [
-      {
-        "id": "warrior_select_attack_target",
-        "entity_id": "@warrior",
-        "name": "select_attack_target",
-        "body": { ... }
       }
     ]
   }
@@ -668,4 +670,4 @@ Error: Expressions not allowed in BDL
 | Version | Date | Changes |
 |---------|------|---------|
 | 0.1.0 | 2026-01-03 | Initial draft |
-| 0.2.0 | 2026-01-04 | Added bound choice functions (section 7), ChoiceBindings, Roster components |
+| 0.2.0 | 2026-01-04 | Added bound choice functions (section 7) as first-class entity properties |

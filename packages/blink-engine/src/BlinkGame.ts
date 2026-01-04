@@ -7,7 +7,7 @@ import { Store, EntityId, ComponentData } from './ecs/Store';
 import { Timeline, ScheduledEvent } from './timeline/Timeline';
 import { RuleExecutor } from './rules/Executor';
 import { TrackerSystem, TrackerOutput } from './trackers/Tracker';
-import { loadIRFromString, loadIRFromObject, IRModule, IRFieldValue, IRRule, IRAction, SourceLocation, SourceFile, IRChoiceBindings, IRRoster, IRBoundChoiceFunction } from './ir';
+import { loadIRFromString, loadIRFromObject, IRModule, IRFieldValue, IRRule, IRAction, SourceLocation, SourceFile, IRBoundFunctions, IRBoundFunction } from './ir';
 
 export interface GameOptions {
   /** Enable debug mode */
@@ -658,40 +658,18 @@ export class BlinkGame {
     return { id: entityId, components };
   }
 
-  // ===== Roster and Choice Functions (BCL Resolution) =====
+  // ===== Bound Choice Functions (BCL Resolution) =====
 
   /**
-   * Get the game's Roster component (list of available heroes)
-   * Returns the hero IDs or null if no Roster exists
+   * Get the bound functions for an entity
+   * Returns a map of function name to function definition
    */
-  getRoster(): IRRoster | null {
-    return this.ir?.initial_state?.roster ?? null;
-  }
-
-  /**
-   * Get the choice bindings for an entity
-   * Returns a map of choice point name to function ID
-   */
-  getChoiceBindings(entityId: EntityId): IRChoiceBindings | null {
-    // First check if entity has ChoiceBindings component
-    const choiceBindings = this.store.getComponent(entityId, 'ChoiceBindings');
-    if (choiceBindings) {
-      // Convert ComponentData to IRChoiceBindings
-      // ComponentData is Record<string, IRFieldValue>, IRChoiceBindings is Record<string, string>
-      const bindings: IRChoiceBindings = {};
-      for (const [key, value] of Object.entries(choiceBindings)) {
-        if (typeof value === 'string') {
-          bindings[key] = value;
-        }
-      }
-      return Object.keys(bindings).length > 0 ? bindings : null;
-    }
-    
-    // Also check initial state for pre-defined bindings
+  getBoundFunctions(entityId: EntityId): IRBoundFunctions | null {
+    // Check initial state for entity's bound functions
     if (this.ir?.initial_state?.entities) {
       const entityDef = this.ir.initial_state.entities.find(e => e.id === entityId);
-      if (entityDef?.choice_bindings) {
-        return entityDef.choice_bindings;
+      if (entityDef?.bound_functions) {
+        return entityDef.bound_functions;
       }
     }
     
@@ -699,35 +677,38 @@ export class BlinkGame {
   }
 
   /**
-   * Get a bound choice function's source code for display in UI
-   * @param functionId The function ID from choice bindings
+   * Get a specific bound function from an entity
+   * @param entityId The entity ID
+   * @param functionName The name of the bound function
+   * @returns The bound function or null if not found
+   */
+  getBoundFunction(entityId: EntityId, functionName: string): IRBoundFunction | null {
+    const boundFunctions = this.getBoundFunctions(entityId);
+    if (boundFunctions && functionName in boundFunctions) {
+      return boundFunctions[functionName];
+    }
+    return null;
+  }
+
+  /**
+   * Get a bound function's source code for display in UI
+   * @param entityId The entity ID
+   * @param functionName The function name
    * @returns The source code string or null if not found
    */
-  getChoiceFunctionSource(functionId: string): string | null {
-    if (!this.ir?.initial_state?.bound_choice_functions) {
-      return null;
-    }
-    const func = this.ir.initial_state.bound_choice_functions.find(f => f.id === functionId);
+  getBoundFunctionSource(entityId: EntityId, functionName: string): string | null {
+    const func = this.getBoundFunction(entityId, functionName);
     return func?.source ?? null;
   }
 
   /**
-   * Get all bound choice functions for a specific entity
-   * @param entityId The entity ID to get choice functions for
-   * @returns Array of bound choice functions or empty array
+   * Get all bound function names for an entity
+   * @param entityId The entity ID
+   * @returns Array of function names or empty array
    */
-  getEntityChoiceFunctions(entityId: EntityId): IRBoundChoiceFunction[] {
-    if (!this.ir?.initial_state?.bound_choice_functions) {
-      return [];
-    }
-    return this.ir.initial_state.bound_choice_functions.filter(f => f.entity_id === entityId);
-  }
-
-  /**
-   * Get all bound choice functions in the IR
-   */
-  getAllBoundChoiceFunctions(): IRBoundChoiceFunction[] {
-    return this.ir?.initial_state?.bound_choice_functions ?? [];
+  getBoundFunctionNames(entityId: EntityId): string[] {
+    const boundFunctions = this.getBoundFunctions(entityId);
+    return boundFunctions ? Object.keys(boundFunctions) : [];
   }
 
   /**
