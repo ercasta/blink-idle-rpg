@@ -107,11 +107,6 @@ jobs:
           cp game/demos/rpg-demo.html _site/
           cp game/demos/blink-engine.bundle.js _site/
           
-          # Copy README if it exists
-          if [ -f game/demos/README.md ]; then
-            cp game/demos/README.md _site/
-          fi
-          
           # Copy data files for runtime use
           echo "Copying data files..."
           mkdir -p _site/data
