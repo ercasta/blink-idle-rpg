@@ -1761,47 +1761,6 @@
     }
     
     // ========================================================================
-    // LEGACY: LOAD CHARACTER DATA FROM JSON (DEPRECATED)
-    // ========================================================================
-    // This function is no longer used. Character data is now extracted from IR.
-    // Kept for reference/backwards compatibility if needed.
-    // ========================================================================
-    async function loadCharacterData() {
-      try {
-        const paths = ['data/characters.json', '../data/characters.json'];
-        let data = null;
-        
-        for (const path of paths) {
-          try {
-            console.debug(`Attempting to load characters from: ${path}`);
-            const response = await fetch(path);
-            if (!response.ok) {
-              throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            data = await response.json();
-            console.info(`Successfully loaded characters from ${path}`);
-            break;
-          } catch (error) {
-            console.warn(`Failed to load from ${path}:`, error.message);
-          }
-        }
-        
-        if (!data) {
-          throw new Error('Failed to load characters.json from all paths');
-        }
-        
-        // Data is already in the correct format
-        availableCharacters = data.characters || data;
-        console.info(`Loaded ${availableCharacters.length} heroes from characters.json`);
-        return availableCharacters;
-      } catch (error) {
-        console.error('Error loading character data:', error);
-        availableCharacters = [];
-        return [];
-      }
-    }
-    
-    // ========================================================================
     // RENDER CHARACTER SELECTION - CAROUSEL BASED
     // ========================================================================
     function renderCharacterSelection() {
@@ -2864,47 +2823,6 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
       
       console.info(`Extracted ${enemyTemplates.length} enemy templates from IR.initial_state`);
       return enemyTemplates;
-    }
-    
-    // ========================================================================
-    // LEGACY: LOAD ENEMY DATA FROM JSON (DEPRECATED)
-    // ========================================================================
-    // This function is no longer used. Enemy data is now extracted from IR.
-    // Kept for reference/backwards compatibility if needed.
-    // ========================================================================
-    async function loadEnemyData() {
-      try {
-        const paths = ['data/enemies.json', '../data/enemies.json'];
-        let data = null;
-        
-        for (const path of paths) {
-          try {
-            console.debug(`Attempting to load enemies from: ${path}`);
-            const response = await fetch(path);
-            if (!response.ok) {
-              throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            data = await response.json();
-            console.info(`Successfully loaded enemies from ${path}`);
-            break;
-          } catch (error) {
-            console.warn(`Failed to load from ${path}:`, error.message);
-          }
-        }
-        
-        if (!data) {
-          throw new Error('Failed to load enemies.json from all paths');
-        }
-        
-        // Data is already in the correct format
-        enemyTemplates = data.enemies || data;
-        console.info(`Loaded ${enemyTemplates.length} enemy templates from enemies.json`);
-        return enemyTemplates;
-      } catch (error) {
-        console.error('Error loading enemy data:', error);
-        enemyTemplates = [];
-        return [];
-      }
     }
     
     // Embedded classic-rpg.ir.json data
