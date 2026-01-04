@@ -58,6 +58,12 @@ component Enemy {
     expReward: integer
 }
 
+// Holds references to all enemy templates / entries in the game
+// Holds references to all enemy templates / entries in the game
+component EnemyCompendium {
+    entries: id[]
+}
+
 // Character skills
 component Skills {
     skill1: string

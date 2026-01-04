@@ -5,11 +5,13 @@
 // Enemies are spawned dynamically based on game progression.
 // =============================================================================
 
+
+
 // -----------------------------------------------------------------------------
 // TIER 1 - Early Game Enemies
 // -----------------------------------------------------------------------------
 
-entity @goblin_scout {
+goblin_scout = new entity {
     Character {
         name: "Goblin Scout"
         class: "Monster"
@@ -64,7 +66,7 @@ entity @goblin_scout {
 // TIER 2 - Early-Mid Game Enemies
 // -----------------------------------------------------------------------------
 
-entity @orc_raider {
+orc_raider = new entity {
     Character {
         name: "Orc Raider"
         class: "Monster"
@@ -115,7 +117,7 @@ entity @orc_raider {
     }
 }
 
-entity @dark_wolf {
+dark_wolf = new entity {
     Character {
         name: "Dark Wolf"
         class: "Monster"
@@ -170,7 +172,7 @@ entity @dark_wolf {
 // TIER 3 - Mid Game Enemies
 // -----------------------------------------------------------------------------
 
-entity @skeleton_warrior {
+skeleton_warrior = new entity {
     Character {
         name: "Skeleton Warrior"
         class: "Monster"
@@ -221,7 +223,7 @@ entity @skeleton_warrior {
     }
 }
 
-entity @dark_mage {
+dark_mage = new entity {
     Character {
         name: "Dark Mage"
         class: "Monster"
@@ -276,7 +278,7 @@ entity @dark_mage {
 // TIER 4 - Late Game Enemies
 // -----------------------------------------------------------------------------
 
-entity @troll_berserker {
+troll_berserker = new entity {
     Character {
         name: "Troll Berserker"
         class: "Monster"
@@ -331,7 +333,7 @@ entity @troll_berserker {
 // TIER 5 - End Game Enemies
 // -----------------------------------------------------------------------------
 
-entity @demon_knight {
+demon_knight = new entity {
     Character {
         name: "Demon Knight"
         class: "Monster"
@@ -386,7 +388,7 @@ entity @demon_knight {
 // TIER 6 - BOSS ENEMIES
 // -----------------------------------------------------------------------------
 
-entity @ancient_dragon {
+ancient_dragon = new entity {
     Character {
         name: "Ancient Dragon"
         class: "Boss"
@@ -437,7 +439,7 @@ entity @ancient_dragon {
     }
 }
 
-entity @dragon_lord_vexar {
+dragon_lord_vexar = new entity {
     Character {
         name: "Dragon Lord Vexar"
         class: "Boss"
@@ -486,4 +488,20 @@ entity @dragon_lord_vexar {
         shieldAmount: 0
         regenAmount: 0
     }
+}
+
+// Global enemy compendium entity (holds references to enemy templates)
+compendium = new entity
+compendium.compendium = EnemyCompendium {
+        entries: [
+            goblin_scout,
+            orc_raider,
+            dark_wolf,
+            skeleton_warrior,
+            dark_mage,
+            troll_berserker,
+            demon_knight,
+            ancient_dragon,
+            dragon_lord_vexar
+        ]
 }
