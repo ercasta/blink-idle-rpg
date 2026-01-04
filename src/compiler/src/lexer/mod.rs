@@ -78,6 +78,12 @@ pub enum TokenKind {
     In,
     #[token("choice")]
     Choice,
+    #[token("new")]
+    New,
+    #[token("having")]
+    Having,
+    #[token("entities")]
+    Entities,
     
     // Types
     #[token("string")]
