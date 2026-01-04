@@ -2204,14 +2204,35 @@
       return null;
     }
     
-    // Reset the BCL editor to default state
-    function resetBclEditor() {
-      document.getElementById('bcl-editor-title').textContent = 'Select a choice to customize';
-      document.getElementById('bcl-editor-signature').style.display = 'none';
-      document.getElementById('bcl-editor-docstring').style.display = 'none';
-      document.getElementById('bcl-editor-default').style.display = 'none';
-      document.getElementById('bcl-editor-textarea').value = '';
+    // Generate a BCL template for a choice point
+    function generateBclTemplate(choicePoint) {
+      const templates = {
+        'select_attack_target': `// Customize target selection
+// Return the id of the enemy to attack
+
+choice fn select_attack_target(character: Character, enemies: list): id {
+    // Example: Target enemy with lowest health
+    let target = enemies[0]
+    for enemy in enemies {
+        if enemy.Health.current < target.Health.current {
+            target = enemy
+        }
     }
+    return target.id
+}`,
+        'select_combat_skill': `// Customize skill selection in combat
+// Return the name of the skill to use
+
+choice fn select_combat_skill(character: Character & Skills & Health & Mana, allies: list, enemies: list): string {
+    let hp_pct = character.Health.current / character.Health.max
+    let mana_pct = character.Mana.current / character.Mana.max
+    
+    // Example: Use defensive skill if low health
+    if hp_pct < 0.3 {
+        return "defensive_stance"
+    }
+    
+    // Default to basic attack
     return "basic_attack"
 }`,
         'select_heal_target': `// Customize heal target selection
@@ -2257,7 +2278,7 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
       return templates[choicePoint.id] || `// Customize ${choicePoint.name}\n\n${choicePoint.signature} {\n    // Your code here\n}`;
     }
     
-    // Reset the BCL editor to empty state
+    // Reset the BCL editor to default state
     function resetBclEditor() {
       document.getElementById('bcl-editor-title').textContent = 'Select a choice to customize';
       document.getElementById('bcl-editor-signature').style.display = 'none';
