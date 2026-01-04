@@ -473,7 +473,11 @@ export class RuleExecutor {
         return min + Math.random() * (max - min);
       }
       case 'len':
-        return Array.isArray(evaluatedArgs[0]) ? evaluatedArgs[0].length : 0;
+        // Return array length for arrays, 1 for scalars (non-null), 0 for null
+        if (Array.isArray(evaluatedArgs[0])) {
+          return evaluatedArgs[0].length;
+        }
+        return evaluatedArgs[0] != null ? 1 : 0;
     }
 
     // User-defined functions

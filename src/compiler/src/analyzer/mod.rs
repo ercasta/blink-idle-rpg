@@ -223,7 +223,7 @@ impl Analyzer {
         ], Type::Float);
         
         symbols.add_function("len".to_string(), vec![
-            ("list".to_string(), Type::List(Box::new(Type::Unknown))),
+            ("value".to_string(), Type::Unknown),
         ], Type::Integer);
         
         Self {

@@ -310,7 +310,7 @@ Engines must provide these built-in functions:
 | `abs` | `(number) -> number` | Absolute value |
 | `random` | `() -> number` | Random 0.0-1.0 |
 | `random_range` | `(number, number) -> number` | Random in range |
-| `len` | `(list) -> number` | Length of list |
+| `len` | `(any) -> number` | Length of value: returns array length for arrays, 1 for scalars (non-null), 0 for null |
 
 ---
 

@@ -569,3 +569,19 @@ fn test_compound_assignment() {
     let result = compile(source, &CompilerOptions::default());
     assert!(result.is_ok(), "Compound assignment should compile");
 }
+
+/// Test len() builtin function with arrays and scalars
+#[test]
+fn test_len_builtin_function() {
+    let source = r#"
+        rule len_rule on LenEvent {
+            let arr = [1, 2, 3, 4, 5]
+            let arr_len = len(arr)
+            let scalar = 42
+            let scalar_len = len(scalar)
+        }
+    "#;
+    
+    let result = compile(source, &CompilerOptions::default());
+    assert!(result.is_ok(), "len() builtin function should compile: {:?}", result.err());
+}
