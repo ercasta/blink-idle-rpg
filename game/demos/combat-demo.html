@@ -854,10 +854,7 @@
       // Load initial data
       updateCharacterData();
       
-      // Subscribe to tracker events
-      game.onTracker((output) => {
-        handleTrackerOutput(output);
-      });
+      // Tracker subsystem removed: update state via simulation events
       
       // Subscribe to simulation events
       game.onSimulation((event) => {
@@ -907,69 +904,8 @@
       }
     }
     
-    function handleTrackerOutput(output) {
-      eventCount++;
-      
-      // Update character data from tracker output
-      if (output.component === 'Health') {
-        for (const entity of output.entities) {
-          if (entity.entityId === 0) {
-            heroData.health = entity.fields.current;
-            heroData.maxHealth = entity.fields.max;
-          } else if (entity.entityId === 1) {
-            enemyData.health = entity.fields.current;
-            enemyData.maxHealth = entity.fields.max;
-          }
-        }
-      }
-      
-      // Log attack events
-      if (output.eventType === 'DoAttack') {
-        // Determine attacker and defender
-        const heroEntity = output.entities.find(e => e.entityId === 0);
-        const enemyEntity = output.entities.find(e => e.entityId === 1);
-        
-        if (heroEntity && enemyEntity) {
-          // Determine who was damaged
-          if (heroData.health < heroData.maxHealth && enemyData.health === enemyData.maxHealth) {
-            addLogEntry('attack', `${enemyData.name} attacks ${heroData.name} for ${enemyData.damage} damage!`);
-          } else {
-            addLogEntry('attack', `${heroData.name} attacks ${enemyData.name} for ${heroData.damage} damage!`);
-          }
-        }
-        
-        // Add visual feedback
-        if (heroData.health < heroData.maxHealth) {
-          document.getElementById('hero-card').classList.add('attack-flash');
-          setTimeout(() => document.getElementById('hero-card').classList.remove('attack-flash'), 200);
-        }
-        if (enemyData.health < enemyData.maxHealth) {
-          document.getElementById('enemy-card').classList.add('attack-flash');
-          setTimeout(() => document.getElementById('enemy-card').classList.remove('attack-flash'), 200);
-        }
-      }
-      
-      // Handle death events
-      if (output.eventType === 'Death') {
-        for (const entity of output.entities) {
-          if (entity.fields.current <= 0) {
-            const charName = entity.entityId === 0 ? heroData.name : enemyData.name;
-            addLogEntry('death', `💀 ${charName} has been defeated!`);
-            
-            // Determine winner
-            if (entity.entityId === 0) {
-              winner = enemyData.name;
-              document.getElementById('hero-card').classList.add('dead');
-            } else {
-              winner = heroData.name;
-              document.getElementById('enemy-card').classList.add('dead');
-            }
-          }
-        }
-      }
-      
-      updateUI();
-    }
+    // Tracker output handling removed. State updates are performed via
+    // `handleSimulationEvent` and `updateCharacterData()` instead.
     
     function handleSimulationEvent(event) {
       switch (event.type) {
@@ -990,6 +926,9 @@
           gameStatusEl.style.color = '#f87171';
           break;
         case 'completed':
+          // Ensure latest state reflected
+          updateCharacterData();
+          updateUI();
           gameStatusEl.textContent = 'Complete';
           gameStatusEl.style.color = '#8b5cf6';
           addLogEntry('system', '⚔️ Battle complete!');
@@ -1003,6 +942,9 @@
           pauseBtn.disabled = true;
           break;
         case 'step':
+          // Update visible state each simulation step
+          updateCharacterData();
+          updateUI();
           gameTimeEl.textContent = event.time.toFixed(2) + 's';
           break;
       }

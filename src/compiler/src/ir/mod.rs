@@ -9,7 +9,7 @@ use thiserror::Error;
 
 use crate::analyzer::{
     TypedModule, TypedItem, TypedComponent, TypedField, TypedRule, TypedFunction,
-    TypedTracker, TypedEntity, TypedBlock, TypedStatement, TypedExpr, TypedExprKind,
+    TypedEntity, TypedBlock, TypedStatement, TypedExpr, TypedExprKind,
     TypedElseClause, TypedComponentInit, TypedBoundFunction, Type,
 };
 use crate::parser::{Literal, BinaryOp, UnaryOp, AssignOp};
@@ -62,7 +62,9 @@ pub struct IRModule {
     /// Function definitions
     pub functions: Vec<IRFunction>,
     
-    /// Tracker definitions
+    /// Tracker definitions removed from IR
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(default)]
     pub trackers: Vec<IRTracker>,
     
     /// Constants
@@ -369,18 +371,13 @@ pub struct IRParam {
     pub param_type: IRType,
 }
 
-/// Tracker definition in IR
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct IRTracker {
-    /// Unique tracker ID
-    pub id: u32,
-    
-    /// Component to track
-    pub component: String,
-    
-    /// Event that triggers tracking
-    pub event: String,
-}
+    /// Tracker definition in IR (legacy; retained for compatibility but unused)
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct IRTracker {
+        pub id: u32,
+        pub component: String,
+        pub event: String,
+    }
 
 /// Initial state in IR
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -423,7 +420,6 @@ struct IRGenerator {
     component_id_counter: u32,
     rule_id_counter: u32,
     function_id_counter: u32,
-    tracker_id_counter: u32,
     entity_id_counter: u32,
 }
 
@@ -433,7 +429,6 @@ impl IRGenerator {
             component_id_counter: 0,
             rule_id_counter: 0,
             function_id_counter: 0,
-            tracker_id_counter: 0,
             entity_id_counter: 0,
         }
     }
@@ -456,12 +451,6 @@ impl IRGenerator {
         id
     }
     
-    fn next_tracker_id(&mut self) -> u32 {
-        let id = self.tracker_id_counter;
-        self.tracker_id_counter += 1;
-        id
-    }
-    
     fn next_entity_id(&mut self) -> u32 {
         let id = self.entity_id_counter;
         self.entity_id_counter += 1;
@@ -472,7 +461,7 @@ impl IRGenerator {
         let mut components = Vec::new();
         let mut rules = Vec::new();
         let mut functions = Vec::new();
-        let mut trackers = Vec::new();
+        let mut trackers = Vec::new(); // legacy; will remain empty
         let mut entities = Vec::new();
         
         for item in &typed_module.items {
@@ -486,9 +475,7 @@ impl IRGenerator {
                 TypedItem::Function(func) => {
                     functions.push(self.generate_function(func));
                 }
-                TypedItem::Tracker(tracker) => {
-                    trackers.push(self.generate_tracker(tracker));
-                }
+                // Trackers removed from language; ignore
                 TypedItem::Entity(entity) => {
                     entities.push(self.generate_entity(entity));
                 }
@@ -774,13 +761,7 @@ impl IRGenerator {
         IRExpression::Literal { value: IRValue::Number(0.0) }
     }
     
-    fn generate_tracker(&mut self, tracker: &TypedTracker) -> IRTracker {
-        IRTracker {
-            id: self.next_tracker_id(),
-            component: tracker.component.clone(),
-            event: tracker.event.clone(),
-        }
-    }
+    
     
     /// Generate an IR entity from a typed entity (BDL support)
     fn generate_entity(&mut self, entity: &TypedEntity) -> IREntity {
@@ -1074,23 +1055,5 @@ mod tests {
         assert_eq!(ir.components[0].name, "Health");
         assert_eq!(ir.components[0].fields.len(), 2);
     }
-
-    #[test]
-    fn test_generate_tracker() {
-        let source = r#"
-            component Health {
-                current: integer
-                maximum: integer
-            }
-            tracker Health on DamageEvent
-        "#;
-        let tokens = tokenize(source).unwrap();
-        let ast = parse(tokens).unwrap();
-        let typed = analyze(ast).unwrap();
-        let ir = generate(typed, &CompilerOptions::default()).unwrap();
-        
-        assert_eq!(ir.trackers.len(), 1);
-        assert_eq!(ir.trackers[0].component, "Health");
-        assert_eq!(ir.trackers[0].event, "DamageEvent");
-    }
+    
 }

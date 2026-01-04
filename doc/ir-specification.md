@@ -23,49 +23,13 @@
 ---
 
 ## 1. Overview
-
-The Blink Intermediate Representation (IR) is the **central contract** between the BRL compiler and all execution engines. It defines a portable, validated format that:
-
-- Is produced by the compiler (Track 2)
-- Is consumed by all engines (Tracks 3, 4, 5)
-- Contains all information needed for execution
-- Has been validated for correctness
-
-```
-┌─────────────┐       ┌─────────────┐       ┌───────────────────┐
-│   BRL/BCL   │──────►│  Compiler   │──────►│   Blink IR (.ir)  │
-│  Source     │       │  (Track 2)  │       │                   │
-└─────────────┘       └─────────────┘       └─────────┬─────────┘
-                                                      │
-                  ┌───────────────────────────────────┼────────┐
-                  │                                   │        │
-                  ▼                                   ▼        ▼
-          ┌──────────────┐               ┌────────────┐  ┌─────────┐
-          │ Rust Engine  │               │ JS Engine  │  │ Batch   │
-          │  (Track 3)   │               │ (Track 4)  │  │(Track 5)│
-          └──────────────┘               └────────────┘  └─────────┘
-```
-
 ---
 
-## 2. Design Goals
+## 8. Trackers
 
-### 2.1 Portability
-- JSON format for maximum compatibility
-- No platform-specific features
-- Self-contained (no external references)
+Trackers were removed from the language; the IR `trackers` field is optional and retained only for legacy compatibility. Engines should ignore `trackers` entries and instead rely on rule outputs, emitted events, or other UI-facing mechanisms to deliver state to the front-end.
 
-### 2.2 Validation
-- Compiler validates all rules at compile time
-- Engines can assume IR is well-formed
-- Schema validation is optional for engines
-
-### 2.3 Efficiency
-- Compact representation
-- Pre-resolved references (indices, not names)
-- Optimized for sequential execution
-
-### 2.4 Debuggability
+---
 - Human-readable format
 - Source mapping information (optional)
 - Meaningful names preserved

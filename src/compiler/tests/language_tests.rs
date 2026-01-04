@@ -72,17 +72,12 @@ fn test_tracker_definition() {
             current: integer
             max: integer
         }
-        
-        tracker Health on DamageEvent
-    "#;
+        "#;
     
-    let result = compile(source, &CompilerOptions::default());
-    assert!(result.is_ok(), "Tracker definition should compile");
-    
-    let ir = result.unwrap();
-    assert_eq!(ir.trackers.len(), 1);
-    assert_eq!(ir.trackers[0].component, "Health");
-    assert_eq!(ir.trackers[0].event, "DamageEvent");
+    // Trackers removed from language; ensure compiler rejects tracker syntax when present
+    let tracker_source = format!("{}\ntracker Health on DamageEvent", source);
+    let result = compile(&tracker_source, &CompilerOptions::default());
+    assert!(result.is_err(), "Compiler should reject tracker definitions");
 }
 
 /// Test new entity syntax: `name = new entity { ... }`

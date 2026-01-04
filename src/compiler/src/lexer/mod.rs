@@ -62,8 +62,6 @@ pub enum TokenKind {
     Module,
     #[token("import")]
     Import,
-    #[token("tracker")]
-    Tracker,
     #[token("when")]
     When,
     #[token("create")]

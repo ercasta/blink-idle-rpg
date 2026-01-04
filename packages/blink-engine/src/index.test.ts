@@ -52,9 +52,7 @@ const simpleCombatIR = {
     }
   ],
   functions: [],
-  trackers: [
-    { id: 0, component: "Health", event: "DoAttack" }
-  ],
+  // trackers removed from IR sample
   initial_state: {
     entities: [
       {
@@ -226,22 +224,7 @@ describe('BlinkGame', () => {
     game.destroy();
   });
 
-  it('should emit tracker events', () => {
-    const game = BlinkGame.createSync();
-    game.loadRulesFromObject(simpleCombatIR);
-    
-    const trackerEvents: unknown[] = [];
-    game.onTracker((event) => {
-      trackerEvents.push(event);
-    });
-    
-    game.scheduleEvent('DoAttack', 0, { source: 0 });
-    game.step();
-    
-    assert.ok(trackerEvents.length > 0);
-    
-    game.destroy();
-  });
+  // Tracker runtime removed; tracker event tests omitted
 
   it('should run until complete', () => {
     const game = BlinkGame.createSync();

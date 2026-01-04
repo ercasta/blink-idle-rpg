@@ -4,7 +4,7 @@
  * Provides a fluent API for defining and running game tests.
  */
 
-import { BlinkGame, StepResult, TrackerOutput, EntityId, GameOptions, ComponentData, IRFieldValue } from '@blink/engine';
+import { BlinkGame, StepResult, EntityId, GameOptions, ComponentData, IRFieldValue } from '@blink/engine';
 
 export interface GameTestOptions extends GameOptions {
   /** Name of the test suite */
@@ -93,7 +93,7 @@ export class GameTest {
   private game: BlinkGame;
   private options: ResolvedGameTestOptions;
   private scenarios: TestScenario[] = [];
-  private trackerHistory: TrackerOutput[] = [];
+  // trackerHistory removed
   private eventHistory: StepResult[] = [];
   private unsubscribeTracker: (() => void) | null = null;
   
@@ -118,10 +118,8 @@ export class GameTest {
       devMode: this.options.devMode,
     });
     
-    // Subscribe to tracker events
-    this.unsubscribeTracker = this.game.onTracker((event) => {
-      this.trackerHistory.push(event);
-    });
+    // Tracker runtime removed; no subscription
+    this.unsubscribeTracker = null;
   }
   
   /**
@@ -295,12 +293,7 @@ export class GameTest {
     return this.game.getTime();
   }
   
-  /**
-   * Get tracker history
-   */
-  getTrackerHistory(): TrackerOutput[] {
-    return [...this.trackerHistory];
-  }
+  // Tracker history API removed
   
   /**
    * Get event history
@@ -313,7 +306,6 @@ export class GameTest {
    * Clear history
    */
   clearHistory(): this {
-    this.trackerHistory = [];
     this.eventHistory = [];
     return this;
   }

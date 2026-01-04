@@ -25,7 +25,7 @@ The Blink Compiler parses Blink Rule Language (BRL), Blink Data Language (BDL), 
 
 | Language | Extension | Purpose | IR Output |
 |----------|-----------|---------|-----------|
-| BRL | `.brl` | Game rules, components, trackers | `components`, `rules`, `functions`, `trackers` |
+| BRL | `.brl` | Game rules, components | `components`, `rules`, `functions` |
 | BDL | `.bdl` | Entity data definitions | `initial_state.entities` |
 | BCL | `.bcl` | Player strategies (planned) | `choice_functions` (planned) |
 
@@ -123,7 +123,7 @@ let source = r#"
         maximum: integer
     }
 
-    tracker Health on DamageEvent
+    // Trackers removed from language
 "#;
 
 let options = CompilerOptions {

@@ -34,7 +34,6 @@ pub enum Item {
     Component(ComponentDef),
     Rule(RuleDef),
     Function(FunctionDef),
-    Tracker(TrackerDef),
     Import(ImportDef),
     ModuleDef(ModuleItemDef),
     /// Entity definition (BDL support)
@@ -135,13 +134,7 @@ pub struct ParamDef {
     pub span: Span,
 }
 
-/// Tracker definition
-#[derive(Debug, Clone)]
-pub struct TrackerDef {
-    pub component: String,
-    pub event: String,
-    pub span: Span,
-}
+
 
 /// Import definition
 #[derive(Debug, Clone)]
@@ -447,7 +440,6 @@ impl Parser {
             TokenKind::Component => self.parse_component().map(Item::Component),
             TokenKind::Rule => self.parse_rule().map(Item::Rule),
             TokenKind::Fn => self.parse_function().map(Item::Function),
-            TokenKind::Tracker => self.parse_tracker().map(Item::Tracker),
             TokenKind::Import => self.parse_import().map(Item::Import),
             TokenKind::Module => self.parse_module_def().map(Item::ModuleDef),
             TokenKind::Entity => self.parse_entity().map(Item::Entity),
@@ -466,13 +458,13 @@ impl Parser {
                 }
                 Err(ParseError::UnexpectedToken {
                     found: token.text.clone(),
-                    expected: "component, rule, fn, tracker, import, module, entity, or entity assignment".to_string(),
+                    expected: "component, rule, fn, import, module, entity, or entity assignment".to_string(),
                     position: token.span.start,
                 })
             }
             _ => Err(ParseError::UnexpectedToken {
                 found: token.text.clone(),
-                expected: "component, rule, fn, tracker, import, module, or entity".to_string(),
+                expected: "component, rule, fn, import, module, or entity".to_string(),
                 position: token.span.start,
             }),
         }
@@ -725,23 +717,7 @@ impl Parser {
         })
     }
     
-    fn parse_tracker(&mut self) -> Result<TrackerDef, ParseError> {
-        let start = self.consume(TokenKind::Tracker, "tracker")?.span.start;
-        
-        let component_token = self.consume(TokenKind::Identifier, "component name")?;
-        let component = component_token.text.clone();
-        
-        self.consume(TokenKind::On, "on")?;
-        
-        let event_token = self.consume(TokenKind::Identifier, "event name")?;
-        let event = event_token.text.clone();
-        
-        Ok(TrackerDef {
-            component,
-            event,
-            span: Span::new(start, event_token.span.end),
-        })
-    }
+    
     
     fn parse_import(&mut self) -> Result<ImportDef, ParseError> {
         let start = self.consume(TokenKind::Import, "import")?.span.start;
@@ -1729,17 +1705,11 @@ mod tests {
 
     #[test]
     fn test_parse_tracker() {
+        // Trackers removed from language; ensure parsing reports unexpected token
         let source = "tracker Health on DamageEvent";
         let tokens = tokenize(source).unwrap();
-        let module = parse(tokens).unwrap();
-        
-        assert_eq!(module.items.len(), 1);
-        if let Item::Tracker(tracker) = &module.items[0] {
-            assert_eq!(tracker.component, "Health");
-            assert_eq!(tracker.event, "DamageEvent");
-        } else {
-            panic!("Expected Tracker item");
-        }
+        let result = parse(tokens);
+        assert!(result.is_err(), "Parser should reject tracker syntax");
     }
 
     #[test]

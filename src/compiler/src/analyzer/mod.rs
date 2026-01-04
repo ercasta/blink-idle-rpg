@@ -10,7 +10,7 @@ use thiserror::Error;
 use std::collections::HashMap;
 
 use crate::parser::{
-    Module, Item, ComponentDef, RuleDef, FunctionDef, TrackerDef, EntityDef,
+    Module, Item, ComponentDef, RuleDef, FunctionDef, EntityDef,
     TypeExpr, Block, Statement, Expr, Literal, BinaryOp, UnaryOp,
 };
 
@@ -87,7 +87,7 @@ impl Type {
 pub struct SymbolTable {
     components: HashMap<String, ComponentInfo>,
     functions: HashMap<String, FunctionInfo>,
-    trackers: Vec<TrackerInfo>,
+    // Trackers removed from language
 }
 
 #[derive(Debug, Clone)]
@@ -104,10 +104,7 @@ pub struct FunctionInfo {
 }
 
 #[derive(Debug, Clone)]
-pub struct TrackerInfo {
-    pub component: String,
-    pub event: String,
-}
+    
 
 impl SymbolTable {
     pub fn new() -> Self {
@@ -135,7 +132,7 @@ impl SymbolTable {
     }
     
     pub fn add_tracker(&mut self, component: String, event: String) {
-        self.trackers.push(TrackerInfo { component, event });
+        // Trackers removed from language; no-op
     }
 }
 
@@ -271,9 +268,7 @@ impl Analyzer {
                         .unwrap_or(Type::Void);
                     self.symbols.add_function(func.name.clone(), params, return_type);
                 }
-                Item::Tracker(tracker) => {
-                    self.symbols.add_tracker(tracker.component.clone(), tracker.event.clone());
-                }
+                // Tracker items removed; ignore if present
                 _ => {}
             }
         }
@@ -285,7 +280,7 @@ impl Analyzer {
                 Item::Component(comp) => Some(TypedItem::Component(self.analyze_component(comp))),
                 Item::Rule(rule) => Some(TypedItem::Rule(self.analyze_rule(rule))),
                 Item::Function(func) => Some(TypedItem::Function(self.analyze_function(func))),
-                Item::Tracker(tracker) => Some(TypedItem::Tracker(self.analyze_tracker(tracker))),
+                // Trackers removed from language
                 Item::Entity(entity) => Some(TypedItem::Entity(self.analyze_entity(entity))),
                 Item::Import(_) => None, // Imports handled separately
                 Item::ModuleDef(_) => None, // Module defs handled separately
@@ -429,19 +424,7 @@ impl Analyzer {
         }
     }
     
-    fn analyze_tracker(&mut self, tracker: &TrackerDef) -> TypedTracker {
-        // Validate that component exists
-        if self.symbols.get_component(&tracker.component).is_none() {
-            self.errors.push(SemanticError::UndefinedComponent {
-                name: tracker.component.clone(),
-            });
-        }
-        
-        TypedTracker {
-            component: tracker.component.clone(),
-            event: tracker.event.clone(),
-        }
-    }
+    
     
     fn analyze_block(&mut self, block: &Block, mut scope: Scope) -> TypedBlock {
         let statements: Vec<_> = block.statements.iter().map(|stmt| {
@@ -816,7 +799,6 @@ pub enum TypedItem {
     Component(TypedComponent),
     Rule(TypedRule),
     Function(TypedFunction),
-    Tracker(TypedTracker),
     /// Entity definition (BDL support)
     Entity(TypedEntity),
 }
@@ -889,10 +871,7 @@ pub struct TypedParam {
 
 /// Typed tracker
 #[derive(Debug, Clone)]
-pub struct TypedTracker {
-    pub component: String,
-    pub event: String,
-}
+// Trackers removed from language
 
 /// Typed block
 #[derive(Debug, Clone)]

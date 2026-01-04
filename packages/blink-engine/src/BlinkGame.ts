@@ -6,7 +6,7 @@
 import { Store, EntityId, ComponentData } from './ecs/Store';
 import { Timeline, ScheduledEvent } from './timeline/Timeline';
 import { RuleExecutor } from './rules/Executor';
-import { TrackerSystem, TrackerOutput } from './trackers/Tracker';
+// Tracker system removed
 import { loadIRFromString, loadIRFromObject, IRModule, IRFieldValue, IRRule, IRAction, SourceLocation, SourceFile, IRBoundFunctions, IRBoundFunction } from './ir';
 
 export interface GameOptions {
@@ -39,7 +39,6 @@ export interface GameStateSnapshot {
 export interface StepResult {
   time: number;
   event: ScheduledEvent;
-  trackerOutput: TrackerOutput[];
 }
 
 export interface SimulationEvent {
@@ -75,7 +74,7 @@ export class BlinkGame {
   private store: Store;
   private timeline: Timeline;
   private executor: RuleExecutor;
-  private trackerSystem: TrackerSystem;
+  // trackerSystem removed
   
   private options: Required<GameOptions>;
   private isRunning: boolean = false;
@@ -84,7 +83,7 @@ export class BlinkGame {
   private lastFrameTime: number = 0;
   private currentSimulationTime: number = 0;
   
-  private trackerCallbacks: Set<TrackerCallback> = new Set();
+  // trackerCallbacks removed
   private simulationCallbacks: Set<SimulationCallback> = new Set();
   private debugCallbacks: Set<DebugCallback> = new Set();
   
@@ -104,7 +103,7 @@ export class BlinkGame {
     this.store = new Store();
     this.timeline = new Timeline();
     this.executor = new RuleExecutor();
-    this.trackerSystem = new TrackerSystem();
+    // trackerSystem removed
   }
 
   /**
@@ -172,8 +171,7 @@ export class BlinkGame {
     // Load functions
     this.executor.loadFunctions(ir.functions);
     
-    // Load trackers
-    this.trackerSystem.loadTrackers(ir.trackers);
+    // Trackers removed from runtime; IR may still contain tracker metadata.
     
     // Load initial state if provided
     if (ir.initial_state) {
@@ -184,7 +182,7 @@ export class BlinkGame {
       console.log(`[BlinkGame] Loaded IR module: ${ir.module}`);
       console.log(`[BlinkGame] Components: ${ir.components.length}`);
       console.log(`[BlinkGame] Rules: ${ir.rules.length}`);
-      console.log(`[BlinkGame] Trackers: ${ir.trackers.length}`);
+      console.log(`[BlinkGame] Trackers: ${(ir.trackers ?? []).length}`);
     }
   }
 
@@ -311,18 +309,9 @@ export class BlinkGame {
       }
     }
     
-    // Capture tracker output
-    const trackerOutput = this.trackerSystem.capture(event, this.store, this.timeline.getTime());
-    
-    // Emit tracker events
-    for (const output of trackerOutput) {
-      this.emitTrackerEvent(output);
-    }
-    
     const result: StepResult = {
       time: this.timeline.getTime(),
       event,
-      trackerOutput,
     };
     
     this.emitSimulationEvent({ type: 'step', time: result.time, event });
@@ -445,13 +434,7 @@ export class BlinkGame {
     return this.timeline.cancel(eventId);
   }
 
-  /**
-   * Subscribe to tracker events
-   */
-  onTracker(callback: TrackerCallback): Unsubscribe {
-    this.trackerCallbacks.add(callback);
-    return () => this.trackerCallbacks.delete(callback);
-  }
+
 
   /**
    * Subscribe to simulation events
@@ -809,15 +792,7 @@ export class BlinkGame {
     this.scheduleNextFrame();
   }
 
-  private emitTrackerEvent(event: TrackerOutput): void {
-    for (const callback of this.trackerCallbacks) {
-      try {
-        callback(event);
-      } catch (error) {
-        console.error('[BlinkGame] Error in tracker callback:', error);
-      }
-    }
-  }
+
 
   private emitSimulationEvent(event: SimulationEvent): void {
     for (const callback of this.simulationCallbacks) {

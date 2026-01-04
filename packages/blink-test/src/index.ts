@@ -69,6 +69,5 @@ export type {
   BlinkGame,
   GameOptions,
   StepResult,
-  TrackerOutput,
   EntityId,
 } from '@blink/engine';

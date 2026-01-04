@@ -41,7 +41,7 @@ export interface IRModule {
   components: IRComponent[];
   rules: IRRule[];
   functions: IRFunction[];
-  trackers: IRTracker[];
+  trackers?: IRTracker[];
   initial_state?: IRInitialState;
   source_map?: SourceMap;
 }

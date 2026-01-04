@@ -102,19 +102,8 @@ rule HandleDeath on DeathEvent {
     target.remove(InCombat)
 }
 
-// Tracker for combat log
-tracker CombatLog on DamageEvent {
-    let source_name = event.DamageEvent.source.Character.name
-    let target_name = event.DamageEvent.target.Character.name
-    let amount = event.DamageEvent.amount
-    
-    emit message("{source_name} hits {target_name} for {amount} damage!")
-}
-
-tracker DeathLog on DeathEvent {
-    let target_name = event.DeathEvent.target.Character.name
-    emit message("{target_name} has been defeated!")
-}
+// Tracker examples removed — use rules that emit messages or explicit UI events
+// to surface combat log information.
 ```
 
 ## player-strategy.bcl

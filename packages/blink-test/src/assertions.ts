@@ -4,7 +4,7 @@
  * Provides a fluent API for asserting game state, entities, components, and events.
  */
 
-import { BlinkGame, EntityId, StepResult, TrackerOutput } from '@blink/engine';
+import { BlinkGame, EntityId, StepResult } from '@blink/engine';
 
 export interface EntityAssertion {
   exists: boolean;

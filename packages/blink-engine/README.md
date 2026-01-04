@@ -29,9 +29,11 @@ const game = await BlinkGame.create({
 // Load game rules (compiled IR)
 await game.loadRules('./game.ir.json');
 
-// Subscribe to game events
-game.onTracker((event) => {
-  console.log(`[${event.time.toFixed(2)}s] ${event.component}:`, event.entities);
+// Subscribe to simulation events
+game.onSimulation((event) => {
+  if (event.type === 'completed') {
+    console.log('Game completed!');
+  }
 });
 
 game.onSimulation((event) => {
@@ -75,7 +77,6 @@ The main game class that coordinates all engine subsystems.
 - `scheduleEvent(eventType, delay?, options?)` - Schedule an event
 - `scheduleRecurringEvent(eventType, interval, options?)` - Schedule a recurring event
 - `cancelEvent(eventId)` - Cancel a scheduled or recurring event
-- `onTracker(callback)` - Subscribe to tracker events
 - `onSimulation(callback)` - Subscribe to simulation events
 - `setTimeScale(scale)` - Set simulation speed
 - `destroy()` - Clean up resources
@@ -122,8 +123,7 @@ interface GameOptions {
 │   │   └── Store.ts
 │   ├── rules/            # Rule execution
 │   │   └── Executor.ts
-│   └── trackers/         # State change tracking
-│       └── Tracker.ts
+│   └── (trackers removed)
 ```
 
 ## Development

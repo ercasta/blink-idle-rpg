@@ -93,8 +93,8 @@ rule handle_click on Click {
     entity.Clicks.count += 1
 }
 
-// Track the click count for UI display
-tracker Clicks on Click
+// NOTE: Trackers have been removed from the language. Use rule emits or explicit
+// UI events to surface state for the UI.
 ```
 
 ### Compiling Your Code
@@ -147,8 +147,8 @@ fn function_name(param: type): return_type {
     return value
 }
 
-// Trackers (UI feedback)
-tracker ComponentName on EventType
+// Trackers (UI feedback) — removed from language
+// Use rule emits or UI-specific messages instead
 
 // Modules
 module module_name {
@@ -174,7 +174,7 @@ component  rule       on         trigger    event
 entity     if         else       for        while
 fn         return     true       false      null
 schedule   cancel     recurring  module     import
-tracker    when       create     delete     has
+when       create     delete     has
 ```
 
 ### Operators

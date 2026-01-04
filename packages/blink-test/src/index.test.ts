@@ -68,9 +68,7 @@ const testIR = {
     }
   ],
   functions: [],
-  trackers: [
-    { id: 0, component: "Health", event: "DoAttack" }
-  ],
+  // trackers removed from IR sample
   initial_state: {
     entities: [
       {
@@ -160,18 +158,7 @@ describe('GameTest', () => {
     test.destroy();
   });
 
-  it('should track tracker output', () => {
-    const test = createTest()
-      .loadRules(testIR)
-      .scheduleEvent('DoAttack', 0, { source: 0 });
-    
-    test.step();
-    
-    const trackerHistory = test.getTrackerHistory();
-    assert.ok(trackerHistory.length > 0);
-    
-    test.destroy();
-  });
+  // Tracker runtime removed; tracker history test omitted
 
   it('should reset to initial state', () => {
     const test = createTest()

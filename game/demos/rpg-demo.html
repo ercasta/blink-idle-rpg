@@ -3076,10 +3076,7 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
       // Initialize run tracking
       initializeRun();
       
-      // Subscribe to tracker events
-      game.onTracker((output) => {
-        handleTrackerOutput(output);
-      });
+      // Tracker subsystem removed: state updates via simulation events
       
       // Subscribe to simulation events
       game.onSimulation((event) => {
@@ -3139,10 +3136,7 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
       // Initialize character data
       updateCharacterData();
       
-      // Subscribe to tracker events
-      game.onTracker((output) => {
-        handleTrackerOutput(output);
-      });
+      // Tracker subsystem removed: state updates via simulation events
       
       // Subscribe to simulation events
       game.onSimulation((event) => {

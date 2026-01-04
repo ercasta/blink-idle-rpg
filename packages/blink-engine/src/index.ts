@@ -55,6 +55,4 @@ export type { ScheduledEvent } from './timeline';
 export { RuleExecutor } from './rules';
 export type { ExecutionContext } from './rules';
 
-// Trackers
-export { TrackerSystem } from './trackers';
-export type { TrackerOutput, EntityComponentData } from './trackers';
+// Trackers removed from runtime

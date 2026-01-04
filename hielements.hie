@@ -133,7 +133,7 @@ element blink_project:
     ##
     ## IMPORTANT: IR is the single source of truth at runtime.
     ## All data should flow through the IR:
-    ##   - BRL → IR.rules, IR.components, IR.trackers, IR.functions
+    ##   - BRL → IR.rules, IR.components, IR.functions
     ##   - BDL → IR.initial_state (entities with component data)
     ##   - BCL → IR.choice_functions (player strategy functions)
     ##
@@ -152,14 +152,13 @@ element blink_project:
     ## Technology: Rust
     ## 
     ## Input Sources:
-    ##   - BRL files: Component definitions, rules, trackers, functions
+    ##   - BRL files: Component definitions, rules, functions
     ##   - BCL files: Choice functions (player strategies)
     ##   - BDL files: Entity definitions (game data)
     ##
     ## Output: Single IR JSON file containing all game data:
     ##   - components[]: Component schemas
     ##   - rules[]: Game rules
-    ##   - trackers[]: Tracker definitions
     ##   - functions[]: Helper functions
     ##   - choice_functions[]: BCL choice functions (PLANNED)
     ##   - initial_state: BDL entities
@@ -199,9 +198,7 @@ element blink_project:
         element rules:
             scope src = files.folder_selector('src/engines/rust/rules/')
         
-        ## Trackers - game feedback for UI
-        element trackers:
-            scope src = files.folder_selector('src/engines/rust/trackers/')
+        # Trackers were removed from the language; no tracker folder required
     
     ## --------------------------------------------------------------------
     ## JavaScript Engine
@@ -279,7 +276,7 @@ element blink_project:
     ## ────────────────────────────────────────────────────────────────────
     ## 
     ## SOURCE FILES (Development):
-    ##   game/brl/*.brl    → Rules, components, trackers
+    ##   game/brl/*.brl    → Rules, components
     ##   game/bcl/*.bcl    → Player strategies (reference implementations)
     ##   game/bdl/*.bdl    → Entity data (heroes, enemies, config)
     ##                       + Bound choice functions (inline in entities)
@@ -325,8 +322,8 @@ element blink_project:
             check files.exists(data, 'characters.json')
         
         ## BRL game rules
-        ## Contains component definitions, rules, trackers, functions
-        ## Compiled to: IR.components, IR.rules, IR.trackers, IR.functions
+        ## Contains component definitions, rules, functions
+        ## Compiled to: IR.components, IR.rules, IR.functions
         element brl:
             scope brl = files.folder_selector('game/brl/')
             check files.exists(brl, 'README.md')

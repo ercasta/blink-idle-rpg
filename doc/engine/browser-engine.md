@@ -199,8 +199,8 @@ class BlinkGame {
   
   /**
    * Subscribe to tracker events
-   */
-  onTracker(callback: (event: TrackerEvent) => void): Unsubscribe;
+    */
+    // Trackers removed from language; engines may expose custom UI events instead.
   
   /**
    * Subscribe to simulation events
@@ -262,15 +262,10 @@ interface EntitySnapshot {
 interface StepResult {
   time: number;
   event: EventInfo;
-  trackerOutput: TrackerEvent[];
+  // trackerOutput: TrackerEvent[]; // removed — use explicit rule emits or UI events
 }
 
-interface TrackerEvent {
-  time: number;
-  trackerId: string;
-  type: 'message' | 'value' | 'state_change' | 'custom';
-  data: unknown;
-}
+// interface TrackerEvent { ... } // removed; trackers are deprecated
 
 interface SimulationEvent {
   type: 'started' | 'paused' | 'resumed' | 'stopped' | 'completed' | 'error';
@@ -321,11 +316,7 @@ async function main() {
   });
   
   // Subscribe to combat log
-  game.onTracker((event) => {
-    if (event.type === 'message') {
-      console.log(`[${event.time.toFixed(2)}s] ${event.data}`);
-    }
-  });
+  // Trackers removed: use explicit rule emits or onSimulation handlers for UI updates.
   
   // Subscribe to simulation events
   game.onSimulation((event) => {
@@ -447,15 +438,12 @@ function useBlinkGame(rulesUrl: string, choices: string) {
         return;
       }
       
-      game.onTracker((event) => {
-        if (event.type === 'message') {
-          setLogs(prev => [...prev, event.data as string]);
-        }
-      });
-      
+      // Tracker subsystem removed; use simulation or debug events instead
       game.onSimulation(() => {
         setState(game.getState());
       });
+      
+      // simulation subscription above updates state
       
       gameRef.current = game;
     }
