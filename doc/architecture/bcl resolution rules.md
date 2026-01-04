@@ -1,19 +1,15 @@
 # BCL Resolution rules
 
 Blink Choice Language allows players to specify behaviour in correspondence of specific rules. Currently the resolution process of BCL is not clear: how do rule distinguish which BCL function has to be called for each player?
-A clear approach is needed. Possible options (more to be considered):
 
+To do so:
 
-1. Modify BRL / BCL / BDL  to allow associating a choice function to an entity (or to a component). Pro: resolution rules are clearly defined by the engine. Cons: not clear who and when links the function to the entity, this is important because there might be now way to create a "default BCL" for a character. Also, there could still be name clashes for BCL functions when their declaration is not bound to an entity. Might be solved with name mangling at loading.
-1. Save BCL in separate files, named as the owning entity (or component for that entity). Pro: language is kept simpler. Cons: The burden falls on the engine; might require duplicate implementations in the engines (small issue). Also: entity id must be known in advance. So for example how can BCL be created for characters that do not yet exists? It would also lead to duplicate BCL for characters sharing same behaviour
-1. Require BCL function names to be unique across different BCL files and bind them to the character. Pro: ???. Cons: will likely lead to name clashes when players manage their builds.
-
-
-In general, choice functions must be called on an entity by BRL; either as a first parameter (so BCLs are regular function with a first parameter as entity) or implementing a sort of OOP where functions are tied to an entity.
-
-Maybe we should allow BDL to bind BCLs to entities, so we can create default characters with their associated BCLs, and then if the players customizes the BCLs, the customized implementation is substituted. We could also say that BCL implementations can only be created already bound to an entity, to avoid name clashes. 
-
-Also we should allow the player to customize the character name. This could be done with a "name choice" BCL. This means that in the character selection screen, the engine runtime is already used (without a timeline) to manipulate data and BCL bindings.
-
-My current preference is that BCL live in dedicated files, and when they are loaded they get bound somehow to the right character.
-
+1. Modify BRL / BDL to make choice functions first class citizens in BRL / BDL.
+1. Modify BRL / BDL to allow associating a choice function to an entity, even anonymously: ``` entity.function = choice (..params...) { function code } ```. In particular BDL is allowed to declare bound choice functions (but not unbounded ones). It's possible to assign the function from an entity to another. ```a.function = b.function ```
+1. Pre-made, selected heros, are declared in a BDL, and have their choice functions anonymously declared and bound to their entities in the BDL
+1. Pre-made heroes are stored in a ```Roster``` component associated to the entity representing the game 
+1. The html engine exposes an interface to allow the client code to get entities and components (e.g. the game ui)
+1. The html engine exposes a method to compile and execute BRL code
+1. When the html ui starts, it creates a game entity, loads heroes from bdl files, creates a BRL snippet that creates the game engine, and concatenates all bdl files into it, creating the ```Roster``` component. It then executes this snippet using the engine
+1. The html interface BCL editing ui gets bcl choice functions from the pre-made heroes. To do so the engine exposes an utility function to get these from the hero entity (so the ui can)
+1. When BRL calls a choice functions, it calls it on the entity, so invoking the bound function e.g. ``` selectedenemy = hero.chooseEnemy(...params...)
