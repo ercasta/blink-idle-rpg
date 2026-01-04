@@ -2119,23 +2119,89 @@
       docstringEl.textContent = choicePoint.docstring;
       docstringEl.style.display = 'block';
       
+      // Show default behavior
       const defaultEl = document.getElementById('bcl-editor-default');
       const defaultTextEl = document.getElementById('bcl-editor-default-text');
-      defaultTextEl.textContent = choicePoint.defaultBehavior || 'Uses engine default';
+      defaultTextEl.textContent = choicePoint.defaultBehavior || 'No default description available';
       defaultEl.style.display = 'block';
       
-      // Load existing customization or default template
+      // Load current customization or default BCL implementation
       const customizations = getBclCustomizations();
       const heroCustomizations = customizations[currentBclHeroId] || {};
-      const existingCode = heroCustomizations[choiceId];
       
-      const textarea = document.getElementById('bcl-editor-textarea');
-      if (existingCode) {
-        textarea.value = existingCode;
+      let editorContent = '';
+      
+      if (heroCustomizations[choiceId]) {
+        // Load existing customization
+        editorContent = heroCustomizations[choiceId];
       } else {
-        // Provide a template based on the choice point
-        textarea.value = generateBclTemplate(choicePoint);
+        // Load default BCL implementation from loaded files
+        const defaultImpl = getDefaultBclImplementation(choiceId);
+        editorContent = defaultImpl || `// No default implementation found for ${choiceId}\n// Write your custom implementation here\n\n${choicePoint.signature} {\n    // Your code here\n}`;
       }
+      
+      // Set editor content
+      document.getElementById('bcl-editor-textarea').value = editorContent;
+    }
+    
+    // Get default BCL implementation for a choice function
+    function getDefaultBclImplementation(choiceId) {
+      // Search through loaded BCL files for the function implementation
+      for (const bclFile of loadedBCLFiles) {
+        // Look for the choice function definition (without global flag to avoid state issues)
+        const regex = new RegExp(`choice\\s+fn\\s+${choiceId}\\s*\\([^)]*\\)\\s*:\\s*\\w+\\s*\\{`);
+        const match = bclFile.content.match(regex);
+        
+        if (match) {
+          const startIndex = match.index;
+          
+          // Extract the full function including body
+          // Find matching closing brace
+          let braceCount = 0;
+          let endIndex = startIndex;
+          let foundOpenBrace = false;
+          
+          for (let i = startIndex; i < bclFile.content.length; i++) {
+            const char = bclFile.content[i];
+            if (char === '{') {
+              braceCount++;
+              foundOpenBrace = true;
+            } else if (char === '}') {
+              braceCount--;
+              if (foundOpenBrace && braceCount === 0) {
+                endIndex = i + 1;
+                break;
+              }
+            }
+          }
+          
+          // Extract function with some context (comments before it)
+          const beforeFunction = bclFile.content.substring(Math.max(0, startIndex - BCL_COMMENT_CONTEXT_LENGTH), startIndex);
+          const commentLines = [];
+          const lines = beforeFunction.split('\n');
+          
+          // Get trailing comments
+          for (let i = lines.length - 1; i >= 0; i--) {
+            const line = lines[i].trim();
+            if (line.startsWith('//')) {
+              commentLines.unshift(lines[i]);
+            } else if (line === '') {
+              // Empty line, continue
+              continue;
+            } else {
+              // Non-comment line, stop
+              break;
+            }
+          }
+          
+          const comments = commentLines.join('\n');
+          const functionCode = bclFile.content.substring(startIndex, endIndex);
+          
+          return comments ? `${comments}\n${functionCode}` : functionCode;
+        }
+      }
+      
+      return null;
     }
     
     // Generate a BCL template for a choice point
@@ -2167,17 +2233,6 @@ choice fn select_combat_skill(character: Character & Skills & Health & Mana, all
     }
     
     // Default to basic attack
-    return "basic_attack"
-}`,
-        'select_skill_on_levelup': `// Customize skill progression on level up
-// Return the name of the skill to learn
-
-choice fn select_skill_on_levelup(character: Character & Skills, currentLevel: number): string {
-    // Example: Learn power_strike at level 2
-    if currentLevel == 2 {
-        return "power_strike"
-    }
-    
     return "basic_attack"
 }`,
         'select_heal_target': `// Customize heal target selection
@@ -2223,7 +2278,7 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
       return templates[choicePoint.id] || `// Customize ${choicePoint.name}\n\n${choicePoint.signature} {\n    // Your code here\n}`;
     }
     
-    // Reset the BCL editor to empty state
+    // Reset the BCL editor to default state
     function resetBclEditor() {
       document.getElementById('bcl-editor-title').textContent = 'Select a choice to customize';
       document.getElementById('bcl-editor-signature').style.display = 'none';
@@ -2356,8 +2411,168 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
     }
     
     // Initialize BCL system when page loads
+    // ========================================================================
+    // LOAD BCL FILES FROM GAME/BCL DIRECTORY
+    // ========================================================================
+    // Loads all BCL strategy files for use in the BCL customization UI.
+    // These files define the default AI behavior for different classes.
+    //
+    // BCL files loaded:
+    //   - warrior-skills.bcl: Warrior combat and skill strategies
+    //   - mage-skills.bcl: Mage spell and targeting strategies
+    //   - rogue-skills.bcl: Rogue stealth and assassination strategies
+    //   - cleric-skills.bcl: Cleric healing and support strategies
+    //   - party-config.bcl: Party-level strategies
+    //   - flee-aggressive.bcl: Aggressive flee strategy
+    //   - flee-conservative.bcl: Conservative flee strategy
+    //
+    // Each BCL file is loaded as text and stored in loadedBCLFiles array.
+    // Players can view and customize these strategies via the BCL editor UI.
+    // ========================================================================
+    
+    // Configuration constants for BCL loading
+    const BCL_GITHUB_PAGES_PATH = 'game-files/';  // Path on GitHub Pages deployment
+    const BCL_LOCAL_DEV_PATH = '../bcl/';          // Path for local development
+    const BCL_DOCSTRING_SEARCH_LENGTH = 500;       // Characters to search before function for docstring
+    const BCL_COMMENT_CONTEXT_LENGTH = 300;        // Characters to search for comments
+    
+    async function loadBclFiles() {
+      const bclFiles = [
+        'warrior-skills.bcl',
+        'mage-skills.bcl',
+        'rogue-skills.bcl',
+        'cleric-skills.bcl',
+        'party-config.bcl',
+        'flee-aggressive.bcl',
+        'flee-conservative.bcl'
+      ];
+      
+      loadedBCLFiles = [];
+      const basePaths = [BCL_GITHUB_PAGES_PATH, BCL_LOCAL_DEV_PATH]; // Try GitHub Pages path first, then local dev path
+      
+      for (const filename of bclFiles) {
+        let loaded = false;
+        for (const basePath of basePaths) {
+          try {
+            const response = await fetch(basePath + filename);
+            if (!response.ok) continue;
+            
+            const content = await response.text();
+            loadedBCLFiles.push({ name: filename, content });
+            console.info(`Loaded BCL file: ${filename} from ${basePath}`);
+            loaded = true;
+            break;
+          } catch (error) {
+            // Try next path
+            continue;
+          }
+        }
+        
+        if (!loaded) {
+          console.warn(`Failed to load BCL file: ${filename} from all paths`);
+        }
+      }
+      
+      console.info(`Loaded ${loadedBCLFiles.length} BCL files successfully`);
+      return loadedBCLFiles;
+    }
+    
+    // ========================================================================
+    // EXTRACT CHOICE FUNCTIONS FROM BCL FILES
+    // ========================================================================
+    // Parse loaded BCL files to extract choice function definitions.
+    // Creates choice point metadata for use in the BCL editor UI.
+    //
+    // Each choice function in BCL follows this pattern:
+    //   choice fn function_name(params...): return_type { ... }
+    //
+    // We extract:
+    //   - Function name (id)
+    //   - Signature (full function declaration)
+    //   - Source file name
+    //   - Function body
+    //
+    // This allows players to view and customize the default BCL implementations.
+    // ========================================================================
+    function extractChoiceFunctionsFromBCL() {
+      const choiceFunctions = [];
+      
+      // Regex to match BCL choice functions
+      // Matches: choice fn function_name(params): return_type { ... }
+      const choiceFnRegex = /choice\s+fn\s+(\w+)\s*\([^)]*\)\s*:\s*\w+\s*\{/g;
+      const fullFnRegex = /(choice\s+fn\s+\w+\s*\([^)]*\)\s*:\s*\w+)\s*\{/;
+      
+      for (const bclFile of loadedBCLFiles) {
+        const matches = [...bclFile.content.matchAll(choiceFnRegex)];
+        
+        for (const match of matches) {
+          const functionName = match[1];
+          const startIndex = match.index;
+          
+          // Extract full signature
+          const sigMatch = bclFile.content.substring(startIndex).match(fullFnRegex);
+          const signature = sigMatch ? sigMatch[1] : `choice fn ${functionName}(...)`;
+          
+          // Try to extract docstring (comment before function)
+          const beforeFunction = bclFile.content.substring(Math.max(0, startIndex - BCL_DOCSTRING_SEARCH_LENGTH), startIndex);
+          const commentMatch = beforeFunction.match(/\/\/\s*(.+?)(?:\n\/\/\s*(.+?))*\s*$/);
+          const docstring = commentMatch ? commentMatch[0].replace(/^\/\/\s*/gm, '').trim() : 
+                            `${functionName} choice function`;
+          
+          // Determine category from file name
+          let category = 'strategy';
+          if (bclFile.name.includes('skill')) category = 'combat';
+          if (bclFile.name.includes('flee')) category = 'retreat';
+          if (bclFile.name.includes('target')) category = 'targeting';
+          
+          // Determine applicable classes from file name
+          let applicableClasses = null;
+          if (bclFile.name.includes('warrior')) applicableClasses = ['Warrior'];
+          if (bclFile.name.includes('mage')) applicableClasses = ['Mage'];
+          if (bclFile.name.includes('rogue')) applicableClasses = ['Rogue'];
+          if (bclFile.name.includes('cleric')) applicableClasses = ['Cleric'];
+          
+          choiceFunctions.push({
+            id: functionName,
+            name: functionName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+            signature: signature,
+            docstring: docstring,
+            category: category,
+            applicableClasses: applicableClasses,
+            sourceFile: bclFile.name,
+            defaultBehavior: docstring
+          });
+        }
+      }
+      
+      console.info(`Extracted ${choiceFunctions.length} choice functions from BCL files`);
+      return choiceFunctions;
+    }
+    
     async function initBclSystem() {
       await loadChoicePoints();
+      await loadBclFiles();
+      
+      // If IR doesn't have choice_points, extract them from BCL files
+      if (!choicePointsData || choicePointsData.length === 0) {
+        choicePointsData = extractChoiceFunctionsFromBCL();
+        console.info(`Using ${choicePointsData.length} choice functions extracted from BCL files`);
+      }
+      
+      // Display loaded BCL info if any files were loaded
+      if (loadedBCLFiles.length > 0) {
+        bclStatus.textContent = `Loaded ${loadedBCLFiles.length} default BCL strategy files`;
+        bclStatus.className = 'file-status loaded';
+        bclInfo.style.display = 'block';
+        bclFileList.innerHTML = '';
+        
+        loadedBCLFiles.forEach(file => {
+          const fileItem = document.createElement('span');
+          fileItem.className = 'bcl-file-item';
+          fileItem.textContent = file.name;
+          bclFileList.appendChild(fileItem);
+        });
+      }
     }
     
     // ========================================================================

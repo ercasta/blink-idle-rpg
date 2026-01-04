@@ -284,22 +284,27 @@ element blink_project:
     ##   game/bdl/*.bdl    → Entity data (heroes, enemies, config)
     ##
     ## COMPILATION (Build Time):
-    ##   All source files → blink-compiler → game/ir/*.ir.json
+    ##   BRL + BDL files → blink-compiler → game/ir/*.ir.json
+    ##   BCL files remain as source (not compiled yet)
     ##
     ## RUNTIME (Browser):
-    ##   IR.json → BlinkEngine.loadRulesFromObject()
-    ##   All data comes from IR - no separate JSON files needed
+    ##   1. IR.json → BlinkEngine.loadRulesFromObject()
+    ##      - Contains compiled BRL rules, BDL entities from IR.initial_state
+    ##      - Contains BRL/BDL source in IR.source_map for dev mode
+    ##   2. BCL files → Loaded separately as text via fetch()
+    ##      - game/bcl/*.bcl loaded by rpg-demo.html
+    ##      - Made available in BCL customization UI
+    ##      - Player customizations stored in localStorage
     ##
     ## LEGACY DATA FILES (game/data/):
     ##   characters.json and enemies.json are TEMPORARY fallbacks
     ##   until compiler fully supports BDL → IR compilation.
     ##   These should be removed once IR contains all entity data.
     ##
-    ## BCL CUSTOMIZATION:
-    ##   Players can customize strategies via the BCL editor in the browser.
-    ##   Currently: Customizations stored in localStorage (text only)
-    ##   Future: Browser-based BCL compiler creates delta IR that merges
-    ##           with base IR for runtime execution.
+    ## BCL RESOLUTION STRATEGY (per doc/architecture/bcl resolution rules.md):
+    ##   Phase 1 (CURRENT): BCL loaded as text, customizations in localStorage
+    ##   Phase 2 (FUTURE): Browser-based BCL compiler creates delta IR
+    ##                     that merges with base IR for runtime execution
     ## ────────────────────────────────────────────────────────────────────
     
     element game_content:
