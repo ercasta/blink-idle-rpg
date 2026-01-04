@@ -723,6 +723,55 @@ The game IDE can:
 3. Provide an editor for customizing the choice function
 4. Save customizations as BCL deltas (only modified choices)
 
+### 13.7 Entity-Bound Choice Functions
+
+Choice functions can be bound to specific entities, allowing each entity to have its own decision-making logic. This binding can happen either in BDL (at entity definition time) or at runtime.
+
+#### Calling Bound Choice Functions
+
+When BRL needs to call a choice function, it calls it **on the entity**:
+
+```brl
+rule on TurnStart {
+    // Call the bound choice function on the entity
+    let target = entity.select_attack_target(enemies)
+    
+    // Use the returned value
+    schedule Attack {
+        source: entity.id
+        target: target
+    }
+}
+```
+
+The syntax `entity.choiceFunctionName(args...)` invokes the choice function bound to that entity.
+
+#### Resolution Order
+
+When `entity.select_attack_target(enemies)` is called:
+
+1. Check entity's `ChoiceBindings` component for a bound function
+2. If not found, check class default (from `{class}-skills.bcl`)
+3. If not found, use global default (from BRL choice point declaration)
+
+#### Example with Multiple Entities
+
+```brl
+rule on CombatTurn for attacker: Character {
+    // Each attacker uses their own bound targeting strategy
+    let target = attacker.select_attack_target(visible_enemies)
+    
+    // Each attacker uses their own skill selection
+    let skill = attacker.select_combat_skill(allies, enemies)
+    
+    schedule UseSkill {
+        source: attacker.id
+        target: target
+        skill: skill
+    }
+}
+```
+
 ---
 
 ## Appendix A: Grammar (EBNF)
@@ -772,3 +821,4 @@ docstring = "///" string_literal ;
 | Version | Date | Changes |
 |---------|------|---------|
 | 0.1.0 | 2024-12-31 | Initial draft |
+| 0.2.0 | 2026-01-04 | Added section 13.7: Entity-Bound Choice Functions |

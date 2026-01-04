@@ -247,9 +247,41 @@ export interface IRTracker {
 
 export interface IRInitialState {
   entities: IREntityDefinition[];
+  roster?: IRRoster;
+  bound_choice_functions?: IRBoundChoiceFunction[];
 }
 
 export interface IREntityDefinition {
   id: number | string;
   components: Record<string, Record<string, IRFieldValue>>;
+  choice_bindings?: IRChoiceBindings;
+}
+
+// ===== Choice Bindings =====
+
+/**
+ * Maps choice point names to bound function IDs for an entity
+ */
+export interface IRChoiceBindings {
+  [choicePointName: string]: string; // function_id
+}
+
+/**
+ * Roster component listing available heroes
+ */
+export interface IRRoster {
+  heroes: (number | string)[];
+}
+
+/**
+ * A choice function bound to a specific entity (from BDL anonymous declarations)
+ */
+export interface IRBoundChoiceFunction {
+  id: string;
+  entity_id: number | string;
+  name: string;
+  params: IRParam[];
+  return_type: IRReturnType;
+  body: IRExpression;
+  source?: string; // Original BCL source for UI display
 }

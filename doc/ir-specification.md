@@ -522,6 +522,94 @@ To include source maps, compile with: `blink-compiler compile --source-map`
 
 ---
 
+## 11.4 Initial State
+
+The `initial_state` section contains entity definitions from BDL files, including their components, choice bindings, and bound choice functions.
+
+### 11.4.1 Initial State Structure
+
+```json
+{
+  "initial_state": {
+    "entities": [
+      {
+        "id": "@warrior",
+        "components": {
+          "Character": { "name": "Sir Braveheart", "class": "Warrior" },
+          "Health": { "current": 120, "max": 120 },
+          "ChoiceBindings": {
+            "select_attack_target": "warrior_select_attack_target",
+            "select_combat_skill": "warrior_select_combat_skill"
+          }
+        }
+      }
+    ],
+    "roster": {
+      "heroes": ["@warrior", "@mage", "@rogue", "@cleric"]
+    },
+    "bound_choice_functions": [
+      {
+        "id": "warrior_select_attack_target",
+        "entity_id": "@warrior",
+        "name": "select_attack_target",
+        "params": [
+          { "name": "character", "type": "entity" },
+          { "name": "enemies", "type": "list" }
+        ],
+        "return_type": "entity",
+        "body": { "type": "call", "function": "find_weakest", "args": [...] },
+        "source": "choice (character: Character, enemies: list): id {\n    return find_weakest(enemies)\n}"
+      }
+    ]
+  }
+}
+```
+
+### 11.4.2 ChoiceBindings Component
+
+The `ChoiceBindings` component maps choice point names to bound function IDs:
+
+```json
+{
+  "ChoiceBindings": {
+    "select_attack_target": "warrior_select_attack_target",
+    "select_combat_skill": "warrior_select_combat_skill",
+    "should_flee_from_battle": "flee_conservative"
+  }
+}
+```
+
+### 11.4.3 Roster Component
+
+The `Roster` component on the game entity lists available heroes:
+
+```json
+{
+  "id": "@game",
+  "components": {
+    "Roster": {
+      "heroes": ["@warrior", "@mage", "@rogue", "@cleric", "@ranger", "@paladin"]
+    }
+  }
+}
+```
+
+### 11.4.4 Bound Choice Functions
+
+Bound choice functions are anonymous choice functions defined inline in BDL and associated with specific entities:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique identifier for the function |
+| `entity_id` | string | Entity this function is bound to |
+| `name` | string | Choice point name this implements |
+| `params` | array | Function parameters |
+| `return_type` | string | Return type |
+| `body` | IRExpression | Compiled function body |
+| `source` | string | Original BCL/BDL source (for UI display) |
+
+---
+
 ## 12. Serialization
 
 ### 12.1 JSON Schema
@@ -638,3 +726,4 @@ Test categories:
 |---------|------|---------|
 | 0.1.0 | 2024-12-31 | Initial draft |
 | 0.1.1 | 2026-01-03 | Added choice_functions (BCL) and source_map sections |
+| 0.1.2 | 2026-01-04 | Added initial_state section with ChoiceBindings, Roster, bound_choice_functions |

@@ -459,6 +459,111 @@ entity @dragon_lord {
 
 ---
 
+## 7. Bound Choice Functions
+
+BDL supports **bound choice functions** - choice functions that are directly associated with an entity. This enables each hero to have their own decision-making logic defined inline in the BDL file.
+
+### 7.1 Syntax
+
+Choice functions can be bound to entities using the following syntax:
+
+```bdl
+entity @hero_name {
+    // ... component definitions ...
+    
+    // Bind a choice function to this entity
+    chooseEnemy = choice (character: Character, enemies: list): id {
+        // Function body (BCL subset only)
+        for enemy in enemies {
+            if enemy.Health.current < 50 {
+                return enemy.id
+            }
+        }
+        return enemies[0].id
+    }
+}
+```
+
+### 7.2 Rules for Bound Choice Functions
+
+1. **Bound Only**: BDL can only declare **bound** choice functions (attached to an entity), not standalone/unbound choice functions
+2. **BCL Subset**: The function body follows BCL rules - no state modification, only pure logic
+3. **Assignment**: Choice functions can be copied from one entity to another: `a.chooseEnemy = b.chooseEnemy`
+4. **Explicit Parameters**: The function must include all parameters it needs - no implicit `self`
+
+### 7.3 ChoiceBindings Component
+
+Entities with bound choice functions automatically get a `ChoiceBindings` component that tracks which choice functions are bound:
+
+```bdl
+entity @warrior {
+    Character {
+        name: "Sir Braveheart"
+        class: "Warrior"
+    }
+    ChoiceBindings {
+        // Automatically populated when choice functions are bound
+        // Map of choice_name -> function_id
+    }
+    
+    // Bind choice function
+    select_attack_target = choice (character: Character, enemies: list): id {
+        return find_weakest(enemies)
+    }
+    
+    select_combat_skill = choice (character: Character, allies: list, enemies: list): string {
+        return "power_strike"
+    }
+}
+```
+
+### 7.4 Roster Component
+
+Pre-made heroes can be collected into a `Roster` component on the game entity:
+
+```bdl
+entity @game {
+    Roster {
+        heroes: [@warrior, @mage, @rogue, @cleric, @ranger, @paladin]
+    }
+}
+```
+
+This allows the UI to query all available heroes for party selection.
+
+### 7.5 Compilation
+
+Bound choice functions compile to the IR with entity association:
+
+```json
+{
+  "initial_state": {
+    "entities": [
+      {
+        "id": "@warrior",
+        "components": {
+          "Character": { "name": "Sir Braveheart" },
+          "ChoiceBindings": {
+            "select_attack_target": "warrior_select_attack_target",
+            "select_combat_skill": "warrior_select_combat_skill"
+          }
+        }
+      }
+    ],
+    "bound_choice_functions": [
+      {
+        "id": "warrior_select_attack_target",
+        "entity_id": "@warrior",
+        "name": "select_attack_target",
+        "body": { ... }
+      }
+    ]
+  }
+}
+```
+
+---
+
 ## 8. Loading Order
 
 BDL files are loaded **after** BRL and BCL files because they depend on component definitions from BRL.
@@ -524,7 +629,8 @@ BDL compiles to the `initial_state.entities` section of the IR:
 | Variable declarations | ✅ | ✅ | ❌ |
 | Expressions | ✅ | ✅ | ❌ |
 | Control flow | ✅ | ✅ | ❌ |
-| Choice functions | ❌ | ✅ | ❌ |
+| Choice functions (unbound) | ❌ | ✅ | ❌ |
+| Bound choice functions | ❌ | ❌ | ✅ |
 | Party definition | ❌ | ✅ | ❌ |
 
 ---
@@ -562,3 +668,4 @@ Error: Expressions not allowed in BDL
 | Version | Date | Changes |
 |---------|------|---------|
 | 0.1.0 | 2026-01-03 | Initial draft |
+| 0.2.0 | 2026-01-04 | Added bound choice functions (section 7), ChoiceBindings, Roster components |

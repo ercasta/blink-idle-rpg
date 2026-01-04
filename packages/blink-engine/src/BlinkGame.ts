@@ -7,7 +7,7 @@ import { Store, EntityId, ComponentData } from './ecs/Store';
 import { Timeline, ScheduledEvent } from './timeline/Timeline';
 import { RuleExecutor } from './rules/Executor';
 import { TrackerSystem, TrackerOutput } from './trackers/Tracker';
-import { loadIRFromString, loadIRFromObject, IRModule, IRFieldValue, IRRule, IRAction, SourceLocation, SourceFile } from './ir';
+import { loadIRFromString, loadIRFromObject, IRModule, IRFieldValue, IRRule, IRAction, SourceLocation, SourceFile, IRChoiceBindings, IRRoster, IRBoundChoiceFunction } from './ir';
 
 export interface GameOptions {
   /** Enable debug mode */
@@ -616,6 +616,133 @@ export class BlinkGame {
     if (component) {
       component[field] = value;
     }
+  }
+
+  // ===== Entity and Component Access (for UI) =====
+
+  /**
+   * Get all entity IDs currently in the store
+   */
+  getAllEntityIds(): EntityId[] {
+    return this.store.getEntityIds();
+  }
+
+  /**
+   * Get all entities with their component data
+   * Returns a map of entity ID to component map
+   */
+  getAllEntities(): Map<EntityId, Map<string, ComponentData>> {
+    return this.store.getSnapshot();
+  }
+
+  /**
+   * Get entities that have a specific component
+   */
+  getEntitiesWithComponent(componentName: string): EntityId[] {
+    return this.store.query(componentName);
+  }
+
+  /**
+   * Get full entity data including all components
+   */
+  getEntityData(entityId: EntityId): { id: EntityId; components: Record<string, ComponentData> } | null {
+    const snapshot = this.store.getSnapshot();
+    const entityComponents = snapshot.get(entityId);
+    if (!entityComponents) {
+      return null;
+    }
+    const components: Record<string, ComponentData> = {};
+    for (const [name, data] of entityComponents) {
+      components[name] = data;
+    }
+    return { id: entityId, components };
+  }
+
+  // ===== Roster and Choice Functions (BCL Resolution) =====
+
+  /**
+   * Get the game's Roster component (list of available heroes)
+   * Returns the hero IDs or null if no Roster exists
+   */
+  getRoster(): IRRoster | null {
+    return this.ir?.initial_state?.roster ?? null;
+  }
+
+  /**
+   * Get the choice bindings for an entity
+   * Returns a map of choice point name to function ID
+   */
+  getChoiceBindings(entityId: EntityId): IRChoiceBindings | null {
+    // First check if entity has ChoiceBindings component
+    const choiceBindings = this.store.getComponent(entityId, 'ChoiceBindings');
+    if (choiceBindings) {
+      return choiceBindings as unknown as IRChoiceBindings;
+    }
+    
+    // Also check initial state for pre-defined bindings
+    if (this.ir?.initial_state?.entities) {
+      const entityDef = this.ir.initial_state.entities.find(e => e.id === entityId);
+      if (entityDef?.choice_bindings) {
+        return entityDef.choice_bindings;
+      }
+    }
+    
+    return null;
+  }
+
+  /**
+   * Get a bound choice function's source code for display in UI
+   * @param functionId The function ID from choice bindings
+   * @returns The source code string or null if not found
+   */
+  getChoiceFunctionSource(functionId: string): string | null {
+    if (!this.ir?.initial_state?.bound_choice_functions) {
+      return null;
+    }
+    const func = this.ir.initial_state.bound_choice_functions.find(f => f.id === functionId);
+    return func?.source ?? null;
+  }
+
+  /**
+   * Get all bound choice functions for a specific entity
+   * @param entityId The entity ID to get choice functions for
+   * @returns Array of bound choice functions or empty array
+   */
+  getEntityChoiceFunctions(entityId: EntityId): IRBoundChoiceFunction[] {
+    if (!this.ir?.initial_state?.bound_choice_functions) {
+      return [];
+    }
+    return this.ir.initial_state.bound_choice_functions.filter(f => f.entity_id === entityId);
+  }
+
+  /**
+   * Get all bound choice functions in the IR
+   */
+  getAllBoundChoiceFunctions(): IRBoundChoiceFunction[] {
+    return this.ir?.initial_state?.bound_choice_functions ?? [];
+  }
+
+  /**
+   * Get the loaded IR module (for advanced access)
+   */
+  getIR(): IRModule | null {
+    return this.ir;
+  }
+
+  // ===== BRL Compilation (stub for future implementation) =====
+
+  /**
+   * Compile and execute BRL code
+   * NOTE: This is a stub for future implementation. Currently throws an error.
+   * @param brlCode The BRL code to compile and execute
+   */
+  compileAndExecuteBRL(_brlCode: string): void {
+    // This is a stub for future implementation
+    // The actual implementation would:
+    // 1. Parse the BRL code
+    // 2. Compile to IR
+    // 3. Load the IR into the engine
+    throw new Error('BRL compilation not yet implemented. Use loadRulesFromObject with pre-compiled IR.');
   }
 
   // ===== Private methods =====
