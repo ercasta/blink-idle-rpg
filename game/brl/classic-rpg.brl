@@ -61,7 +61,7 @@ component Enemy {
 // Holds references to all enemy templates / entries in the game
 // Holds references to all enemy templates / entries in the game
 component EnemyCompendium {
-    entries: id[]
+    entries: list<id>
 }
 
 // Character skills
@@ -443,22 +443,3 @@ rule reschedule_retargeting on CheckAllTargets {
         }
     }
 }
-
-// Trackers for UI feedback
-tracker Health on DoAttack
-tracker Character on DoAttack
-tracker Health on AfterAttack
-tracker Health on Death
-tracker Character on Death
-tracker Character on LevelUp
-tracker Skills on LevelUp
-tracker GameState on EnemyDefeated
-tracker GameState on GameOver
-tracker Enemy on EnemySpawned
-tracker Mana on UseSkill
-tracker Skills on SkillAcquired
-tracker ChoiceContext on SkillChoice
-tracker GameState on PlayerDefeated
-tracker RunStats on UpdateRunStats
-tracker RunStats on FleeFromBattle
-tracker GameState on SaveRunToLeaderboard

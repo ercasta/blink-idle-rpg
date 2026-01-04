@@ -55,8 +55,3 @@ rule death_check on DoAttack {
         }
     }
 }
-
-// Trackers for UI feedback
-tracker Health on DoAttack
-tracker Character on DoAttack
-tracker Health on Death
