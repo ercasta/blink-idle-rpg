@@ -150,6 +150,12 @@ HTML Demo (accesses via getBoundFunction API)
 4. ✅ Console logs show bound functions detected
 5. ✅ BCL UI displays correct status
 
+### Notes on IR Format
+The compiler generates simplified IR bodies for bound functions:
+- `select_attack_target`: Body is `{"type": "var", "name": "id"}` (simplified)
+- Other functions: Bodies are more complete expressions
+This is the compiler's internal representation and is handled by the engine.
+
 ### To Test
 - [ ] Run game and verify heroes use bound functions
 - [ ] Open BCL editor and verify default implementations load
