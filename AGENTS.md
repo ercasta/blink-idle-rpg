@@ -7,3 +7,28 @@
 - Change hielements accordingly
 - Implement the changes
 - Run Hielements checks to ensure alignment
+
+## Language Compilation Test Suite
+
+After making changes to the compiler, run the language compilation test suite:
+
+```bash
+cd src/compiler
+cargo test --test language_tests
+```
+
+This test suite validates:
+- Component definitions
+- Rule definitions and triggers
+- Function definitions
+- Tracker definitions
+- Entity syntax (new and legacy)
+- `entities having` expressions
+- Bound choice functions
+- Composite types
+- Control flow (if/else, for loops)
+- Expressions (binary, unary, field access, index access, function calls)
+- Statement types (let, schedule, create, delete)
+- Assignment operators
+
+All tests must pass before changes to the compiler are committed.

@@ -535,7 +535,8 @@ Bound choice functions are stored directly on entities as first-class properties
   "initial_state": {
     "entities": [
       {
-        "id": "@warrior",
+        "id": 0,
+        "variable": "warrior",
         "components": {
           "Character": { "name": "Sir Braveheart", "class": "Warrior" },
           "Health": { "current": 120, "max": 120 }
@@ -563,7 +564,39 @@ Bound choice functions are stored directly on entities as first-class properties
 }
 ```
 
-### 11.4.2 Bound Functions
+**Note**: The `variable` field replaces the old `name` field (and the `@name` syntax in BDL).
+Entities are nameless; variables reference them. The new BDL syntax is:
+
+```bdl
+warrior = new entity {
+    Character {
+        name: "Sir Braveheart"
+        class: "Warrior"
+    }
+}
+```
+
+### 11.4.2 Entity Queries
+
+BRL/BCL can query entities by component using the `entities having` expression:
+
+```brl
+let warriors = entities having Character
+```
+
+This generates an IR call expression:
+
+```json
+{
+  "type": "call",
+  "function": "entities_having",
+  "args": [
+    { "type": "literal", "value": "Character" }
+  ]
+}
+```
+
+### 11.4.3 Bound Functions
 
 Bound choice functions are defined inline in BDL and stored as first-class properties of entities. When BRL code calls a choice function on an entity, the engine looks up the function directly in the entity's `bound_functions` map.
 

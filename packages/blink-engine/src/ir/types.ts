@@ -251,6 +251,10 @@ export interface IRInitialState {
 
 export interface IREntityDefinition {
   id: number | string;
+  /** Variable name for the entity (e.g., "warrior" from `warrior = new entity`)
+   * This replaces the old @name syntax. Entities are nameless; variables reference them.
+   */
+  variable?: string;
   components: Record<string, Record<string, IRFieldValue>>;
   /** Bound choice functions stored directly on the entity */
   bound_functions?: IRBoundFunctions;

@@ -393,9 +393,10 @@ pub struct IRInitialState {
 pub struct IREntity {
     /// Numeric entity ID
     pub id: u32,
-    /// Optional entity name (e.g., "warrior", "goblin_scout")
+    /// Variable name for the entity (e.g., "warrior" from `warrior = new entity`)
+    /// This replaces the old @name syntax. Entities are nameless; variables reference them.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub name: Option<String>,
+    pub variable: Option<String>,
     /// Component data for this entity
     pub components: IndexMap<String, IndexMap<String, IRValue>>,
     /// Bound choice functions for this entity (BCL)
@@ -810,7 +811,7 @@ impl IRGenerator {
         
         IREntity {
             id,
-            name: entity.name.clone(),
+            variable: entity.variable.clone(),
             components,
             bound_functions,
         }
@@ -918,6 +919,16 @@ impl IRGenerator {
                 IRExpression::Call {
                     function: "list".to_string(),
                     args: elements.iter().map(|e| self.generate_expression(e)).collect(),
+                }
+            }
+            TypedExprKind::EntitiesHaving(component) => {
+                // Entity query: `entities having ComponentType`
+                // Generate a call to a built-in 'entities_having' function
+                IRExpression::Call {
+                    function: "entities_having".to_string(),
+                    args: vec![
+                        IRExpression::Literal { value: IRValue::String(component.clone()) },
+                    ],
                 }
             }
             _ => IRExpression::Literal { value: IRValue::Null },

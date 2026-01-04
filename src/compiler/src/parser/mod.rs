@@ -42,10 +42,15 @@ pub enum Item {
 }
 
 /// Entity definition (for BDL - entity data files)
+/// 
+/// Supports two syntaxes:
+/// 1. Variable assignment: `warrior = new entity { ... }`
+/// 2. Inline declaration: `new entity { ... }` (returns to caller)
 #[derive(Debug, Clone)]
 pub struct EntityDef {
-    /// Optional entity name (e.g., @warrior, @goblin_scout)
-    pub name: Option<String>,
+    /// Variable name for the entity (e.g., "warrior" from `warrior = new entity`)
+    /// This replaces the old @name syntax. Entities are nameless; variables reference them.
+    pub variable: Option<String>,
     /// Components initialized for this entity
     pub components: Vec<ComponentInit>,
     /// Bound choice functions for this entity (BCL)
@@ -294,7 +299,8 @@ pub enum Expr {
     /// Variable or identifier reference
     Identifier(String, Span),
     
-    /// Entity reference (@name)
+    /// Entity reference (@name) - DEPRECATED: use variable assignment (`warrior = new entity`) instead.
+    /// This syntax will be removed in a future version. Migrate to the new syntax as soon as possible.
     EntityRef(String, Span),
     
     /// Field access (a.b)
@@ -326,6 +332,10 @@ pub enum Expr {
     
     /// Parenthesized expression
     Paren(Box<Expr>, Span),
+    
+    /// Entity query: `entities having ComponentType`
+    /// Returns a list of entities that have the specified component
+    EntitiesHaving(String, Span),
 }
 
 /// Literal values
@@ -441,14 +451,70 @@ impl Parser {
             TokenKind::Import => self.parse_import().map(Item::Import),
             TokenKind::Module => self.parse_module_def().map(Item::ModuleDef),
             TokenKind::Entity => self.parse_entity().map(Item::Entity),
-            // Also handle entity refs like @warrior at top level (BDL syntax)
+            TokenKind::New => self.parse_entity().map(Item::Entity),
+            // DEPRECATED: @name syntax at top level - still parsed for backward compatibility
             TokenKind::EntityRef => self.parse_entity().map(Item::Entity),
+            // Handle variable assignment: `warrior = new entity { ... }`
+            TokenKind::Identifier => {
+                // Look ahead to see if this is a variable assignment to a new entity
+                let peek_idx = self.pos;
+                if self.tokens.get(peek_idx + 1).map(|t| t.kind == TokenKind::Eq).unwrap_or(false) {
+                    // Check if after = comes `new entity`
+                    if self.tokens.get(peek_idx + 2).map(|t| t.kind == TokenKind::New).unwrap_or(false) {
+                        return self.parse_entity_assignment().map(Item::Entity);
+                    }
+                }
+                Err(ParseError::UnexpectedToken {
+                    found: token.text.clone(),
+                    expected: "component, rule, fn, tracker, import, module, entity, or entity assignment".to_string(),
+                    position: token.span.start,
+                })
+            }
             _ => Err(ParseError::UnexpectedToken {
                 found: token.text.clone(),
                 expected: "component, rule, fn, tracker, import, module, or entity".to_string(),
                 position: token.span.start,
             }),
         }
+    }
+    
+    /// Parse entity assignment: `warrior = new entity { ... }`
+    fn parse_entity_assignment(&mut self) -> Result<EntityDef, ParseError> {
+        // Get variable name
+        let var_token = self.consume(TokenKind::Identifier, "variable name")?;
+        let variable = var_token.text.clone();
+        let start = var_token.span.start;
+        
+        // Consume `=`
+        self.consume(TokenKind::Eq, "=")?;
+        
+        // Consume `new entity`
+        self.consume(TokenKind::New, "new")?;
+        self.consume(TokenKind::Entity, "entity")?;
+        
+        // Parse entity body
+        self.consume(TokenKind::LBrace, "{")?;
+        
+        let mut components = Vec::new();
+        let mut bound_functions = Vec::new();
+        
+        while !self.check(&TokenKind::RBrace) && !self.is_at_end() {
+            // Check if this is a bound function (.functionName = choice...)
+            if self.check(&TokenKind::Dot) {
+                bound_functions.push(self.parse_bound_function()?);
+            } else {
+                components.push(self.parse_component_init()?);
+            }
+        }
+        
+        let end_token = self.consume(TokenKind::RBrace, "}")?;
+        
+        Ok(EntityDef {
+            variable: Some(variable),
+            components,
+            bound_functions,
+            span: Span::new(start, end_token.span.end),
+        })
     }
     
     fn parse_component(&mut self) -> Result<ComponentDef, ParseError> {
@@ -741,33 +807,55 @@ impl Parser {
     }
     
     /// Parse an entity definition (BDL support)
-    /// Syntax: entity { Component { ... } Component { ... } }
-    /// Or: entity @name { Component { ... } }
+    /// 
+    /// New syntax (variable assignment):
+    ///   warrior = new entity { Component { ... } }
+    /// 
+    /// Legacy syntax (still supported for backward compatibility during transition):
+    ///   entity { Component { ... } }
+    ///   entity @name { Component { ... } }  <- DEPRECATED
+    ///   @name { Component { ... } }          <- DEPRECATED
+    /// 
     /// With optional bound functions: .functionName = choice(...) { ... }
     fn parse_entity(&mut self) -> Result<EntityDef, ParseError> {
-        // Check for entity keyword or @name
-        let (start, name) = if self.check(&TokenKind::EntityRef) {
-            // @name syntax without entity keyword
+        // Check for different entity syntaxes
+        let (start, variable) = if self.check(&TokenKind::EntityRef) {
+            // DEPRECATED: @name syntax without entity keyword
+            // Still parsed for backward compatibility but will be removed
             let ref_token = self.advance().unwrap().clone();
-            let name = ref_token.text[1..].to_string(); // Remove @ prefix
-            (ref_token.span.start, Some(name))
+            let var_name = ref_token.text[1..].to_string(); // Remove @ prefix
+            (ref_token.span.start, Some(var_name))
+        } else if self.check(&TokenKind::New) {
+            // New syntax: `new entity { ... }` (anonymous, returned to caller)
+            // This would be used in assignment: `a = new entity { ... }`
+            let start = self.consume(TokenKind::New, "new")?.span.start;
+            self.consume(TokenKind::Entity, "entity")?;
+            (start, None)
         } else {
-            // entity keyword
+            // entity keyword (legacy or with identifier)
             let start = self.consume(TokenKind::Entity, "entity")?.span.start;
             
-            // Optional @name after entity keyword
-            let name = if self.check(&TokenKind::EntityRef) {
+            // Optional @name or identifier after entity keyword (DEPRECATED)
+            let variable = if self.check(&TokenKind::EntityRef) {
                 let ref_token = self.advance().unwrap().clone();
                 Some(ref_token.text[1..].to_string()) // Remove @ prefix
             } else if self.check(&TokenKind::Identifier) {
-                // Also allow entity name { ... } without @ for convenience
-                let name_token = self.advance().unwrap().clone();
-                Some(name_token.text)
+                // Check if this is actually a named entity or just a component
+                // Look ahead to see if there's a { after the identifier
+                let peek_idx = self.pos;
+                if self.tokens.get(peek_idx + 1).map(|t| t.kind == TokenKind::LBrace).unwrap_or(false) {
+                    // This is a named entity: `entity warrior { ... }`
+                    let name_token = self.advance().unwrap().clone();
+                    Some(name_token.text)
+                } else {
+                    // This is an anonymous entity: `entity { ComponentName { ... } }`
+                    None
+                }
             } else {
                 None
             };
             
-            (start, name)
+            (start, variable)
         };
         
         self.consume(TokenKind::LBrace, "{")?;
@@ -787,7 +875,7 @@ impl Parser {
         let end_token = self.consume(TokenKind::RBrace, "}")?;
         
         Ok(EntityDef {
-            name,
+            variable,
             components,
             bound_functions,
             span: Span::new(start, end_token.span.end),
@@ -1511,6 +1599,13 @@ impl Parser {
             TokenKind::True => Ok(Expr::Literal(Literal::Boolean(true))),
             TokenKind::False => Ok(Expr::Literal(Literal::Boolean(false))),
             TokenKind::Null => Ok(Expr::Literal(Literal::Null)),
+            // Parse `entities having ComponentType` expression
+            TokenKind::Entities => {
+                let span_start = token.span.start;
+                self.consume(TokenKind::Having, "having")?;
+                let component_token = self.consume(TokenKind::Identifier, "component name")?;
+                Ok(Expr::EntitiesHaving(component_token.text.clone(), Span::new(span_start, component_token.span.end)))
+            }
             // Handle 'entity' and 'event' keywords as identifiers in expression context
             // Note: 'id' (TypeId) is only allowed as field names, not as standalone identifiers
             TokenKind::Entity | TokenKind::Event => {
@@ -1587,6 +1682,7 @@ impl Expr {
             Expr::Cast(_, _, s) => *s,
             Expr::List(_, s) => *s,
             Expr::Paren(_, s) => *s,
+            Expr::EntitiesHaving(_, s) => *s,
         }
     }
 }
@@ -1665,7 +1761,7 @@ mod tests {
         
         assert_eq!(module.items.len(), 1);
         if let Item::Entity(entity) = &module.items[0] {
-            assert_eq!(entity.name, Some("warrior".to_string()));
+            assert_eq!(entity.variable, Some("warrior".to_string()));
             assert_eq!(entity.components.len(), 1);
             assert_eq!(entity.bound_functions.len(), 1);
             
@@ -1692,7 +1788,7 @@ mod tests {
         
         assert_eq!(module.items.len(), 1);
         if let Item::Entity(entity) = &module.items[0] {
-            assert_eq!(entity.name, Some("warrior".to_string()));
+            assert_eq!(entity.variable, Some("warrior".to_string()));
             assert_eq!(entity.bound_functions.len(), 1);
             
             let func = &entity.bound_functions[0];
@@ -1713,6 +1809,57 @@ mod tests {
             }
         } else {
             panic!("Expected Entity item");
+        }
+    }
+
+    #[test]
+    fn test_parse_new_entity_syntax() {
+        let source = r#"
+            warrior = new entity {
+                Health {
+                    current: 100
+                    max: 100
+                }
+            }
+        "#;
+        let tokens = tokenize(source).unwrap();
+        let module = parse(tokens).unwrap();
+        
+        assert_eq!(module.items.len(), 1);
+        if let Item::Entity(entity) = &module.items[0] {
+            assert_eq!(entity.variable, Some("warrior".to_string()));
+            assert_eq!(entity.components.len(), 1);
+            assert_eq!(entity.components[0].name, "Health");
+        } else {
+            panic!("Expected Entity item");
+        }
+    }
+
+    #[test]
+    fn test_parse_entities_having_expression() {
+        let source = r#"
+            rule test on SomeEvent {
+                let warriors = entities having Character
+            }
+        "#;
+        let tokens = tokenize(source).unwrap();
+        let module = parse(tokens).unwrap();
+        
+        assert_eq!(module.items.len(), 1);
+        if let Item::Rule(rule) = &module.items[0] {
+            assert_eq!(rule.body.statements.len(), 1);
+            if let Statement::Let(let_stmt) = &rule.body.statements[0] {
+                assert_eq!(let_stmt.name, "warriors");
+                if let Expr::EntitiesHaving(component, _) = &let_stmt.value {
+                    assert_eq!(component, "Character");
+                } else {
+                    panic!("Expected EntitiesHaving expression");
+                }
+            } else {
+                panic!("Expected Let statement");
+            }
+        } else {
+            panic!("Expected Rule item");
         }
     }
 }
