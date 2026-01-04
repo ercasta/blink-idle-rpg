@@ -2148,9 +2148,9 @@
     function getDefaultBclImplementation(choiceId) {
       // Search through loaded BCL files for the function implementation
       for (const bclFile of loadedBCLFiles) {
-        // Look for the choice function definition
-        const regex = new RegExp(`choice\\s+fn\\s+${choiceId}\\s*\\([^)]*\\)\\s*:\\s*\\w+\\s*\\{`, 'g');
-        const match = regex.exec(bclFile.content);
+        // Look for the choice function definition (without global flag to avoid state issues)
+        const regex = new RegExp(`choice\\s+fn\\s+${choiceId}\\s*\\([^)]*\\)\\s*:\\s*\\w+\\s*\\{`);
+        const match = bclFile.content.match(regex);
         
         if (match) {
           const startIndex = match.index;
@@ -2158,17 +2158,17 @@
           // Extract the full function including body
           // Find matching closing brace
           let braceCount = 0;
-          let inFunction = false;
           let endIndex = startIndex;
+          let foundOpenBrace = false;
           
           for (let i = startIndex; i < bclFile.content.length; i++) {
             const char = bclFile.content[i];
             if (char === '{') {
               braceCount++;
-              inFunction = true;
+              foundOpenBrace = true;
             } else if (char === '}') {
               braceCount--;
-              if (inFunction && braceCount === 0) {
+              if (foundOpenBrace && braceCount === 0) {
                 endIndex = i + 1;
                 break;
               }
@@ -2176,7 +2176,7 @@
           }
           
           // Extract function with some context (comments before it)
-          const beforeFunction = bclFile.content.substring(Math.max(0, startIndex - 300), startIndex);
+          const beforeFunction = bclFile.content.substring(Math.max(0, startIndex - BCL_COMMENT_CONTEXT_LENGTH), startIndex);
           const commentLines = [];
           const lines = beforeFunction.split('\n');
           
@@ -2429,6 +2429,13 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
     // Each BCL file is loaded as text and stored in loadedBCLFiles array.
     // Players can view and customize these strategies via the BCL editor UI.
     // ========================================================================
+    
+    // Configuration constants for BCL loading
+    const BCL_GITHUB_PAGES_PATH = 'game-files/';  // Path on GitHub Pages deployment
+    const BCL_LOCAL_DEV_PATH = '../bcl/';          // Path for local development
+    const BCL_DOCSTRING_SEARCH_LENGTH = 500;       // Characters to search before function for docstring
+    const BCL_COMMENT_CONTEXT_LENGTH = 300;        // Characters to search for comments
+    
     async function loadBclFiles() {
       const bclFiles = [
         'warrior-skills.bcl',
@@ -2441,7 +2448,7 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
       ];
       
       loadedBCLFiles = [];
-      const basePaths = ['game-files/', '../bcl/']; // Try GitHub Pages path first, then local dev path
+      const basePaths = [BCL_GITHUB_PAGES_PATH, BCL_LOCAL_DEV_PATH]; // Try GitHub Pages path first, then local dev path
       
       for (const filename of bclFiles) {
         let loaded = false;
@@ -2507,7 +2514,7 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
           const signature = sigMatch ? sigMatch[1] : `choice fn ${functionName}(...)`;
           
           // Try to extract docstring (comment before function)
-          const beforeFunction = bclFile.content.substring(Math.max(0, startIndex - 500), startIndex);
+          const beforeFunction = bclFile.content.substring(Math.max(0, startIndex - BCL_DOCSTRING_SEARCH_LENGTH), startIndex);
           const commentMatch = beforeFunction.match(/\/\/\s*(.+?)(?:\n\/\/\s*(.+?))*\s*$/);
           const docstring = commentMatch ? commentMatch[0].replace(/^\/\/\s*/gm, '').trim() : 
                             `${functionName} choice function`;
