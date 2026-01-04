@@ -102,8 +102,9 @@ fn run_compile(
     let source = fs::read_to_string(input)?;
     
     // Collect additional source files for source map only
-    // BCL and BDL files are NOT concatenated with the BRL source because they have different syntax
-    // They are only included in the source map for debugging/dev tools
+    // BCL (choice functions) and BDL (entity definitions) files are NOT concatenated with the BRL (game rules) 
+    // source because they have different syntax and language constructs that the BRL parser cannot understand.
+    // They are only included in the source map for debugging/dev tools support.
     let mut additional_files: Vec<(String, String, String)> = Vec::new();
     
     for path in include_files {
