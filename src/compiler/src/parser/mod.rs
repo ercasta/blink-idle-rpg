@@ -97,6 +97,8 @@ pub enum TypeExpr {
     Component(String),
     List(Box<TypeExpr>),
     Optional(Box<TypeExpr>),
+    /// Composite type (A & B & C) - used in BCL for entity type constraints
+    Composite(Vec<TypeExpr>),
 }
 
 /// Rule definition
@@ -859,24 +861,31 @@ impl Parser {
     /// Parse a choice function parameter type
     /// Supports composite types like `Character & Skills & Health`
     fn parse_choice_param_type(&mut self) -> Result<TypeExpr, ParseError> {
-        let mut type_expr = self.parse_type()?;
+        let first_type = self.parse_type()?;
         
         // Handle composite types with &
-        while self.check(&TokenKind::And) {
-            self.advance();
-            let additional_type = self.parse_type()?;
-            // For composite types, we'll represent as a Component with combined name
-            // This is a simplification - in a full implementation, we'd have a proper composite type
-            if let TypeExpr::Component(name1) = type_expr {
-                if let TypeExpr::Component(name2) = additional_type {
-                    type_expr = TypeExpr::Component(format!("{} & {}", name1, name2));
-                } else {
-                    type_expr = TypeExpr::Component(name1);
+        if self.check(&TokenKind::And) {
+            let mut types = vec![first_type];
+            
+            while self.check(&TokenKind::And) {
+                self.advance();
+                let additional_type = self.parse_type()?;
+                types.push(additional_type);
+            }
+            
+            // Validate all types in composite are components (entity constraints)
+            for t in &types {
+                if !matches!(t, TypeExpr::Component(_)) {
+                    return Err(ParseError::InvalidSyntax {
+                        message: "Composite types (using &) can only contain component types".to_string(),
+                    });
                 }
             }
+            
+            Ok(TypeExpr::Composite(types))
+        } else {
+            Ok(first_type)
         }
-        
-        Ok(type_expr)
     }
     
     fn parse_block(&mut self) -> Result<Block, ParseError> {
@@ -1664,6 +1673,44 @@ mod tests {
             assert_eq!(func.name, "selectTarget");
             assert_eq!(func.params.len(), 1);
             assert_eq!(func.params[0].name, "enemies");
+        } else {
+            panic!("Expected Entity item");
+        }
+    }
+
+    #[test]
+    fn test_parse_bound_function_with_composite_type() {
+        let source = r#"
+            entity @warrior {
+                .selectSkill = choice(character: Character & Skills & Health, enemies: list): string {
+                    return "power_strike"
+                }
+            }
+        "#;
+        let tokens = tokenize(source).unwrap();
+        let module = parse(tokens).unwrap();
+        
+        assert_eq!(module.items.len(), 1);
+        if let Item::Entity(entity) = &module.items[0] {
+            assert_eq!(entity.name, Some("warrior".to_string()));
+            assert_eq!(entity.bound_functions.len(), 1);
+            
+            let func = &entity.bound_functions[0];
+            assert_eq!(func.name, "selectSkill");
+            assert_eq!(func.params.len(), 2);
+            assert_eq!(func.params[0].name, "character");
+            
+            // Verify composite type was parsed correctly
+            if let TypeExpr::Composite(types) = &func.params[0].param_type {
+                assert_eq!(types.len(), 3);
+                if let TypeExpr::Component(name) = &types[0] {
+                    assert_eq!(name, "Character");
+                } else {
+                    panic!("Expected Component type");
+                }
+            } else {
+                panic!("Expected Composite type");
+            }
         } else {
             panic!("Expected Entity item");
         }

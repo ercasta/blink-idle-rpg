@@ -57,6 +57,8 @@ pub enum Type {
     Component(String),
     List(Box<Type>),
     Optional(Box<Type>),
+    /// Composite type (A & B & C) - entity with multiple component requirements
+    Composite(Vec<Type>),
     Void,
     Unknown,
 }
@@ -73,6 +75,9 @@ impl Type {
             TypeExpr::Component(name) => Type::Component(name.clone()),
             TypeExpr::List(inner) => Type::List(Box::new(Type::from_type_expr(inner))),
             TypeExpr::Optional(inner) => Type::Optional(Box::new(Type::from_type_expr(inner))),
+            TypeExpr::Composite(types) => {
+                Type::Composite(types.iter().map(Type::from_type_expr).collect())
+            }
         }
     }
 }

@@ -10,7 +10,7 @@ use thiserror::Error;
 use crate::analyzer::{
     TypedModule, TypedItem, TypedComponent, TypedField, TypedRule, TypedFunction,
     TypedTracker, TypedEntity, TypedBlock, TypedStatement, TypedExpr, TypedExprKind,
-    TypedElseClause, TypedComponentInit, Type,
+    TypedElseClause, TypedComponentInit, TypedBoundFunction, Type,
 };
 use crate::parser::{Literal, BinaryOp, UnaryOp, AssignOp};
 use crate::CompilerOptions;
@@ -582,6 +582,7 @@ impl IRGenerator {
             Type::Integer | Type::Float | Type::Decimal => IRType::Number,
             Type::EntityId => IRType::Entity,
             Type::Component(_) => IRType::Entity, // Components are accessed via entity
+            Type::Composite(_) => IRType::Entity, // Composite types represent entity constraints
             Type::List(inner) => IRType::List {
                 element: Box::new(self.convert_type(inner)),
             },
@@ -816,7 +817,7 @@ impl IRGenerator {
     }
     
     /// Generate an IR bound function from a typed bound function
-    fn generate_bound_function(&self, func: &crate::analyzer::TypedBoundFunction) -> IRBoundFunction {
+    fn generate_bound_function(&self, func: &TypedBoundFunction) -> IRBoundFunction {
         let params: Vec<_> = func.params.iter().map(|p| {
             IRParam {
                 name: p.name.clone(),
