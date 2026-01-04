@@ -1693,61 +1693,47 @@
     const confirmPartyBtn = document.getElementById('confirm-party-btn');
     
     // ========================================================================
-    // EXTRACT CHARACTER DATA FROM IR
+    // LOAD CHARACTER DATA FROM JSON
     // ========================================================================
     // Character data - hero definitions for the party selection screen.
-    // This function extracts hero definitions from IR.initial_state.
+    // This function loads hero definitions from characters.json data file.
     //
-    // SOURCE: game/bdl/heroes.bdl → compiled into IR.initial_state
-    // Heroes are entities with Team.isPlayer = true and HeroInfo component
+    // SOURCE: game/data/characters.json
+    // NOTE: BDL compilation into IR.initial_state is not yet supported by compiler
     // ========================================================================
-    function extractCharacterDataFromIR(ir) {
-      if (!ir || !ir.initial_state || !ir.initial_state.entities) {
-        console.error('Invalid IR structure for character extraction');
+    async function loadCharacterData() {
+      try {
+        const paths = ['data/characters.json', '../data/characters.json'];
+        let data = null;
+        
+        for (const path of paths) {
+          try {
+            console.debug(`Attempting to load characters from: ${path}`);
+            const response = await fetch(path);
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            data = await response.json();
+            console.info(`Successfully loaded characters from ${path}`);
+            break;
+          } catch (error) {
+            console.warn(`Failed to load from ${path}:`, error.message);
+          }
+        }
+        
+        if (!data) {
+          throw new Error('Failed to load characters.json from all paths');
+        }
+        
+        // Data is already in the correct format
+        availableCharacters = data.characters || data;
+        console.info(`Loaded ${availableCharacters.length} heroes from characters.json`);
+        return availableCharacters;
+      } catch (error) {
+        console.error('Error loading character data:', error);
+        availableCharacters = [];
         return [];
       }
-      
-      // Find all entities with HeroInfo component (these are the selectable heroes)
-      const heroes = ir.initial_state.entities.filter(entity => 
-        entity.components.HeroInfo && entity.components.Team?.isPlayer === true
-      );
-      
-      // Transform to the format expected by the UI
-      availableCharacters = heroes.map(entity => {
-        const char = entity.components.Character || {};
-        const health = entity.components.Health || {};
-        const mana = entity.components.Mana || {};
-        const stats = entity.components.Stats || {};
-        const combat = entity.components.Combat || {};
-        const skills = entity.components.Skills || {};
-        const heroInfo = entity.components.HeroInfo || {};
-        
-        return {
-          id: heroInfo.id || `hero_${entity.id}`,
-          name: char.name || 'Unknown Hero',
-          class: char.class || 'Unknown',
-          description: heroInfo.description || '',
-          difficulty: heroInfo.difficulty || 'Medium',
-          role: heroInfo.role || '',
-          playstyle: heroInfo.playstyle || '',
-          baseHealth: health.max || 100,
-          baseMana: mana.max || 50,
-          baseDamage: combat.damage || 10,
-          baseDefense: combat.defense || 5,
-          attackSpeed: combat.attackSpeed || 1.0,
-          stats: {
-            strength: stats.strength || 10,
-            dexterity: stats.dexterity || 10,
-            intelligence: stats.intelligence || 10,
-            constitution: stats.constitution || 10,
-            wisdom: stats.wisdom || 10
-          },
-          skills: [skills.skill1, skills.skill2, skills.skill3, skills.skill4].filter(s => s)
-        };
-      });
-      
-      console.info(`Extracted ${availableCharacters.length} heroes from IR.initial_state`);
-      return availableCharacters;
     }
     
     // ========================================================================
@@ -2750,37 +2736,48 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
     // SOURCE: game/bdl/enemies.bdl → compiled into IR.initial_state
     // Enemies are entities with Enemy component and Team.isPlayer = false
     // ========================================================================
-    function extractEnemyDataFromIR(ir) {
-      if (!ir || !ir.initial_state || !ir.initial_state.entities) {
-        console.error('Invalid IR structure for enemy extraction');
+    // ========================================================================
+    // LOAD ENEMY DATA FROM JSON
+    // ========================================================================
+    // Enemy data - enemy templates for spawning during gameplay.
+    // This function loads enemy definitions from enemies.json data file.
+    //
+    // SOURCE: game/data/enemies.json
+    // NOTE: BDL compilation into IR.initial_state is not yet supported by compiler
+    // ========================================================================
+    async function loadEnemyData() {
+      try {
+        const paths = ['data/enemies.json', '../data/enemies.json'];
+        let data = null;
+        
+        for (const path of paths) {
+          try {
+            console.debug(`Attempting to load enemies from: ${path}`);
+            const response = await fetch(path);
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            data = await response.json();
+            console.info(`Successfully loaded enemies from ${path}`);
+            break;
+          } catch (error) {
+            console.warn(`Failed to load from ${path}:`, error.message);
+          }
+        }
+        
+        if (!data) {
+          throw new Error('Failed to load enemies.json from all paths');
+        }
+        
+        // Data is already in the correct format
+        enemyTemplates = data.enemies || data;
+        console.info(`Loaded ${enemyTemplates.length} enemy templates from enemies.json`);
+        return enemyTemplates;
+      } catch (error) {
+        console.error('Error loading enemy data:', error);
+        enemyTemplates = [];
         return [];
       }
-      
-      // Find all entities with Enemy component (these are the enemy templates)
-      const enemies = ir.initial_state.entities.filter(entity => 
-        entity.components.Enemy && entity.components.Team?.isPlayer === false
-      );
-      
-      // Transform to the format expected by the spawn logic
-      enemyTemplates = enemies.map(entity => {
-        const char = entity.components.Character || {};
-        const health = entity.components.Health || {};
-        const combat = entity.components.Combat || {};
-        const enemy = entity.components.Enemy || {};
-        
-        return {
-          name: char.name || 'Unknown Enemy',
-          tier: enemy.tier || 1,
-          health: health.max || 50,
-          damage: combat.damage || 10,
-          speed: combat.attackSpeed || 1.0,
-          exp: enemy.expReward || 25,
-          boss: enemy.isBoss || false
-        };
-      });
-      
-      console.info(`Extracted ${enemyTemplates.length} enemy templates from IR.initial_state`);
-      return enemyTemplates;
     }
     
     // Embedded classic-rpg.ir.json data
@@ -2990,76 +2987,7 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
         return;
       }
       
-      // Modify IR to use selected characters
-      const modifiedIR = JSON.parse(JSON.stringify(ir));
-      
-      // Update initial state with selected characters
-      modifiedIR.initial_state.entities = modifiedIR.initial_state.entities.filter(e => !e.components.Team || !e.components.Team.isPlayer);
-      
-      // Add selected characters as player entities
-      selectedCharacters.forEach((char, index) => {
-        const entityId = index;
-        modifiedIR.initial_state.entities.unshift({
-          id: entityId,
-          components: {
-            Character: {
-              name: char.name,
-              class: char.class,
-              level: 1,
-              experience: 0,
-              experienceToLevel: 100
-            },
-            Health: {
-              current: char.baseHealth,
-              max: char.baseHealth
-            },
-            Mana: {
-              current: char.baseMana,
-              max: char.baseMana
-            },
-            Stats: char.stats,
-            Combat: {
-              damage: char.baseDamage,
-              defense: char.baseDefense,
-              attackSpeed: char.attackSpeed,
-              critChance: 0.05,
-              critMultiplier: 1.5
-            },
-            Target: {
-              entity: 4 + index // Will be updated when enemies spawn
-            },
-            Team: {
-              id: 'player',
-              isPlayer: true
-            },
-            Skills: {
-              skill1: char.skills ? char.skills[0] : '',
-              skill2: '',
-              skill3: '',
-              skill4: '',
-              skillPoints: 0
-            },
-            Buffs: {
-              damageBonus: 0,
-              defenseBonus: 0,
-              hasteBonus: 0,
-              shieldAmount: 0,
-              regenAmount: 0
-            },
-            SkillCooldown: {
-              skill1Cooldown: 0,
-              skill2Cooldown: 0,
-              skill3Cooldown: 0,
-              skill4Cooldown: 0
-            },
-            ChoiceContext: {
-              pendingChoice: '',
-              options: '',
-              chosen: ''
-            }
-          }
-        });
-      });
+      // Use IR as-is (heroes will be created dynamically below)
       
       game = BlinkEngine.BlinkGame.createSync({
         debug: false,
@@ -3068,7 +2996,79 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
         maxEventsPerFrame: 1000
       });
       
-      game.loadRulesFromObject(modifiedIR);
+      game.loadRulesFromObject(ir);
+      
+      // Create hero entities dynamically from selected characters
+      selectedCharacters.forEach((char, index) => {
+        const entityId = index;
+        game.createEntity(entityId);
+        
+        game.addComponent(entityId, 'Character', {
+          name: char.name,
+          class: char.class,
+          level: 1,
+          experience: 0,
+          experienceToLevel: 100
+        });
+        
+        game.addComponent(entityId, 'Health', {
+          current: char.baseHealth,
+          max: char.baseHealth
+        });
+        
+        game.addComponent(entityId, 'Mana', {
+          current: char.baseMana,
+          max: char.baseMana
+        });
+        
+        game.addComponent(entityId, 'Stats', char.stats);
+        
+        game.addComponent(entityId, 'Combat', {
+          damage: char.baseDamage,
+          defense: char.baseDefense,
+          attackSpeed: char.attackSpeed,
+          critChance: 0.05,
+          critMultiplier: 1.5
+        });
+        
+        game.addComponent(entityId, 'Target', {
+          entity: 4 + index // Will be updated when enemies spawn
+        });
+        
+        game.addComponent(entityId, 'Team', {
+          id: 'player',
+          isPlayer: true
+        });
+        
+        game.addComponent(entityId, 'Skills', {
+          skill1: char.skills && char.skills.length > 0 ? char.skills[0] : '',
+          skill2: '',
+          skill3: '',
+          skill4: '',
+          skillPoints: 0
+        });
+        
+        game.addComponent(entityId, 'Buffs', {
+          damageBonus: 0,
+          defenseBonus: 0,
+          hasteBonus: 0,
+          shieldAmount: 0,
+          regenAmount: 0
+        });
+        
+        game.addComponent(entityId, 'SkillCooldown', {
+          skill1Cooldown: 0,
+          skill2Cooldown: 0,
+          skill3Cooldown: 0,
+          skill4Cooldown: 0
+        });
+        
+        game.addComponent(entityId, 'ChoiceContext', {
+          pendingChoice: '',
+          options: '',
+          chosen: ''
+        });
+      });
       
       // Initialize character data
       updateCharacterData();
@@ -3689,30 +3689,18 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
     
     // Initialize on load
     window.addEventListener('load', async () => {
-      // Load IR (this is the source of truth for rules/components/trackers/data)
+      // Load IR (this is the source of truth for rules/components/functions)
       await loadDefaultIR();
       
-      // Extract character and enemy data from IR.initial_state
+      // Load character and enemy data from JSON files
+      // NOTE: BDL entities are not yet compiled into IR.initial_state by the compiler
+      // The --include flag only adds files to source map for debugging support
       if (classicRpgIR) {
-        extractCharacterDataFromIR(classicRpgIR);
-        extractEnemyDataFromIR(classicRpgIR);
+        await loadCharacterData();
+        await loadEnemyData();
         renderCharacterSelection();
-        
-        // Log bound functions found in IR
-        if (classicRpgIR.initial_state && classicRpgIR.initial_state.entities) {
-          const entitiesWithBoundFunctions = classicRpgIR.initial_state.entities.filter(e => e.bound_functions);
-          if (entitiesWithBoundFunctions.length > 0) {
-            console.info(`✓ Found bound choice functions in IR for ${entitiesWithBoundFunctions.length} entities:`);
-            entitiesWithBoundFunctions.forEach(entity => {
-              const functionNames = Object.keys(entity.bound_functions);
-              console.info(`  - ${entity.name}: ${functionNames.join(', ')}`);
-            });
-          } else {
-            console.warn('No bound functions found in IR entities');
-          }
-        }
       } else {
-        console.error('Failed to load IR - cannot extract game data');
+        console.error('Failed to load IR - cannot proceed');
         alert('Failed to load game data. Please refresh the page.');
         return;
       }
