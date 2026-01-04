@@ -1693,13 +1693,78 @@
     const confirmPartyBtn = document.getElementById('confirm-party-btn');
     
     // ========================================================================
-    // LOAD CHARACTER DATA FROM JSON
+    // EXTRACT CHARACTER DATA FROM IR.initial_state
     // ========================================================================
     // Character data - hero definitions for the party selection screen.
-    // This function loads hero definitions from characters.json data file.
+    // This function extracts hero definitions from IR.initial_state.entities
     //
-    // SOURCE: game/data/characters.json
-    // NOTE: BDL compilation into IR.initial_state is not yet supported by compiler
+    // SOURCE: game/bdl/heroes.bdl → compiled into IR.initial_state
+    // Heroes are entities with HeroInfo component and Team.isPlayer = true
+    // ========================================================================
+    function extractCharactersFromIR() {
+      if (!classicRpgIR || !classicRpgIR.initial_state || !classicRpgIR.initial_state.entities) {
+        console.error('No initial_state.entities in IR');
+        return [];
+      }
+      
+      // Filter entities that are heroes (have HeroInfo component and Team.isPlayer = true)
+      const heroes = classicRpgIR.initial_state.entities.filter(entity => {
+        return entity.components.HeroInfo && 
+               entity.components.Team && 
+               entity.components.Team.isPlayer === true;
+      });
+      
+      // Convert IR entities to the format expected by the UI
+      availableCharacters = heroes.map(entity => {
+        return {
+          id: entity.id,
+          name: entity.components.Character?.name || 'Unknown Hero',
+          class: entity.components.Character?.class || 'Adventurer',
+          level: entity.components.Character?.level || 1,
+          // Base stats for display in hero selection
+          baseHealth: entity.components.Health?.max || 100,
+          baseMana: entity.components.Mana?.max || 0,
+          baseDamage: entity.components.Combat?.damage || 10,
+          baseDefense: entity.components.Combat?.defense || 5,
+          // Hero info for UI
+          description: entity.components.HeroInfo?.description || '',
+          role: entity.components.HeroInfo?.role || 'Unknown',
+          difficulty: entity.components.HeroInfo?.difficulty || 'Normal',
+          // Full component data for game engine
+          health: {
+            current: entity.components.Health?.current || 100,
+            max: entity.components.Health?.max || 100
+          },
+          mana: {
+            current: entity.components.Mana?.current || 0,
+            max: entity.components.Mana?.max || 0
+          },
+          stats: entity.components.Stats || {
+            strength: 10,
+            dexterity: 10,
+            intelligence: 10,
+            constitution: 10,
+            wisdom: 10
+          },
+          combat: entity.components.Combat || {
+            damage: 10,
+            defense: 5,
+            attackSpeed: 1.0,
+            critChance: 0.1,
+            critMultiplier: 1.5
+          }
+        };
+      });
+      
+      console.info(`Extracted ${availableCharacters.length} heroes from IR.initial_state`);
+      return availableCharacters;
+    }
+    
+    // ========================================================================
+    // LEGACY: LOAD CHARACTER DATA FROM JSON (DEPRECATED)
+    // ========================================================================
+    // This function is no longer used. Character data is now extracted from IR.
+    // Kept for reference/backwards compatibility if needed.
     // ========================================================================
     async function loadCharacterData() {
       try {
@@ -2737,13 +2802,75 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
     // Enemies are entities with Enemy component and Team.isPlayer = false
     // ========================================================================
     // ========================================================================
-    // LOAD ENEMY DATA FROM JSON
     // ========================================================================
-    // Enemy data - enemy templates for spawning during gameplay.
-    // This function loads enemy definitions from enemies.json data file.
+    // EXTRACT ENEMY DATA FROM IR.initial_state
+    // ========================================================================
+    // Enemy templates - creature definitions used for spawning enemies.
+    // This function extracts enemy templates from IR.initial_state.entities
     //
-    // SOURCE: game/data/enemies.json
-    // NOTE: BDL compilation into IR.initial_state is not yet supported by compiler
+    // SOURCE: game/bdl/enemies.bdl → compiled into IR.initial_state
+    // Enemies are entities with Enemy component and Team.isPlayer = false
+    // ========================================================================
+    function extractEnemiesFromIR() {
+      if (!classicRpgIR || !classicRpgIR.initial_state || !classicRpgIR.initial_state.entities) {
+        console.error('No initial_state.entities in IR');
+        return [];
+      }
+      
+      // Filter entities that are enemies (have Enemy component and Team.isPlayer = false)
+      const enemies = classicRpgIR.initial_state.entities.filter(entity => {
+        return entity.components.Enemy && 
+               entity.components.Team && 
+               entity.components.Team.isPlayer === false;
+      });
+      
+      // Convert IR entities to the format expected by the game
+      enemyTemplates = enemies.map(entity => {
+        return {
+          id: entity.id,
+          variable: entity.variable, // Used for spawning specific enemy types
+          name: entity.components.Character?.name || 'Unknown Enemy',
+          class: entity.components.Character?.class || 'Monster',
+          level: entity.components.Character?.level || 1,
+          health: {
+            current: entity.components.Health?.current || 50,
+            max: entity.components.Health?.max || 50
+          },
+          mana: {
+            current: entity.components.Mana?.current || 0,
+            max: entity.components.Mana?.max || 0
+          },
+          stats: entity.components.Stats || {
+            strength: 8,
+            dexterity: 8,
+            intelligence: 8,
+            constitution: 8,
+            wisdom: 8
+          },
+          combat: entity.components.Combat || {
+            damage: 8,
+            defense: 3,
+            attackSpeed: 1.0,
+            critChance: 0.05,
+            critMultiplier: 1.5
+          },
+          enemy: entity.components.Enemy || {
+            tier: 1,
+            isBoss: false,
+            expReward: 10
+          }
+        };
+      });
+      
+      console.info(`Extracted ${enemyTemplates.length} enemy templates from IR.initial_state`);
+      return enemyTemplates;
+    }
+    
+    // ========================================================================
+    // LEGACY: LOAD ENEMY DATA FROM JSON (DEPRECATED)
+    // ========================================================================
+    // This function is no longer used. Enemy data is now extracted from IR.
+    // Kept for reference/backwards compatibility if needed.
     // ========================================================================
     async function loadEnemyData() {
       try {
@@ -3692,12 +3819,11 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
       // Load IR (this is the source of truth for rules/components/functions)
       await loadDefaultIR();
       
-      // Load character and enemy data from JSON files
-      // NOTE: BDL entities are not yet compiled into IR.initial_state by the compiler
-      // The --include flag only adds files to source map for debugging support
+      // Extract character and enemy data from IR.initial_state
+      // BDL entities are now compiled into IR.initial_state by the compiler
       if (classicRpgIR) {
-        await loadCharacterData();
-        await loadEnemyData();
+        extractCharactersFromIR();
+        extractEnemiesFromIR();
         renderCharacterSelection();
       } else {
         console.error('Failed to load IR - cannot proceed');
