@@ -76,6 +76,8 @@ pub enum TokenKind {
     Let,
     #[token("in")]
     In,
+    #[token("choice")]
+    Choice,
     
     // Types
     #[token("string")]

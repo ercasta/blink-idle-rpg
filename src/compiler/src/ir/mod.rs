@@ -10,7 +10,7 @@ use thiserror::Error;
 use crate::analyzer::{
     TypedModule, TypedItem, TypedComponent, TypedField, TypedRule, TypedFunction,
     TypedTracker, TypedEntity, TypedBlock, TypedStatement, TypedExpr, TypedExprKind,
-    TypedElseClause, TypedComponentInit, Type,
+    TypedElseClause, TypedComponentInit, TypedBoundFunction, Type,
 };
 use crate::parser::{Literal, BinaryOp, UnaryOp, AssignOp};
 use crate::CompilerOptions;
@@ -398,6 +398,23 @@ pub struct IREntity {
     pub name: Option<String>,
     /// Component data for this entity
     pub components: IndexMap<String, IndexMap<String, IRValue>>,
+    /// Bound choice functions for this entity (BCL)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bound_functions: Option<IndexMap<String, IRBoundFunction>>,
+}
+
+/// Bound function definition in IR (choice function bound to an entity)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IRBoundFunction {
+    /// Function parameters
+    pub params: Vec<IRParam>,
+    /// Return type
+    pub return_type: IRType,
+    /// Function body (expression tree)
+    pub body: IRExpression,
+    /// Original source code (for UI display)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source: Option<String>,
 }
 
 /// IR Generator context
@@ -565,6 +582,7 @@ impl IRGenerator {
             Type::Integer | Type::Float | Type::Decimal => IRType::Number,
             Type::EntityId => IRType::Entity,
             Type::Component(_) => IRType::Entity, // Components are accessed via entity
+            Type::Composite(_) => IRType::Entity, // Composite types represent entity constraints
             Type::List(inner) => IRType::List {
                 element: Box::new(self.convert_type(inner)),
             },
@@ -779,10 +797,41 @@ impl IRGenerator {
             components.insert(comp.name.clone(), fields);
         }
         
+        // Build bound functions if any
+        let bound_functions = if entity.bound_functions.is_empty() {
+            None
+        } else {
+            let mut funcs = IndexMap::new();
+            for func in &entity.bound_functions {
+                funcs.insert(func.name.clone(), self.generate_bound_function(func));
+            }
+            Some(funcs)
+        };
+        
         IREntity {
             id,
             name: entity.name.clone(),
             components,
+            bound_functions,
+        }
+    }
+    
+    /// Generate an IR bound function from a typed bound function
+    fn generate_bound_function(&self, func: &TypedBoundFunction) -> IRBoundFunction {
+        let params: Vec<_> = func.params.iter().map(|p| {
+            IRParam {
+                name: p.name.clone(),
+                param_type: self.convert_type(&p.param_type),
+            }
+        }).collect();
+        
+        let body = self.generate_function_body(&func.body);
+        
+        IRBoundFunction {
+            params,
+            return_type: self.convert_type(&func.return_type),
+            body,
+            source: None, // TODO: Include source text when source map is enabled
         }
     }
     

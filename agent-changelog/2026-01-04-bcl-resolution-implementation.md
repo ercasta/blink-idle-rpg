@@ -5,7 +5,7 @@
 
 ## Summary
 
-Implementing the BCL resolution rules as specified in `doc/architecture/bcl resolution rules.md`. This change makes choice functions first-class citizens in BRL/BDL, allows binding choice functions directly to entities (not via a ChoiceBindings component), and adds engine support for resolving and calling bound choice functions.
+Implemented the BCL resolution rules as specified in `doc/architecture/bcl resolution rules.md`. This change makes choice functions first-class citizens in BRL/BDL, allows binding choice functions directly to entities (not via a ChoiceBindings component), and adds engine support for resolving and calling bound choice functions.
 
 ## Key Design Decisions
 
@@ -14,61 +14,116 @@ Based on feedback, the implementation follows these principles:
 2. **Bound functions are first-class entity properties** - No ChoiceBindings component needed; functions bind directly to entities
 3. **No fallback mechanism** - If a function is not bound to an entity, a runtime error is raised
 
-## Requirements (from bcl resolution rules.md)
+## Changes Made
 
-1. Modify BRL/BDL to make choice functions first-class citizens
-2. Allow associating choice functions to entities (including anonymous declarations)
-3. Pre-made heroes have their choice functions declared and bound in BDL
-4. Pre-made heroes stored in a `Roster` component (defined in BRL like any other component)
-5. HTML engine exposes interface to get entities and components
-6. HTML engine exposes method to compile and execute BRL code
-7. HTML UI creates game entity, loads heroes from BDL, creates Roster component
-8. HTML interface BCL editing UI gets choice functions from hero entities via utility function
-9. BRL calls choice functions on entities (invoking bound function)
+### Documentation Updates
 
-## Changes
+1. **Updated `doc/architecture/bcl resolution rules.md`**:
+   - Removed outdated references to Roster and ChoiceBindings components
+   - Documented the new `.functionName = choice(...)` syntax
+   - Added examples of IR output with `bound_functions`
+   - Documented engine API methods for accessing bound functions
+   - Added reference links to related documents
 
-### Language Specification Changes
+### Compiler Changes
 
-#### doc/language/bdl-specification.md
-- Added section 7: Bound Choice Functions as first-class entity properties
-- Functions bind directly to entities, not via a component
-- Required binding: if function not found, error is raised (no fallback)
+1. **Lexer (`src/compiler/src/lexer/mod.rs`)**:
+   - Added `choice` keyword token
 
-#### doc/language/brl-specification.md
-- Added section 13.7: Entity-Bound Choice Functions
-- Syntax for calling choice functions on entities: `entity.choiceFunction(...)`
-- Strict resolution: error if function not bound (no fallback to class/global defaults)
+2. **Parser (`src/compiler/src/parser/mod.rs`)**:
+   - Added `BoundFunctionDef` AST node for bound choice functions
+   - Updated `EntityDef` to include `bound_functions` field
+   - Implemented parsing for `.functionName = choice(...) { }` syntax
+   - Added `parse_bound_function()` method
+   - Added `parse_choice_param_type()` for composite types (e.g., `Character & Skills`)
+   - Added support for `list` type shorthand (without angle brackets)
+   - Added test for parsing entity with bound function
 
-### IR Specification Changes
+3. **Analyzer (`src/compiler/src/analyzer/mod.rs`)**:
+   - Added `TypedBoundFunction` type
+   - Updated `TypedEntity` to include `bound_functions` field
+   - Added `analyze_bound_function()` method with parameter scope handling
 
-#### doc/ir-specification.md
-- Added section 11.4: Initial State with `bound_functions` stored directly on entities
-- Removed ChoiceBindings component (not a language construct)
-- Removed Roster from IR spec (it's a regular BRL-defined component)
+4. **IR Generator (`src/compiler/src/ir/mod.rs`)**:
+   - Added `IRBoundFunction` type with params, return_type, body, and source fields
+   - Updated `IREntity` to include optional `bound_functions` field
+   - Added `generate_bound_function()` method
 
-### Engine Implementation Changes
+### Engine Implementation Changes (existing)
 
 #### packages/blink-engine/src/ir/types.ts
 - Added `IRBoundFunctions` interface - map of function names to definitions
 - Added `IRBoundFunction` interface - function definition with params, body, source
 - Extended `IREntityDefinition` with `bound_functions` field
-- Removed `IRChoiceBindings`, `IRRoster`, `IRBoundChoiceFunction` (simplified approach)
 
 #### packages/blink-engine/src/BlinkGame.ts
 - Added `getBoundFunctions()` - get all bound functions for an entity
 - Added `getBoundFunction()` - get a specific bound function
 - Added `getBoundFunctionSource()` - get source for UI display
 - Added `getBoundFunctionNames()` - list all bound function names
-- Removed `getRoster()`, `getChoiceBindings()` methods (not needed with new approach)
 
-## Hielements Impact
+## Example BDL Syntax
 
-No changes to hielements.hie required. Documentation fits under existing scopes.
+```bdl
+entity @warrior {
+    Character { name: "Sir Braveheart", class: "Warrior" }
+    Health { current: 120, max: 120 }
+    
+    .selectAttackTarget = choice(enemies: list): id {
+        let target = enemies[0]
+        for enemy in enemies {
+            if enemy.Combat.damage > target.Combat.damage {
+                target = enemy
+            }
+        }
+        return target.id
+    }
+    
+    .selectCombatSkill = choice(character: Character & Skills, allies: list, enemies: list): string {
+        let hp_pct = character.Health.current / character.Health.max
+        if hp_pct < 0.3 {
+            return "defensive_stance"
+        }
+        return "power_strike"
+    }
+}
+```
+
+## Example IR Output
+
+```json
+{
+  "initial_state": {
+    "entities": [{
+      "id": 0,
+      "name": "warrior",
+      "components": { ... },
+      "bound_functions": {
+        "selectAttackTarget": {
+          "params": [{ "name": "enemies", "type": { "type": "list", "element": { "type": "entity" } } }],
+          "return_type": { "type": "entity" },
+          "body": { ... }
+        }
+      }
+    }]
+  }
+}
+```
+
+## Testing
+
+- All existing compiler tests pass (15 tests)
+- New test added for parsing entity with bound function
+- Manual compilation test verified IR output contains `bound_functions`
+
+## Future Work
+
+- Update hero definitions in `game/bdl/heroes.bdl` with actual bound choice functions
+- Implement source text capture for bound functions (for UI display)
+- Connect HTML demo to use bound functions from IR
 
 ## Related Documents
 
-- `doc/architecture/bcl resolution rules.md` - Original requirements
-- `doc/architecture/bcl-function-resolution.md` - Detailed architecture
-- `doc/language/bcl-specification.md` - BCL language spec
-- `doc/ir-specification.md` - IR format specification
+- `doc/architecture/bcl resolution rules.md` - High-level architecture
+- `doc/architecture/bcl-compiler-requirements.md` - Detailed requirements
+- `doc/architecture/bcl-function-resolution.md` - Resolution architecture

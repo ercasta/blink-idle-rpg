@@ -57,6 +57,8 @@ pub enum Type {
     Component(String),
     List(Box<Type>),
     Optional(Box<Type>),
+    /// Composite type (A & B & C) - entity with multiple component requirements
+    Composite(Vec<Type>),
     Void,
     Unknown,
 }
@@ -73,6 +75,9 @@ impl Type {
             TypeExpr::Component(name) => Type::Component(name.clone()),
             TypeExpr::List(inner) => Type::List(Box::new(Type::from_type_expr(inner))),
             TypeExpr::Optional(inner) => Type::Optional(Box::new(Type::from_type_expr(inner))),
+            TypeExpr::Composite(types) => {
+                Type::Composite(types.iter().map(Type::from_type_expr).collect())
+            }
         }
     }
 }
@@ -325,9 +330,47 @@ impl Analyzer {
             }
         }).collect();
         
+        // Analyze bound functions
+        let bound_functions: Vec<_> = entity.bound_functions.iter()
+            .map(|func| self.analyze_bound_function(func))
+            .collect();
+        
         TypedEntity {
             name: entity.name.clone(),
             components,
+            bound_functions,
+        }
+    }
+    
+    /// Analyze a bound function (choice function bound to an entity)
+    fn analyze_bound_function(&mut self, func: &crate::parser::BoundFunctionDef) -> TypedBoundFunction {
+        let mut scope = Scope::new();
+        
+        // Add parameters to scope
+        for param in &func.params {
+            scope.define(
+                param.name.clone(),
+                Type::from_type_expr(&param.param_type),
+            );
+        }
+        
+        // Analyze body
+        let body = self.analyze_block(&func.body, scope);
+        
+        let return_type = func.return_type.as_ref()
+            .map(Type::from_type_expr)
+            .unwrap_or(Type::Void);
+        
+        TypedBoundFunction {
+            name: func.name.clone(),
+            params: func.params.iter().map(|p| {
+                TypedParam {
+                    name: p.name.clone(),
+                    param_type: Type::from_type_expr(&p.param_type),
+                }
+            }).collect(),
+            return_type,
+            body,
         }
     }
     
@@ -772,6 +815,21 @@ pub struct TypedEntity {
     pub name: Option<String>,
     /// Components initialized for this entity
     pub components: Vec<TypedComponentInit>,
+    /// Bound choice functions for this entity
+    pub bound_functions: Vec<TypedBoundFunction>,
+}
+
+/// Typed bound function (choice function bound to an entity)
+#[derive(Debug, Clone)]
+pub struct TypedBoundFunction {
+    /// Function name (e.g., "selectAttackTarget")
+    pub name: String,
+    /// Function parameters
+    pub params: Vec<TypedParam>,
+    /// Return type
+    pub return_type: Type,
+    /// Function body
+    pub body: TypedBlock,
 }
 
 /// Typed component

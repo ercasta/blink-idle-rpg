@@ -48,6 +48,23 @@ pub struct EntityDef {
     pub name: Option<String>,
     /// Components initialized for this entity
     pub components: Vec<ComponentInit>,
+    /// Bound choice functions for this entity (BCL)
+    pub bound_functions: Vec<BoundFunctionDef>,
+    pub span: Span,
+}
+
+/// Bound function definition (choice function bound to an entity)
+/// Syntax: .functionName = choice(params...): returnType { body }
+#[derive(Debug, Clone)]
+pub struct BoundFunctionDef {
+    /// Function name (e.g., "selectAttackTarget")
+    pub name: String,
+    /// Function parameters
+    pub params: Vec<ParamDef>,
+    /// Return type
+    pub return_type: Option<TypeExpr>,
+    /// Function body
+    pub body: Block,
     pub span: Span,
 }
 
@@ -80,6 +97,8 @@ pub enum TypeExpr {
     Component(String),
     List(Box<TypeExpr>),
     Optional(Box<TypeExpr>),
+    /// Composite type (A & B & C) - used in BCL for entity type constraints
+    Composite(Vec<TypeExpr>),
 }
 
 /// Rule definition
@@ -514,11 +533,16 @@ impl Parser {
             TokenKind::TypeDecimal => Ok(TypeExpr::Decimal),
             TokenKind::TypeId => Ok(TypeExpr::Id),
             TokenKind::TypeList => {
-                // list<T>
-                self.consume(TokenKind::Lt, "<")?;
-                let inner = self.parse_type()?;
-                self.consume(TokenKind::Gt, ">")?;
-                Ok(TypeExpr::List(Box::new(inner)))
+                // list<T> or list (shorthand for list<entity>)
+                if self.check(&TokenKind::Lt) {
+                    self.advance();
+                    let inner = self.parse_type()?;
+                    self.consume(TokenKind::Gt, ">")?;
+                    Ok(TypeExpr::List(Box::new(inner)))
+                } else {
+                    // Shorthand: `list` means `list<id>` (list of entities)
+                    Ok(TypeExpr::List(Box::new(TypeExpr::Id)))
+                }
             }
             TokenKind::Identifier => Ok(TypeExpr::Component(token.text.clone())),
             _ => Err(ParseError::UnexpectedToken {
@@ -719,6 +743,7 @@ impl Parser {
     /// Parse an entity definition (BDL support)
     /// Syntax: entity { Component { ... } Component { ... } }
     /// Or: entity @name { Component { ... } }
+    /// With optional bound functions: .functionName = choice(...) { ... }
     fn parse_entity(&mut self) -> Result<EntityDef, ParseError> {
         // Check for entity keyword or @name
         let (start, name) = if self.check(&TokenKind::EntityRef) {
@@ -748,8 +773,15 @@ impl Parser {
         self.consume(TokenKind::LBrace, "{")?;
         
         let mut components = Vec::new();
+        let mut bound_functions = Vec::new();
+        
         while !self.check(&TokenKind::RBrace) && !self.is_at_end() {
-            components.push(self.parse_component_init()?);
+            // Check if this is a bound function (.functionName = choice...)
+            if self.check(&TokenKind::Dot) {
+                bound_functions.push(self.parse_bound_function()?);
+            } else {
+                components.push(self.parse_component_init()?);
+            }
         }
         
         let end_token = self.consume(TokenKind::RBrace, "}")?;
@@ -757,8 +789,103 @@ impl Parser {
         Ok(EntityDef {
             name,
             components,
+            bound_functions,
             span: Span::new(start, end_token.span.end),
         })
+    }
+    
+    /// Parse a bound function definition
+    /// Syntax: .functionName = choice(params...): returnType { body }
+    fn parse_bound_function(&mut self) -> Result<BoundFunctionDef, ParseError> {
+        let start = self.consume(TokenKind::Dot, ".")?.span.start;
+        
+        // Parse function name
+        let name_token = self.consume(TokenKind::Identifier, "function name")?;
+        let name = name_token.text.clone();
+        
+        self.consume(TokenKind::Eq, "=")?;
+        self.consume(TokenKind::Choice, "choice")?;
+        self.consume(TokenKind::LParen, "(")?;
+        
+        // Parse parameters
+        let mut params = Vec::new();
+        while !self.check(&TokenKind::RParen) && !self.is_at_end() {
+            let param_name_token = self.consume(TokenKind::Identifier, "parameter name")?;
+            let param_name = param_name_token.text.clone();
+            let param_start = param_name_token.span.start;
+            
+            self.consume(TokenKind::Colon, ":")?;
+            let param_type = self.parse_choice_param_type()?;
+            
+            let param_end = self.tokens.get(self.pos.saturating_sub(1))
+                .map(|t| t.span.end)
+                .unwrap_or(param_start);
+            
+            params.push(ParamDef {
+                name: param_name,
+                param_type,
+                span: Span::new(param_start, param_end),
+            });
+            
+            if self.check(&TokenKind::Comma) {
+                self.advance();
+            }
+        }
+        
+        self.consume(TokenKind::RParen, ")")?;
+        
+        // Optional return type
+        let return_type = if self.check(&TokenKind::Colon) {
+            self.advance();
+            Some(self.parse_type()?)
+        } else {
+            None
+        };
+        
+        // Parse body
+        let body = self.parse_block()?;
+        
+        let end = self.tokens.get(self.pos.saturating_sub(1))
+            .map(|t| t.span.end)
+            .unwrap_or(start);
+        
+        Ok(BoundFunctionDef {
+            name,
+            params,
+            return_type,
+            body,
+            span: Span::new(start, end),
+        })
+    }
+    
+    /// Parse a choice function parameter type
+    /// Supports composite types like `Character & Skills & Health`
+    fn parse_choice_param_type(&mut self) -> Result<TypeExpr, ParseError> {
+        let first_type = self.parse_type()?;
+        
+        // Handle composite types with &
+        if self.check(&TokenKind::And) {
+            let mut types = vec![first_type];
+            
+            while self.check(&TokenKind::And) {
+                self.advance();
+                let additional_type = self.parse_type()?;
+                types.push(additional_type);
+            }
+            
+            // Validate all types in composite are components (entity constraints)
+            for t in &types {
+                if !matches!(t, TypeExpr::Component(_)) {
+                    return Err(ParseError::InvalidSyntax {
+                        message: "Composite types (using &) can only contain component types".to_string(),
+                    });
+                }
+            }
+            
+            Ok(TypeExpr::Composite(types))
+        } else {
+            Ok(first_type)
+        }
     }
     
     fn parse_block(&mut self) -> Result<Block, ParseError> {
@@ -1516,6 +1643,76 @@ mod tests {
             assert_eq!(tracker.event, "DamageEvent");
         } else {
             panic!("Expected Tracker item");
+        }
+    }
+
+    #[test]
+    fn test_parse_entity_with_bound_function() {
+        let source = r#"
+            entity @warrior {
+                Health {
+                    current: 100
+                    max: 100
+                }
+                
+                .selectTarget = choice(enemies: list): id {
+                    return enemies[0]
+                }
+            }
+        "#;
+        let tokens = tokenize(source).unwrap();
+        let module = parse(tokens).unwrap();
+        
+        assert_eq!(module.items.len(), 1);
+        if let Item::Entity(entity) = &module.items[0] {
+            assert_eq!(entity.name, Some("warrior".to_string()));
+            assert_eq!(entity.components.len(), 1);
+            assert_eq!(entity.bound_functions.len(), 1);
+            
+            let func = &entity.bound_functions[0];
+            assert_eq!(func.name, "selectTarget");
+            assert_eq!(func.params.len(), 1);
+            assert_eq!(func.params[0].name, "enemies");
+        } else {
+            panic!("Expected Entity item");
+        }
+    }
+
+    #[test]
+    fn test_parse_bound_function_with_composite_type() {
+        let source = r#"
+            entity @warrior {
+                .selectSkill = choice(character: Character & Skills & Health, enemies: list): string {
+                    return "power_strike"
+                }
+            }
+        "#;
+        let tokens = tokenize(source).unwrap();
+        let module = parse(tokens).unwrap();
+        
+        assert_eq!(module.items.len(), 1);
+        if let Item::Entity(entity) = &module.items[0] {
+            assert_eq!(entity.name, Some("warrior".to_string()));
+            assert_eq!(entity.bound_functions.len(), 1);
+            
+            let func = &entity.bound_functions[0];
+            assert_eq!(func.name, "selectSkill");
+            assert_eq!(func.params.len(), 2);
+            assert_eq!(func.params[0].name, "character");
+            
+            // Verify composite type was parsed correctly
+            if let TypeExpr::Composite(types) = &func.params[0].param_type {
+                assert_eq!(types.len(), 3);
+                if let TypeExpr::Component(name) = &types[0] {
+                    assert_eq!(name, "Character");
+                } else {
+                    panic!("Expected Component type");
+                }
+            } else {
+                panic!("Expected Composite type");
+            }
+        } else {
+            panic!("Expected Entity item");
         }
     }
 }
