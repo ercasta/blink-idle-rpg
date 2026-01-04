@@ -459,6 +459,113 @@ entity @dragon_lord {
 
 ---
 
+## 7. Bound Choice Functions
+
+BDL supports **bound choice functions** - choice functions that are directly associated with an entity as first-class citizens. This enables each hero to have their own decision-making logic defined inline in the BDL file.
+
+### 7.1 Syntax
+
+Choice functions can be bound to entities using the following syntax:
+
+```bdl
+entity @hero_name {
+    // ... component definitions ...
+    
+    // Bind a choice function to this entity
+    chooseEnemy = choice (character: Character, enemies: list): id {
+        // Function body (BCL subset only)
+        for enemy in enemies {
+            if enemy.Health.current < 50 {
+                return enemy.id
+            }
+        }
+        return enemies[0].id
+    }
+}
+```
+
+### 7.2 Rules for Bound Choice Functions
+
+1. **Bound Only**: BDL can only declare **bound** choice functions (attached to an entity), not standalone/unbound choice functions
+2. **BCL Subset**: The function body follows BCL rules - no state modification, only pure logic
+3. **Assignment**: Choice functions can be copied from one entity to another: `a.chooseEnemy = b.chooseEnemy`
+4. **Explicit Parameters**: The function must include all parameters it needs - no implicit `self`
+5. **Required Binding**: If BRL code calls a choice function on an entity that doesn't have it bound, a runtime error is raised - there is no fallback mechanism
+
+### 7.3 Complete Example
+
+```bdl
+entity @warrior {
+    Character {
+        name: "Sir Braveheart"
+        class: "Warrior"
+    }
+    Health {
+        current: 120
+        max: 120
+    }
+    
+    // Bind choice functions directly to the entity
+    select_attack_target = choice (character: Character, enemies: list): id {
+        return find_weakest(enemies)
+    }
+    
+    select_combat_skill = choice (character: Character, allies: list, enemies: list): string {
+        return "power_strike"
+    }
+}
+```
+
+### 7.4 Compilation
+
+Bound choice functions compile to the IR with entity association. The functions are stored as first-class properties of the entity, not in a separate component:
+
+```json
+{
+  "initial_state": {
+    "entities": [
+      {
+        "id": "@warrior",
+        "components": {
+          "Character": { "name": "Sir Braveheart", "class": "Warrior" },
+          "Health": { "current": 120, "max": 120 }
+        },
+        "bound_functions": {
+          "select_attack_target": {
+            "params": [
+              { "name": "character", "type": "entity" },
+              { "name": "enemies", "type": "list" }
+            ],
+            "return_type": { "type": "entity" },
+            "body": {
+              "type": "call",
+              "function": "find_weakest",
+              "args": [{ "type": "param", "name": "enemies" }]
+            },
+            "source": "choice (character: Character, enemies: list): id {\n    return find_weakest(enemies)\n}"
+          },
+          "select_combat_skill": {
+            "params": [
+              { "name": "character", "type": "entity" },
+              { "name": "allies", "type": "list" },
+              { "name": "enemies", "type": "list" }
+            ],
+            "return_type": { "type": "string" },
+            "body": {
+              "type": "literal",
+              "value": "power_strike"
+            },
+            "source": "choice (character: Character, allies: list, enemies: list): string {\n    return \"power_strike\"\n}"
+          }
+        }
+      }
+    ]
+  }
+}
+```
+
+---
+
 ## 8. Loading Order
 
 BDL files are loaded **after** BRL and BCL files because they depend on component definitions from BRL.
@@ -524,7 +631,8 @@ BDL compiles to the `initial_state.entities` section of the IR:
 | Variable declarations | ✅ | ✅ | ❌ |
 | Expressions | ✅ | ✅ | ❌ |
 | Control flow | ✅ | ✅ | ❌ |
-| Choice functions | ❌ | ✅ | ❌ |
+| Choice functions (unbound) | ❌ | ✅ | ❌ |
+| Bound choice functions | ❌ | ❌ | ✅ |
 | Party definition | ❌ | ✅ | ❌ |
 
 ---
@@ -562,3 +670,4 @@ Error: Expressions not allowed in BDL
 | Version | Date | Changes |
 |---------|------|---------|
 | 0.1.0 | 2026-01-03 | Initial draft |
+| 0.2.0 | 2026-01-04 | Added bound choice functions (section 7) as first-class entity properties |

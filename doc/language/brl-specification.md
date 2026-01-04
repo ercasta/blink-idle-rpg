@@ -723,6 +723,78 @@ The game IDE can:
 3. Provide an editor for customizing the choice function
 4. Save customizations as BCL deltas (only modified choices)
 
+### 13.7 Entity-Bound Choice Functions
+
+Choice functions can be bound to specific entities as first-class properties, allowing each entity to have its own decision-making logic. This binding happens in BDL (at entity definition time).
+
+#### Calling Bound Choice Functions
+
+When BRL needs to call a choice function, it calls it **on the entity**:
+
+```brl
+rule on TurnStart {
+    // Call the bound choice function on the entity
+    let target = entity.select_attack_target(enemies)
+    
+    // Use the returned value
+    schedule Attack {
+        source: entity.id
+        target: target
+    }
+}
+```
+
+The syntax `entity.choiceFunctionName(args...)` invokes the choice function bound to that entity.
+
+#### Resolution
+
+When `entity.select_attack_target(enemies)` is called:
+
+1. The engine looks for a function named `select_attack_target` bound directly to the entity
+2. If not found, a **`UnboundFunctionError`** is raised - there is no fallback mechanism
+
+This strict resolution ensures that:
+- All required choice functions must be explicitly defined for each entity
+- Missing bindings are caught immediately at runtime
+- No implicit behavior is assumed
+
+#### Error Handling
+
+When a bound function is not found, the error message includes:
+- The entity ID that was accessed
+- The function name that was called
+- A hint to check the entity's BDL definition
+
+Example error:
+```
+UnboundFunctionError: Function 'select_attack_target' is not bound to entity '@warrior'
+  at rule CombatTurn (classic-rpg.brl:153:5)
+  
+  Help: Ensure the entity has the function bound in its BDL definition:
+        select_attack_target = choice (...) { ... }
+```
+
+Developers should ensure all entities have the required functions bound in their BDL definitions before calling them in BRL rules.
+
+#### Example with Multiple Entities
+
+```brl
+rule on CombatTurn for attacker: Character {
+    // Each attacker uses their own bound targeting strategy
+    // If select_attack_target is not bound to attacker, an error is raised
+    let target = attacker.select_attack_target(visible_enemies)
+    
+    // Each attacker uses their own skill selection
+    let skill = attacker.select_combat_skill(allies, enemies)
+    
+    schedule UseSkill {
+        source: attacker.id
+        target: target
+        skill: skill
+    }
+}
+```
+
 ---
 
 ## Appendix A: Grammar (EBNF)
@@ -772,3 +844,4 @@ docstring = "///" string_literal ;
 | Version | Date | Changes |
 |---------|------|---------|
 | 0.1.0 | 2024-12-31 | Initial draft |
+| 0.2.0 | 2026-01-04 | Added section 13.7: Entity-Bound Choice Functions |

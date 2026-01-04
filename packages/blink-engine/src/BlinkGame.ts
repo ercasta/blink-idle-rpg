@@ -7,7 +7,7 @@ import { Store, EntityId, ComponentData } from './ecs/Store';
 import { Timeline, ScheduledEvent } from './timeline/Timeline';
 import { RuleExecutor } from './rules/Executor';
 import { TrackerSystem, TrackerOutput } from './trackers/Tracker';
-import { loadIRFromString, loadIRFromObject, IRModule, IRFieldValue, IRRule, IRAction, SourceLocation, SourceFile } from './ir';
+import { loadIRFromString, loadIRFromObject, IRModule, IRFieldValue, IRRule, IRAction, SourceLocation, SourceFile, IRBoundFunctions, IRBoundFunction } from './ir';
 
 export interface GameOptions {
   /** Enable debug mode */
@@ -616,6 +616,122 @@ export class BlinkGame {
     if (component) {
       component[field] = value;
     }
+  }
+
+  // ===== Entity and Component Access (for UI) =====
+
+  /**
+   * Get all entity IDs currently in the store
+   */
+  getAllEntityIds(): EntityId[] {
+    return this.store.getEntityIds();
+  }
+
+  /**
+   * Get all entities with their component data
+   * Returns a map of entity ID to component map
+   */
+  getAllEntities(): Map<EntityId, Map<string, ComponentData>> {
+    return this.store.getSnapshot();
+  }
+
+  /**
+   * Get entities that have a specific component
+   */
+  getEntitiesWithComponent(componentName: string): EntityId[] {
+    return this.store.query(componentName);
+  }
+
+  /**
+   * Get full entity data including all components
+   */
+  getEntityData(entityId: EntityId): { id: EntityId; components: Record<string, ComponentData> } | null {
+    const snapshot = this.store.getSnapshot();
+    const entityComponents = snapshot.get(entityId);
+    if (!entityComponents) {
+      return null;
+    }
+    const components: Record<string, ComponentData> = {};
+    for (const [name, data] of entityComponents) {
+      components[name] = data;
+    }
+    return { id: entityId, components };
+  }
+
+  // ===== Bound Choice Functions (BCL Resolution) =====
+
+  /**
+   * Get the bound functions for an entity
+   * Returns a map of function name to function definition
+   */
+  getBoundFunctions(entityId: EntityId): IRBoundFunctions | null {
+    // Check initial state for entity's bound functions
+    if (this.ir?.initial_state?.entities) {
+      const entityDef = this.ir.initial_state.entities.find(e => e.id === entityId);
+      if (entityDef?.bound_functions) {
+        return entityDef.bound_functions;
+      }
+    }
+    
+    return null;
+  }
+
+  /**
+   * Get a specific bound function from an entity
+   * @param entityId The entity ID
+   * @param functionName The name of the bound function
+   * @returns The bound function or null if not found
+   */
+  getBoundFunction(entityId: EntityId, functionName: string): IRBoundFunction | null {
+    const boundFunctions = this.getBoundFunctions(entityId);
+    if (boundFunctions && functionName in boundFunctions) {
+      return boundFunctions[functionName];
+    }
+    return null;
+  }
+
+  /**
+   * Get a bound function's source code for display in UI
+   * @param entityId The entity ID
+   * @param functionName The function name
+   * @returns The source code string or null if not found
+   */
+  getBoundFunctionSource(entityId: EntityId, functionName: string): string | null {
+    const func = this.getBoundFunction(entityId, functionName);
+    return func?.source ?? null;
+  }
+
+  /**
+   * Get all bound function names for an entity
+   * @param entityId The entity ID
+   * @returns Array of function names or empty array
+   */
+  getBoundFunctionNames(entityId: EntityId): string[] {
+    const boundFunctions = this.getBoundFunctions(entityId);
+    return boundFunctions ? Object.keys(boundFunctions) : [];
+  }
+
+  /**
+   * Get the loaded IR module (for advanced access)
+   */
+  getIR(): IRModule | null {
+    return this.ir;
+  }
+
+  // ===== BRL Compilation (stub for future implementation) =====
+
+  /**
+   * Compile and execute BRL code
+   * NOTE: This is a stub for future implementation. Currently throws an error.
+   * @param brlCode The BRL code to compile and execute
+   */
+  compileAndExecuteBRL(_brlCode: string): void {
+    // This is a stub for future implementation
+    // The actual implementation would:
+    // 1. Parse the BRL code
+    // 2. Compile to IR
+    // 3. Load the IR into the engine
+    throw new Error('BRL compilation not yet implemented. Use loadRulesFromObject with pre-compiled IR.');
   }
 
   // ===== Private methods =====

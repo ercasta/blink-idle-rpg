@@ -522,6 +522,62 @@ To include source maps, compile with: `blink-compiler compile --source-map`
 
 ---
 
+## 11.4 Initial State
+
+The `initial_state` section contains entity definitions from BDL files, including their components and bound choice functions.
+
+### 11.4.1 Initial State Structure
+
+Bound choice functions are stored directly on entities as first-class properties, not in a separate component:
+
+```json
+{
+  "initial_state": {
+    "entities": [
+      {
+        "id": "@warrior",
+        "components": {
+          "Character": { "name": "Sir Braveheart", "class": "Warrior" },
+          "Health": { "current": 120, "max": 120 }
+        },
+        "bound_functions": {
+          "select_attack_target": {
+            "params": [
+              { "name": "character", "type": "entity" },
+              { "name": "enemies", "type": "list" }
+            ],
+            "return_type": "entity",
+            "body": { "type": "call", "function": "find_weakest", "args": [...] },
+            "source": "choice (character: Character, enemies: list): id {\n    return find_weakest(enemies)\n}"
+          },
+          "select_combat_skill": {
+            "params": [...],
+            "return_type": "string",
+            "body": { ... },
+            "source": "..."
+          }
+        }
+      }
+    ]
+  }
+}
+```
+
+### 11.4.2 Bound Functions
+
+Bound choice functions are defined inline in BDL and stored as first-class properties of entities. When BRL code calls a choice function on an entity, the engine looks up the function directly in the entity's `bound_functions` map.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `params` | array | Function parameters |
+| `return_type` | string | Return type |
+| `body` | IRExpression | Compiled function body |
+| `source` | string | Original BCL/BDL source (for UI display) |
+
+**Resolution**: If the called function is not found in the entity's `bound_functions`, a runtime error is raised. There is no fallback mechanism.
+
+---
+
 ## 12. Serialization
 
 ### 12.1 JSON Schema
@@ -638,3 +694,4 @@ Test categories:
 |---------|------|---------|
 | 0.1.0 | 2024-12-31 | Initial draft |
 | 0.1.1 | 2026-01-03 | Added choice_functions (BCL) and source_map sections |
+| 0.1.2 | 2026-01-04 | Added initial_state section with ChoiceBindings, Roster, bound_choice_functions |

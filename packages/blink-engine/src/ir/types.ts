@@ -252,4 +252,25 @@ export interface IRInitialState {
 export interface IREntityDefinition {
   id: number | string;
   components: Record<string, Record<string, IRFieldValue>>;
+  /** Bound choice functions stored directly on the entity */
+  bound_functions?: IRBoundFunctions;
+}
+
+// ===== Bound Functions =====
+
+/**
+ * Maps function names to their definitions, stored directly on entities
+ */
+export interface IRBoundFunctions {
+  [functionName: string]: IRBoundFunction;
+}
+
+/**
+ * A choice function bound directly to an entity (from BDL)
+ */
+export interface IRBoundFunction {
+  params: IRParam[];
+  return_type: IRReturnType;
+  body: IRExpression;
+  source?: string; // Original BCL/BDL source for UI display
 }
