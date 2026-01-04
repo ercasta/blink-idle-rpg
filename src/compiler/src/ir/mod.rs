@@ -461,7 +461,7 @@ impl IRGenerator {
         let mut components = Vec::new();
         let mut rules = Vec::new();
         let mut functions = Vec::new();
-        let mut trackers = Vec::new(); // legacy; will remain empty
+        let trackers = Vec::new(); // legacy; will remain empty
         let mut entities = Vec::new();
         
         for item in &typed_module.items {

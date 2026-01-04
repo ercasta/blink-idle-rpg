@@ -103,15 +103,11 @@ pub struct FunctionInfo {
     pub return_type: Type,
 }
 
-#[derive(Debug, Clone)]
-    
-
 impl SymbolTable {
     pub fn new() -> Self {
         Self {
             components: HashMap::new(),
             functions: HashMap::new(),
-            trackers: Vec::new(),
         }
     }
     
@@ -131,7 +127,7 @@ impl SymbolTable {
         self.functions.get(name)
     }
     
-    pub fn add_tracker(&mut self, component: String, event: String) {
+    pub fn add_tracker(&mut self, _component: String, _event: String) {
         // Trackers removed from language; no-op
     }
 }
@@ -870,7 +866,6 @@ pub struct TypedParam {
 }
 
 /// Typed tracker
-#[derive(Debug, Clone)]
 // Trackers removed from language
 
 /// Typed block
