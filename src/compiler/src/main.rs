@@ -8,10 +8,6 @@ use std::path::PathBuf;
 
 use blink_compiler::{compile, CompilerOptions};
 
-/// Separator used when concatenating multiple source files for compilation
-const SOURCE_FILE_SEPARATOR_PREFIX: &str = "\n\n// === ";
-const SOURCE_FILE_SEPARATOR_SUFFIX: &str = " ===\n";
-
 #[derive(Parser)]
 #[command(name = "blink-compiler")]
 #[command(author = "Blink Team")]
@@ -103,9 +99,12 @@ fn run_compile(
     include_files: &[PathBuf],
 ) -> Result<(), Box<dyn std::error::Error>> {
     // Read main source file
-    let mut source = fs::read_to_string(input)?;
+    let source = fs::read_to_string(input)?;
     
-    // Collect additional source files for compilation and source map
+    // Collect additional source files for source map only
+    // BCL (choice functions) and BDL (entity definitions) files are NOT concatenated with the BRL (game rules) 
+    // source because they have different syntax and language constructs that the BRL parser cannot understand.
+    // They are only included in the source map for debugging/dev tools support.
     let mut additional_files: Vec<(String, String, String)> = Vec::new();
     
     for path in include_files {
@@ -123,14 +122,7 @@ fn run_compile(
             "unknown".to_string()
         };
         
-        // Append the content to the main source for compilation
-        // Uses separator constants for maintainability
-        source.push_str(SOURCE_FILE_SEPARATOR_PREFIX);
-        source.push_str(&path_str);
-        source.push_str(SOURCE_FILE_SEPARATOR_SUFFIX);
-        source.push_str(&content);
-        
-        // Also track for source map
+        // Track for source map only - do not append to source
         additional_files.push((path_str, content, language));
     }
     
