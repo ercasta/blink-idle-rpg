@@ -56,6 +56,9 @@ BDL is a **strict subset** of BRL, limited to entity creation and component init
 | Entity creation | ✅ Yes |
 | Component initialization | ✅ Yes |
 
+| Bound choice functions (attached to entities) | ✅ Yes |
+
+
 ### What BDL Removes from BRL
 
 | Feature | Available in BDL |

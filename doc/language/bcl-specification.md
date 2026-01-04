@@ -6,14 +6,14 @@
 
 ## Table of Contents
 
-1. [Introduction](#introduction)
-2. [Relationship to BRL](#relationship-to-brl)
-3. [Allowed Constructs](#allowed-constructs)
-4. [Disallowed Constructs](#disallowed-constructs)
-5. [Choice Functions](#choice-functions)
-6. [Party Configuration](#party-configuration)
-7. [Strategy Patterns](#strategy-patterns)
-8. [Examples](#examples)
+1. [Introduction](#1-introduction)
+2. [Relationship to BRL](#2-relationship-to-brl)
+3. [Allowed Constructs](#3-allowed-constructs)
+4. [Disallowed Constructs](#4-disallowed-constructs)
+5. [Choice Functions](#5-choice-functions)
+6. [Party Configuration](#6-party-configuration)
+7. [Strategy Patterns](#7-strategy-patterns)
+8. [Examples](#8-examples)
 
 ---
 
@@ -289,21 +289,7 @@ choice fn should_flee_from_battle(
 ): boolean
 ```
 
-### 5.5 Default Choices and Overrides
-
-Choice points declared in BRL can have default implementations. BCL can override any choice:
-
-```bcl
-// Player can override any declared choice
-choice fn select_attack_target(attacker: Character, enemies: list): id {
-    // Custom logic: always attack highest threat
-    return find_highest_threat(enemies)
-}
-
-// If not overridden, BRL's default implementation is used
-```
-
-### 5.6 Customization Deltas
+### 5.5 Customization Deltas
 
 When players customize choice functions in the game UI:
 - Only the modified choice functions are saved
