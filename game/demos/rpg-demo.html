@@ -2146,7 +2146,32 @@
     
     // Get default BCL implementation for a choice function
     function getDefaultBclImplementation(choiceId) {
-      // Search through loaded BCL files for the function implementation
+      // First, try to get bound function from IR entities
+      if (classicRpgIR && classicRpgIR.initial_state && classicRpgIR.initial_state.entities) {
+        for (const entity of classicRpgIR.initial_state.entities) {
+          if (entity.bound_functions && entity.bound_functions[choiceId]) {
+            const boundFunc = entity.bound_functions[choiceId];
+            // If the bound function has a source field, use it
+            if (boundFunc.source) {
+              return `// From entity: ${entity.name}\n// Bound function from IR\n\n${boundFunc.source}`;
+            }
+            // Otherwise, reconstruct from IR structure
+            const params = boundFunc.params.map(p => {
+              let typeStr = p.type.type;
+              if (p.type.type === 'list') {
+                typeStr = 'list';
+              } else if (p.type.type === 'composite') {
+                typeStr = p.type.components.join(' & ');
+              }
+              return `${p.name}: ${typeStr}`;
+            }).join(', ');
+            const returnType = boundFunc.return_type.type;
+            return `// From entity: ${entity.name}\n// Bound function from IR (reconstructed)\n\nchoice fn ${choiceId}(${params}): ${returnType} {\n    // Function body defined in BDL\n    // See IR for full implementation\n}`;
+          }
+        }
+      }
+      
+      // Fallback: Search through loaded BCL files for the function implementation
       for (const bclFile of loadedBCLFiles) {
         // Look for the choice function definition (without global flag to avoid state issues)
         const regex = new RegExp(`choice\\s+fn\\s+${choiceId}\\s*\\([^)]*\\)\\s*:\\s*\\w+\\s*\\{`);
@@ -2553,19 +2578,44 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
       await loadChoicePoints();
       await loadBclFiles();
       
+      // Count bound functions in IR
+      let irBoundFunctionCount = 0;
+      if (classicRpgIR && classicRpgIR.initial_state && classicRpgIR.initial_state.entities) {
+        const entitiesWithBoundFunctions = classicRpgIR.initial_state.entities.filter(e => e.bound_functions);
+        irBoundFunctionCount = entitiesWithBoundFunctions.reduce((sum, e) => sum + Object.keys(e.bound_functions).length, 0);
+      }
+      
       // If IR doesn't have choice_points, extract them from BCL files
       if (!choicePointsData || choicePointsData.length === 0) {
         choicePointsData = extractChoiceFunctionsFromBCL();
         console.info(`Using ${choicePointsData.length} choice functions extracted from BCL files`);
       }
       
-      // Display loaded BCL info if any files were loaded
-      if (loadedBCLFiles.length > 0) {
-        bclStatus.textContent = `Loaded ${loadedBCLFiles.length} default BCL strategy files`;
+      // Display loaded BCL info
+      if (irBoundFunctionCount > 0 || loadedBCLFiles.length > 0) {
+        const statusParts = [];
+        if (irBoundFunctionCount > 0) {
+          statusParts.push(`${irBoundFunctionCount} bound functions from IR`);
+        }
+        if (loadedBCLFiles.length > 0) {
+          statusParts.push(`${loadedBCLFiles.length} BCL files for customization`);
+        }
+        bclStatus.textContent = `Loaded: ${statusParts.join(', ')}`;
         bclStatus.className = 'file-status loaded';
         bclInfo.style.display = 'block';
         bclFileList.innerHTML = '';
         
+        // Show IR bound functions
+        if (irBoundFunctionCount > 0) {
+          const irItem = document.createElement('span');
+          irItem.className = 'bcl-file-item';
+          irItem.textContent = `IR (${irBoundFunctionCount} bound functions)`;
+          irItem.style.fontWeight = 'bold';
+          irItem.title = 'Bound choice functions defined in heroes.bdl, compiled into IR';
+          bclFileList.appendChild(irItem);
+        }
+        
+        // Show BCL files
         loadedBCLFiles.forEach(file => {
           const fileItem = document.createElement('span');
           fileItem.className = 'bcl-file-item';
@@ -3618,6 +3668,20 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
         extractCharacterDataFromIR(classicRpgIR);
         extractEnemyDataFromIR(classicRpgIR);
         renderCharacterSelection();
+        
+        // Log bound functions found in IR
+        if (classicRpgIR.initial_state && classicRpgIR.initial_state.entities) {
+          const entitiesWithBoundFunctions = classicRpgIR.initial_state.entities.filter(e => e.bound_functions);
+          if (entitiesWithBoundFunctions.length > 0) {
+            console.info(`✓ Found bound choice functions in IR for ${entitiesWithBoundFunctions.length} entities:`);
+            entitiesWithBoundFunctions.forEach(entity => {
+              const functionNames = Object.keys(entity.bound_functions);
+              console.info(`  - ${entity.name}: ${functionNames.join(', ')}`);
+            });
+          } else {
+            console.warn('No bound functions found in IR entities');
+          }
+        }
       } else {
         console.error('Failed to load IR - cannot extract game data');
         alert('Failed to load game data. Please refresh the page.');
