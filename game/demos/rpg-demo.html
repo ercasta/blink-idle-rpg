@@ -3419,152 +3419,8 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
       document.getElementById('enemy-summary').textContent = `${aliveEnemies}/${totalEnemies} Alive`;
     }
     
-    function handleTrackerOutput(output) {
-      // Batch UI updates - only update every 50 events
-      updateCounter++;
-      const shouldUpdate = updateCounter % 50 === 0;
-      
-      // Update character data from tracker (but less frequently)
-      if (shouldUpdate) {
-        updateCharacterData();
-      }
-      
-      // Handle specific events
-      if (output.eventType === 'DoAttack') {
-        // Skip visual feedback for attacks to improve performance
-        // Only update UI periodically
-        if (shouldUpdate) {
-          for (const entity of output.entities) {
-            const card = document.getElementById(`char-${entity.entityId}`);
-            if (card) {
-              card.classList.add('attacking');
-              setTimeout(() => card.classList.remove('attacking'), 200);
-            }
-          }
-        }
-      }
-      
-      if (output.eventType === 'Death') {
-        for (const entity of output.entities) {
-          if (entity.fields.current <= 0) {
-            const deadEntityId = entity.entityId;
-            
-            // Determine if this is a player or enemy by checking the Team component
-            const teamComp = game.getComponent(deadEntityId, 'Team');
-            const isPlayer = teamComp && teamComp.isPlayer;
-            
-            // Get character name for logging
-            const charComp = game.getComponent(deadEntityId, 'Character');
-            const charName = charComp ? charComp.name : 'Unknown';
-            
-            if (isPlayer) {
-              // Player hero died - penalties applied in BRL
-              addLogEntry('death', `💀 ${charName} has been defeated! (+50s penalty)`);
-              
-              // Find all alive heroes
-              const aliveHeroes = [];
-              for (let heroId = 0; heroId <= 3; heroId++) {
-                const health = game.getComponent(heroId, 'Health');
-                if (health && health.current > 0) {
-                  aliveHeroes.push(heroId);
-                }
-              }
-              
-              // Retarget all enemies that were attacking the dead hero
-              // Query all entities with Team and Target components to find enemies
-              const allTeamEntities = game.query('Team', 'Target');
-              for (const enemyId of allTeamEntities) {
-                const team = game.getComponent(enemyId, 'Team');
-                if (team && !team.isPlayer) {
-                  const target = game.getComponent(enemyId, 'Target');
-                  const health = game.getComponent(enemyId, 'Health');
-                  const isEnemyAlive = health && health.current > 0;
-                  
-                  if (target && target.entity === deadEntityId) {
-                    // Retarget to a random alive hero if any exist
-                    if (aliveHeroes.length > 0) {
-                      const newTarget = aliveHeroes[Math.floor(Math.random() * aliveHeroes.length)];
-                      game.setComponentField(enemyId, 'Target', 'entity', newTarget);
-                      
-                      // Schedule a new attack to prevent enemy from stopping
-                      if (isEnemyAlive) {
-                        game.scheduleEvent('DoAttack', 0.1, { source: enemyId });
-                      }
-                    } else {
-                      // No heroes left, game over
-                      game.setComponentField(enemyId, 'Target', 'entity', null);
-                    }
-                  }
-                }
-              }
-              
-              // Check if all heroes are dead for game over
-              if (aliveHeroes.length === 0) {
-                gameState.gameOver = true;
-                showGameBanner(false);
-                if (game) {
-                  game.pause();
-                }
-              }
-            } else {
-              // Enemy died - Now handled by BRL rules
-              // BRL spawn_replacement_enemy rule will spawn a new enemy
-              // BRL retargeting system (every 2s) will handle dead targets
-              
-              // Only log every 10th kill for summary
-              if (gameState.enemiesDefeated % 10 === 0) {
-                const killsSinceLast = gameState.enemiesDefeated - lastLoggedKills;
-                if (killsSinceLast > 0) {
-                  addLogEntry('death', `⚔️ ${killsSinceLast} enemies defeated! Total: ${gameState.enemiesDefeated}`);
-                  lastLoggedKills = gameState.enemiesDefeated;
-                }
-              }
-            }
-          }
-        }
-      }
-      
-      if (output.eventType === 'LevelUp') {
-        // Only log level ups, they're important milestones
-        // Update character data first to get the latest level
-        updateCharacterData();
-        for (const entity of output.entities) {
-          const char = playerCharacters[entity.entityId];
-          if (char) {
-            addLogEntry('levelup', `🎉 ${char.name} leveled up to Level ${char.level}!`);
-          }
-        }
-      }
-      
-      if (output.eventType === 'EnemyDefeated') {
-        for (const entity of output.entities) {
-          if (entity.component === 'GameState') {
-            gameState.enemiesDefeated = entity.fields.enemiesDefeated;
-            gameState.playerDeaths = entity.fields.playerDeaths || 0;
-          }
-        }
-      }
-      
-      if (output.eventType === 'PlayerDefeated') {
-        for (const entity of output.entities) {
-          if (entity.component === 'GameState') {
-            gameState.playerDeaths = entity.fields.playerDeaths || 0;
-          }
-        }
-      }
-      
-      if (output.eventType === 'GameVictory') {
-        gameState.victory = true;
-        gameState.gameOver = true;
-        showGameBanner(true);
-      }
-      
-      // Update UI only periodically
-      if (shouldUpdate) {
-        updateUI();
-        renderParties();
-      }
-    }
+    // Note: handleTrackerOutput was removed as trackers are no longer supported.
+    // State updates now happen via polling game state in handleSimulationEvent on 'step' events.
     
     function handleSimulationEvent(event) {
       switch (event.type) {
@@ -3600,7 +3456,57 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
           pauseBtn.disabled = true;
           break;
         case 'step':
+          // Poll game state on each step
+          updateCounter++;
+          const shouldUpdate = updateCounter % 50 === 0;
+          
           gameTimeEl.textContent = event.time.toFixed(2) + 's';
+          
+          // Update character data from game state (batched to improve performance)
+          if (shouldUpdate) {
+            updateCharacterData();
+            updateUI();
+            renderParties();
+          }
+          
+          // Check for victory/defeat conditions by polling GameState entity
+          const gameStateEntities = game.query('GameState');
+          if (gameStateEntities.length > 0) {
+            const gs = game.getComponent(gameStateEntities[0], 'GameState');
+            if (gs) {
+              // Check for victory
+              if (gs.victory && !gameState.victory) {
+                gameState.victory = true;
+                gameState.gameOver = true;
+                showGameBanner(true);
+              }
+              
+              // Check for game over (all players dead)
+              if (gs.gameOver && !gameState.gameOver) {
+                gameState.gameOver = true;
+                if (!gameState.victory) {
+                  showGameBanner(false);
+                  if (game) {
+                    game.pause();
+                  }
+                }
+              }
+              
+              // Update local game state for UI
+              gameState.wave = gs.currentWave;
+              gameState.enemiesDefeated = gs.enemiesDefeated;
+              gameState.playerDeaths = gs.playerDeaths || 0;
+              
+              // Log kills periodically
+              if (gameState.enemiesDefeated % 10 === 0 && gameState.enemiesDefeated !== lastLoggedKills) {
+                const killsSinceLast = gameState.enemiesDefeated - lastLoggedKills;
+                if (killsSinceLast > 0) {
+                  addLogEntry('death', `⚔️ ${killsSinceLast} enemies defeated! Total: ${gameState.enemiesDefeated}`);
+                  lastLoggedKills = gameState.enemiesDefeated;
+                }
+              }
+            }
+          }
           break;
       }
       
