@@ -108,16 +108,11 @@ demo-package: compile-brl
 	
 	@echo "Copying demo HTML and JS files..."
 	cp game/demos/index.html demo-package/
-	cp game/demos/combat-demo.html demo-package/
 	cp game/demos/rpg-demo.html demo-package/
 	cp game/demos/blink-engine.bundle.js demo-package/
 	cp game/demos/README.md demo-package/
 	
 	@echo "Copying game rule files..."
-	cp game/brl/simple-combat.brl demo-package/
-	cp game/brl/simple-clicker.brl demo-package/
-	cp game/ir/simple-combat.ir.json demo-package/
-	cp game/ir/simple-clicker.ir.json demo-package/
 	cp game/ir/classic-rpg.ir.json demo-package/
 	cp game/bcl/warrior-skills.bcl demo-package/
 	cp game/bcl/mage-skills.bcl demo-package/

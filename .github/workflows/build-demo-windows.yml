@@ -41,18 +41,25 @@ jobs:
             $bclIncludes += "--include"
             $bclIncludes += $_.FullName
           }
-          # Build list of BDL files for inclusion in source map
-          $bdlIncludes = @()
-          Get-ChildItem ..\..\game\bdl\*.bdl -ErrorAction SilentlyContinue | ForEach-Object {
-            $bdlIncludes += "--include"
-            $bdlIncludes += $_.FullName
-          }
           # Compile all BRL files to IR with source maps for debugging support
+          # Note: BDL files are only included for classic-rpg.brl since they depend on its component definitions
           Get-ChildItem ..\..\game\brl\*.brl | ForEach-Object {
             $filename = $_.BaseName
-            $args = @("compile", "-i", $_.FullName, "-o", "..\..\game\ir\$filename.ir.json", "--pretty", "--source-map") + $bclIncludes + $bdlIncludes
-            & .\target\release\blink-compiler.exe $args
-            Write-Host "Compiled $filename.brl -> $filename.ir.json (with source map including BCL/BDL)"
+            if ($filename -eq "classic-rpg") {
+              # classic-rpg.brl gets BDL files included (heroes, enemies, game-config)
+              $args = @("compile", "-i", $_.FullName, "-o", "..\..\game\ir\$filename.ir.json", "--pretty", "--source-map") + $bclIncludes + @(
+                "--include", "..\..\game\bdl\heroes.bdl",
+                "--include", "..\..\game\bdl\enemies.bdl",
+                "--include", "..\..\game\bdl\game-config.bdl"
+              )
+              & .\target\release\blink-compiler.exe $args
+              Write-Host "Compiled $filename.brl -> $filename.ir.json (with source map including BCL/BDL)"
+            } else {
+              # Other BRL files only get BCL files (no BDL dependencies)
+              $args = @("compile", "-i", $_.FullName, "-o", "..\..\game\ir\$filename.ir.json", "--pretty", "--source-map") + $bclIncludes
+              & .\target\release\blink-compiler.exe $args
+              Write-Host "Compiled $filename.brl -> $filename.ir.json (with source map including BCL)"
+            }
           }
           Set-Location ..\..
           Write-Host "IR files generated:"
@@ -66,7 +73,6 @@ jobs:
       - name: Copy demo HTML and JS files
         run: |
           Copy-Item game\demos\index.html demo-package\
-          Copy-Item game\demos\combat-demo.html demo-package\
           Copy-Item game\demos\rpg-demo.html demo-package\
           Copy-Item game\demos\blink-engine.bundle.js demo-package\
           Copy-Item game\demos\README.md demo-package\
@@ -74,13 +80,7 @@ jobs:
       
       - name: Copy game rule files from examples
         run: |
-          # Copy BRL files
-          Copy-Item game\brl\simple-combat.brl demo-package\
-          Copy-Item game\brl\simple-clicker.brl demo-package\
-          
           # Copy IR files
-          Copy-Item game\ir\simple-combat.ir.json demo-package\
-          Copy-Item game\ir\simple-clicker.ir.json demo-package\
           Copy-Item game\ir\classic-rpg.ir.json demo-package\
           
           # Copy BCL files

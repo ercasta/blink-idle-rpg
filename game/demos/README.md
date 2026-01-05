@@ -89,8 +89,7 @@ All demos are optimized for mobile devices with:
 
 The demos load game files from the sibling directories:
 
-- **BRL Files** (from `game/brl/`): `simple-combat.brl`, `simple-clicker.brl`
-- **IR Files** (from `game/ir/`): `simple-combat.ir.json`, `simple-clicker.ir.json`, `classic-rpg.ir.json`
+- **IR Files** (from `game/ir/`): `classic-rpg.ir.json`
 - **BCL Files** (from `game/bcl/`): `warrior-skills.bcl`, `mage-skills.bcl`, `rogue-skills.bcl`, `cleric-skills.bcl`, `party-config.bcl`
 
 ## Building the Demo Package
