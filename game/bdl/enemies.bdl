@@ -513,9 +513,13 @@ dragon_lord_vexar = new entity {
         isBoss: true
         expReward: 500
         wave: 6
+        name: "Lord Vexar"
     }
     EnemyTemplate {
         isTemplate: true
+    }
+    FinalBoss {
+        isFinalBoss: true
     }
     Buffs {
         damageBonus: 0
