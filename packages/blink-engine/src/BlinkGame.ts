@@ -12,12 +12,10 @@ import { loadIRFromString, loadIRFromObject, IRModule, IRFieldValue, IRRule, IRA
 export interface GameOptions {
   /** Enable debug mode */
   debug?: boolean;
-  /** Time scale (1.0 = real time, 10.0 = 10x speed) */
-  timeScale?: number;
+  /** Simulation milliseconds to advance per frame before UI update (controls game speed) */
+  msPerFrame?: number;
   /** Maximum events per frame */
   maxEventsPerFrame?: number;
-  /** Discrete time step in seconds (e.g., 0.01 for 1/100th second steps) */
-  discreteTimeStep?: number;
   /** Enable dev mode for step-by-step debugging */
   devMode?: boolean;
 }
@@ -79,8 +77,6 @@ export class BlinkGame {
   private isRunning: boolean = false;
   private isPaused: boolean = false;
   private animationFrameId: number | null = null;
-  private lastFrameTime: number = 0;
-  private currentSimulationTime: number = 0;
   
   // trackerCallbacks removed
   private simulationCallbacks: Set<SimulationCallback> = new Set();
@@ -92,9 +88,8 @@ export class BlinkGame {
   private constructor(options: GameOptions = {}) {
     this.options = {
       debug: options.debug ?? false,
-      timeScale: options.timeScale ?? 1.0,
+      msPerFrame: options.msPerFrame ?? 16, // Default: 16ms per frame (simulates ~60fps at 1x speed)
       maxEventsPerFrame: options.maxEventsPerFrame ?? 100,
-      discreteTimeStep: options.discreteTimeStep ?? 0,
       devMode: options.devMode ?? false,
     };
     this.devMode = this.options.devMode;
@@ -214,8 +209,6 @@ export class BlinkGame {
     
     this.isRunning = true;
     this.isPaused = false;
-    this.lastFrameTime = performance.now();
-    this.currentSimulationTime = this.timeline.getTime();
     
     this.emitSimulationEvent({ type: 'started', time: this.timeline.getTime() });
     
@@ -250,8 +243,6 @@ export class BlinkGame {
     }
     
     this.isPaused = false;
-    this.lastFrameTime = performance.now();
-    this.currentSimulationTime = this.timeline.getTime();
     
     this.emitSimulationEvent({ type: 'resumed', time: this.timeline.getTime() });
     
@@ -280,7 +271,6 @@ export class BlinkGame {
     this.stop();
     this.store.clear();
     this.timeline.clear();
-    this.currentSimulationTime = 0;
     
     // Reload initial state
     if (this.ir?.initial_state) {
@@ -481,10 +471,17 @@ export class BlinkGame {
   }
 
   /**
-   * Set time scale (1.0 = real time)
+   * Set how many simulation milliseconds to advance per frame (controls game speed)
    */
-  setTimeScale(scale: number): void {
-    this.options.timeScale = scale;
+  setMsPerFrame(ms: number): void {
+    this.options.msPerFrame = ms;
+  }
+
+  /**
+   * Get current ms per frame setting
+   */
+  getMsPerFrame(): number {
+    return this.options.msPerFrame;
   }
 
   /**
@@ -519,16 +516,17 @@ export class BlinkGame {
   }
 
   /**
-   * Run multiple steps efficiently, optionally respecting discrete time steps
+   * Run multiple steps efficiently
+   * Advances simulation time by the specified milliseconds (or msPerFrame amount if not specified)
    * Returns summary of what happened
    */
-  runSteps(maxSteps: number = 100, maxTime?: number): {
+  runSteps(maxSteps: number = 100, millisecondsToAdvance?: number): {
     stepsExecuted: number;
     timeAdvanced: number;
     eventsProcessed: number;
   } {
     const startTime = this.timeline.getTime();
-    const discreteStep = this.options.discreteTimeStep;
+    const targetTime = startTime + (millisecondsToAdvance ?? this.options.msPerFrame);
     let stepsExecuted = 0;
     let eventsProcessed = 0;
     
@@ -536,27 +534,14 @@ export class BlinkGame {
       const nextEvent = this.timeline.peek();
       if (!nextEvent) break;
       
-      // If we have a max time and would exceed it, stop
-      if (maxTime !== undefined && nextEvent.time > startTime + maxTime) {
+      // Stop if next event is beyond our target time
+      if (nextEvent.time > targetTime) {
         break;
-      }
-      
-      // If using discrete time stepping, advance time in discrete increments
-      if (discreteStep > 0 && nextEvent.time > this.timeline.getTime()) {
-        const timeToEvent = nextEvent.time - this.timeline.getTime();
-        const steps = Math.ceil(timeToEvent / discreteStep);
-        // Advance to next discrete time step that includes the event
-        this.timeline.setTime(this.timeline.getTime() + (steps * discreteStep));
       }
       
       this.step();
       stepsExecuted++;
       eventsProcessed++;
-      
-      // Check if we've exceeded max time
-      if (maxTime !== undefined && this.timeline.getTime() >= startTime + maxTime) {
-        break;
-      }
     }
     
     const timeAdvanced = this.timeline.getTime() - startTime;
@@ -729,32 +714,24 @@ export class BlinkGame {
       this.animationFrameId = requestAnimationFrame(this.gameLoop.bind(this));
     } else {
       // Fallback for non-browser environments
-      setTimeout(() => this.gameLoop(performance.now()), 16);
+      setTimeout(() => this.gameLoop(), 16);
     }
   }
 
-  private gameLoop(currentTime: number): void {
+  private gameLoop(): void {
     if (!this.isRunning || this.isPaused) {
       return;
     }
     
-    const deltaTime = (currentTime - this.lastFrameTime) / 1000; // Convert to seconds
-    this.lastFrameTime = currentTime;
+    // Advance simulation by msPerFrame milliseconds before updating UI
+    const millisecondsToAdvance = this.options.msPerFrame;
+    const targetTime = this.timeline.getTime() + millisecondsToAdvance;
     
-    // Calculate how much simulation time to advance
-    const simulationDelta = deltaTime * this.options.timeScale;
-    this.currentSimulationTime += simulationDelta;
-    let targetTime = this.currentSimulationTime;
-    
-    // If using discrete time stepping, round target time to discrete intervals
-    const discreteStep = this.options.discreteTimeStep;
-    if (discreteStep > 0) {
-      const currentDiscreteTime = Math.floor(this.timeline.getTime() / discreteStep) * discreteStep;
-      const targetDiscreteTime = Math.floor(targetTime / discreteStep) * discreteStep;
-      targetTime = targetDiscreteTime;
+    if (this.options.debug && this.timeline.getTime() < 1000) {
+      console.log(`[GameLoop] Advancing ${millisecondsToAdvance}ms, from ${this.timeline.getTime()}ms to target ${targetTime}ms`);
     }
     
-    // Process events up to target time (or max events per frame)
+    // Process all events up to target time (or max events per frame)
     let eventsProcessed = 0;
     
     while (
@@ -763,27 +740,22 @@ export class BlinkGame {
     ) {
       const nextEvent = this.timeline.peek();
       if (!nextEvent || nextEvent.time > targetTime) {
+        if (this.options.debug && eventsProcessed === 0 && this.timeline.getTime() < 1000) {
+          console.log(`[GameLoop] No events to process: nextEvent=${nextEvent ? nextEvent.eventType + '@' + nextEvent.time + 'ms' : 'null'}, targetTime=${targetTime}ms`);
+        }
         break;
       }
       
-      // If using discrete time stepping, advance timeline to next discrete step
-      if (discreteStep > 0 && nextEvent.time > this.timeline.getTime()) {
-        const timeToEvent = nextEvent.time - this.timeline.getTime();
-        const steps = Math.ceil(timeToEvent / discreteStep);
-        this.timeline.setTime(this.timeline.getTime() + (steps * discreteStep));
+      if (this.options.debug && eventsProcessed < 5 && this.timeline.getTime() < 1000) {
+        console.log(`[GameLoop] Processing event: ${nextEvent.eventType} at time ${nextEvent.time}ms`);
       }
       
       this.step();
       eventsProcessed++;
     }
     
-    // If we hit the event limit and there are still events before targetTime,
-    // sync currentSimulationTime to where we actually got to prevent "hanging"
-    if (eventsProcessed >= this.options.maxEventsPerFrame && this.timeline.hasEvents()) {
-      const nextEvent = this.timeline.peek();
-      if (nextEvent && nextEvent.time <= targetTime) {
-        this.currentSimulationTime = this.timeline.getTime();
-      }
+    if (this.options.debug && this.timeline.getTime() < 1000) {
+      console.log(`[GameLoop] Processed ${eventsProcessed} events, timeline now at ${this.timeline.getTime()}ms`);
     }
     
     // Check if simulation is complete
@@ -793,7 +765,7 @@ export class BlinkGame {
       return;
     }
     
-    // Schedule next frame
+    // Schedule next frame (wall-clock time only affects UI update rate, not simulation)
     this.scheduleNextFrame();
   }
 

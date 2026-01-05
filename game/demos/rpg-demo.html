@@ -1370,6 +1370,22 @@
     .hero-customize-btn.has-customizations:hover {
       box-shadow: 0 3px 10px rgba(74, 222, 128, 0.4);
     }
+
+    /* Processing indicator */
+    .processing-indicator {
+      display: inline-block;
+      margin-left: 8px;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .processing-indicator.hidden {
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -1468,6 +1484,7 @@
       <div class="status-item">
         <span class="status-label">🎮 Status:</span>
         <span class="status-value" id="game-status">Ready</span>
+        <span class="processing-indicator hidden" id="processing-indicator">⚙️</span>
       </div>
     </div>
     
@@ -3044,9 +3061,8 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
       
       
       game = BlinkEngine.BlinkGame.createSync({
-        debug: false,
-        timeScale: parseFloat(speedSlider.value),
-        discreteTimeStep: 0.01,
+        debug: true,  // Enable debug logging to diagnose event processing
+        msPerFrame: parseFloat(speedSlider.value) * 16, // Speed multiplier * base 16ms
         maxEventsPerFrame: 1000
       });
       
@@ -3193,8 +3209,7 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
       
       game = BlinkEngine.BlinkGame.createSync({
         debug: false,
-        timeScale: parseFloat(speedSlider.value),
-        discreteTimeStep: 0.01, // 1/100th of a second time steps
+        msPerFrame: parseFloat(speedSlider.value) * 16, // Speed multiplier * base 16ms
         maxEventsPerFrame: 1000 // Process more events per frame for speed
       });
       
@@ -3429,26 +3444,33 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
     // State updates now happen via polling game state in handleSimulationEvent on 'step' events.
     
     function handleSimulationEvent(event) {
+      const processingIndicator = document.getElementById('processing-indicator');
+      
       switch (event.type) {
         case 'started':
           gameStatusEl.textContent = 'Running';
           gameStatusEl.style.color = '#4ade80';
+          processingIndicator.classList.remove('hidden');
           break;
         case 'paused':
           gameStatusEl.textContent = 'Paused';
           gameStatusEl.style.color = '#fbbf24';
+          processingIndicator.classList.add('hidden');
           break;
         case 'resumed':
           gameStatusEl.textContent = 'Running';
           gameStatusEl.style.color = '#4ade80';
+          processingIndicator.classList.remove('hidden');
           break;
         case 'stopped':
           gameStatusEl.textContent = 'Stopped';
           gameStatusEl.style.color = '#f87171';
+          processingIndicator.classList.add('hidden');
           break;
         case 'completed':
           gameStatusEl.textContent = 'Complete';
           gameStatusEl.style.color = '#8b5cf6';
+          processingIndicator.classList.add('hidden');
           
           if (!gameState.victory) {
             // Check if all players are dead
@@ -3617,7 +3639,8 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
       const speed = parseFloat(e.target.value);
       speedValue.textContent = `${speed}x`;
       if (game) {
-        game.setTimeScale(speed);
+        // Set msPerFrame: speed multiplier * base 16ms per frame
+        game.setMsPerFrame(speed * 16);
       }
     });
     
