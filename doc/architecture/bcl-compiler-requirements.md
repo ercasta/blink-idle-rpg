@@ -35,9 +35,9 @@ pub struct BoundFunctionDef {
 ```
 
 #### Add Parsing for Choice Function Syntax
-In BDL entity definitions, support:
+In BDL entity definitions, support (use variable-assignment or anonymous entities):
 ```bdl
-entity @warrior {
+warrior = new entity {
     Character { ... }
     Health { ... }
     
@@ -142,7 +142,7 @@ Note: BCL files are NOT compiled separately. Instead, BDL files contain inline c
 
 ### Before (Current)
 ```bdl
-entity @warrior {
+warrior = new entity {
     Character {
         name: "Sir Braveheart"
         class: "Warrior"
@@ -155,7 +155,7 @@ entity @warrior {
 
 ### After (With Bound Functions)
 ```bdl
-entity @warrior {
+warrior = new entity {
     Character {
         name: "Sir Braveheart"
         class: "Warrior"

@@ -1756,7 +1756,7 @@ mod tests {
     #[test]
     fn test_parse_entity_with_bound_function() {
         let source = r#"
-            entity @warrior {
+            warrior = new entity {
                 Health {
                     current: 100
                     max: 100
@@ -1788,7 +1788,7 @@ mod tests {
     #[test]
     fn test_parse_bound_function_with_composite_type() {
         let source = r#"
-            entity @warrior {
+            warrior = new entity {
                 .selectSkill = choice(character: Character & Skills & Health, enemies: list): string {
                     return "power_strike"
                 }

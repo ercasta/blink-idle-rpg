@@ -87,10 +87,26 @@ entity HeroName {
 }
 ```
 
-### 3.2 Named Entity References
+### 3.2 Named Entity References (Removed)
+
+The legacy `entity @name { ... }` syntax has been removed. Use anonymous entity
+declarations or the variable-assignment form when an identifier is needed.
+
+Anonymous entity example:
 
 ```bdl
-entity @warrior {
+entity {
+    Character {
+        name: "Sir Braveheart"
+        class: "Warrior"
+    }
+}
+```
+
+Variable-assignment (useful when generating IR with an id):
+
+```bdl
+warrior = new entity {
     Character {
         name: "Sir Braveheart"
         class: "Warrior"
@@ -196,23 +212,11 @@ entity {
 }
 ```
 
-### 5.2 Named Entity
+### 5.2 Named Entity (Deprecated)
 
-Named entities can be referenced later:
-
-```bdl
-entity @goblin_template {
-    Character {
-        name: "Goblin Scout"
-        class: "Monster"
-    }
-    Enemy {
-        tier: 1
-        isBoss: false
-        expReward: 25
-    }
-}
-```
+The `entity @name { ... }` syntax is deprecated and removed. If you need a stable
+identifier for an entity (for tooling or IR generation), use the `variable = new entity { ... }`
+form shown above. Otherwise, anonymous `entity { ... }` declarations are preferred in BDL.
 
 ### 5.3 Multiple Components
 

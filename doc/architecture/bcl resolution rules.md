@@ -16,31 +16,31 @@ Blink Choice Language allows players to specify behaviour in correspondence of s
 BDL allows declaring bound choice functions directly on entity definitions using the `.functionName = choice(...) { ... }` syntax:
 
 ```bdl
-entity @warrior {
-    Character { name: "Sir Braveheart", class: "Warrior", level: 1 }
-    Health { current: 120, max: 120 }
-    Combat { damage: 18, defense: 10 }
+warrior = new entity {
+  Character { name: "Sir Braveheart", class: "Warrior", level: 1 }
+  Health { current: 120, max: 120 }
+  Combat { damage: 18, defense: 10 }
     
-    // Bound choice function for target selection
-    .selectAttackTarget = choice(character: Character, enemies: list): id {
-        // Warriors prioritize high-threat targets
-        let target = enemies[0]
-        for enemy in enemies {
-            if enemy.Combat.damage > target.Combat.damage {
-                target = enemy
-            }
-        }
-        return target.id
+  // Bound choice function for target selection
+  .selectAttackTarget = choice(character: Character, enemies: list): id {
+    // Warriors prioritize high-threat targets
+    let target = enemies[0]
+    for enemy in enemies {
+      if enemy.Combat.damage > target.Combat.damage {
+        target = enemy
+      }
     }
+    return target.id
+  }
     
-    // Bound choice function for skill selection
-    .selectCombatSkill = choice(character: Character & Skills & Health, allies: list, enemies: list): string {
-        let hp_pct = character.Health.current / character.Health.max
-        if hp_pct < 0.3 {
-            return "defensive_stance"
-        }
-        return "power_strike"
+  // Bound choice function for skill selection
+  .selectCombatSkill = choice(character: Character & Skills & Health, allies: list, enemies: list): string {
+    let hp_pct = character.Health.current / character.Health.max
+    if hp_pct < 0.3 {
+      return "defensive_stance"
     }
+    return "power_strike"
+  }
 }
 ```
 
