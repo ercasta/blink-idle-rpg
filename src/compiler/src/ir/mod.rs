@@ -257,6 +257,15 @@ pub enum IRExpression {
         #[serde(rename = "else")]
         else_expr: Box<IRExpression>,
     },
+    
+    /// Entity cloning
+    #[serde(rename = "clone")]
+    Clone {
+        source: Box<IRExpression>,
+        #[serde(skip_serializing_if = "Vec::is_empty")]
+        #[serde(default)]
+        overrides: Vec<IRComponentInit>,
+    },
 }
 
 /// Action representation in IR
@@ -910,6 +919,27 @@ impl IRGenerator {
                     args: vec![
                         IRExpression::Literal { value: IRValue::String(component.clone()) },
                     ],
+                }
+            }
+            TypedExprKind::CloneEntity { source, overrides } => {
+                // Entity cloning: `clone entity_expr` or `clone entity_expr { overrides }`
+                let source_ir = self.generate_expression(source);
+                
+                // Convert component overrides to IR
+                let overrides_ir = overrides.iter().map(|comp_init| {
+                    let fields = comp_init.fields.iter().map(|(name, expr)| {
+                        (name.clone(), self.generate_expression(expr))
+                    }).collect();
+                    
+                    IRComponentInit {
+                        name: comp_init.name.clone(),
+                        fields,
+                    }
+                }).collect();
+                
+                IRExpression::Clone {
+                    source: Box::new(source_ir),
+                    overrides: overrides_ir,
                 }
             }
             _ => IRExpression::Literal { value: IRValue::Null },

@@ -329,6 +329,14 @@ pub enum Expr {
     /// Entity query: `entities having ComponentType`
     /// Returns a list of entities that have the specified component
     EntitiesHaving(String, Span),
+    
+    /// Entity cloning: `clone entity_ref` or `clone entity_ref { overrides }`
+    /// Creates a new entity by cloning an existing one
+    CloneEntity {
+        source: Box<Expr>,
+        overrides: Vec<ComponentInit>,
+        span: Span,
+    },
 }
 
 /// Literal values
@@ -1582,6 +1590,38 @@ impl Parser {
                 let component_token = self.consume(TokenKind::Identifier, "component name")?;
                 Ok(Expr::EntitiesHaving(component_token.text.clone(), Span::new(span_start, component_token.span.end)))
             }
+            // Parse `clone entity_expr` or `clone entity_expr { overrides }`
+            TokenKind::Clone => {
+                let span_start = token.span.start;
+                
+                // Parse the source entity expression
+                let source = self.parse_postfix_expr()?;
+                
+                // Check for optional component overrides
+                let mut overrides = Vec::new();
+                let span_end = if self.check(&TokenKind::LBrace) {
+                    self.advance();
+                    
+                    // Parse component initializations (overrides)
+                    while !self.check(&TokenKind::RBrace) && !self.is_at_end() {
+                        overrides.push(self.parse_component_init()?);
+                    }
+                    
+                    let end_token = self.consume(TokenKind::RBrace, "}")?;
+                    end_token.span.end
+                } else {
+                    // Get the end of the source expression
+                    self.tokens.get(self.pos.saturating_sub(1))
+                        .map(|t| t.span.end)
+                        .unwrap_or(span_start)
+                };
+                
+                Ok(Expr::CloneEntity {
+                    source: Box::new(source),
+                    overrides,
+                    span: Span::new(span_start, span_end),
+                })
+            }
             // Handle 'entity' and 'event' keywords as identifiers in expression context
             // Note: 'id' (TypeId) is only allowed as field names, not as standalone identifiers
             TokenKind::Entity | TokenKind::Event => {
@@ -1659,6 +1699,7 @@ impl Expr {
             Expr::List(_, s) => *s,
             Expr::Paren(_, s) => *s,
             Expr::EntitiesHaving(_, s) => *s,
+            Expr::CloneEntity { span, .. } => *span,
         }
     }
 }

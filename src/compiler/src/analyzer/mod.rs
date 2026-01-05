@@ -776,6 +776,47 @@ impl Analyzer {
                     typ: Type::List(Box::new(Type::EntityId)),
                 }
             }
+            Expr::CloneEntity { source, overrides, .. } => {
+                // Analyze the source entity expression
+                let source_typed = self.analyze_expr(source, scope);
+                
+                // Validate that source is an entity type
+                if !matches!(source_typed.typ, Type::EntityId | Type::Unknown) {
+                    self.errors.push(SemanticError::TypeMismatch {
+                        expected: "entity".to_string(),
+                        found: format!("{:?}", source_typed.typ),
+                    });
+                }
+                
+                // Analyze component overrides
+                let typed_overrides = overrides.iter().map(|comp_init| {
+                    // Validate component exists
+                    if self.symbols.get_component(&comp_init.name).is_none() {
+                        self.errors.push(SemanticError::UndefinedComponent {
+                            name: comp_init.name.clone(),
+                        });
+                    }
+                    
+                    // Analyze field expressions
+                    let typed_fields = comp_init.fields.iter().map(|(field_name, expr)| {
+                        let typed_expr = self.analyze_expr(expr, scope);
+                        (field_name.clone(), typed_expr)
+                    }).collect();
+                    
+                    TypedComponentInit {
+                        name: comp_init.name.clone(),
+                        fields: typed_fields,
+                    }
+                }).collect();
+                
+                TypedExpr {
+                    kind: TypedExprKind::CloneEntity {
+                        source: Box::new(source_typed),
+                        overrides: typed_overrides,
+                    },
+                    typ: Type::EntityId,
+                }
+            }
         }
     }
 }
@@ -966,6 +1007,11 @@ pub enum TypedExprKind {
     /// Entity query: `entities having ComponentType`
     /// Returns a list of entities that have the specified component
     EntitiesHaving(String),
+    /// Entity cloning: `clone entity_ref` or `clone entity_ref { overrides }`
+    CloneEntity {
+        source: Box<TypedExpr>,
+        overrides: Vec<TypedComponentInit>,
+    },
 }
 
 /// Perform semantic analysis on a parsed module

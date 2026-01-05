@@ -78,6 +78,8 @@ pub enum TokenKind {
     Choice,
     #[token("new")]
     New,
+    #[token("clone")]
+    Clone,
     #[token("having")]
     Having,
     #[token("entities")]
