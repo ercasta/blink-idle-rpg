@@ -824,9 +824,8 @@
     constructor(options = {}) {
       this.options = {
         debug: options.debug || false,
-        timeScale: options.timeScale || 1.0,
+        msPerFrame: options.msPerFrame || 16, // Default: 16ms per frame
         maxEventsPerFrame: options.maxEventsPerFrame || 100,
-        discreteTimeStep: options.discreteTimeStep || 0,
         devMode: options.devMode || false,
       };
       
@@ -838,8 +837,6 @@
       this.isRunning = false;
       this.isPaused = false;
       this.animationFrameId = null;
-      this.lastFrameTime = 0;
-      this.currentSimulationTime = 0;
       
       // trackerCallbacks removed
       this.simulationCallbacks = new Set();
@@ -928,8 +925,6 @@
       
       this.isRunning = true;
       this.isPaused = false;
-      this.lastFrameTime = performance.now();
-      this.currentSimulationTime = this.timeline.getTime();
       
       this.emitSimulationEvent({ type: 'started', time: this.timeline.getTime() });
       
@@ -957,8 +952,6 @@
       }
       
       this.isPaused = false;
-      this.lastFrameTime = performance.now();
-      this.currentSimulationTime = this.timeline.getTime();
       
       this.emitSimulationEvent({ type: 'resumed', time: this.timeline.getTime() });
       
@@ -981,7 +974,6 @@
       this.stop();
       this.store.clear();
       this.timeline.clear();
-      this.currentSimulationTime = 0;
       
       if (this.ir && this.ir.initial_state) {
         this.loadState(this.ir.initial_state.entities);
@@ -1107,8 +1099,12 @@
       return this.ir ? this.ir.rules : [];
     }
 
-    setTimeScale(scale) {
-      this.options.timeScale = scale;
+    setMsPerFrame(ms) {
+      this.options.msPerFrame = ms;
+    }
+
+    getMsPerFrame() {
+      return this.options.msPerFrame;
     }
 
     getIsRunning() {
@@ -1193,29 +1189,24 @@
       if (typeof requestAnimationFrame !== 'undefined') {
         this.animationFrameId = requestAnimationFrame(this.gameLoop.bind(this));
       } else {
-        setTimeout(() => this.gameLoop(performance.now()), 16);
+        setTimeout(() => this.gameLoop(), 16);
       }
     }
 
-    gameLoop(currentTime) {
+    gameLoop() {
       if (!this.isRunning || this.isPaused) {
         return;
       }
       
-      const deltaTime = (currentTime - this.lastFrameTime) / 1000;
-      this.lastFrameTime = currentTime;
+      // Advance simulation by msPerFrame milliseconds before updating UI
+      const millisecondsToAdvance = this.options.msPerFrame;
+      const targetTime = this.timeline.getTime() + millisecondsToAdvance;
       
-      const simulationDelta = deltaTime * this.options.timeScale;
-      this.currentSimulationTime += simulationDelta;
-      let targetTime = this.currentSimulationTime;
-      
-      const discreteStep = this.options.discreteTimeStep;
-      if (discreteStep > 0) {
-        const currentDiscreteTime = Math.floor(this.timeline.getTime() / discreteStep) * discreteStep;
-        const targetDiscreteTime = Math.floor(targetTime / discreteStep) * discreteStep;
-        targetTime = targetDiscreteTime;
+      if (this.options.debug && this.timeline.getTime() < 1000) {
+        console.log(`[GameLoop] Advancing ${millisecondsToAdvance}ms, from ${this.timeline.getTime()}ms to target ${targetTime}ms`);
       }
       
+      // Process all events up to target time (or max events per frame)
       let eventsProcessed = 0;
       
       while (
@@ -1224,34 +1215,32 @@
       ) {
         const nextEvent = this.timeline.peek();
         if (!nextEvent || nextEvent.time > targetTime) {
+          if (this.options.debug && eventsProcessed === 0 && this.timeline.getTime() < 1000) {
+            console.log(`[GameLoop] No events to process: nextEvent=${nextEvent ? nextEvent.eventType + '@' + nextEvent.time + 'ms' : 'null'}, targetTime=${targetTime}ms`);
+          }
           break;
         }
         
-        if (discreteStep > 0 && nextEvent.time > this.timeline.getTime()) {
-          const timeToEvent = nextEvent.time - this.timeline.getTime();
-          const steps = Math.ceil(timeToEvent / discreteStep);
-          this.timeline.setTime(this.timeline.getTime() + (steps * discreteStep));
+        if (this.options.debug && eventsProcessed < 5 && this.timeline.getTime() < 1000) {
+          console.log(`[GameLoop] Processing event: ${nextEvent.eventType} at time ${nextEvent.time}ms`);
         }
         
         this.step();
         eventsProcessed++;
       }
       
-      // If we hit the event limit and there are still events before targetTime,
-      // sync currentSimulationTime to where we actually got to prevent "hanging"
-      if (eventsProcessed >= this.options.maxEventsPerFrame && this.timeline.hasEvents()) {
-        const nextEvent = this.timeline.peek();
-        if (nextEvent && nextEvent.time <= targetTime) {
-          this.currentSimulationTime = this.timeline.getTime();
-        }
+      if (this.options.debug && this.timeline.getTime() < 1000) {
+        console.log(`[GameLoop] Processed ${eventsProcessed} events, timeline now at ${this.timeline.getTime()}ms`);
       }
       
+      // Check if simulation is complete
       if (!this.timeline.hasEvents()) {
         this.isRunning = false;
         this.emitSimulationEvent({ type: 'completed', time: this.timeline.getTime() });
         return;
       }
       
+      // Schedule next frame (wall-clock time only affects UI update rate, not simulation)
       this.scheduleNextFrame();
     }
 
