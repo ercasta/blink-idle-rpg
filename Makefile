@@ -75,6 +75,8 @@ install-packages:
 build-packages:
 	@echo "Building blink-engine..."
 	cd packages/blink-engine && npm run build
+	@echo "Building browser bundle..."
+	cd packages/blink-engine && npm run build:bundle
 	@echo "Building blink-test..."
 	cd packages/blink-test && npm run build
 	@echo "Packages built successfully"

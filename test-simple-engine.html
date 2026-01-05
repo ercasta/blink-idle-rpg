@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Engine Test</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #00ff00;
+        }
+        .log {
+            margin: 10px 0;
+            padding: 5px;
+            background: #0a0a0a;
+        }
+        button {
+            margin: 10px 5px;
+            padding: 10px 20px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Simple Engine Test</h1>
+    <div>
+        <button id="startBtn">Start Game</button>
+        <button id="pauseBtn">Pause</button>
+        <button id="stepBtn">Step Once</button>
+    </div>
+    <div>
+        <label>Speed: <input type="range" id="speedSlider" min="1" max="100" value="1"> <span id="speedValue">1x</span></label>
+    </div>
+    <div id="status">Status: Ready</div>
+    <div id="time">Time: 0ms</div>
+    <div id="events">Events: 0</div>
+    <h2>Log:</h2>
+    <div id="log"></div>
+
+    <script src="game/demos/blink-engine.bundle.js"></script>
+    <script>
+        const logDiv = document.getElementById('log');
+        const statusDiv = document.getElementById('status');
+        const timeDiv = document.getElementById('time');
+        const eventsDiv = document.getElementById('events');
+        const startBtn = document.getElementById('startBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const stepBtn = document.getElementById('stepBtn');
+        const speedSlider = document.getElementById('speedSlider');
+        const speedValue = document.getElementById('speedValue');
+
+        let eventCount = 0;
+
+        function log(msg) {
+            console.log(msg);
+            const entry = document.createElement('div');
+            entry.className = 'log';
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            logDiv.insertBefore(entry, logDiv.firstChild);
+            if (logDiv.children.length > 20) {
+                logDiv.removeChild(logDiv.lastChild);
+            }
+        }
+
+        // Create simple IR with minimal rules
+        const simpleIR = {
+            version: '1.0',
+            module: 'simple-test',
+            components: [
+                {
+                    name: 'Counter',
+                    fields: [
+                        { name: 'value', type: 'number', default: 0 }
+                    ]
+                }
+            ],
+            rules: [
+                {
+                    name: 'increment_on_tick',
+                    trigger: { event: 'Tick' },
+                    conditions: [],
+                    actions: [
+                        {
+                            type: 'update',
+                            entity: { type: 'event_entity' },
+                            component: 'Counter',
+                            field: 'value',
+                            value: {
+                                type: 'binary_op',
+                                op: '+',
+                                left: { type: 'component_field', entity: { type: 'event_entity' }, component: 'Counter', field: 'value' },
+                                right: { type: 'literal', value: 1 }
+                            }
+                        },
+                        {
+                            type: 'schedule',
+                            event_type: 'Tick',
+                            delay: 100, // Schedule next tick in 100ms
+                            fields: {}
+                        }
+                    ]
+                }
+            ],
+            functions: [],
+            trackers: [],
+            initial_state: {
+                entities: [
+                    {
+                        id: 0,
+                        components: {
+                            Counter: { value: 0 }
+                        }
+                    }
+                ]
+            }
+        };
+
+        log('Creating game with simple IR...');
+        const game = BlinkEngine.BlinkGame.createSync({
+            debug: true,
+            msPerFrame: 16, // Start with 16ms per frame
+            maxEventsPerFrame: 100
+        });
+
+        log('Loading simple rules...');
+        game.loadRulesFromObject(simpleIR);
+
+        log('Scheduling initial Tick event at time 0...');
+        game.scheduleEvent('Tick', 0, {});
+
+        log(`Game has events: ${game.hasEvents()}`);
+        log(`Timeline time: ${game.getTime()}ms`);
+
+        // Subscribe to simulation events
+        game.onSimulation((event) => {
+            statusDiv.textContent = `Status: ${event.type}`;
+            if (event.type === 'step') {
+                eventCount++;
+                eventsDiv.textContent = `Events processed: ${eventCount}`;
+                timeDiv.textContent = `Time: ${event.time}ms`;
+                
+                // Check counter value
+                const counter = game.getComponent(0, 'Counter');
+                if (counter) {
+                    log(`Counter value: ${counter.value} at time ${event.time}ms`);
+                }
+            }
+        });
+
+        startBtn.addEventListener('click', () => {
+            log('Starting game...');
+            game.start();
+        });
+
+        pauseBtn.addEventListener('click', () => {
+            log('Pausing game...');
+            game.pause();
+        });
+
+        stepBtn.addEventListener('click', () => {
+            log('Stepping once...');
+            const result = game.step();
+            if (result) {
+                log(`Stepped to time ${result.time}ms, event: ${result.event.eventType}`);
+                timeDiv.textContent = `Time: ${result.time}ms`;
+                eventCount++;
+                eventsDiv.textContent = `Events processed: ${eventCount}`;
+            } else {
+                log('No events to step');
+            }
+        });
+
+        speedSlider.addEventListener('input', (e) => {
+            const speed = parseInt(e.target.value);
+            speedValue.textContent = `${speed}x`;
+            game.setMsPerFrame(speed * 16);
+            log(`Speed set to ${speed}x (${speed * 16}ms per frame)`);
+        });
+
+        log('Test ready. Click "Start Game" to begin or "Step Once" to manually step through events.');
+    </script>
+</body>
+</html>

@@ -21,6 +21,9 @@ game_state = new entity {
         gameOver: false
         victory: false
         retargetingActive: false
+        currentTier: 1
+        waveInTier: 1
+        bossSpawned: false
     }
 }
 
