@@ -1,0 +1,57 @@
+// Simple Combat System
+// Demonstrates combat mechanics with health, damage, and death
+
+// Character information
+component Character {
+    name: string
+    level: integer
+}
+
+// Health component
+component Health {
+    current: integer
+    max: integer
+}
+
+// Attack capability
+component Attack {
+    damage: integer
+    speed: float
+}
+
+// Current attack target
+component Target {
+    entity: id?
+}
+
+// Function to calculate damage with multiplier
+fn calculate_damage(base: float, multiplier: float): float {
+    return base * multiplier
+}
+
+// Main attack rule: apply damage and schedule next attack
+rule attack_rule on DoAttack {
+    // Only attack if we have a target
+    if entity.Target.entity != null {
+        let target = entity.Target.entity
+        let damage = entity.Attack.damage
+        
+        // Apply damage to target
+        target.Health.current -= damage
+        
+        // Schedule next attack based on attack speed
+        let delay = 100 / entity.Attack.speed
+        schedule [delay: delay] DoAttack {
+            source: entity.id
+        }
+    }
+}
+
+// Death check: emit Death event when health drops to zero
+rule death_check on DoAttack {
+    if entity.Health.current <= 0 {
+        schedule Death {
+            target: entity.id
+        }
+    }
+}
