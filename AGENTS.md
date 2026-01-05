@@ -8,6 +8,38 @@
 - Implement the changes
 - Run Hielements checks to ensure alignment
 
+## Pre-submission Build Checks
+
+**ALWAYS** run these checks before submitting a PR to ensure the build passes:
+
+1. **Build the compiler:**
+   ```bash
+   make build-compiler
+   ```
+
+2. **Build the packages:**
+   ```bash
+   make install-packages
+   make build-packages
+   ```
+
+3. **Compile BRL to IR:**
+   ```bash
+   make compile-brl
+   ```
+
+4. **Test the demo package creation:**
+   ```bash
+   make demo-package
+   ```
+
+5. **Run tests:**
+   ```bash
+   make test
+   ```
+
+All commands must complete successfully before submitting a PR. This ensures CI/CD workflows will pass and prevents build failures.
+
 ## Language Compilation Test Suite
 
 After making changes to the compiler, run the language compilation test suite:

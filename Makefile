@@ -108,6 +108,7 @@ demo-package: compile-brl
 	
 	@echo "Copying demo HTML and JS files..."
 	cp game/demos/index.html demo-package/
+	cp game/demos/combat-demo.html demo-package/
 	cp game/demos/rpg-demo.html demo-package/
 	cp game/demos/blink-engine.bundle.js demo-package/
 	cp game/demos/README.md demo-package/
