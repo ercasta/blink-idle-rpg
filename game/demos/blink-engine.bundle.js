@@ -678,63 +678,8 @@
 
   // ===== Tracker System =====
   
-  class TrackerSystem {
-    constructor() {
-      this.trackers = [];
-      this.trackersByEvent = new Map();
-    }
-
-    loadTrackers(trackers) {
-      this.trackers = trackers;
-      this.trackersByEvent.clear();
-
-      for (const tracker of trackers) {
-        const existing = this.trackersByEvent.get(tracker.event) || [];
-        existing.push(tracker);
-        this.trackersByEvent.set(tracker.event, existing);
-      }
-    }
-
-    getTrackersForEvent(eventType) {
-      return this.trackersByEvent.get(eventType) || [];
-    }
-
-    capture(event, store, time) {
-      const outputs = [];
-      const trackers = this.getTrackersForEvent(event.eventType);
-
-      for (const tracker of trackers) {
-        const entityData = [];
-
-        const entityIds = store.query(tracker.component);
-
-        for (const entityId of entityIds) {
-          const component = store.getComponent(entityId, tracker.component);
-          if (component) {
-            entityData.push({
-              entityId,
-              fields: { ...component },
-            });
-          }
-        }
-
-        outputs.push({
-          trackerId: tracker.id,
-          eventType: event.eventType,
-          time,
-          component: tracker.component,
-          entities: entityData,
-        });
-      }
-
-      return outputs;
-    }
-
-    clear() {
-      this.trackers = [];
-      this.trackersByEvent.clear();
-    }
-  }
+  // TrackerSystem removed - no longer supported
+  // State updates should be done by polling game state entities
 
   // ===== IR Loader =====
   
@@ -800,7 +745,7 @@
       this.store = new Store();
       this.timeline = new Timeline();
       this.executor = new RuleExecutor();
-      this.trackerSystem = new TrackerSystem();
+      // trackerSystem removed
       
       this.isRunning = false;
       this.isPaused = false;
@@ -808,7 +753,7 @@
       this.lastFrameTime = 0;
       this.currentSimulationTime = 0;
       
-      this.trackerCallbacks = new Set();
+      // trackerCallbacks removed
       this.simulationCallbacks = new Set();
       this.debugCallbacks = new Set();
       
@@ -858,7 +803,7 @@
       
       this.executor.loadRules(ir.rules);
       this.executor.loadFunctions(ir.functions);
-      this.trackerSystem.loadTrackers(ir.trackers);
+      // trackerSystem.loadTrackers removed - trackers no longer supported
       
       if (ir.initial_state) {
         this.loadState(ir.initial_state.entities);
@@ -868,7 +813,7 @@
         console.log(`[BlinkGame] Loaded IR module: ${ir.module}`);
         console.log(`[BlinkGame] Components: ${ir.components.length}`);
         console.log(`[BlinkGame] Rules: ${ir.rules.length}`);
-        console.log(`[BlinkGame] Trackers: ${ir.trackers.length}`);
+        // Trackers line removed
       }
     }
 
@@ -971,16 +916,12 @@
         }
       }
       
-      const trackerOutput = this.trackerSystem.capture(event, this.store, this.timeline.getTime());
-      
-      for (const output of trackerOutput) {
-        this.emitTrackerEvent(output);
-      }
+      // trackerSystem.capture removed - trackers no longer supported
       
       const result = {
         time: this.timeline.getTime(),
         event,
-        trackerOutput,
+        // trackerOutput removed
       };
       
       this.emitSimulationEvent({ type: 'step', time: result.time, event });
@@ -1049,10 +990,7 @@
       return this.timeline.schedule(eventType, delay, options);
     }
 
-    onTracker(callback) {
-      this.trackerCallbacks.add(callback);
-      return () => this.trackerCallbacks.delete(callback);
-    }
+    // onTracker removed - trackers no longer supported
 
     onSimulation(callback) {
       this.simulationCallbacks.add(callback);
@@ -1099,7 +1037,7 @@
 
     destroy() {
       this.stop();
-      this.trackerCallbacks.clear();
+      // trackerCallbacks.clear() removed
       this.simulationCallbacks.clear();
       this.debugCallbacks.clear();
       this.store.clear();
@@ -1229,15 +1167,7 @@
       this.scheduleNextFrame();
     }
 
-    emitTrackerEvent(event) {
-      for (const callback of this.trackerCallbacks) {
-        try {
-          callback(event);
-        } catch (error) {
-          console.error('[BlinkGame] Error in tracker callback:', error);
-        }
-      }
-    }
+    // emitTrackerEvent removed - trackers no longer supported
 
     emitSimulationEvent(event) {
       for (const callback of this.simulationCallbacks) {
@@ -1267,7 +1197,7 @@
     Store,
     Timeline,
     RuleExecutor,
-    TrackerSystem,
+    // TrackerSystem removed
     loadIRFromString,
     loadIRFromObject,
   };
