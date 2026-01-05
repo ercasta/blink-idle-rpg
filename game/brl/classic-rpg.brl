@@ -65,6 +65,11 @@ component EnemyTemplate {
     isTemplate: boolean
 }
 
+// Marks an entity as the final boss
+component FinalBoss {
+    isFinalBoss: boolean
+}
+
 // Holds references to all enemy templates / entries in the game
 // Holds references to all enemy templates / entries in the game
 component EnemyCompendium {
@@ -298,14 +303,9 @@ rule spawn_enemy_from_template on SpawnEnemy {
 
 // Spawn the final boss (Dragon Lord Vexar) once
 rule spawn_lord_vexar on SpawnLordVexar {
-    // Find the Dragon Lord Vexar boss template
-    let templates = entities having EnemyTemplate
+    // Find the final boss template using FinalBoss component
+    let templates = entities having FinalBoss
     let bossTemplate = templates[0]
-    for t in templates {
-        if t.Character.name == "Dragon Lord Vexar" {
-            bossTemplate = t
-        }
-    }
     
     // Clone the boss template
     let newBoss = clone bossTemplate {
