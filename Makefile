@@ -3,6 +3,9 @@
 
 .PHONY: help all clean build-compiler compile-brl build-packages test demo-package install-packages
 
+# When set to true, include source_map in IR output for dev tools
+SOURCE_MAP_FLAG=--source-map
+
 # Default target
 help:
 	@echo "Blink Idle RPG - Local Pipeline Commands"
@@ -47,11 +50,11 @@ compile-brl: build-compiler
 	cd src/compiler && \
 	for brl_file in ../../game/brl/*.brl; do \
 		filename=$$(basename "$$brl_file" .brl); \
-		if [ "$$filename" = "classic-rpg" ]; then \
-			./target/release/blink-compiler compile -i "$$brl_file" -o "../../game/ir/$${filename}.ir.json" --pretty \
-				--include ../../game/bdl/heroes.bdl \
-				--include ../../game/bdl/enemies.bdl \
-				--include ../../game/bdl/game-config.bdl; \
+			if [ "$$filename" = "classic-rpg" ]; then \
+				./target/release/blink-compiler compile -i "$$brl_file" -o "../../game/ir/$${filename}.ir.json" --pretty $(SOURCE_MAP_FLAG) \
+					--include ../../game/bdl/heroes.bdl \
+					--include ../../game/bdl/enemies.bdl \
+					--include ../../game/bdl/game-config.bdl; \
 			echo "Compiled $${filename}.brl with BDL files -> $${filename}.ir.json"; \
 		else \
 			./target/release/blink-compiler compile -i "$$brl_file" -o "../../game/ir/$${filename}.ir.json" --pretty; \

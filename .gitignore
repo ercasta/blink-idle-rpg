@@ -36,3 +36,10 @@ blink-demo-package*.zip
 
 # Local environment overrides
 .env
+game/rule-chain-1600x1200.png
+game/rule-chain-1600x1200.svg
+game/rule-chain-1920x1080.png
+game/rule-chain-1920x1080.svg
+game/rule-chain.mmd
+game/rule-chain.png
+game/rule-chain.svg
