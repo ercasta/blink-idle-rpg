@@ -103,7 +103,6 @@ jobs:
           # Copy demo HTML and JS files
           echo "Copying demo files..."
           cp game/demos/index.html _site/
-          cp game/demos/combat-demo.html _site/
           cp game/demos/rpg-demo.html _site/
           cp game/demos/blink-engine.bundle.js _site/
           
