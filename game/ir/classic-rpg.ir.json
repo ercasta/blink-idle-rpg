@@ -2,7 +2,7 @@
   "version": "1.0",
   "module": "unnamed",
   "metadata": {
-    "compiled_at": "2026-01-19T16:20:28Z",
+    "compiled_at": "2026-01-19T17:04:26Z",
     "compiler_version": "0.1.0"
   },
   "components": [
@@ -5722,5 +5722,100 @@
         }
       }
     ]
-  }
+  },
+  "choice_points": [
+    {
+      "id": "select_attack_target",
+      "name": "Select Attack Target",
+      "signature": "choice fn select_attack_target(character: id, enemies: list<id>): id",
+      "params": [
+        {
+          "name": "character",
+          "type": {
+            "type": "entity"
+          }
+        },
+        {
+          "name": "enemies",
+          "type": {
+            "type": "list",
+            "element": {
+              "type": "entity"
+            }
+          }
+        }
+      ],
+      "return_type": {
+        "type": "entity"
+      },
+      "category": "targeting",
+      "applicable_classes": [
+        "Warrior"
+      ]
+    },
+    {
+      "id": "select_combat_skill",
+      "name": "Select Combat Skill",
+      "signature": "choice fn select_combat_skill(character: id, allies: list<id>, enemies: list<id>): string",
+      "params": [
+        {
+          "name": "character",
+          "type": {
+            "type": "entity"
+          }
+        },
+        {
+          "name": "allies",
+          "type": {
+            "type": "list",
+            "element": {
+              "type": "entity"
+            }
+          }
+        },
+        {
+          "name": "enemies",
+          "type": {
+            "type": "list",
+            "element": {
+              "type": "entity"
+            }
+          }
+        }
+      ],
+      "return_type": {
+        "type": "string"
+      },
+      "category": "skills",
+      "applicable_classes": [
+        "Warrior"
+      ]
+    },
+    {
+      "id": "select_skill_on_levelup",
+      "name": "Select Skill On Levelup",
+      "signature": "choice fn select_skill_on_levelup(character: id, currentLevel: id): string",
+      "params": [
+        {
+          "name": "character",
+          "type": {
+            "type": "entity"
+          }
+        },
+        {
+          "name": "currentLevel",
+          "type": {
+            "type": "entity"
+          }
+        }
+      ],
+      "return_type": {
+        "type": "string"
+      },
+      "category": "skills",
+      "applicable_classes": [
+        "Warrior"
+      ]
+    }
+  ]
 }
