@@ -345,6 +345,7 @@
           event,
           bindings,
           params: new Map(),
+          locals: new Map(),
           functions: this.functions,
         };
 
@@ -415,6 +416,18 @@
           break;
         case 'despawn':
           this.executeDespawn(action, context);
+          break;
+        case 'conditional':
+          this.executeConditional(action, context);
+          break;
+        case 'loop':
+          this.executeLoop(action, context);
+          break;
+        case 'let':
+          this.executeLet(action, context);
+          break;
+        case 'while':
+          this.executeWhile(action, context);
           break;
         default:
           console.warn(`Unknown action type: ${action.type}`);
@@ -502,6 +515,71 @@
       }
     }
 
+    executeLet(action, context) {
+      const value = this.evaluateExpression(action.value, context);
+      context.locals.set(action.name, value);
+    }
+
+    executeConditional(action, context) {
+      const condition = this.evaluateExpression(action.condition, context);
+      if (condition) {
+        for (const thenAction of action.then_actions) {
+          this.executeAction(thenAction, context);
+        }
+      } else if (action.else_actions) {
+        for (const elseAction of action.else_actions) {
+          this.executeAction(elseAction, context);
+        }
+      }
+    }
+
+    executeLoop(action, context) {
+      const iterable = this.evaluateExpression(action.iterable, context);
+      if (!Array.isArray(iterable)) {
+        console.warn(`Loop iterable is not an array: ${typeof iterable}`);
+        return;
+      }
+
+      for (const item of iterable) {
+        // Bind loop variable to local scope - validate item is a valid field value
+        const fieldValue = this.toFieldValue(item);
+        context.locals.set(action.variable, fieldValue);
+        
+        for (const bodyAction of action.body) {
+          this.executeAction(bodyAction, context);
+        }
+      }
+    }
+
+    /**
+     * Convert an unknown value to IRFieldValue, returning null for invalid values
+     */
+    toFieldValue(value) {
+      if (value === null) return null;
+      if (typeof value === 'number') return value;
+      if (typeof value === 'string') return value;
+      if (typeof value === 'boolean') return value;
+      if (Array.isArray(value)) return value;
+      if (typeof value === 'object') return value;
+      return null;
+    }
+
+    executeWhile(action, context) {
+      const MAX_WHILE_ITERATIONS = 10000;
+      let iterations = 0;
+      
+      while (this.evaluateExpression(action.condition, context) && iterations < MAX_WHILE_ITERATIONS) {
+        for (const bodyAction of action.body) {
+          this.executeAction(bodyAction, context);
+        }
+        iterations++;
+      }
+      
+      if (iterations >= MAX_WHILE_ITERATIONS) {
+        console.warn(`While loop exceeded maximum iterations (${MAX_WHILE_ITERATIONS}), stopping`);
+      }
+    }
+
     evaluateEntityExpression(expr, context) {
       if (expr.type === 'var') {
         const entityId = context.bindings.get(expr.name);
@@ -540,6 +618,10 @@
           return expr.value;
 
         case 'var': {
+          // Check locals first (let bindings), then entity bindings
+          if (context.locals.has(expr.name)) {
+            return context.locals.get(expr.name);
+          }
           const entityId = context.bindings.get(expr.name);
           return entityId !== undefined ? entityId : null;
         }
