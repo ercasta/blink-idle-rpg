@@ -111,9 +111,6 @@ orc_raider = new entity {
         isBoss: false
         expReward: 35
     }
-    EnemyTemplate {
-        isTemplate: true
-    }
     Buffs {
         damageBonus: 0
         defenseBonus: 0
@@ -164,9 +161,6 @@ dark_wolf = new entity {
         tier: 2
         isBoss: false
         expReward: 40
-    }
-    EnemyTemplate {
-        isTemplate: true
     }
     Buffs {
         damageBonus: 0
@@ -223,9 +217,6 @@ skeleton_warrior = new entity {
         isBoss: false
         expReward: 50
     }
-    EnemyTemplate {
-        isTemplate: true
-    }
     Buffs {
         damageBonus: 0
         defenseBonus: 0
@@ -276,9 +267,6 @@ dark_mage = new entity {
         tier: 3
         isBoss: false
         expReward: 75
-    }
-    EnemyTemplate {
-        isTemplate: true
     }
     Buffs {
         damageBonus: 0
@@ -335,9 +323,6 @@ troll_berserker = new entity {
         isBoss: false
         expReward: 80
     }
-    EnemyTemplate {
-        isTemplate: true
-    }
     Buffs {
         damageBonus: 0
         defenseBonus: 0
@@ -392,9 +377,6 @@ demon_knight = new entity {
         tier: 5
         isBoss: false
         expReward: 150
-    }
-    EnemyTemplate {
-        isTemplate: true
     }
     Buffs {
         damageBonus: 0
@@ -451,9 +433,6 @@ ancient_dragon = new entity {
         isBoss: true
         expReward: 300
     }
-    EnemyTemplate {
-        isTemplate: true
-    }
     Buffs {
         damageBonus: 0
         defenseBonus: 0
@@ -504,9 +483,6 @@ dragon_lord_vexar = new entity {
         tier: 6
         isBoss: true
         expReward: 500
-    }
-    EnemyTemplate {
-        isTemplate: true
     }
     Buffs {
         damageBonus: 0
