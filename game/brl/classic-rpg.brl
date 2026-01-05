@@ -56,6 +56,8 @@ component Enemy {
     tier: integer
     isBoss: boolean
     expReward: integer
+    wave: integer
+    name: string
 }
 
 // Marks an entity as an enemy template (not a spawned enemy)
@@ -96,6 +98,9 @@ component GameState {
     gameOver: boolean
     victory: boolean
     retargetingActive: boolean
+    currentTier: integer
+    waveInTier: integer
+    bossSpawned: boolean
 }
 
 // Run tracking for leaderboard
@@ -194,26 +199,64 @@ rule start_retargeting_system on GameStart {
 rule spawn_initial_enemies on GameStart {
     if entity.SpawnConfig {
         let count = entity.SpawnConfig.initialEnemyCount
-        // Schedule multiple enemy spawn events with small delays
-        schedule [delay: 0.05] SpawnEnemy {
-            tier: 1
+        // Initialize tiered wave tracking
+        entity.GameState.currentTier = 1
+        entity.GameState.waveInTier = 1
+        entity.GameState.currentWave = 1
+        entity.GameState.bossSpawned = false
+
+        // Spawn initial wave enemies (spread by small delays)
+        for i in 0..(count - 1) {
+            schedule [delay: 0.05 * (i + 1)] SpawnEnemy {
+                tier: 1
+            }
         }
-        schedule [delay: 0.10] SpawnEnemy {
-            tier: 1
-        }
-        schedule [delay: 0.15] SpawnEnemy {
-            tier: 1
-        }
-        schedule [delay: 0.20] SpawnEnemy {
-            tier: 1
-        }
-        schedule [delay: 0.25] SpawnEnemy {
-            tier: 1
-        }
-        // Emit signal that enemies were spawned
-        schedule [delay: 0.30] EnemySpawned {
+
+        // Notify that the first wave spawned
+        schedule [delay: 0.3] EnemySpawned {
             wave: 1
         }
+    }
+}
+
+// Handle a wave starting: spawn its enemies and schedule the next wave
+rule handle_enemy_spawned on EnemySpawned {
+    // Determine current tier and wave index
+    let tier = entity.GameState.currentTier
+    let waveIndex = entity.GameState.waveInTier
+    let count = entity.SpawnConfig.initialEnemyCount
+
+    // Spawn enemies for this wave
+    for i in 0..(count - 1) {
+        schedule [delay: 0.05 * (i + 1)] SpawnEnemy {
+            tier: tier
+        }
+    }
+
+    // If this is the final tier, spawn the named final boss once
+    if tier == entity.SpawnConfig.maxTier {
+        if entity.GameState.bossSpawned == false {
+            schedule [delay: 1.0] SpawnLordVexar {
+            }
+            entity.GameState.bossSpawned = true
+        }
+        // Do not schedule further waves after boss spawn
+        return
+    }
+
+    // Schedule the next wave: advance waveInTier/tier counters
+    let nextWaveIndex = waveIndex + 1
+    if nextWaveIndex > entity.SpawnConfig.wavesPerTier {
+        entity.GameState.currentTier = tier + 1
+        entity.GameState.waveInTier = 1
+    } else {
+        entity.GameState.waveInTier = nextWaveIndex
+    }
+    entity.GameState.currentWave += 1
+
+    // Schedule next EnemySpawned event for the next wave
+    schedule [delay: 2.0] EnemySpawned {
+        wave: entity.GameState.currentWave
     }
 }
 
@@ -225,12 +268,17 @@ rule spawn_initial_enemies on GameStart {
 rule spawn_enemy_from_template on SpawnEnemy {
     // Find enemy templates matching the requested tier
     let templates = entities having EnemyTemplate
-    
-    // For now, just clone the first template we find (tier 1 goblin)
-    // TODO: Add filtering by tier and random selection once BRL supports it
+
+    // Try to find a template matching the requested tier (fallback to first)
     let templateId = templates[0]
-    
-    // Clone the template and mark it as not a template
+    for t in templates {
+        if t.Enemy.tier == event.tier {
+            templateId = t
+            break
+        }
+    }
+
+    // Clone the selected template and mark it as not a template
     let newEnemy = clone templateId {
         EnemyTemplate {
             isTemplate: false
@@ -244,6 +292,22 @@ rule spawn_enemy_from_template on SpawnEnemy {
     // Schedule the enemy's first attack
     schedule [delay: 0.1] DoAttack {
         source: newEnemy
+    }
+}
+
+// Spawn the final boss (Dragon Lord Vexar) once
+rule spawn_lord_vexar on SpawnLordVexar {
+    // Clone the named final boss template if it exists
+    let newBoss = clone dragon_lord_vexar {
+        EnemyTemplate {
+            isTemplate: false
+        }
+    }
+
+    // Mark as the active target for players and start its attack
+    newBoss.Target.entity = 0
+    schedule [delay: 0.5] DoAttack {
+        source: newBoss
     }
 }
 
@@ -303,6 +367,38 @@ rule player_death_handler on Death {
     }
 }
 
+// When a player is defeated, schedule a respawn after 120 seconds
+rule respawn_on_player_defeated on PlayerDefeated {
+    // Schedule respawn for the dead player after 120s
+    schedule [delay: 120.0] RespawnPlayer {
+        player: event.player
+    }
+}
+
+// Restore player state when the RespawnPlayer event fires
+rule respawn_player on RespawnPlayer {
+    let p = event.player
+    // Restore health and mana
+    if p.Health {
+        p.Health.current = p.Health.max
+    }
+    if p.Mana {
+        p.Mana.current = p.Mana.max
+    }
+    // Clear temporary buffs that should not persist through death
+    if p.Buffs {
+        p.Buffs.shieldAmount = 0
+        p.Buffs.regenAmount = 0
+        p.Buffs.damageBonus = 0
+        p.Buffs.defenseBonus = 0
+        p.Buffs.hasteBonus = 0.0
+    }
+    // Allow fleeing again and reset any run-state flags as appropriate
+    if p.RunStats {
+        p.RunStats.canFlee = true
+    }
+}
+
 // Grant experience to players when enemy defeated
 rule grant_experience on EnemyDefeated {
     if entity.Team.isPlayer {
@@ -342,6 +438,20 @@ rule level_up_stats on LevelUp {
 // Track enemy defeats and check victory
 rule boss_defeated_victory on EnemyDefeated {
     entity.GameState.enemiesDefeated += 1
+    // If this was the named final boss, finish the run with victory.
+    if event.isBoss {
+        let defeated = event.enemy
+        if defeated.Enemy.name == "Lord Vexar" {
+            entity.GameState.bossDefeated = true
+            entity.GameState.victory = true
+            entity.GameState.gameOver = true
+            schedule GameOver {
+                victory: true
+            }
+            // Do not run the normal victory check
+            return
+        }
+    }
     schedule CheckVictory {
     }
 }
@@ -422,14 +532,9 @@ rule apply_death_penalty on PlayerDefeated {
 }
 
 // Game over on all players dead
-rule game_over_check on PlayerDefeated {
-    // Check if all players are dead
-    // Note: This is simplified - real check would query all player entities
-    entity.GameState.gameOver = true
-    schedule GameOver {
-        victory: false
-    }
-}
+// NOTE: Removed automatic game-over when all players die. The game
+// now continues (players will respawn) and only finishes when the
+// final boss (Lord Vexar) is defeated.
 
 // Victory check
 rule victory_check on CheckVictory {

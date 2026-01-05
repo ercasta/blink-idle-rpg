@@ -12,7 +12,7 @@
 // Tracks overall game progress
 // -----------------------------------------------------------------------------
 
-entity @game_state {
+entity {
     GameState {
         currentWave: 1
         enemiesDefeated: 0
@@ -29,7 +29,7 @@ entity @game_state {
 // Tracks the current run for leaderboard
 // -----------------------------------------------------------------------------
 
-entity @run_stats {
+entity {
     RunStats {
         simulationTime: 0.0
         retreatCount: 0
@@ -46,7 +46,7 @@ entity @run_stats {
 // Defines penalties and cooldowns for the flee mechanic
 // -----------------------------------------------------------------------------
 
-entity @flee_config {
+entity {
     FleeConfig {
         retreatTimePenalty: 10.0
         deathTimePenaltyMultiplier: 5.0
@@ -60,11 +60,12 @@ entity @flee_config {
 // These values are used by the spawn system
 // -----------------------------------------------------------------------------
 
-entity @spawn_config {
+entity {
     SpawnConfig {
         bossEveryKills: 100
         tierProgressionKills: 50
         maxTier: 6
+        wavesPerTier: 300
         healthScaleRate: 200
         damageScaleRate: 300
         initialEnemyCount: 5
@@ -76,7 +77,7 @@ entity @spawn_config {
 // References to all enemy templates for spawning
 // -----------------------------------------------------------------------------
 
-entity @enemy_compendium {
+entity {
     EnemyCompendium {
         entries: []
     }

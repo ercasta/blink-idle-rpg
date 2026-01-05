@@ -52,6 +52,7 @@ goblin_scout = new entity {
         tier: 1
         isBoss: false
         expReward: 25
+        wave: 1
     }
     EnemyTemplate {
         isTemplate: true
@@ -110,6 +111,7 @@ orc_raider = new entity {
         tier: 2
         isBoss: false
         expReward: 35
+        wave: 2
     }
     EnemyTemplate {
         isTemplate: true
@@ -164,6 +166,7 @@ dark_wolf = new entity {
         tier: 2
         isBoss: false
         expReward: 40
+        wave: 2
     }
     EnemyTemplate {
         isTemplate: true
@@ -222,6 +225,7 @@ skeleton_warrior = new entity {
         tier: 3
         isBoss: false
         expReward: 50
+        wave: 3
     }
     EnemyTemplate {
         isTemplate: true
@@ -276,6 +280,7 @@ dark_mage = new entity {
         tier: 3
         isBoss: false
         expReward: 75
+        wave: 3
     }
     EnemyTemplate {
         isTemplate: true
@@ -334,6 +339,7 @@ troll_berserker = new entity {
         tier: 4
         isBoss: false
         expReward: 80
+        wave: 4
     }
     EnemyTemplate {
         isTemplate: true
@@ -392,6 +398,7 @@ demon_knight = new entity {
         tier: 5
         isBoss: false
         expReward: 150
+        wave: 5
     }
     EnemyTemplate {
         isTemplate: true
@@ -450,6 +457,7 @@ ancient_dragon = new entity {
         tier: 6
         isBoss: true
         expReward: 300
+        wave: 6
     }
     EnemyTemplate {
         isTemplate: true
@@ -504,6 +512,7 @@ dragon_lord_vexar = new entity {
         tier: 6
         isBoss: true
         expReward: 500
+        wave: 6
     }
     EnemyTemplate {
         isTemplate: true

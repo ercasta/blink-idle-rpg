@@ -9,7 +9,7 @@
 // WARRIORS - Melee fighters with high health and defense
 // -----------------------------------------------------------------------------
 
-entity @warrior {
+entity {
     Character {
         name: "Sir Braveheart"
         class: "Warrior"
@@ -133,7 +133,7 @@ entity @warrior {
     }
 }
 
-entity @warrior2 {
+entity {
     Character {
         name: "Gorak the Unbreakable"
         class: "Warrior"
@@ -257,7 +257,7 @@ entity @warrior2 {
     }
 }
 
-entity @warrior3 {
+entity {
     Character {
         name: "Valkyrie Stormblade"
         class: "Warrior"
@@ -317,7 +317,7 @@ entity @warrior3 {
     }
 }
 
-entity @warrior4 {
+entity {
     Character {
         name: "Titan Ironheart"
         class: "Warrior"
@@ -377,7 +377,7 @@ entity @warrior4 {
     }
 }
 
-entity @warrior5 {
+entity {
     Character {
         name: "Bladestorm"
         class: "Warrior"
@@ -441,7 +441,7 @@ entity @warrior5 {
 // MAGES - Ranged spell casters with high damage but low health
 // -----------------------------------------------------------------------------
 
-entity @mage {
+entity {
     Character {
         name: "Elara Flamecaster"
         class: "Mage"
@@ -573,7 +573,7 @@ entity @mage {
     }
 }
 
-entity @mage2 {
+entity {
     Character {
         name: "Zephyr the Archmage"
         class: "Mage"
@@ -633,7 +633,7 @@ entity @mage2 {
     }
 }
 
-entity @mage3 {
+entity {
     Character {
         name: "Frost Weaver Selene"
         class: "Mage"
@@ -693,7 +693,7 @@ entity @mage3 {
     }
 }
 
-entity @mage4 {
+entity {
     Character {
         name: "Lightning Caller Volt"
         class: "Mage"
@@ -753,7 +753,7 @@ entity @mage4 {
     }
 }
 
-entity @mage5 {
+entity {
     Character {
         name: "Sage Emberwick"
         class: "Mage"
@@ -817,7 +817,7 @@ entity @mage5 {
 // ROGUES - Fast melee attackers with high crit chance
 // -----------------------------------------------------------------------------
 
-entity @rogue {
+entity {
     Character {
         name: "Shadow"
         class: "Rogue"
@@ -964,7 +964,7 @@ entity @rogue {
     }
 }
 
-entity @rogue2 {
+entity {
     Character {
         name: "Viper"
         class: "Rogue"
@@ -1024,7 +1024,7 @@ entity @rogue2 {
     }
 }
 
-entity @rogue3 {
+entity {
     Character {
         name: "Nightblade Kira"
         class: "Rogue"
@@ -1084,7 +1084,7 @@ entity @rogue3 {
     }
 }
 
-entity @rogue4 {
+entity {
     Character {
         name: "Ghost"
         class: "Rogue"
@@ -1144,7 +1144,7 @@ entity @rogue4 {
     }
 }
 
-entity @rogue5 {
+entity {
     Character {
         name: "Dagger Master Jin"
         class: "Rogue"
@@ -1208,7 +1208,7 @@ entity @rogue5 {
 // CLERICS - Healers and support characters
 // -----------------------------------------------------------------------------
 
-entity @cleric {
+entity {
     Character {
         name: "Brother Aldric"
         class: "Cleric"
@@ -1368,7 +1368,7 @@ entity @cleric {
     }
 }
 
-entity @cleric2 {
+entity {
     Character {
         name: "Sister Lumina"
         class: "Cleric"
@@ -1428,7 +1428,7 @@ entity @cleric2 {
     }
 }
 
-entity @cleric3 {
+entity {
     Character {
         name: "Battle Priest Marcus"
         class: "Cleric"
@@ -1488,7 +1488,7 @@ entity @cleric3 {
     }
 }
 
-entity @cleric4 {
+entity {
     Character {
         name: "Shieldbearer Thora"
         class: "Cleric"
@@ -1548,7 +1548,7 @@ entity @cleric4 {
     }
 }
 
-entity @cleric5 {
+entity {
     Character {
         name: "Prophet Celestia"
         class: "Cleric"
@@ -1612,7 +1612,7 @@ entity @cleric5 {
 // RANGERS - Ranged physical damage dealers
 // -----------------------------------------------------------------------------
 
-entity @ranger {
+entity {
     Character {
         name: "Aria Swiftarrow"
         class: "Ranger"
@@ -1672,7 +1672,7 @@ entity @ranger {
     }
 }
 
-entity @ranger2 {
+entity {
     Character {
         name: "Hunter Thornwood"
         class: "Ranger"
@@ -1732,7 +1732,7 @@ entity @ranger2 {
     }
 }
 
-entity @ranger3 {
+entity {
     Character {
         name: "Windrunner Lyra"
         class: "Ranger"
@@ -1792,7 +1792,7 @@ entity @ranger3 {
     }
 }
 
-entity @ranger4 {
+entity {
     Character {
         name: "Sniper Hawkeye"
         class: "Ranger"
@@ -1852,7 +1852,7 @@ entity @ranger4 {
     }
 }
 
-entity @ranger5 {
+entity {
     Character {
         name: "Beastmaster Renn"
         class: "Ranger"
@@ -1916,7 +1916,7 @@ entity @ranger5 {
 // PALADINS - Holy warriors with tank and support abilities
 // -----------------------------------------------------------------------------
 
-entity @paladin {
+entity {
     Character {
         name: "Dame Lightbringer"
         class: "Paladin"
@@ -1976,7 +1976,7 @@ entity @paladin {
     }
 }
 
-entity @paladin2 {
+entity {
     Character {
         name: "Justicar Voran"
         class: "Paladin"
@@ -2036,7 +2036,7 @@ entity @paladin2 {
     }
 }
 
-entity @paladin3 {
+entity {
     Character {
         name: "Guardian Solas"
         class: "Paladin"
@@ -2096,7 +2096,7 @@ entity @paladin3 {
     }
 }
 
-entity @paladin4 {
+entity {
     Character {
         name: "Zealot Pyra"
         class: "Paladin"
@@ -2156,7 +2156,7 @@ entity @paladin4 {
     }
 }
 
-entity @paladin5 {
+entity {
     Character {
         name: "Templar Aegis"
         class: "Paladin"

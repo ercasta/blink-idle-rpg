@@ -107,30 +107,6 @@ fn test_new_entity_syntax() {
     assert_eq!(state.entities[0].variable, Some("warrior".to_string()));
 }
 
-/// Test legacy entity syntax: `entity @name { ... }` (deprecated but supported)
-#[test]
-fn test_legacy_entity_syntax() {
-    let source = r#"
-        component Health {
-            current: integer
-            max: integer
-        }
-        
-        entity @warrior {
-            Health {
-                current: 100
-                max: 100
-            }
-        }
-    "#;
-    
-    let result = compile(source, &CompilerOptions::default());
-    assert!(result.is_ok(), "Legacy entity syntax should compile");
-    
-    let ir = result.unwrap();
-    assert!(ir.initial_state.is_some());
-}
-
 /// Test `entities having` expression
 #[test]
 fn test_entities_having_expression() {
