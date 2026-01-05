@@ -2,7 +2,7 @@
   "version": "1.0",
   "module": "unnamed",
   "metadata": {
-    "compiled_at": "2026-01-19T12:42:23Z",
+    "compiled_at": "2026-01-19T17:01:57Z",
     "compiler_version": "0.1.0"
   },
   "components": [
@@ -515,6 +515,18 @@
     },
     {
       "id": 18,
+      "name": "HeroTemplate",
+      "fields": [
+        {
+          "name": "isTemplate",
+          "type": {
+            "type": "boolean"
+          }
+        }
+      ]
+    },
+    {
+      "id": 19,
       "name": "SpawnConfig",
       "fields": [
         {
@@ -592,6 +604,22 @@
             }
           },
           "then_actions": [
+            {
+              "type": "let",
+              "name": "stagger",
+              "value": {
+                "type": "binary",
+                "op": "multiply",
+                "left": {
+                  "type": "literal",
+                  "value": 0.1
+                },
+                "right": {
+                  "type": "var",
+                  "name": "id"
+                }
+              }
+            },
             {
               "type": "schedule",
               "event": "DoAttack",
@@ -676,6 +704,16 @@
             "name": "SpawnConfig"
           },
           "then_actions": [
+            {
+              "type": "let",
+              "name": "count",
+              "value": {
+                "type": "field",
+                "entity": "entity",
+                "component": "SpawnConfig",
+                "field": "initialEnemyCount"
+              }
+            },
             {
               "type": "schedule",
               "event": "SpawnEnemy",
@@ -773,6 +811,60 @@
       },
       "actions": [
         {
+          "type": "let",
+          "name": "templates",
+          "value": {
+            "type": "call",
+            "function": "entities_having",
+            "args": [
+              {
+                "type": "literal",
+                "value": "EnemyTemplate"
+              }
+            ]
+          }
+        },
+        {
+          "type": "let",
+          "name": "templateId",
+          "value": {
+            "type": "call",
+            "function": "get",
+            "args": [
+              {
+                "type": "var",
+                "name": "templates"
+              },
+              {
+                "type": "literal",
+                "value": 0.0
+              }
+            ]
+          }
+        },
+        {
+          "type": "let",
+          "name": "newEnemy",
+          "value": {
+            "type": "clone",
+            "source": {
+              "type": "var",
+              "name": "templateId"
+            },
+            "overrides": [
+              {
+                "name": "EnemyTemplate",
+                "fields": {
+                  "isTemplate": {
+                    "type": "literal",
+                    "value": false
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
           "type": "modify",
           "entity": {
             "type": "var",
@@ -846,6 +938,36 @@
           },
           "then_actions": [
             {
+              "type": "let",
+              "name": "target",
+              "value": {
+                "type": "field",
+                "entity": "entity",
+                "component": "Target",
+                "field": "entity"
+              }
+            },
+            {
+              "type": "let",
+              "name": "damage",
+              "value": {
+                "type": "binary",
+                "op": "add",
+                "left": {
+                  "type": "field",
+                  "entity": "entity",
+                  "component": "Combat",
+                  "field": "damage"
+                },
+                "right": {
+                  "type": "field",
+                  "entity": "entity",
+                  "component": "Buffs",
+                  "field": "damageBonus"
+                }
+              }
+            },
+            {
               "type": "modify",
               "entity": {
                 "type": "var",
@@ -870,6 +992,34 @@
                 "target": {
                   "type": "var",
                   "name": "id"
+                }
+              }
+            },
+            {
+              "type": "let",
+              "name": "delay",
+              "value": {
+                "type": "binary",
+                "op": "divide",
+                "left": {
+                  "type": "literal",
+                  "value": 1.0
+                },
+                "right": {
+                  "type": "binary",
+                  "op": "add",
+                  "left": {
+                    "type": "field",
+                    "entity": "entity",
+                    "component": "Combat",
+                    "field": "attackSpeed"
+                  },
+                  "right": {
+                    "type": "field",
+                    "entity": "entity",
+                    "component": "Buffs",
+                    "field": "hasteBonus"
+                  }
                 }
               }
             },
@@ -1298,6 +1448,67 @@
     },
     {
       "id": 12,
+      "name": "spawn_replacement_enemy",
+      "trigger": {
+        "type": "event",
+        "event": "EnemyDefeated"
+      },
+      "actions": [
+        {
+          "type": "conditional",
+          "condition": {
+            "type": "binary",
+            "op": "and",
+            "left": {
+              "type": "binary",
+              "op": "lt",
+              "left": {
+                "type": "field",
+                "entity": "entity",
+                "component": "GameState",
+                "field": "enemiesDefeated"
+              },
+              "right": {
+                "type": "literal",
+                "value": 1000.0
+              }
+            },
+            "right": {
+              "type": "binary",
+              "op": "eq",
+              "left": {
+                "type": "field",
+                "entity": "entity",
+                "component": "GameState",
+                "field": "gameOver"
+              },
+              "right": {
+                "type": "literal",
+                "value": false
+              }
+            }
+          },
+          "then_actions": [
+            {
+              "type": "schedule",
+              "event": "SpawnEnemy",
+              "delay": {
+                "type": "literal",
+                "value": 0.1
+              },
+              "fields": {
+                "tier": {
+                  "type": "literal",
+                  "value": 1.0
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 13,
       "name": "use_skill_power_strike",
       "trigger": {
         "type": "event",
@@ -1340,7 +1551,7 @@
       ]
     },
     {
-      "id": 13,
+      "id": 14,
       "name": "use_skill_fireball",
       "trigger": {
         "type": "event",
@@ -1415,7 +1626,7 @@
       ]
     },
     {
-      "id": 14,
+      "id": 15,
       "name": "use_skill_heal",
       "trigger": {
         "type": "event",
@@ -1490,7 +1701,7 @@
       ]
     },
     {
-      "id": 15,
+      "id": 16,
       "name": "use_skill_backstab",
       "trigger": {
         "type": "event",
@@ -1533,7 +1744,7 @@
       ]
     },
     {
-      "id": 16,
+      "id": 17,
       "name": "mana_regen",
       "trigger": {
         "type": "event",
@@ -1590,7 +1801,7 @@
       ]
     },
     {
-      "id": 17,
+      "id": 18,
       "name": "spawn_next_enemy",
       "trigger": {
         "type": "event",
@@ -1700,7 +1911,7 @@
       ]
     },
     {
-      "id": 18,
+      "id": 19,
       "name": "count_player_death",
       "trigger": {
         "type": "event",
@@ -1724,7 +1935,7 @@
       ]
     },
     {
-      "id": 19,
+      "id": 20,
       "name": "apply_death_penalty",
       "trigger": {
         "type": "event",
@@ -1800,7 +2011,7 @@
       ]
     },
     {
-      "id": 20,
+      "id": 21,
       "name": "game_over_check",
       "trigger": {
         "type": "event",
@@ -1834,7 +2045,7 @@
       ]
     },
     {
-      "id": 21,
+      "id": 22,
       "name": "victory_check",
       "trigger": {
         "type": "event",
@@ -1915,7 +2126,7 @@
       ]
     },
     {
-      "id": 22,
+      "id": 23,
       "name": "acquire_skill",
       "trigger": {
         "type": "event",
@@ -1968,13 +2179,33 @@
       ]
     },
     {
-      "id": 23,
+      "id": 24,
       "name": "flee_battle",
       "trigger": {
         "type": "event",
         "event": "FleeFromBattle"
       },
       "actions": [
+        {
+          "type": "let",
+          "name": "timeSinceFlee",
+          "value": {
+            "type": "binary",
+            "op": "subtract",
+            "left": {
+              "type": "field",
+              "entity": "entity",
+              "component": "RunStats",
+              "field": "simulationTime"
+            },
+            "right": {
+              "type": "field",
+              "entity": "entity",
+              "component": "RunStats",
+              "field": "lastFleeTime"
+            }
+          }
+        },
         {
           "type": "conditional",
           "condition": {
@@ -2109,7 +2340,7 @@
       ]
     },
     {
-      "id": 24,
+      "id": 25,
       "name": "despawn_enemies",
       "trigger": {
         "type": "event",
@@ -2162,13 +2393,33 @@
       ]
     },
     {
-      "id": 25,
+      "id": 26,
       "name": "update_flee_cooldown",
       "trigger": {
         "type": "event",
         "event": "UpdateRunStats"
       },
       "actions": [
+        {
+          "type": "let",
+          "name": "timeSinceFlee",
+          "value": {
+            "type": "binary",
+            "op": "subtract",
+            "left": {
+              "type": "field",
+              "entity": "entity",
+              "component": "RunStats",
+              "field": "simulationTime"
+            },
+            "right": {
+              "type": "field",
+              "entity": "entity",
+              "component": "RunStats",
+              "field": "lastFleeTime"
+            }
+          }
+        },
         {
           "type": "conditional",
           "condition": {
@@ -2205,7 +2456,7 @@
       ]
     },
     {
-      "id": 26,
+      "id": 27,
       "name": "complete_run",
       "trigger": {
         "type": "event",
@@ -2263,7 +2514,7 @@
       ]
     },
     {
-      "id": 27,
+      "id": 28,
       "name": "start_global_retargeting",
       "trigger": {
         "type": "event",
@@ -2332,7 +2583,7 @@
       ]
     },
     {
-      "id": 28,
+      "id": 29,
       "name": "check_entity_target",
       "trigger": {
         "type": "event",
@@ -2356,6 +2607,16 @@
             }
           },
           "then_actions": [
+            {
+              "type": "let",
+              "name": "target",
+              "value": {
+                "type": "field",
+                "entity": "entity",
+                "component": "Target",
+                "field": "entity"
+              }
+            },
             {
               "type": "conditional",
               "condition": {
@@ -2406,7 +2667,7 @@
       ]
     },
     {
-      "id": 29,
+      "id": 30,
       "name": "reschedule_retargeting",
       "trigger": {
         "type": "event",
@@ -2453,13 +2714,21 @@
       ]
     },
     {
-      "id": 30,
+      "id": 31,
       "name": "find_new_target",
       "trigger": {
         "type": "event",
         "event": "FindNewTarget"
       },
       "actions": [
+        {
+          "type": "let",
+          "name": "seeker",
+          "value": {
+            "type": "var",
+            "name": "seeker"
+          }
+        },
         {
           "type": "modify",
           "entity": {
@@ -2612,6 +2881,9 @@
             "difficulty": "Easy",
             "role": "Tank / Melee DPS",
             "playstyle": "Get in close and deal consistent damage while absorbing enemy attacks"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         },
         "bound_functions": {
@@ -2758,6 +3030,9 @@
             "difficulty": "Easy",
             "role": "Tank / Defensive",
             "playstyle": "Extreme durability and defense, absorbs massive amounts of damage"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         },
         "bound_functions": {
@@ -2904,6 +3179,9 @@
             "difficulty": "Medium",
             "role": "Melee DPS / Bruiser",
             "playstyle": "Fast-paced melee combat with balanced offense and defense"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         }
       },
@@ -2964,6 +3242,9 @@
             "difficulty": "Easy",
             "role": "Heavy DPS / Tank",
             "playstyle": "Devastating slow attacks that hit extremely hard"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         }
       },
@@ -3024,6 +3305,9 @@
             "difficulty": "Hard",
             "role": "Melee DPS / Glass Cannon",
             "playstyle": "Extremely aggressive high-speed melee with low survivability"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         }
       },
@@ -3084,6 +3368,9 @@
             "difficulty": "Medium",
             "role": "Ranged DPS / AoE",
             "playstyle": "Maximize spell damage while managing mana and staying out of danger"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         },
         "bound_functions": {
@@ -3230,6 +3517,9 @@
             "difficulty": "Hard",
             "role": "Ranged DPS / Burst",
             "playstyle": "Maximum spell power with lowest survivability - nuclear glass cannon"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         }
       },
@@ -3290,6 +3580,9 @@
             "difficulty": "Medium",
             "role": "Ranged DPS / Control",
             "playstyle": "Balanced caster with defensive capabilities and crowd control"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         }
       },
@@ -3350,6 +3643,9 @@
             "difficulty": "Medium",
             "role": "Ranged DPS / Sustained",
             "playstyle": "Rapid-fire spell casting for consistent damage output"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         }
       },
@@ -3410,6 +3706,9 @@
             "difficulty": "Easy",
             "role": "Ranged DPS / Sustain",
             "playstyle": "Efficient spell usage with excellent mana regeneration"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         }
       },
@@ -3470,6 +3769,9 @@
             "difficulty": "Medium",
             "role": "Melee DPS / Assassin",
             "playstyle": "Focus on eliminating priority targets with high burst damage and crits"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         },
         "bound_functions": {
@@ -3616,6 +3918,9 @@
             "difficulty": "Hard",
             "role": "Melee DPS / DoT",
             "playstyle": "Apply poison effects and let damage over time do the work"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         }
       },
@@ -3676,6 +3981,9 @@
             "difficulty": "Easy",
             "role": "Melee DPS / Balanced",
             "playstyle": "Well-rounded assassin with good damage and survivability"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         }
       },
@@ -3736,6 +4044,9 @@
             "difficulty": "Hard",
             "role": "Melee DPS / Hyper Carry",
             "playstyle": "Lightning-fast attacks with maximum crit - dies if touched"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         }
       },
@@ -3796,6 +4107,9 @@
             "difficulty": "Medium",
             "role": "Melee DPS / Precision",
             "playstyle": "Slower but harder-hitting strikes with good positioning"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         }
       },
@@ -3856,6 +4170,9 @@
             "difficulty": "Easy",
             "role": "Healer / Support",
             "playstyle": "Keep allies alive with healing while contributing moderate damage"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         },
         "bound_functions": {
@@ -4002,6 +4319,9 @@
             "difficulty": "Easy",
             "role": "Healer / Pure Support",
             "playstyle": "Maximum healing power - keep allies alive at all costs"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         }
       },
@@ -4062,6 +4382,9 @@
             "difficulty": "Medium",
             "role": "Hybrid DPS / Support",
             "playstyle": "Balance between dealing holy damage and supporting allies"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         }
       },
@@ -4122,6 +4445,9 @@
             "difficulty": "Medium",
             "role": "Tank / Support",
             "playstyle": "Prevent damage with shields while providing emergency healing"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         }
       },
@@ -4182,6 +4508,9 @@
             "difficulty": "Hard",
             "role": "Support / Buffer",
             "playstyle": "Enhance allies with buffs while maintaining healing support"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         }
       },
@@ -4242,6 +4571,9 @@
             "difficulty": "Medium",
             "role": "Ranged DPS / Single Target",
             "playstyle": "Maintain distance and deliver precise, high-damage attacks from range"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         }
       },
@@ -4302,6 +4634,9 @@
             "difficulty": "Easy",
             "role": "Ranged DPS / Sustained",
             "playstyle": "Consistent ranged damage with good survivability"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         }
       },
@@ -4362,6 +4697,9 @@
             "difficulty": "Medium",
             "role": "Ranged DPS / Rapid Fire",
             "playstyle": "Rapid arrow volleys - death by a thousand cuts"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         }
       },
@@ -4422,6 +4760,9 @@
             "difficulty": "Medium",
             "role": "Ranged DPS / Burst",
             "playstyle": "Devastating single shots - each arrow is a kill shot"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         }
       },
@@ -4482,6 +4823,9 @@
             "difficulty": "Easy",
             "role": "Ranged DPS / Utility",
             "playstyle": "Well-rounded ranger with pet support and good versatility"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         }
       },
@@ -4542,6 +4886,9 @@
             "difficulty": "Easy",
             "role": "Hybrid Tank / Support",
             "playstyle": "Balance between dealing damage, tanking, and supporting allies"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         }
       },
@@ -4602,6 +4949,9 @@
             "difficulty": "Easy",
             "role": "Melee DPS / Tank",
             "playstyle": "Holy warrior dealing bonus damage to undead and demons"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         }
       },
@@ -4662,6 +5012,9 @@
             "difficulty": "Easy",
             "role": "Tank / Protector",
             "playstyle": "Maximum protection - intercept attacks meant for allies"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         }
       },
@@ -4722,6 +5075,9 @@
             "difficulty": "Medium",
             "role": "Melee DPS / Bruiser",
             "playstyle": "Aggressive holy warrior - offense is the best defense"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         }
       },
@@ -4782,6 +5138,9 @@
             "difficulty": "Easy",
             "role": "Hybrid / Versatile",
             "playstyle": "Jack of all trades - adapts to any party composition"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         }
       },
@@ -5363,5 +5722,100 @@
         }
       }
     ]
-  }
+  },
+  "choice_points": [
+    {
+      "id": "select_attack_target",
+      "name": "Select Attack Target",
+      "signature": "choice fn select_attack_target(character: id, enemies: list<id>): id",
+      "params": [
+        {
+          "name": "character",
+          "type": {
+            "type": "entity"
+          }
+        },
+        {
+          "name": "enemies",
+          "type": {
+            "type": "list",
+            "element": {
+              "type": "entity"
+            }
+          }
+        }
+      ],
+      "return_type": {
+        "type": "entity"
+      },
+      "category": "targeting",
+      "applicable_classes": [
+        "Warrior"
+      ]
+    },
+    {
+      "id": "select_combat_skill",
+      "name": "Select Combat Skill",
+      "signature": "choice fn select_combat_skill(character: id, allies: list<id>, enemies: list<id>): string",
+      "params": [
+        {
+          "name": "character",
+          "type": {
+            "type": "entity"
+          }
+        },
+        {
+          "name": "allies",
+          "type": {
+            "type": "list",
+            "element": {
+              "type": "entity"
+            }
+          }
+        },
+        {
+          "name": "enemies",
+          "type": {
+            "type": "list",
+            "element": {
+              "type": "entity"
+            }
+          }
+        }
+      ],
+      "return_type": {
+        "type": "string"
+      },
+      "category": "skills",
+      "applicable_classes": [
+        "Warrior"
+      ]
+    },
+    {
+      "id": "select_skill_on_levelup",
+      "name": "Select Skill On Levelup",
+      "signature": "choice fn select_skill_on_levelup(character: id, currentLevel: id): string",
+      "params": [
+        {
+          "name": "character",
+          "type": {
+            "type": "entity"
+          }
+        },
+        {
+          "name": "currentLevel",
+          "type": {
+            "type": "entity"
+          }
+        }
+      ],
+      "return_type": {
+        "type": "string"
+      },
+      "category": "skills",
+      "applicable_classes": [
+        "Warrior"
+      ]
+    }
+  ]
 }
