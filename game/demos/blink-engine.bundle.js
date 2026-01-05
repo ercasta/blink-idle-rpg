@@ -6,6 +6,10 @@
 (function(global) {
   'use strict';
 
+  // ===== Constants =====
+  
+  const MAX_WHILE_ITERATIONS = 10000;
+
   // ===== IR Types =====
   
   // Field value type (simplified for browser)
@@ -543,6 +547,9 @@
       for (const item of iterable) {
         // Bind loop variable to local scope - validate item is a valid field value
         const fieldValue = this.toFieldValue(item);
+        if (fieldValue === null && item !== null) {
+          console.warn(`Loop item could not be converted to valid field value: ${typeof item}`);
+        }
         context.locals.set(action.variable, fieldValue);
         
         for (const bodyAction of action.body) {
@@ -565,7 +572,6 @@
     }
 
     executeWhile(action, context) {
-      const MAX_WHILE_ITERATIONS = 10000;
       let iterations = 0;
       
       while (this.evaluateExpression(action.condition, context) && iterations < MAX_WHILE_ITERATIONS) {
