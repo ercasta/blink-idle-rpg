@@ -40,18 +40,22 @@ jobs:
               BCL_INCLUDES="$BCL_INCLUDES --include $bcl_file"
             fi
           done
-          # Build list of BDL files for inclusion in source map
-          BDL_INCLUDES=""
-          for bdl_file in ../../game/bdl/*.bdl; do
-            if [ -f "$bdl_file" ]; then
-              BDL_INCLUDES="$BDL_INCLUDES --include $bdl_file"
-            fi
-          done
           # Compile all BRL files to IR with source maps for debugging support
+          # Note: BDL files are only included for classic-rpg.brl since they depend on its component definitions
           for brl_file in ../../game/brl/*.brl; do
             filename=$(basename "$brl_file" .brl)
-            ./target/release/blink-compiler compile -i "$brl_file" -o "../../game/ir/${filename}.ir.json" --pretty --source-map $BCL_INCLUDES $BDL_INCLUDES
-            echo "Compiled ${filename}.brl -> ${filename}.ir.json (with source map including BCL/BDL)"
+            if [ "$filename" = "classic-rpg" ]; then
+              # classic-rpg.brl gets BDL files included (heroes, enemies, game-config)
+              ./target/release/blink-compiler compile -i "$brl_file" -o "../../game/ir/${filename}.ir.json" --pretty --source-map $BCL_INCLUDES \
+                --include ../../game/bdl/heroes.bdl \
+                --include ../../game/bdl/enemies.bdl \
+                --include ../../game/bdl/game-config.bdl
+              echo "Compiled ${filename}.brl -> ${filename}.ir.json (with source map including BCL/BDL)"
+            else
+              # Other BRL files only get BCL files (no BDL dependencies)
+              ./target/release/blink-compiler compile -i "$brl_file" -o "../../game/ir/${filename}.ir.json" --pretty --source-map $BCL_INCLUDES
+              echo "Compiled ${filename}.brl -> ${filename}.ir.json (with source map including BCL)"
+            fi
           done
           cd ../..
           echo "IR files generated:"
