@@ -30,5 +30,9 @@ build/
 # Generated files (but keep IR files in game/ir and game/demos/data)
 *.ir.generated.json
 
+# Demo package artifacts
+demo-package/
+blink-demo-package*.zip
+
 # Local environment overrides
 .env
