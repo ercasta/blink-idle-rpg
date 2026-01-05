@@ -341,6 +341,16 @@ rule boss_defeated_victory on EnemyDefeated {
     }
 }
 
+// Spawn a replacement enemy when one is defeated
+rule spawn_replacement_enemy on EnemyDefeated {
+    if entity.GameState.enemiesDefeated < 1000 && entity.GameState.gameOver == false {
+        // Schedule spawning of a new enemy to maintain combat
+        schedule [delay: 0.1] SpawnEnemy {
+            tier: 1
+        }
+    }
+}
+
 // Power strike skill
 rule use_skill_power_strike on UseSkill {
     if entity.Skills.skill1 == "power_strike" {

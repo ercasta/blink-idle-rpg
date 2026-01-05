@@ -2,7 +2,7 @@
   "version": "1.0",
   "module": "unnamed",
   "metadata": {
-    "compiled_at": "2026-01-19T16:03:18Z",
+    "compiled_at": "2026-01-19T16:11:41Z",
     "compiler_version": "0.1.0"
   },
   "components": [
@@ -1436,6 +1436,67 @@
     },
     {
       "id": 12,
+      "name": "spawn_replacement_enemy",
+      "trigger": {
+        "type": "event",
+        "event": "EnemyDefeated"
+      },
+      "actions": [
+        {
+          "type": "conditional",
+          "condition": {
+            "type": "binary",
+            "op": "and",
+            "left": {
+              "type": "binary",
+              "op": "lt",
+              "left": {
+                "type": "field",
+                "entity": "entity",
+                "component": "GameState",
+                "field": "enemiesDefeated"
+              },
+              "right": {
+                "type": "literal",
+                "value": 1000.0
+              }
+            },
+            "right": {
+              "type": "binary",
+              "op": "eq",
+              "left": {
+                "type": "field",
+                "entity": "entity",
+                "component": "GameState",
+                "field": "gameOver"
+              },
+              "right": {
+                "type": "literal",
+                "value": false
+              }
+            }
+          },
+          "then_actions": [
+            {
+              "type": "schedule",
+              "event": "SpawnEnemy",
+              "delay": {
+                "type": "literal",
+                "value": 0.1
+              },
+              "fields": {
+                "tier": {
+                  "type": "literal",
+                  "value": 1.0
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 13,
       "name": "use_skill_power_strike",
       "trigger": {
         "type": "event",
@@ -1478,7 +1539,7 @@
       ]
     },
     {
-      "id": 13,
+      "id": 14,
       "name": "use_skill_fireball",
       "trigger": {
         "type": "event",
@@ -1553,7 +1614,7 @@
       ]
     },
     {
-      "id": 14,
+      "id": 15,
       "name": "use_skill_heal",
       "trigger": {
         "type": "event",
@@ -1628,7 +1689,7 @@
       ]
     },
     {
-      "id": 15,
+      "id": 16,
       "name": "use_skill_backstab",
       "trigger": {
         "type": "event",
@@ -1671,7 +1732,7 @@
       ]
     },
     {
-      "id": 16,
+      "id": 17,
       "name": "mana_regen",
       "trigger": {
         "type": "event",
@@ -1728,7 +1789,7 @@
       ]
     },
     {
-      "id": 17,
+      "id": 18,
       "name": "spawn_next_enemy",
       "trigger": {
         "type": "event",
@@ -1838,7 +1899,7 @@
       ]
     },
     {
-      "id": 18,
+      "id": 19,
       "name": "count_player_death",
       "trigger": {
         "type": "event",
@@ -1862,7 +1923,7 @@
       ]
     },
     {
-      "id": 19,
+      "id": 20,
       "name": "apply_death_penalty",
       "trigger": {
         "type": "event",
@@ -1938,7 +1999,7 @@
       ]
     },
     {
-      "id": 20,
+      "id": 21,
       "name": "game_over_check",
       "trigger": {
         "type": "event",
@@ -1972,7 +2033,7 @@
       ]
     },
     {
-      "id": 21,
+      "id": 22,
       "name": "victory_check",
       "trigger": {
         "type": "event",
@@ -2053,7 +2114,7 @@
       ]
     },
     {
-      "id": 22,
+      "id": 23,
       "name": "acquire_skill",
       "trigger": {
         "type": "event",
@@ -2106,7 +2167,7 @@
       ]
     },
     {
-      "id": 23,
+      "id": 24,
       "name": "flee_battle",
       "trigger": {
         "type": "event",
@@ -2267,7 +2328,7 @@
       ]
     },
     {
-      "id": 24,
+      "id": 25,
       "name": "despawn_enemies",
       "trigger": {
         "type": "event",
@@ -2320,7 +2381,7 @@
       ]
     },
     {
-      "id": 25,
+      "id": 26,
       "name": "update_flee_cooldown",
       "trigger": {
         "type": "event",
@@ -2383,7 +2444,7 @@
       ]
     },
     {
-      "id": 26,
+      "id": 27,
       "name": "complete_run",
       "trigger": {
         "type": "event",
@@ -2441,7 +2502,7 @@
       ]
     },
     {
-      "id": 27,
+      "id": 28,
       "name": "start_global_retargeting",
       "trigger": {
         "type": "event",
@@ -2510,7 +2571,7 @@
       ]
     },
     {
-      "id": 28,
+      "id": 29,
       "name": "check_entity_target",
       "trigger": {
         "type": "event",
@@ -2594,7 +2655,7 @@
       ]
     },
     {
-      "id": 29,
+      "id": 30,
       "name": "reschedule_retargeting",
       "trigger": {
         "type": "event",
@@ -2641,7 +2702,7 @@
       ]
     },
     {
-      "id": 30,
+      "id": 31,
       "name": "find_new_target",
       "trigger": {
         "type": "event",
