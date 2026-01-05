@@ -204,6 +204,62 @@ pub fn compile_to_json_with_sources(
     json.map_err(|e| CompileError::IRError(format!("JSON serialization failed: {}", e)))
 }
 
+/// Compile BRL source and return JSON IR with BDL entity files
+///
+/// This version includes BDL files that are parsed and compiled into IR.initial_state.
+///
+/// # Arguments
+///
+/// * `source` - BRL source code
+/// * `options` - Compiler configuration options
+/// * `source_path` - Path to the main BRL source file (used for source map)
+/// * `additional_sources` - Additional source files to include in source map (path, content, language)
+/// * `bdl_files` - BDL files to parse and compile into entities (path, content)
+pub fn compile_to_json_with_bdl(
+    source: &str,
+    options: &CompilerOptions,
+    source_path: Option<&str>,
+    additional_sources: &[(String, String, String)],
+    bdl_files: &[(String, String)],
+) -> Result<String, CompileError> {
+    // Step 1: Tokenize and parse main BRL source
+    let tokens = lexer::tokenize(source)
+        .map_err(|e| CompileError::LexerError(e.to_string()))?;
+    let mut ast = parser::parse(tokens)
+        .map_err(|e| CompileError::ParserError(e.to_string()))?;
+    
+    // Step 2: Parse BDL files and merge their items into the main AST
+    for (bdl_path, bdl_content) in bdl_files {
+        let bdl_tokens = lexer::tokenize(bdl_content)
+            .map_err(|e| CompileError::LexerError(format!("Failed to tokenize BDL file {}: {}", bdl_path, e)))?;
+        let bdl_ast = parser::parse(bdl_tokens)
+            .map_err(|e| CompileError::ParserError(format!("Failed to parse BDL file {}: {}", bdl_path, e)))?;
+        
+        // Merge BDL items (entities) into main AST
+        for item in bdl_ast.items {
+            if matches!(item, parser::Item::Entity(_)) {
+                ast.items.push(item);
+            }
+        }
+    }
+    
+    // Step 3: Semantic analysis on the combined AST (BRL + BDL)
+    let typed_ast = analyzer::analyze(ast)
+        .map_err(|e| CompileError::SemanticError(e.to_string()))?;
+    
+    // Step 4: Generate IR with source map support and merged entities
+    let ir = ir::generate_with_sources(typed_ast, options, source, source_path, additional_sources)
+        .map_err(|e| CompileError::IRError(e.to_string()))?;
+    
+    let json = if options.pretty_print {
+        serde_json::to_string_pretty(&ir)
+    } else {
+        serde_json::to_string(&ir)
+    };
+    
+    json.map_err(|e| CompileError::IRError(format!("JSON serialization failed: {}", e)))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

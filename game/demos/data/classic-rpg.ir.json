@@ -2,7 +2,7 @@
   "version": "1.0",
   "module": "unnamed",
   "metadata": {
-    "compiled_at": "2026-01-18T21:28:57Z",
+    "compiled_at": "2026-01-18T22:33:51Z",
     "compiler_version": "0.1.0"
   },
   "components": [
@@ -2274,5 +2274,2779 @@
       }
     }
   ],
-  "trackers": []
+  "initial_state": {
+    "entities": [
+      {
+        "id": 0,
+        "variable": "warrior",
+        "components": {
+          "Character": {
+            "name": "Sir Braveheart",
+            "class": "Warrior",
+            "level": 1.0,
+            "experience": 0.0,
+            "experienceToLevel": 100.0
+          },
+          "Health": {
+            "current": 120.0,
+            "max": 120.0
+          },
+          "Mana": {
+            "current": 30.0,
+            "max": 30.0
+          },
+          "Stats": {
+            "strength": 16.0,
+            "dexterity": 10.0,
+            "intelligence": 8.0,
+            "constitution": 14.0,
+            "wisdom": 8.0
+          },
+          "Combat": {
+            "damage": 18.0,
+            "defense": 10.0,
+            "attackSpeed": 0.8,
+            "critChance": 0.1,
+            "critMultiplier": 1.5
+          },
+          "Team": {
+            "id": "player",
+            "isPlayer": true
+          },
+          "Skills": {
+            "skill1": "power_strike",
+            "skill2": "",
+            "skill3": "",
+            "skill4": "",
+            "skillPoints": 0.0
+          },
+          "Buffs": {
+            "damageBonus": 0.0,
+            "defenseBonus": 0.0,
+            "hasteBonus": 0.0,
+            "shieldAmount": 0.0,
+            "regenAmount": 0.0
+          },
+          "HeroInfo": {
+            "id": "warrior",
+            "description": "A stalwart defender with unmatched strength. Wields heavy armor and weapons, protecting allies while dealing devastating melee damage.",
+            "difficulty": "Easy",
+            "role": "Tank / Melee DPS",
+            "playstyle": "Get in close and deal consistent damage while absorbing enemy attacks"
+          }
+        },
+        "bound_functions": {
+          "select_attack_target": {
+            "params": [
+              {
+                "name": "character",
+                "type": {
+                  "type": "entity"
+                }
+              },
+              {
+                "name": "enemies",
+                "type": {
+                  "type": "list",
+                  "element": {
+                    "type": "entity"
+                  }
+                }
+              }
+            ],
+            "return_type": {
+              "type": "entity"
+            },
+            "body": {
+              "type": "var",
+              "name": "id"
+            }
+          },
+          "select_combat_skill": {
+            "params": [
+              {
+                "name": "character",
+                "type": {
+                  "type": "entity"
+                }
+              },
+              {
+                "name": "allies",
+                "type": {
+                  "type": "list",
+                  "element": {
+                    "type": "entity"
+                  }
+                }
+              },
+              {
+                "name": "enemies",
+                "type": {
+                  "type": "list",
+                  "element": {
+                    "type": "entity"
+                  }
+                }
+              }
+            ],
+            "return_type": {
+              "type": "string"
+            },
+            "body": {
+              "type": "literal",
+              "value": "basic_attack"
+            }
+          },
+          "select_skill_on_levelup": {
+            "params": [
+              {
+                "name": "character",
+                "type": {
+                  "type": "entity"
+                }
+              },
+              {
+                "name": "currentLevel",
+                "type": {
+                  "type": "entity"
+                }
+              }
+            ],
+            "return_type": {
+              "type": "string"
+            },
+            "body": {
+              "type": "literal",
+              "value": "power_strike"
+            }
+          }
+        }
+      },
+      {
+        "id": 1,
+        "variable": "warrior2",
+        "components": {
+          "Character": {
+            "name": "Gorak the Unbreakable",
+            "class": "Warrior",
+            "level": 1.0,
+            "experience": 0.0,
+            "experienceToLevel": 100.0
+          },
+          "Health": {
+            "current": 140.0,
+            "max": 140.0
+          },
+          "Mana": {
+            "current": 20.0,
+            "max": 20.0
+          },
+          "Stats": {
+            "strength": 14.0,
+            "dexterity": 8.0,
+            "intelligence": 6.0,
+            "constitution": 18.0,
+            "wisdom": 10.0
+          },
+          "Combat": {
+            "damage": 15.0,
+            "defense": 12.0,
+            "attackSpeed": 0.7,
+            "critChance": 0.05,
+            "critMultiplier": 1.5
+          },
+          "Team": {
+            "id": "player",
+            "isPlayer": true
+          },
+          "Skills": {
+            "skill1": "power_strike",
+            "skill2": "",
+            "skill3": "",
+            "skill4": "",
+            "skillPoints": 0.0
+          },
+          "Buffs": {
+            "damageBonus": 0.0,
+            "defenseBonus": 0.0,
+            "hasteBonus": 0.0,
+            "shieldAmount": 0.0,
+            "regenAmount": 0.0
+          },
+          "HeroInfo": {
+            "id": "warrior2",
+            "description": "A veteran warrior forged in countless battles. Specializes in defensive tactics and outlasting enemies through superior endurance.",
+            "difficulty": "Easy",
+            "role": "Tank / Defensive",
+            "playstyle": "Extreme durability and defense, absorbs massive amounts of damage"
+          }
+        },
+        "bound_functions": {
+          "select_attack_target": {
+            "params": [
+              {
+                "name": "character",
+                "type": {
+                  "type": "entity"
+                }
+              },
+              {
+                "name": "enemies",
+                "type": {
+                  "type": "list",
+                  "element": {
+                    "type": "entity"
+                  }
+                }
+              }
+            ],
+            "return_type": {
+              "type": "entity"
+            },
+            "body": {
+              "type": "var",
+              "name": "id"
+            }
+          },
+          "select_combat_skill": {
+            "params": [
+              {
+                "name": "character",
+                "type": {
+                  "type": "entity"
+                }
+              },
+              {
+                "name": "allies",
+                "type": {
+                  "type": "list",
+                  "element": {
+                    "type": "entity"
+                  }
+                }
+              },
+              {
+                "name": "enemies",
+                "type": {
+                  "type": "list",
+                  "element": {
+                    "type": "entity"
+                  }
+                }
+              }
+            ],
+            "return_type": {
+              "type": "string"
+            },
+            "body": {
+              "type": "literal",
+              "value": "basic_attack"
+            }
+          },
+          "select_skill_on_levelup": {
+            "params": [
+              {
+                "name": "character",
+                "type": {
+                  "type": "entity"
+                }
+              },
+              {
+                "name": "currentLevel",
+                "type": {
+                  "type": "entity"
+                }
+              }
+            ],
+            "return_type": {
+              "type": "string"
+            },
+            "body": {
+              "type": "literal",
+              "value": "power_strike"
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "variable": "warrior3",
+        "components": {
+          "Character": {
+            "name": "Valkyrie Stormblade",
+            "class": "Warrior",
+            "level": 1.0,
+            "experience": 0.0,
+            "experienceToLevel": 100.0
+          },
+          "Health": {
+            "current": 105.0,
+            "max": 105.0
+          },
+          "Mana": {
+            "current": 35.0,
+            "max": 35.0
+          },
+          "Stats": {
+            "strength": 15.0,
+            "dexterity": 14.0,
+            "intelligence": 8.0,
+            "constitution": 12.0,
+            "wisdom": 8.0
+          },
+          "Combat": {
+            "damage": 20.0,
+            "defense": 8.0,
+            "attackSpeed": 1.0,
+            "critChance": 0.1,
+            "critMultiplier": 1.5
+          },
+          "Team": {
+            "id": "player",
+            "isPlayer": true
+          },
+          "Skills": {
+            "skill1": "power_strike",
+            "skill2": "",
+            "skill3": "",
+            "skill4": "",
+            "skillPoints": 0.0
+          },
+          "Buffs": {
+            "damageBonus": 0.0,
+            "defenseBonus": 0.0,
+            "hasteBonus": 0.0,
+            "shieldAmount": 0.0,
+            "regenAmount": 0.0
+          },
+          "HeroInfo": {
+            "id": "warrior3",
+            "description": "A fierce warrior who values speed over raw defense. Delivers rapid strikes with medium armor for balanced offense and defense.",
+            "difficulty": "Medium",
+            "role": "Melee DPS / Bruiser",
+            "playstyle": "Fast-paced melee combat with balanced offense and defense"
+          }
+        }
+      },
+      {
+        "id": 3,
+        "variable": "warrior4",
+        "components": {
+          "Character": {
+            "name": "Titan Ironheart",
+            "class": "Warrior",
+            "level": 1.0,
+            "experience": 0.0,
+            "experienceToLevel": 100.0
+          },
+          "Health": {
+            "current": 130.0,
+            "max": 130.0
+          },
+          "Mana": {
+            "current": 25.0,
+            "max": 25.0
+          },
+          "Stats": {
+            "strength": 20.0,
+            "dexterity": 6.0,
+            "intelligence": 6.0,
+            "constitution": 16.0,
+            "wisdom": 8.0
+          },
+          "Combat": {
+            "damage": 28.0,
+            "defense": 11.0,
+            "attackSpeed": 0.5,
+            "critChance": 0.1,
+            "critMultiplier": 1.5
+          },
+          "Team": {
+            "id": "player",
+            "isPlayer": true
+          },
+          "Skills": {
+            "skill1": "power_strike",
+            "skill2": "",
+            "skill3": "",
+            "skill4": "",
+            "skillPoints": 0.0
+          },
+          "Buffs": {
+            "damageBonus": 0.0,
+            "defenseBonus": 0.0,
+            "hasteBonus": 0.0,
+            "shieldAmount": 0.0,
+            "regenAmount": 0.0
+          },
+          "HeroInfo": {
+            "id": "warrior4",
+            "description": "A colossal warrior wielding a massive two-handed weapon. Trades speed for overwhelming power with each strike.",
+            "difficulty": "Easy",
+            "role": "Heavy DPS / Tank",
+            "playstyle": "Devastating slow attacks that hit extremely hard"
+          }
+        }
+      },
+      {
+        "id": 4,
+        "variable": "warrior5",
+        "components": {
+          "Character": {
+            "name": "Bladestorm",
+            "class": "Warrior",
+            "level": 1.0,
+            "experience": 0.0,
+            "experienceToLevel": 100.0
+          },
+          "Health": {
+            "current": 95.0,
+            "max": 95.0
+          },
+          "Mana": {
+            "current": 30.0,
+            "max": 30.0
+          },
+          "Stats": {
+            "strength": 16.0,
+            "dexterity": 16.0,
+            "intelligence": 6.0,
+            "constitution": 10.0,
+            "wisdom": 8.0
+          },
+          "Combat": {
+            "damage": 24.0,
+            "defense": 6.0,
+            "attackSpeed": 1.3,
+            "critChance": 0.15,
+            "critMultiplier": 1.5
+          },
+          "Team": {
+            "id": "player",
+            "isPlayer": true
+          },
+          "Skills": {
+            "skill1": "power_strike",
+            "skill2": "",
+            "skill3": "",
+            "skill4": "",
+            "skillPoints": 0.0
+          },
+          "Buffs": {
+            "damageBonus": 0.0,
+            "defenseBonus": 0.0,
+            "hasteBonus": 0.0,
+            "shieldAmount": 0.0,
+            "regenAmount": 0.0
+          },
+          "HeroInfo": {
+            "id": "warrior5",
+            "description": "A dual-wielding warrior who sacrifices defense for rapid, relentless assault. Glass cannon melee fighter with high risk, high reward.",
+            "difficulty": "Hard",
+            "role": "Melee DPS / Glass Cannon",
+            "playstyle": "Extremely aggressive high-speed melee with low survivability"
+          }
+        }
+      },
+      {
+        "id": 5,
+        "variable": "mage",
+        "components": {
+          "Character": {
+            "name": "Elara Flamecaster",
+            "class": "Mage",
+            "level": 1.0,
+            "experience": 0.0,
+            "experienceToLevel": 100.0
+          },
+          "Health": {
+            "current": 70.0,
+            "max": 70.0
+          },
+          "Mana": {
+            "current": 100.0,
+            "max": 100.0
+          },
+          "Stats": {
+            "strength": 6.0,
+            "dexterity": 12.0,
+            "intelligence": 18.0,
+            "constitution": 8.0,
+            "wisdom": 14.0
+          },
+          "Combat": {
+            "damage": 25.0,
+            "defense": 4.0,
+            "attackSpeed": 0.6,
+            "critChance": 0.1,
+            "critMultiplier": 2.0
+          },
+          "Team": {
+            "id": "player",
+            "isPlayer": true
+          },
+          "Skills": {
+            "skill1": "fireball",
+            "skill2": "",
+            "skill3": "",
+            "skill4": "",
+            "skillPoints": 0.0
+          },
+          "Buffs": {
+            "damageBonus": 0.0,
+            "defenseBonus": 0.0,
+            "hasteBonus": 0.0,
+            "shieldAmount": 0.0,
+            "regenAmount": 0.0
+          },
+          "HeroInfo": {
+            "id": "mage",
+            "description": "A master of elemental magic who rains destruction from afar. High damage output but fragile - positioning and mana management are key.",
+            "difficulty": "Medium",
+            "role": "Ranged DPS / AoE",
+            "playstyle": "Maximize spell damage while managing mana and staying out of danger"
+          }
+        },
+        "bound_functions": {
+          "select_attack_target": {
+            "params": [
+              {
+                "name": "character",
+                "type": {
+                  "type": "entity"
+                }
+              },
+              {
+                "name": "enemies",
+                "type": {
+                  "type": "list",
+                  "element": {
+                    "type": "entity"
+                  }
+                }
+              }
+            ],
+            "return_type": {
+              "type": "entity"
+            },
+            "body": {
+              "type": "var",
+              "name": "id"
+            }
+          },
+          "select_combat_skill": {
+            "params": [
+              {
+                "name": "character",
+                "type": {
+                  "type": "entity"
+                }
+              },
+              {
+                "name": "allies",
+                "type": {
+                  "type": "list",
+                  "element": {
+                    "type": "entity"
+                  }
+                }
+              },
+              {
+                "name": "enemies",
+                "type": {
+                  "type": "list",
+                  "element": {
+                    "type": "entity"
+                  }
+                }
+              }
+            ],
+            "return_type": {
+              "type": "string"
+            },
+            "body": {
+              "type": "literal",
+              "value": "basic_attack"
+            }
+          },
+          "select_skill_on_levelup": {
+            "params": [
+              {
+                "name": "character",
+                "type": {
+                  "type": "entity"
+                }
+              },
+              {
+                "name": "currentLevel",
+                "type": {
+                  "type": "entity"
+                }
+              }
+            ],
+            "return_type": {
+              "type": "string"
+            },
+            "body": {
+              "type": "literal",
+              "value": "fireball"
+            }
+          }
+        }
+      },
+      {
+        "id": 6,
+        "variable": "mage2",
+        "components": {
+          "Character": {
+            "name": "Zephyr the Archmage",
+            "class": "Mage",
+            "level": 1.0,
+            "experience": 0.0,
+            "experienceToLevel": 100.0
+          },
+          "Health": {
+            "current": 65.0,
+            "max": 65.0
+          },
+          "Mana": {
+            "current": 120.0,
+            "max": 120.0
+          },
+          "Stats": {
+            "strength": 4.0,
+            "dexterity": 10.0,
+            "intelligence": 20.0,
+            "constitution": 6.0,
+            "wisdom": 16.0
+          },
+          "Combat": {
+            "damage": 30.0,
+            "defense": 3.0,
+            "attackSpeed": 0.5,
+            "critChance": 0.15,
+            "critMultiplier": 2.0
+          },
+          "Team": {
+            "id": "player",
+            "isPlayer": true
+          },
+          "Skills": {
+            "skill1": "fireball",
+            "skill2": "",
+            "skill3": "",
+            "skill4": "",
+            "skillPoints": 0.0
+          },
+          "Buffs": {
+            "damageBonus": 0.0,
+            "defenseBonus": 0.0,
+            "hasteBonus": 0.0,
+            "shieldAmount": 0.0,
+            "regenAmount": 0.0
+          },
+          "HeroInfo": {
+            "id": "mage2",
+            "description": "A brilliant arcane scholar who prioritizes raw magical power. Highest damage potential but requires careful mana management.",
+            "difficulty": "Hard",
+            "role": "Ranged DPS / Burst",
+            "playstyle": "Maximum spell power with lowest survivability - nuclear glass cannon"
+          }
+        }
+      },
+      {
+        "id": 7,
+        "variable": "mage3",
+        "components": {
+          "Character": {
+            "name": "Frost Weaver Selene",
+            "class": "Mage",
+            "level": 1.0,
+            "experience": 0.0,
+            "experienceToLevel": 100.0
+          },
+          "Health": {
+            "current": 80.0,
+            "max": 80.0
+          },
+          "Mana": {
+            "current": 90.0,
+            "max": 90.0
+          },
+          "Stats": {
+            "strength": 6.0,
+            "dexterity": 10.0,
+            "intelligence": 16.0,
+            "constitution": 10.0,
+            "wisdom": 14.0
+          },
+          "Combat": {
+            "damage": 22.0,
+            "defense": 6.0,
+            "attackSpeed": 0.7,
+            "critChance": 0.1,
+            "critMultiplier": 2.0
+          },
+          "Team": {
+            "id": "player",
+            "isPlayer": true
+          },
+          "Skills": {
+            "skill1": "fireball",
+            "skill2": "",
+            "skill3": "",
+            "skill4": "",
+            "skillPoints": 0.0
+          },
+          "Buffs": {
+            "damageBonus": 0.0,
+            "defenseBonus": 0.0,
+            "hasteBonus": 0.0,
+            "shieldAmount": 0.0,
+            "regenAmount": 0.0
+          },
+          "HeroInfo": {
+            "id": "mage3",
+            "description": "A frost mage who balances damage with survivability. Ice shields provide extra protection while slowing enemies.",
+            "difficulty": "Medium",
+            "role": "Ranged DPS / Control",
+            "playstyle": "Balanced caster with defensive capabilities and crowd control"
+          }
+        }
+      },
+      {
+        "id": 8,
+        "variable": "mage4",
+        "components": {
+          "Character": {
+            "name": "Lightning Caller Volt",
+            "class": "Mage",
+            "level": 1.0,
+            "experience": 0.0,
+            "experienceToLevel": 100.0
+          },
+          "Health": {
+            "current": 72.0,
+            "max": 72.0
+          },
+          "Mana": {
+            "current": 95.0,
+            "max": 95.0
+          },
+          "Stats": {
+            "strength": 6.0,
+            "dexterity": 14.0,
+            "intelligence": 17.0,
+            "constitution": 8.0,
+            "wisdom": 12.0
+          },
+          "Combat": {
+            "damage": 20.0,
+            "defense": 4.0,
+            "attackSpeed": 0.9,
+            "critChance": 0.1,
+            "critMultiplier": 2.0
+          },
+          "Team": {
+            "id": "player",
+            "isPlayer": true
+          },
+          "Skills": {
+            "skill1": "fireball",
+            "skill2": "",
+            "skill3": "",
+            "skill4": "",
+            "skillPoints": 0.0
+          },
+          "Buffs": {
+            "damageBonus": 0.0,
+            "defenseBonus": 0.0,
+            "hasteBonus": 0.0,
+            "shieldAmount": 0.0,
+            "regenAmount": 0.0
+          },
+          "HeroInfo": {
+            "id": "mage4",
+            "description": "A storm mage specializing in quick-casting lightning spells. Fast casting speed with moderate damage per hit.",
+            "difficulty": "Medium",
+            "role": "Ranged DPS / Sustained",
+            "playstyle": "Rapid-fire spell casting for consistent damage output"
+          }
+        }
+      },
+      {
+        "id": 9,
+        "variable": "mage5",
+        "components": {
+          "Character": {
+            "name": "Sage Emberwick",
+            "class": "Mage",
+            "level": 1.0,
+            "experience": 0.0,
+            "experienceToLevel": 100.0
+          },
+          "Health": {
+            "current": 75.0,
+            "max": 75.0
+          },
+          "Mana": {
+            "current": 110.0,
+            "max": 110.0
+          },
+          "Stats": {
+            "strength": 6.0,
+            "dexterity": 12.0,
+            "intelligence": 16.0,
+            "constitution": 9.0,
+            "wisdom": 18.0
+          },
+          "Combat": {
+            "damage": 23.0,
+            "defense": 5.0,
+            "attackSpeed": 0.6,
+            "critChance": 0.1,
+            "critMultiplier": 2.0
+          },
+          "Team": {
+            "id": "player",
+            "isPlayer": true
+          },
+          "Skills": {
+            "skill1": "fireball",
+            "skill2": "",
+            "skill3": "",
+            "skill4": "",
+            "skillPoints": 0.0
+          },
+          "Buffs": {
+            "damageBonus": 0.0,
+            "defenseBonus": 0.0,
+            "hasteBonus": 0.0,
+            "shieldAmount": 0.0,
+            "regenAmount": 0.0
+          },
+          "HeroInfo": {
+            "id": "mage5",
+            "description": "A scholarly mage focused on mana efficiency and long-term sustainability. Lower burst but never runs out of mana.",
+            "difficulty": "Easy",
+            "role": "Ranged DPS / Sustain",
+            "playstyle": "Efficient spell usage with excellent mana regeneration"
+          }
+        }
+      },
+      {
+        "id": 10,
+        "variable": "rogue",
+        "components": {
+          "Character": {
+            "name": "Shadow",
+            "class": "Rogue",
+            "level": 1.0,
+            "experience": 0.0,
+            "experienceToLevel": 100.0
+          },
+          "Health": {
+            "current": 80.0,
+            "max": 80.0
+          },
+          "Mana": {
+            "current": 50.0,
+            "max": 50.0
+          },
+          "Stats": {
+            "strength": 10.0,
+            "dexterity": 18.0,
+            "intelligence": 10.0,
+            "constitution": 10.0,
+            "wisdom": 8.0
+          },
+          "Combat": {
+            "damage": 22.0,
+            "defense": 6.0,
+            "attackSpeed": 1.4,
+            "critChance": 0.25,
+            "critMultiplier": 2.5
+          },
+          "Team": {
+            "id": "player",
+            "isPlayer": true
+          },
+          "Skills": {
+            "skill1": "backstab",
+            "skill2": "",
+            "skill3": "",
+            "skill4": "",
+            "skillPoints": 0.0
+          },
+          "Buffs": {
+            "damageBonus": 0.0,
+            "defenseBonus": 0.0,
+            "hasteBonus": 0.0,
+            "shieldAmount": 0.0,
+            "regenAmount": 0.0
+          },
+          "HeroInfo": {
+            "id": "rogue",
+            "description": "Swift and deadly, striking from the shadows. Relies on critical hits and burst damage to eliminate high-priority targets quickly.",
+            "difficulty": "Medium",
+            "role": "Melee DPS / Assassin",
+            "playstyle": "Focus on eliminating priority targets with high burst damage and crits"
+          }
+        },
+        "bound_functions": {
+          "select_attack_target": {
+            "params": [
+              {
+                "name": "character",
+                "type": {
+                  "type": "entity"
+                }
+              },
+              {
+                "name": "enemies",
+                "type": {
+                  "type": "list",
+                  "element": {
+                    "type": "entity"
+                  }
+                }
+              }
+            ],
+            "return_type": {
+              "type": "entity"
+            },
+            "body": {
+              "type": "var",
+              "name": "id"
+            }
+          },
+          "select_combat_skill": {
+            "params": [
+              {
+                "name": "character",
+                "type": {
+                  "type": "entity"
+                }
+              },
+              {
+                "name": "allies",
+                "type": {
+                  "type": "list",
+                  "element": {
+                    "type": "entity"
+                  }
+                }
+              },
+              {
+                "name": "enemies",
+                "type": {
+                  "type": "list",
+                  "element": {
+                    "type": "entity"
+                  }
+                }
+              }
+            ],
+            "return_type": {
+              "type": "string"
+            },
+            "body": {
+              "type": "literal",
+              "value": "basic_attack"
+            }
+          },
+          "select_skill_on_levelup": {
+            "params": [
+              {
+                "name": "character",
+                "type": {
+                  "type": "entity"
+                }
+              },
+              {
+                "name": "currentLevel",
+                "type": {
+                  "type": "entity"
+                }
+              }
+            ],
+            "return_type": {
+              "type": "string"
+            },
+            "body": {
+              "type": "literal",
+              "value": "backstab"
+            }
+          }
+        }
+      },
+      {
+        "id": 11,
+        "variable": "rogue2",
+        "components": {
+          "Character": {
+            "name": "Viper",
+            "class": "Rogue",
+            "level": 1.0,
+            "experience": 0.0,
+            "experienceToLevel": 100.0
+          },
+          "Health": {
+            "current": 75.0,
+            "max": 75.0
+          },
+          "Mana": {
+            "current": 55.0,
+            "max": 55.0
+          },
+          "Stats": {
+            "strength": 8.0,
+            "dexterity": 18.0,
+            "intelligence": 12.0,
+            "constitution": 8.0,
+            "wisdom": 10.0
+          },
+          "Combat": {
+            "damage": 19.0,
+            "defense": 5.0,
+            "attackSpeed": 1.3,
+            "critChance": 0.2,
+            "critMultiplier": 2.5
+          },
+          "Team": {
+            "id": "player",
+            "isPlayer": true
+          },
+          "Skills": {
+            "skill1": "backstab",
+            "skill2": "",
+            "skill3": "",
+            "skill4": "",
+            "skillPoints": 0.0
+          },
+          "Buffs": {
+            "damageBonus": 0.0,
+            "defenseBonus": 0.0,
+            "hasteBonus": 0.0,
+            "shieldAmount": 0.0,
+            "regenAmount": 0.0
+          },
+          "HeroInfo": {
+            "id": "rogue2",
+            "description": "A poison specialist who weakens enemies over time. Applies deadly toxins that continue damaging after initial strikes.",
+            "difficulty": "Hard",
+            "role": "Melee DPS / DoT",
+            "playstyle": "Apply poison effects and let damage over time do the work"
+          }
+        }
+      },
+      {
+        "id": 12,
+        "variable": "rogue3",
+        "components": {
+          "Character": {
+            "name": "Nightblade Kira",
+            "class": "Rogue",
+            "level": 1.0,
+            "experience": 0.0,
+            "experienceToLevel": 100.0
+          },
+          "Health": {
+            "current": 90.0,
+            "max": 90.0
+          },
+          "Mana": {
+            "current": 50.0,
+            "max": 50.0
+          },
+          "Stats": {
+            "strength": 12.0,
+            "dexterity": 16.0,
+            "intelligence": 10.0,
+            "constitution": 12.0,
+            "wisdom": 10.0
+          },
+          "Combat": {
+            "damage": 21.0,
+            "defense": 7.0,
+            "attackSpeed": 1.2,
+            "critChance": 0.2,
+            "critMultiplier": 2.5
+          },
+          "Team": {
+            "id": "player",
+            "isPlayer": true
+          },
+          "Skills": {
+            "skill1": "backstab",
+            "skill2": "",
+            "skill3": "",
+            "skill4": "",
+            "skillPoints": 0.0
+          },
+          "Buffs": {
+            "damageBonus": 0.0,
+            "defenseBonus": 0.0,
+            "hasteBonus": 0.0,
+            "shieldAmount": 0.0,
+            "regenAmount": 0.0
+          },
+          "HeroInfo": {
+            "id": "rogue3",
+            "description": "A versatile assassin with balanced stats. Reliable critical strikes and good survivability for a rogue.",
+            "difficulty": "Easy",
+            "role": "Melee DPS / Balanced",
+            "playstyle": "Well-rounded assassin with good damage and survivability"
+          }
+        }
+      },
+      {
+        "id": 13,
+        "variable": "rogue4",
+        "components": {
+          "Character": {
+            "name": "Ghost",
+            "class": "Rogue",
+            "level": 1.0,
+            "experience": 0.0,
+            "experienceToLevel": 100.0
+          },
+          "Health": {
+            "current": 65.0,
+            "max": 65.0
+          },
+          "Mana": {
+            "current": 45.0,
+            "max": 45.0
+          },
+          "Stats": {
+            "strength": 8.0,
+            "dexterity": 20.0,
+            "intelligence": 10.0,
+            "constitution": 6.0,
+            "wisdom": 8.0
+          },
+          "Combat": {
+            "damage": 25.0,
+            "defense": 4.0,
+            "attackSpeed": 1.6,
+            "critChance": 0.3,
+            "critMultiplier": 2.5
+          },
+          "Team": {
+            "id": "player",
+            "isPlayer": true
+          },
+          "Skills": {
+            "skill1": "backstab",
+            "skill2": "",
+            "skill3": "",
+            "skill4": "",
+            "skillPoints": 0.0
+          },
+          "Buffs": {
+            "damageBonus": 0.0,
+            "defenseBonus": 0.0,
+            "hasteBonus": 0.0,
+            "shieldAmount": 0.0,
+            "regenAmount": 0.0
+          },
+          "HeroInfo": {
+            "id": "rogue4",
+            "description": "The ultimate glass cannon rogue. Unmatched attack speed and critical chance but extremely fragile.",
+            "difficulty": "Hard",
+            "role": "Melee DPS / Hyper Carry",
+            "playstyle": "Lightning-fast attacks with maximum crit - dies if touched"
+          }
+        }
+      },
+      {
+        "id": 14,
+        "variable": "rogue5",
+        "components": {
+          "Character": {
+            "name": "Dagger Master Jin",
+            "class": "Rogue",
+            "level": 1.0,
+            "experience": 0.0,
+            "experienceToLevel": 100.0
+          },
+          "Health": {
+            "current": 85.0,
+            "max": 85.0
+          },
+          "Mana": {
+            "current": 50.0,
+            "max": 50.0
+          },
+          "Stats": {
+            "strength": 14.0,
+            "dexterity": 16.0,
+            "intelligence": 10.0,
+            "constitution": 10.0,
+            "wisdom": 10.0
+          },
+          "Combat": {
+            "damage": 26.0,
+            "defense": 6.0,
+            "attackSpeed": 1.0,
+            "critChance": 0.2,
+            "critMultiplier": 2.5
+          },
+          "Team": {
+            "id": "player",
+            "isPlayer": true
+          },
+          "Skills": {
+            "skill1": "backstab",
+            "skill2": "",
+            "skill3": "",
+            "skill4": "",
+            "skillPoints": 0.0
+          },
+          "Buffs": {
+            "damageBonus": 0.0,
+            "defenseBonus": 0.0,
+            "hasteBonus": 0.0,
+            "shieldAmount": 0.0,
+            "regenAmount": 0.0
+          },
+          "HeroInfo": {
+            "id": "rogue5",
+            "description": "A disciplined rogue who focuses on precision over speed. Higher damage per hit with controlled, tactical strikes.",
+            "difficulty": "Medium",
+            "role": "Melee DPS / Precision",
+            "playstyle": "Slower but harder-hitting strikes with good positioning"
+          }
+        }
+      },
+      {
+        "id": 15,
+        "variable": "cleric",
+        "components": {
+          "Character": {
+            "name": "Brother Aldric",
+            "class": "Cleric",
+            "level": 1.0,
+            "experience": 0.0,
+            "experienceToLevel": 100.0
+          },
+          "Health": {
+            "current": 90.0,
+            "max": 90.0
+          },
+          "Mana": {
+            "current": 80.0,
+            "max": 80.0
+          },
+          "Stats": {
+            "strength": 10.0,
+            "dexterity": 8.0,
+            "intelligence": 12.0,
+            "constitution": 12.0,
+            "wisdom": 18.0
+          },
+          "Combat": {
+            "damage": 12.0,
+            "defense": 8.0,
+            "attackSpeed": 0.7,
+            "critChance": 0.05,
+            "critMultiplier": 1.5
+          },
+          "Team": {
+            "id": "player",
+            "isPlayer": true
+          },
+          "Skills": {
+            "skill1": "heal",
+            "skill2": "",
+            "skill3": "",
+            "skill4": "",
+            "skillPoints": 0.0
+          },
+          "Buffs": {
+            "damageBonus": 0.0,
+            "defenseBonus": 0.0,
+            "hasteBonus": 0.0,
+            "shieldAmount": 0.0,
+            "regenAmount": 0.0
+          },
+          "HeroInfo": {
+            "id": "cleric",
+            "description": "A divine healer who supports allies with healing and protective magic. Keeps the party alive through the toughest battles.",
+            "difficulty": "Easy",
+            "role": "Healer / Support",
+            "playstyle": "Keep allies alive with healing while contributing moderate damage"
+          }
+        },
+        "bound_functions": {
+          "select_attack_target": {
+            "params": [
+              {
+                "name": "character",
+                "type": {
+                  "type": "entity"
+                }
+              },
+              {
+                "name": "enemies",
+                "type": {
+                  "type": "list",
+                  "element": {
+                    "type": "entity"
+                  }
+                }
+              }
+            ],
+            "return_type": {
+              "type": "entity"
+            },
+            "body": {
+              "type": "var",
+              "name": "id"
+            }
+          },
+          "select_combat_skill": {
+            "params": [
+              {
+                "name": "character",
+                "type": {
+                  "type": "entity"
+                }
+              },
+              {
+                "name": "allies",
+                "type": {
+                  "type": "list",
+                  "element": {
+                    "type": "entity"
+                  }
+                }
+              },
+              {
+                "name": "enemies",
+                "type": {
+                  "type": "list",
+                  "element": {
+                    "type": "entity"
+                  }
+                }
+              }
+            ],
+            "return_type": {
+              "type": "string"
+            },
+            "body": {
+              "type": "literal",
+              "value": "basic_attack"
+            }
+          },
+          "select_skill_on_levelup": {
+            "params": [
+              {
+                "name": "character",
+                "type": {
+                  "type": "entity"
+                }
+              },
+              {
+                "name": "currentLevel",
+                "type": {
+                  "type": "entity"
+                }
+              }
+            ],
+            "return_type": {
+              "type": "string"
+            },
+            "body": {
+              "type": "literal",
+              "value": "heal"
+            }
+          }
+        }
+      },
+      {
+        "id": 16,
+        "variable": "cleric2",
+        "components": {
+          "Character": {
+            "name": "Sister Lumina",
+            "class": "Cleric",
+            "level": 1.0,
+            "experience": 0.0,
+            "experienceToLevel": 100.0
+          },
+          "Health": {
+            "current": 85.0,
+            "max": 85.0
+          },
+          "Mana": {
+            "current": 100.0,
+            "max": 100.0
+          },
+          "Stats": {
+            "strength": 8.0,
+            "dexterity": 8.0,
+            "intelligence": 14.0,
+            "constitution": 12.0,
+            "wisdom": 20.0
+          },
+          "Combat": {
+            "damage": 10.0,
+            "defense": 7.0,
+            "attackSpeed": 0.6,
+            "critChance": 0.05,
+            "critMultiplier": 1.5
+          },
+          "Team": {
+            "id": "player",
+            "isPlayer": true
+          },
+          "Skills": {
+            "skill1": "heal",
+            "skill2": "",
+            "skill3": "",
+            "skill4": "",
+            "skillPoints": 0.0
+          },
+          "Buffs": {
+            "damageBonus": 0.0,
+            "defenseBonus": 0.0,
+            "hasteBonus": 0.0,
+            "shieldAmount": 0.0,
+            "regenAmount": 0.0
+          },
+          "HeroInfo": {
+            "id": "cleric2",
+            "description": "A devoted healer who maximizes healing output. Best support in the game but minimal combat capability.",
+            "difficulty": "Easy",
+            "role": "Healer / Pure Support",
+            "playstyle": "Maximum healing power - keep allies alive at all costs"
+          }
+        }
+      },
+      {
+        "id": 17,
+        "variable": "cleric3",
+        "components": {
+          "Character": {
+            "name": "Battle Priest Marcus",
+            "class": "Cleric",
+            "level": 1.0,
+            "experience": 0.0,
+            "experienceToLevel": 100.0
+          },
+          "Health": {
+            "current": 100.0,
+            "max": 100.0
+          },
+          "Mana": {
+            "current": 70.0,
+            "max": 70.0
+          },
+          "Stats": {
+            "strength": 14.0,
+            "dexterity": 10.0,
+            "intelligence": 12.0,
+            "constitution": 12.0,
+            "wisdom": 14.0
+          },
+          "Combat": {
+            "damage": 18.0,
+            "defense": 8.0,
+            "attackSpeed": 0.8,
+            "critChance": 0.1,
+            "critMultiplier": 1.5
+          },
+          "Team": {
+            "id": "player",
+            "isPlayer": true
+          },
+          "Skills": {
+            "skill1": "heal",
+            "skill2": "",
+            "skill3": "",
+            "skill4": "",
+            "skillPoints": 0.0
+          },
+          "Buffs": {
+            "damageBonus": 0.0,
+            "defenseBonus": 0.0,
+            "hasteBonus": 0.0,
+            "shieldAmount": 0.0,
+            "regenAmount": 0.0
+          },
+          "HeroInfo": {
+            "id": "cleric3",
+            "description": "A militant cleric who deals holy damage to enemies. Combines decent damage with moderate healing capabilities.",
+            "difficulty": "Medium",
+            "role": "Hybrid DPS / Support",
+            "playstyle": "Balance between dealing holy damage and supporting allies"
+          }
+        }
+      },
+      {
+        "id": 18,
+        "variable": "cleric4",
+        "components": {
+          "Character": {
+            "name": "Shieldbearer Thora",
+            "class": "Cleric",
+            "level": 1.0,
+            "experience": 0.0,
+            "experienceToLevel": 100.0
+          },
+          "Health": {
+            "current": 110.0,
+            "max": 110.0
+          },
+          "Mana": {
+            "current": 75.0,
+            "max": 75.0
+          },
+          "Stats": {
+            "strength": 12.0,
+            "dexterity": 8.0,
+            "intelligence": 10.0,
+            "constitution": 16.0,
+            "wisdom": 16.0
+          },
+          "Combat": {
+            "damage": 11.0,
+            "defense": 10.0,
+            "attackSpeed": 0.7,
+            "critChance": 0.05,
+            "critMultiplier": 1.5
+          },
+          "Team": {
+            "id": "player",
+            "isPlayer": true
+          },
+          "Skills": {
+            "skill1": "heal",
+            "skill2": "",
+            "skill3": "",
+            "skill4": "",
+            "skillPoints": 0.0
+          },
+          "Buffs": {
+            "damageBonus": 0.0,
+            "defenseBonus": 0.0,
+            "hasteBonus": 0.0,
+            "shieldAmount": 0.0,
+            "regenAmount": 0.0
+          },
+          "HeroInfo": {
+            "id": "cleric4",
+            "description": "A defensive cleric who protects allies with shields and barriers. Focuses on damage prevention over healing.",
+            "difficulty": "Medium",
+            "role": "Tank / Support",
+            "playstyle": "Prevent damage with shields while providing emergency healing"
+          }
+        }
+      },
+      {
+        "id": 19,
+        "variable": "cleric5",
+        "components": {
+          "Character": {
+            "name": "Prophet Celestia",
+            "class": "Cleric",
+            "level": 1.0,
+            "experience": 0.0,
+            "experienceToLevel": 100.0
+          },
+          "Health": {
+            "current": 88.0,
+            "max": 88.0
+          },
+          "Mana": {
+            "current": 95.0,
+            "max": 95.0
+          },
+          "Stats": {
+            "strength": 8.0,
+            "dexterity": 10.0,
+            "intelligence": 16.0,
+            "constitution": 10.0,
+            "wisdom": 18.0
+          },
+          "Combat": {
+            "damage": 12.0,
+            "defense": 7.0,
+            "attackSpeed": 0.7,
+            "critChance": 0.05,
+            "critMultiplier": 1.5
+          },
+          "Team": {
+            "id": "player",
+            "isPlayer": true
+          },
+          "Skills": {
+            "skill1": "heal",
+            "skill2": "",
+            "skill3": "",
+            "skill4": "",
+            "skillPoints": 0.0
+          },
+          "Buffs": {
+            "damageBonus": 0.0,
+            "defenseBonus": 0.0,
+            "hasteBonus": 0.0,
+            "shieldAmount": 0.0,
+            "regenAmount": 0.0
+          },
+          "HeroInfo": {
+            "id": "cleric5",
+            "description": "A mystic healer with powerful buffs and enhanced mana pool. Provides utility beyond just healing.",
+            "difficulty": "Hard",
+            "role": "Support / Buffer",
+            "playstyle": "Enhance allies with buffs while maintaining healing support"
+          }
+        }
+      },
+      {
+        "id": 20,
+        "variable": "ranger",
+        "components": {
+          "Character": {
+            "name": "Aria Swiftarrow",
+            "class": "Ranger",
+            "level": 1.0,
+            "experience": 0.0,
+            "experienceToLevel": 100.0
+          },
+          "Health": {
+            "current": 85.0,
+            "max": 85.0
+          },
+          "Mana": {
+            "current": 60.0,
+            "max": 60.0
+          },
+          "Stats": {
+            "strength": 12.0,
+            "dexterity": 16.0,
+            "intelligence": 10.0,
+            "constitution": 10.0,
+            "wisdom": 12.0
+          },
+          "Combat": {
+            "damage": 20.0,
+            "defense": 5.0,
+            "attackSpeed": 1.2,
+            "critChance": 0.15,
+            "critMultiplier": 2.0
+          },
+          "Team": {
+            "id": "player",
+            "isPlayer": true
+          },
+          "Skills": {
+            "skill1": "aimed_shot",
+            "skill2": "",
+            "skill3": "",
+            "skill4": "",
+            "skillPoints": 0.0
+          },
+          "Buffs": {
+            "damageBonus": 0.0,
+            "defenseBonus": 0.0,
+            "hasteBonus": 0.0,
+            "shieldAmount": 0.0,
+            "regenAmount": 0.0
+          },
+          "HeroInfo": {
+            "id": "ranger",
+            "description": "An expert marksman with deadly precision. Excels at dealing consistent damage from range with high critical strike chance.",
+            "difficulty": "Medium",
+            "role": "Ranged DPS / Single Target",
+            "playstyle": "Maintain distance and deliver precise, high-damage attacks from range"
+          }
+        }
+      },
+      {
+        "id": 21,
+        "variable": "ranger2",
+        "components": {
+          "Character": {
+            "name": "Hunter Thornwood",
+            "class": "Ranger",
+            "level": 1.0,
+            "experience": 0.0,
+            "experienceToLevel": 100.0
+          },
+          "Health": {
+            "current": 90.0,
+            "max": 90.0
+          },
+          "Mana": {
+            "current": 55.0,
+            "max": 55.0
+          },
+          "Stats": {
+            "strength": 14.0,
+            "dexterity": 16.0,
+            "intelligence": 8.0,
+            "constitution": 12.0,
+            "wisdom": 10.0
+          },
+          "Combat": {
+            "damage": 22.0,
+            "defense": 6.0,
+            "attackSpeed": 1.1,
+            "critChance": 0.15,
+            "critMultiplier": 2.0
+          },
+          "Team": {
+            "id": "player",
+            "isPlayer": true
+          },
+          "Skills": {
+            "skill1": "aimed_shot",
+            "skill2": "",
+            "skill3": "",
+            "skill4": "",
+            "skillPoints": 0.0
+          },
+          "Buffs": {
+            "damageBonus": 0.0,
+            "defenseBonus": 0.0,
+            "hasteBonus": 0.0,
+            "shieldAmount": 0.0,
+            "regenAmount": 0.0
+          },
+          "HeroInfo": {
+            "id": "ranger2",
+            "description": "A wilderness ranger who excels at tracking and taking down single targets. Reliable sustained ranged damage.",
+            "difficulty": "Easy",
+            "role": "Ranged DPS / Sustained",
+            "playstyle": "Consistent ranged damage with good survivability"
+          }
+        }
+      },
+      {
+        "id": 22,
+        "variable": "ranger3",
+        "components": {
+          "Character": {
+            "name": "Windrunner Lyra",
+            "class": "Ranger",
+            "level": 1.0,
+            "experience": 0.0,
+            "experienceToLevel": 100.0
+          },
+          "Health": {
+            "current": 80.0,
+            "max": 80.0
+          },
+          "Mana": {
+            "current": 60.0,
+            "max": 60.0
+          },
+          "Stats": {
+            "strength": 10.0,
+            "dexterity": 18.0,
+            "intelligence": 10.0,
+            "constitution": 10.0,
+            "wisdom": 12.0
+          },
+          "Combat": {
+            "damage": 18.0,
+            "defense": 5.0,
+            "attackSpeed": 1.5,
+            "critChance": 0.15,
+            "critMultiplier": 2.0
+          },
+          "Team": {
+            "id": "player",
+            "isPlayer": true
+          },
+          "Skills": {
+            "skill1": "aimed_shot",
+            "skill2": "",
+            "skill3": "",
+            "skill4": "",
+            "skillPoints": 0.0
+          },
+          "Buffs": {
+            "damageBonus": 0.0,
+            "defenseBonus": 0.0,
+            "hasteBonus": 0.0,
+            "shieldAmount": 0.0,
+            "regenAmount": 0.0
+          },
+          "HeroInfo": {
+            "id": "ranger3",
+            "description": "An agile ranger with the fastest attack speed. Lower damage per shot but overwhelming volume of arrows.",
+            "difficulty": "Medium",
+            "role": "Ranged DPS / Rapid Fire",
+            "playstyle": "Rapid arrow volleys - death by a thousand cuts"
+          }
+        }
+      },
+      {
+        "id": 23,
+        "variable": "ranger4",
+        "components": {
+          "Character": {
+            "name": "Sniper Hawkeye",
+            "class": "Ranger",
+            "level": 1.0,
+            "experience": 0.0,
+            "experienceToLevel": 100.0
+          },
+          "Health": {
+            "current": 82.0,
+            "max": 82.0
+          },
+          "Mana": {
+            "current": 65.0,
+            "max": 65.0
+          },
+          "Stats": {
+            "strength": 14.0,
+            "dexterity": 16.0,
+            "intelligence": 12.0,
+            "constitution": 10.0,
+            "wisdom": 14.0
+          },
+          "Combat": {
+            "damage": 28.0,
+            "defense": 5.0,
+            "attackSpeed": 0.8,
+            "critChance": 0.2,
+            "critMultiplier": 2.5
+          },
+          "Team": {
+            "id": "player",
+            "isPlayer": true
+          },
+          "Skills": {
+            "skill1": "aimed_shot",
+            "skill2": "",
+            "skill3": "",
+            "skill4": "",
+            "skillPoints": 0.0
+          },
+          "Buffs": {
+            "damageBonus": 0.0,
+            "defenseBonus": 0.0,
+            "hasteBonus": 0.0,
+            "shieldAmount": 0.0,
+            "regenAmount": 0.0
+          },
+          "HeroInfo": {
+            "id": "ranger4",
+            "description": "A patient marksman who waits for the perfect shot. Slow but extremely powerful attacks with high crit damage.",
+            "difficulty": "Medium",
+            "role": "Ranged DPS / Burst",
+            "playstyle": "Devastating single shots - each arrow is a kill shot"
+          }
+        }
+      },
+      {
+        "id": 24,
+        "variable": "ranger5",
+        "components": {
+          "Character": {
+            "name": "Beastmaster Renn",
+            "class": "Ranger",
+            "level": 1.0,
+            "experience": 0.0,
+            "experienceToLevel": 100.0
+          },
+          "Health": {
+            "current": 92.0,
+            "max": 92.0
+          },
+          "Mana": {
+            "current": 70.0,
+            "max": 70.0
+          },
+          "Stats": {
+            "strength": 12.0,
+            "dexterity": 14.0,
+            "intelligence": 12.0,
+            "constitution": 12.0,
+            "wisdom": 14.0
+          },
+          "Combat": {
+            "damage": 19.0,
+            "defense": 6.0,
+            "attackSpeed": 1.0,
+            "critChance": 0.15,
+            "critMultiplier": 2.0
+          },
+          "Team": {
+            "id": "player",
+            "isPlayer": true
+          },
+          "Skills": {
+            "skill1": "aimed_shot",
+            "skill2": "",
+            "skill3": "",
+            "skill4": "",
+            "skillPoints": 0.0
+          },
+          "Buffs": {
+            "damageBonus": 0.0,
+            "defenseBonus": 0.0,
+            "hasteBonus": 0.0,
+            "shieldAmount": 0.0,
+            "regenAmount": 0.0
+          },
+          "HeroInfo": {
+            "id": "ranger5",
+            "description": "A ranger who commands nature's fury. Balanced stats with good survivability and utility.",
+            "difficulty": "Easy",
+            "role": "Ranged DPS / Utility",
+            "playstyle": "Well-rounded ranger with pet support and good versatility"
+          }
+        }
+      },
+      {
+        "id": 25,
+        "variable": "paladin",
+        "components": {
+          "Character": {
+            "name": "Dame Lightbringer",
+            "class": "Paladin",
+            "level": 1.0,
+            "experience": 0.0,
+            "experienceToLevel": 100.0
+          },
+          "Health": {
+            "current": 110.0,
+            "max": 110.0
+          },
+          "Mana": {
+            "current": 70.0,
+            "max": 70.0
+          },
+          "Stats": {
+            "strength": 14.0,
+            "dexterity": 10.0,
+            "intelligence": 10.0,
+            "constitution": 14.0,
+            "wisdom": 12.0
+          },
+          "Combat": {
+            "damage": 16.0,
+            "defense": 9.0,
+            "attackSpeed": 0.9,
+            "critChance": 0.1,
+            "critMultiplier": 1.5
+          },
+          "Team": {
+            "id": "player",
+            "isPlayer": true
+          },
+          "Skills": {
+            "skill1": "divine_strike",
+            "skill2": "",
+            "skill3": "",
+            "skill4": "",
+            "skillPoints": 0.0
+          },
+          "Buffs": {
+            "damageBonus": 0.0,
+            "defenseBonus": 0.0,
+            "hasteBonus": 0.0,
+            "shieldAmount": 0.0,
+            "regenAmount": 0.0
+          },
+          "HeroInfo": {
+            "id": "paladin",
+            "description": "A holy warrior who balances offense and defense. Can heal allies while dealing respectable damage to enemies.",
+            "difficulty": "Easy",
+            "role": "Hybrid Tank / Support",
+            "playstyle": "Balance between dealing damage, tanking, and supporting allies"
+          }
+        }
+      },
+      {
+        "id": 26,
+        "variable": "paladin2",
+        "components": {
+          "Character": {
+            "name": "Justicar Voran",
+            "class": "Paladin",
+            "level": 1.0,
+            "experience": 0.0,
+            "experienceToLevel": 100.0
+          },
+          "Health": {
+            "current": 115.0,
+            "max": 115.0
+          },
+          "Mana": {
+            "current": 65.0,
+            "max": 65.0
+          },
+          "Stats": {
+            "strength": 16.0,
+            "dexterity": 10.0,
+            "intelligence": 8.0,
+            "constitution": 14.0,
+            "wisdom": 12.0
+          },
+          "Combat": {
+            "damage": 20.0,
+            "defense": 9.0,
+            "attackSpeed": 0.9,
+            "critChance": 0.1,
+            "critMultiplier": 1.5
+          },
+          "Team": {
+            "id": "player",
+            "isPlayer": true
+          },
+          "Skills": {
+            "skill1": "divine_strike",
+            "skill2": "",
+            "skill3": "",
+            "skill4": "",
+            "skillPoints": 0.0
+          },
+          "Buffs": {
+            "damageBonus": 0.0,
+            "defenseBonus": 0.0,
+            "hasteBonus": 0.0,
+            "shieldAmount": 0.0,
+            "regenAmount": 0.0
+          },
+          "HeroInfo": {
+            "id": "paladin2",
+            "description": "A righteous paladin focused on dealing holy damage to evil. Strong offense with divine protection.",
+            "difficulty": "Easy",
+            "role": "Melee DPS / Tank",
+            "playstyle": "Holy warrior dealing bonus damage to undead and demons"
+          }
+        }
+      },
+      {
+        "id": 27,
+        "variable": "paladin3",
+        "components": {
+          "Character": {
+            "name": "Guardian Solas",
+            "class": "Paladin",
+            "level": 1.0,
+            "experience": 0.0,
+            "experienceToLevel": 100.0
+          },
+          "Health": {
+            "current": 125.0,
+            "max": 125.0
+          },
+          "Mana": {
+            "current": 70.0,
+            "max": 70.0
+          },
+          "Stats": {
+            "strength": 12.0,
+            "dexterity": 8.0,
+            "intelligence": 10.0,
+            "constitution": 16.0,
+            "wisdom": 14.0
+          },
+          "Combat": {
+            "damage": 14.0,
+            "defense": 11.0,
+            "attackSpeed": 0.8,
+            "critChance": 0.1,
+            "critMultiplier": 1.5
+          },
+          "Team": {
+            "id": "player",
+            "isPlayer": true
+          },
+          "Skills": {
+            "skill1": "divine_strike",
+            "skill2": "",
+            "skill3": "",
+            "skill4": "",
+            "skillPoints": 0.0
+          },
+          "Buffs": {
+            "damageBonus": 0.0,
+            "defenseBonus": 0.0,
+            "hasteBonus": 0.0,
+            "shieldAmount": 0.0,
+            "regenAmount": 0.0
+          },
+          "HeroInfo": {
+            "id": "paladin3",
+            "description": "A protective paladin who shields allies from harm. Highest defense among paladins with area protection.",
+            "difficulty": "Easy",
+            "role": "Tank / Protector",
+            "playstyle": "Maximum protection - intercept attacks meant for allies"
+          }
+        }
+      },
+      {
+        "id": 28,
+        "variable": "paladin4",
+        "components": {
+          "Character": {
+            "name": "Zealot Pyra",
+            "class": "Paladin",
+            "level": 1.0,
+            "experience": 0.0,
+            "experienceToLevel": 100.0
+          },
+          "Health": {
+            "current": 105.0,
+            "max": 105.0
+          },
+          "Mana": {
+            "current": 60.0,
+            "max": 60.0
+          },
+          "Stats": {
+            "strength": 16.0,
+            "dexterity": 12.0,
+            "intelligence": 8.0,
+            "constitution": 12.0,
+            "wisdom": 12.0
+          },
+          "Combat": {
+            "damage": 22.0,
+            "defense": 7.0,
+            "attackSpeed": 1.0,
+            "critChance": 0.15,
+            "critMultiplier": 1.5
+          },
+          "Team": {
+            "id": "player",
+            "isPlayer": true
+          },
+          "Skills": {
+            "skill1": "divine_strike",
+            "skill2": "",
+            "skill3": "",
+            "skill4": "",
+            "skillPoints": 0.0
+          },
+          "Buffs": {
+            "damageBonus": 0.0,
+            "defenseBonus": 0.0,
+            "hasteBonus": 0.0,
+            "shieldAmount": 0.0,
+            "regenAmount": 0.0
+          },
+          "HeroInfo": {
+            "id": "paladin4",
+            "description": "A fervent holy warrior who sacrifices defense for righteous fury. High damage output with moderate tankiness.",
+            "difficulty": "Medium",
+            "role": "Melee DPS / Bruiser",
+            "playstyle": "Aggressive holy warrior - offense is the best defense"
+          }
+        }
+      },
+      {
+        "id": 29,
+        "variable": "paladin5",
+        "components": {
+          "Character": {
+            "name": "Templar Aegis",
+            "class": "Paladin",
+            "level": 1.0,
+            "experience": 0.0,
+            "experienceToLevel": 100.0
+          },
+          "Health": {
+            "current": 112.0,
+            "max": 112.0
+          },
+          "Mana": {
+            "current": 75.0,
+            "max": 75.0
+          },
+          "Stats": {
+            "strength": 14.0,
+            "dexterity": 12.0,
+            "intelligence": 12.0,
+            "constitution": 14.0,
+            "wisdom": 14.0
+          },
+          "Combat": {
+            "damage": 17.0,
+            "defense": 9.0,
+            "attackSpeed": 0.9,
+            "critChance": 0.1,
+            "critMultiplier": 1.5
+          },
+          "Team": {
+            "id": "player",
+            "isPlayer": true
+          },
+          "Skills": {
+            "skill1": "divine_strike",
+            "skill2": "",
+            "skill3": "",
+            "skill4": "",
+            "skillPoints": 0.0
+          },
+          "Buffs": {
+            "damageBonus": 0.0,
+            "defenseBonus": 0.0,
+            "hasteBonus": 0.0,
+            "shieldAmount": 0.0,
+            "regenAmount": 0.0
+          },
+          "HeroInfo": {
+            "id": "paladin5",
+            "description": "A veteran templar with decades of experience. Perfectly balanced stats make them effective in any situation.",
+            "difficulty": "Easy",
+            "role": "Hybrid / Versatile",
+            "playstyle": "Jack of all trades - adapts to any party composition"
+          }
+        }
+      },
+      {
+        "id": 30,
+        "variable": "goblin_scout",
+        "components": {
+          "Character": {
+            "name": "Goblin Scout",
+            "class": "Monster",
+            "level": 1.0,
+            "experience": 0.0,
+            "experienceToLevel": 999.0
+          },
+          "Health": {
+            "current": 60.0,
+            "max": 60.0
+          },
+          "Mana": {
+            "current": 0.0,
+            "max": 0.0
+          },
+          "Stats": {
+            "strength": 8.0,
+            "dexterity": 12.0,
+            "intelligence": 4.0,
+            "constitution": 8.0,
+            "wisdom": 4.0
+          },
+          "Combat": {
+            "damage": 8.0,
+            "defense": 2.0,
+            "attackSpeed": 1.0,
+            "critChance": 0.05,
+            "critMultiplier": 1.5
+          },
+          "Target": {
+            "entity": null
+          },
+          "Team": {
+            "id": "enemy",
+            "isPlayer": false
+          },
+          "Enemy": {
+            "tier": 1.0,
+            "isBoss": false,
+            "expReward": 25.0
+          },
+          "Buffs": {
+            "damageBonus": 0.0,
+            "defenseBonus": 0.0,
+            "hasteBonus": 0.0,
+            "shieldAmount": 0.0,
+            "regenAmount": 0.0
+          }
+        }
+      },
+      {
+        "id": 31,
+        "variable": "orc_raider",
+        "components": {
+          "Character": {
+            "name": "Orc Raider",
+            "class": "Monster",
+            "level": 2.0,
+            "experience": 0.0,
+            "experienceToLevel": 999.0
+          },
+          "Health": {
+            "current": 90.0,
+            "max": 90.0
+          },
+          "Mana": {
+            "current": 0.0,
+            "max": 0.0
+          },
+          "Stats": {
+            "strength": 12.0,
+            "dexterity": 8.0,
+            "intelligence": 4.0,
+            "constitution": 12.0,
+            "wisdom": 4.0
+          },
+          "Combat": {
+            "damage": 12.0,
+            "defense": 4.0,
+            "attackSpeed": 0.8,
+            "critChance": 0.05,
+            "critMultiplier": 1.5
+          },
+          "Target": {
+            "entity": null
+          },
+          "Team": {
+            "id": "enemy",
+            "isPlayer": false
+          },
+          "Enemy": {
+            "tier": 2.0,
+            "isBoss": false,
+            "expReward": 35.0
+          },
+          "Buffs": {
+            "damageBonus": 0.0,
+            "defenseBonus": 0.0,
+            "hasteBonus": 0.0,
+            "shieldAmount": 0.0,
+            "regenAmount": 0.0
+          }
+        }
+      },
+      {
+        "id": 32,
+        "variable": "dark_wolf",
+        "components": {
+          "Character": {
+            "name": "Dark Wolf",
+            "class": "Monster",
+            "level": 2.0,
+            "experience": 0.0,
+            "experienceToLevel": 999.0
+          },
+          "Health": {
+            "current": 75.0,
+            "max": 75.0
+          },
+          "Mana": {
+            "current": 0.0,
+            "max": 0.0
+          },
+          "Stats": {
+            "strength": 10.0,
+            "dexterity": 16.0,
+            "intelligence": 4.0,
+            "constitution": 8.0,
+            "wisdom": 6.0
+          },
+          "Combat": {
+            "damage": 14.0,
+            "defense": 3.0,
+            "attackSpeed": 1.2,
+            "critChance": 0.1,
+            "critMultiplier": 1.5
+          },
+          "Target": {
+            "entity": null
+          },
+          "Team": {
+            "id": "enemy",
+            "isPlayer": false
+          },
+          "Enemy": {
+            "tier": 2.0,
+            "isBoss": false,
+            "expReward": 40.0
+          },
+          "Buffs": {
+            "damageBonus": 0.0,
+            "defenseBonus": 0.0,
+            "hasteBonus": 0.0,
+            "shieldAmount": 0.0,
+            "regenAmount": 0.0
+          }
+        }
+      },
+      {
+        "id": 33,
+        "variable": "skeleton_warrior",
+        "components": {
+          "Character": {
+            "name": "Skeleton Warrior",
+            "class": "Monster",
+            "level": 3.0,
+            "experience": 0.0,
+            "experienceToLevel": 999.0
+          },
+          "Health": {
+            "current": 110.0,
+            "max": 110.0
+          },
+          "Mana": {
+            "current": 0.0,
+            "max": 0.0
+          },
+          "Stats": {
+            "strength": 14.0,
+            "dexterity": 10.0,
+            "intelligence": 4.0,
+            "constitution": 12.0,
+            "wisdom": 4.0
+          },
+          "Combat": {
+            "damage": 16.0,
+            "defense": 6.0,
+            "attackSpeed": 0.7,
+            "critChance": 0.1,
+            "critMultiplier": 1.5
+          },
+          "Target": {
+            "entity": null
+          },
+          "Team": {
+            "id": "enemy",
+            "isPlayer": false
+          },
+          "Enemy": {
+            "tier": 3.0,
+            "isBoss": false,
+            "expReward": 50.0
+          },
+          "Buffs": {
+            "damageBonus": 0.0,
+            "defenseBonus": 0.0,
+            "hasteBonus": 0.0,
+            "shieldAmount": 0.0,
+            "regenAmount": 0.0
+          }
+        }
+      },
+      {
+        "id": 34,
+        "variable": "dark_mage",
+        "components": {
+          "Character": {
+            "name": "Dark Mage",
+            "class": "Monster",
+            "level": 5.0,
+            "experience": 0.0,
+            "experienceToLevel": 999.0
+          },
+          "Health": {
+            "current": 80.0,
+            "max": 80.0
+          },
+          "Mana": {
+            "current": 100.0,
+            "max": 100.0
+          },
+          "Stats": {
+            "strength": 6.0,
+            "dexterity": 10.0,
+            "intelligence": 16.0,
+            "constitution": 8.0,
+            "wisdom": 12.0
+          },
+          "Combat": {
+            "damage": 22.0,
+            "defense": 4.0,
+            "attackSpeed": 0.5,
+            "critChance": 0.15,
+            "critMultiplier": 2.0
+          },
+          "Target": {
+            "entity": null
+          },
+          "Team": {
+            "id": "enemy",
+            "isPlayer": false
+          },
+          "Enemy": {
+            "tier": 3.0,
+            "isBoss": false,
+            "expReward": 75.0
+          },
+          "Buffs": {
+            "damageBonus": 0.0,
+            "defenseBonus": 0.0,
+            "hasteBonus": 0.0,
+            "shieldAmount": 0.0,
+            "regenAmount": 0.0
+          }
+        }
+      },
+      {
+        "id": 35,
+        "variable": "troll_berserker",
+        "components": {
+          "Character": {
+            "name": "Troll Berserker",
+            "class": "Monster",
+            "level": 7.0,
+            "experience": 0.0,
+            "experienceToLevel": 999.0
+          },
+          "Health": {
+            "current": 180.0,
+            "max": 180.0
+          },
+          "Mana": {
+            "current": 0.0,
+            "max": 0.0
+          },
+          "Stats": {
+            "strength": 18.0,
+            "dexterity": 8.0,
+            "intelligence": 4.0,
+            "constitution": 18.0,
+            "wisdom": 4.0
+          },
+          "Combat": {
+            "damage": 22.0,
+            "defense": 8.0,
+            "attackSpeed": 0.6,
+            "critChance": 0.15,
+            "critMultiplier": 1.5
+          },
+          "Target": {
+            "entity": null
+          },
+          "Team": {
+            "id": "enemy",
+            "isPlayer": false
+          },
+          "Enemy": {
+            "tier": 4.0,
+            "isBoss": false,
+            "expReward": 80.0
+          },
+          "Buffs": {
+            "damageBonus": 0.0,
+            "defenseBonus": 0.0,
+            "hasteBonus": 0.0,
+            "shieldAmount": 0.0,
+            "regenAmount": 0.0
+          }
+        }
+      },
+      {
+        "id": 36,
+        "variable": "demon_knight",
+        "components": {
+          "Character": {
+            "name": "Demon Knight",
+            "class": "Monster",
+            "level": 8.0,
+            "experience": 0.0,
+            "experienceToLevel": 999.0
+          },
+          "Health": {
+            "current": 250.0,
+            "max": 250.0
+          },
+          "Mana": {
+            "current": 50.0,
+            "max": 50.0
+          },
+          "Stats": {
+            "strength": 18.0,
+            "dexterity": 12.0,
+            "intelligence": 10.0,
+            "constitution": 16.0,
+            "wisdom": 8.0
+          },
+          "Combat": {
+            "damage": 30.0,
+            "defense": 10.0,
+            "attackSpeed": 0.7,
+            "critChance": 0.15,
+            "critMultiplier": 2.0
+          },
+          "Target": {
+            "entity": null
+          },
+          "Team": {
+            "id": "enemy",
+            "isPlayer": false
+          },
+          "Enemy": {
+            "tier": 5.0,
+            "isBoss": false,
+            "expReward": 150.0
+          },
+          "Buffs": {
+            "damageBonus": 0.0,
+            "defenseBonus": 0.0,
+            "hasteBonus": 0.0,
+            "shieldAmount": 0.0,
+            "regenAmount": 0.0
+          }
+        }
+      },
+      {
+        "id": 37,
+        "variable": "ancient_dragon",
+        "components": {
+          "Character": {
+            "name": "Ancient Dragon",
+            "class": "Boss",
+            "level": 10.0,
+            "experience": 0.0,
+            "experienceToLevel": 999.0
+          },
+          "Health": {
+            "current": 400.0,
+            "max": 400.0
+          },
+          "Mana": {
+            "current": 150.0,
+            "max": 150.0
+          },
+          "Stats": {
+            "strength": 22.0,
+            "dexterity": 14.0,
+            "intelligence": 16.0,
+            "constitution": 22.0,
+            "wisdom": 14.0
+          },
+          "Combat": {
+            "damage": 40.0,
+            "defense": 12.0,
+            "attackSpeed": 0.8,
+            "critChance": 0.2,
+            "critMultiplier": 2.0
+          },
+          "Target": {
+            "entity": null
+          },
+          "Team": {
+            "id": "enemy",
+            "isPlayer": false
+          },
+          "Enemy": {
+            "tier": 6.0,
+            "isBoss": true,
+            "expReward": 300.0
+          },
+          "Buffs": {
+            "damageBonus": 0.0,
+            "defenseBonus": 0.0,
+            "hasteBonus": 0.0,
+            "shieldAmount": 0.0,
+            "regenAmount": 0.0
+          }
+        }
+      },
+      {
+        "id": 38,
+        "variable": "dragon_lord_vexar",
+        "components": {
+          "Character": {
+            "name": "Dragon Lord Vexar",
+            "class": "Boss",
+            "level": 10.0,
+            "experience": 0.0,
+            "experienceToLevel": 999.0
+          },
+          "Health": {
+            "current": 500.0,
+            "max": 500.0
+          },
+          "Mana": {
+            "current": 200.0,
+            "max": 200.0
+          },
+          "Stats": {
+            "strength": 25.0,
+            "dexterity": 15.0,
+            "intelligence": 20.0,
+            "constitution": 25.0,
+            "wisdom": 15.0
+          },
+          "Combat": {
+            "damage": 40.0,
+            "defense": 15.0,
+            "attackSpeed": 0.8,
+            "critChance": 0.2,
+            "critMultiplier": 2.5
+          },
+          "Target": {
+            "entity": null
+          },
+          "Team": {
+            "id": "enemy",
+            "isPlayer": false
+          },
+          "Enemy": {
+            "tier": 6.0,
+            "isBoss": true,
+            "expReward": 500.0
+          },
+          "Buffs": {
+            "damageBonus": 0.0,
+            "defenseBonus": 0.0,
+            "hasteBonus": 0.0,
+            "shieldAmount": 0.0,
+            "regenAmount": 0.0
+          }
+        }
+      },
+      {
+        "id": 39,
+        "variable": "game_state",
+        "components": {
+          "GameState": {
+            "currentWave": 1.0,
+            "enemiesDefeated": 0.0,
+            "playerDeaths": 0.0,
+            "bossDefeated": false,
+            "gameOver": false,
+            "victory": false,
+            "retargetingActive": false
+          }
+        }
+      },
+      {
+        "id": 40,
+        "variable": "run_stats",
+        "components": {
+          "RunStats": {
+            "simulationTime": 0.0,
+            "retreatCount": 0.0,
+            "retreatPenalty": 0.0,
+            "deathPenalty": 0.0,
+            "totalTime": 0.0,
+            "canFlee": true,
+            "lastFleeTime": null
+          }
+        }
+      },
+      {
+        "id": 41,
+        "variable": "flee_config",
+        "components": {
+          "FleeConfig": {
+            "retreatTimePenalty": 10.0,
+            "deathTimePenaltyMultiplier": 5.0,
+            "fleeCooldown": 5.0
+          }
+        }
+      },
+      {
+        "id": 42,
+        "variable": "spawn_config",
+        "components": {
+          "SpawnConfig": {
+            "bossEveryKills": 100.0,
+            "tierProgressionKills": 50.0,
+            "maxTier": 6.0,
+            "healthScaleRate": 200.0,
+            "damageScaleRate": 300.0,
+            "initialEnemyCount": 5.0
+          }
+        }
+      }
+    ]
+  }
 }

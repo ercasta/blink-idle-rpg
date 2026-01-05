@@ -101,11 +101,11 @@ fn run_compile(
     // Read main source file
     let source = fs::read_to_string(input)?;
     
-    // Collect additional source files for source map only
-    // BCL (choice functions) and BDL (entity definitions) files are NOT concatenated with the BRL (game rules) 
-    // source because they have different syntax and language constructs that the BRL parser cannot understand.
-    // They are only included in the source map for debugging/dev tools support.
+    // Collect additional source files
+    // BDL (entity definitions) files are parsed and compiled into IR.initial_state
+    // BCL (choice functions) files are only included in the source map for now (future: compile to bound functions)
     let mut additional_files: Vec<(String, String, String)> = Vec::new();
+    let mut bdl_files: Vec<(String, String)> = Vec::new();
     
     for path in include_files {
         let content = fs::read_to_string(path)?;
@@ -122,7 +122,12 @@ fn run_compile(
             "unknown".to_string()
         };
         
-        // Track for source map only - do not append to source
+        // Store BDL files separately for entity compilation
+        if language == "bdl" {
+            bdl_files.push((path_str.clone(), content.clone()));
+        }
+        
+        // Track all files for source map
         additional_files.push((path_str, content, language));
     }
     
@@ -146,11 +151,12 @@ fn run_compile(
         Vec::new()
     };
     
-    let json = blink_compiler::compile_to_json_with_sources(
+    let json = blink_compiler::compile_to_json_with_bdl(
         &source,
         &options,
         source_path.as_deref(),
         &source_map_files,
+        &bdl_files,
     )?;
     
     match output {

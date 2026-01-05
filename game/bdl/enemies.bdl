@@ -489,19 +489,3 @@ dragon_lord_vexar = new entity {
         regenAmount: 0
     }
 }
-
-// Global enemy compendium entity (holds references to enemy templates)
-compendium = new entity
-compendium.compendium = EnemyCompendium {
-        entries: [
-            goblin_scout,
-            orc_raider,
-            dark_wolf,
-            skeleton_warrior,
-            dark_mage,
-            troll_berserker,
-            demon_knight,
-            ancient_dragon,
-            dragon_lord_vexar
-        ]
-}
