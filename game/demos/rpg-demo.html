@@ -3128,16 +3128,15 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
         handleSimulationEvent(event);
       });
       
-      // Schedule initial attack events for selected heroes
-      for (let i = 0; i < selectedCharacters.length; i++) {
-        const health = game.getComponent(i, 'Health');
-        if (health && health.current > 0) {
-          game.scheduleEvent('DoAttack', i * 0.1, { source: i });
-        }
-      }
-      
-      // Spawn initial set of enemies
+      // Spawn initial set of enemies (still in UI for now - Proposal #4 would move this to BRL)
       spawnInitialEnemies(5);
+      
+      // NEW: Schedule GameStart event to trigger BRL initialization
+      // This will automatically start hero attacks and retargeting system
+      game.scheduleEvent('GameStart', 0, {});
+      
+      // Emit EnemySpawned to ensure retargeting activates
+      game.scheduleEvent('EnemySpawned', 0.1, { wave: 1 });
       
       renderParties();
       refreshLeaderboard();
@@ -3200,16 +3199,16 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
         game.setDevMode(true);
       }
       
-      // Schedule initial attack events for heroes (0-3)
-      for (let i = 0; i <= 3; i++) {
-        const health = game.getComponent(i, 'Health');
-        if (health && health.current > 0) {
-          game.scheduleEvent('DoAttack', i * 0.1, { source: i });
-        }
-      }
-      
-      // Spawn initial set of enemies (5 enemies to start)
+      // Spawn initial set of enemies (5 enemies to start) 
+      // (still in UI for now - Proposal #4 would move this to BRL)
       spawnInitialEnemies(5);
+      
+      // NEW: Schedule GameStart event to trigger BRL initialization
+      // This will automatically start hero attacks and retargeting system
+      game.scheduleEvent('GameStart', 0, {});
+      
+      // Emit EnemySpawned to ensure retargeting activates
+      game.scheduleEvent('EnemySpawned', 0.1, { wave: 1 });
       
       renderParties();
       addLogEntry('system', 'Battle initialized! Ready for 1000 fights. Press Start to begin.');

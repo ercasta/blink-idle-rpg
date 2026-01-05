@@ -155,6 +155,35 @@ fn calculate_exp_for_level(level: float): float {
     return 100 * level
 }
 
+// ============================================================================
+// GAME INITIALIZATION RULES
+// ============================================================================
+
+// Rule 1: Start hero attacks when game begins
+rule initialize_hero_attacks on GameStart {
+    if entity.Team.isPlayer && entity.Health.current > 0 {
+        // Stagger attacks by 0.1s per hero to avoid perfect synchronization
+        let stagger = 0.1 * entity.id
+        schedule [delay: stagger] DoAttack {
+            source: entity.id
+        }
+    }
+}
+
+// Rule 2: Start retargeting system when game begins
+rule start_retargeting_system on GameStart {
+    if entity.GameState.retargetingActive == false {
+        entity.GameState.retargetingActive = true
+        // Schedule first retargeting check in 2 seconds
+        schedule [delay: 2.0] CheckAllTargets {
+        }
+    }
+}
+
+// ============================================================================
+// COMBAT RULES
+// ============================================================================
+
 // Main attack rule: apply damage and schedule next attack
 rule attack_rule on DoAttack {
     if entity.Target.entity != null && entity.Health.current > 0 {
@@ -418,13 +447,10 @@ rule start_global_retargeting on EnemySpawned {
 // Check if entity needs retargeting
 rule check_entity_target on CheckAllTargets {
     // Rule fires for each entity with Target and Health components
-    if entity.Health.current > 0 && entity.Target.entity != null {
+    if entity.Health.current > 0 {
         let target = entity.Target.entity
-        // Check if target is dead
-        // NOTE: BRL engine should handle the case where target entity no longer exists
-        if target.Health.current <= 0 {
-            // Target is dead, need new target
-            entity.Target.entity = null
+        // If no target or target is dead, find a new one
+        if target == null || target.Health.current <= 0 {
             schedule FindNewTarget {
                 seeker: entity.id
             }
@@ -441,5 +467,27 @@ rule reschedule_retargeting on CheckAllTargets {
         // Schedule next check in 2 seconds
         schedule [delay: 2.0] CheckAllTargets {
         }
+    }
+}
+
+// ============================================================================
+// TARGET ASSIGNMENT RULES
+// ============================================================================
+
+// Find and assign a new target for an entity
+rule find_new_target on FindNewTarget {
+    let seeker = event.seeker
+    
+    // This is a simplified implementation since BRL doesn't yet support
+    // advanced entity queries. The UI will still handle initial target assignment
+    // but this rule ensures targets are reassigned when they die.
+    
+    // For now, just clear the target and schedule a new attack
+    // The UI-side retargeting will handle finding a new target
+    seeker.Target.entity = null
+    
+    // Schedule an attack to continue combat flow
+    schedule [delay: 0.1] DoAttack {
+        source: seeker.id
     }
 }
