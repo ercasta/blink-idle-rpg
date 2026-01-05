@@ -577,15 +577,15 @@ impl IRGenerator {
             None
         };
         
+        // Extract choice points from bound functions before moving entities
+        let choice_points = self.extract_choice_points(&entities);
+        
         // Build initial_state from entities (BDL support)
         let initial_state = if entities.is_empty() {
             None
         } else {
-            Some(IRInitialState { entities: entities.clone() })
+            Some(IRInitialState { entities })
         };
-        
-        // Extract choice points from bound functions
-        let choice_points = self.extract_choice_points(&entities);
         
         Ok(IRModule {
             version: "1.0".to_string(),
@@ -961,7 +961,7 @@ impl IRGenerator {
         choice_points
     }
     
-    /// Convert a snake_case or camelCase function name to a human-readable title
+    /// Convert a snake_case function name to a human-readable title
     fn humanize_name(&self, name: &str) -> String {
         // Convert snake_case to space-separated words
         let words: Vec<&str> = name.split('_').collect();

@@ -163,7 +163,7 @@ element blink_project:
     ##   - choice_functions[]: BCL choice functions (PLANNED)
     ##   - initial_state: BDL entities
     ##   - source_map: Original source (optional, for dev tools)
-    ##   - choice_points[]: Metadata about customizable choices (PLANNED)
+    ##   - choice_points[]: Metadata about customizable choices (IMPLEMENTED)
     ## --------------------------------------------------------------------
     element compiler:
         scope src = files.folder_selector('src/compiler/')
