@@ -206,7 +206,8 @@ rule spawn_initial_enemies on GameStart {
         entity.GameState.bossSpawned = false
 
         // Spawn initial wave enemies (spread by small delays)
-        for i in 0..(count - 1) {
+        let indices = [0, 1, 2, 3]
+        for i in indices {
             schedule [delay: 0.05 * (i + 1)] SpawnEnemy {
                 tier: 1
             }
@@ -227,7 +228,8 @@ rule handle_enemy_spawned on EnemySpawned {
     let count = entity.SpawnConfig.initialEnemyCount
 
     // Spawn enemies for this wave
-    for i in 0..(count - 1) {
+    let indices = [0, 1, 2, 3]
+    for i in indices {
         schedule [delay: 0.05 * (i + 1)] SpawnEnemy {
             tier: tier
         }
@@ -274,7 +276,6 @@ rule spawn_enemy_from_template on SpawnEnemy {
     for t in templates {
         if t.Enemy.tier == event.tier {
             templateId = t
-            break
         }
     }
 
@@ -297,8 +298,17 @@ rule spawn_enemy_from_template on SpawnEnemy {
 
 // Spawn the final boss (Dragon Lord Vexar) once
 rule spawn_lord_vexar on SpawnLordVexar {
-    // Clone the named final boss template if it exists
-    let newBoss = clone dragon_lord_vexar {
+    // Find the Dragon Lord Vexar boss template
+    let templates = entities having EnemyTemplate
+    let bossTemplate = templates[0]
+    for t in templates {
+        if t.Character.name == "Dragon Lord Vexar" {
+            bossTemplate = t
+        }
+    }
+    
+    // Clone the boss template
+    let newBoss = clone bossTemplate {
         EnemyTemplate {
             isTemplate: false
         }
