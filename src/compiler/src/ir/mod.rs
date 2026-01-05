@@ -344,6 +344,20 @@ pub enum IRAction {
         iterable: IRExpression,
         body: Vec<IRAction>,
     },
+    
+    /// Let action - bind a value to a local variable
+    #[serde(rename = "let")]
+    Let {
+        name: String,
+        value: IRExpression,
+    },
+    
+    /// While loop action
+    #[serde(rename = "while")]
+    While {
+        condition: IRExpression,
+        body: Vec<IRAction>,
+    },
 }
 
 /// Component initialization in IR
@@ -682,6 +696,21 @@ impl IRGenerator {
                     entity: self.generate_expression(entity),
                 })
             }
+            TypedStatement::Let { name, value, .. } => {
+                Some(IRAction::Let {
+                    name: name.clone(),
+                    value: self.generate_expression(value),
+                })
+            }
+            TypedStatement::While { condition, body } => {
+                let body_actions = self.generate_block_actions(body);
+                
+                Some(IRAction::While {
+                    condition: self.generate_expression(condition),
+                    body: body_actions,
+                })
+            }
+            // Return, Cancel, and Expr statements are not supported as IR actions yet
             _ => None,
         }
     }

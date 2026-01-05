@@ -16,6 +16,10 @@ import {
   IRScheduleAction,
   IREmitAction,
   IRDespawnAction,
+  IRConditionalAction,
+  IRLoopAction,
+  IRLetAction,
+  IRWhileAction,
 } from '../ir/types';
 
 export interface ExecutionContext {
@@ -25,7 +29,13 @@ export interface ExecutionContext {
   bindings: Map<string, EntityId>;
   params: Map<string, IRFieldValue>;
   functions: Map<string, IRFunction>;
+  locals: Map<string, IRFieldValue>;  // Local variables from let statements
 }
+
+/**
+ * Maximum iterations for while loops to prevent infinite loops
+ */
+const MAX_WHILE_ITERATIONS = 10000;
 
 /**
  * Execute rules against an event
@@ -86,6 +96,7 @@ export class RuleExecutor {
         bindings,
         params: new Map(),
         functions: this.functions,
+        locals: new Map(),  // Initialize empty locals map
       };
 
       // Check condition
@@ -215,8 +226,84 @@ export class RuleExecutor {
       case 'despawn':
         this.executeDespawn(action, context);
         break;
+      case 'conditional':
+        this.executeConditional(action, context);
+        break;
+      case 'loop':
+        this.executeLoop(action, context);
+        break;
+      case 'let':
+        this.executeLet(action, context);
+        break;
+      case 'while':
+        this.executeWhile(action, context);
+        break;
       default:
         console.warn(`Unknown action type: ${(action as IRAction).type}`);
+    }
+  }
+
+  private executeLet(action: IRLetAction, context: ExecutionContext): void {
+    const value = this.evaluateExpression(action.value, context);
+    context.locals.set(action.name, value);
+  }
+
+  private executeConditional(action: IRConditionalAction, context: ExecutionContext): void {
+    const condition = this.evaluateExpression(action.condition, context);
+    if (condition) {
+      for (const thenAction of action.then_actions) {
+        this.executeAction(thenAction, context);
+      }
+    } else if (action.else_actions) {
+      for (const elseAction of action.else_actions) {
+        this.executeAction(elseAction, context);
+      }
+    }
+  }
+
+  private executeLoop(action: IRLoopAction, context: ExecutionContext): void {
+    const iterable = this.evaluateExpression(action.iterable, context);
+    if (!Array.isArray(iterable)) {
+      console.warn(`Loop iterable is not an array: ${typeof iterable}`);
+      return;
+    }
+
+    for (const item of iterable) {
+      // Bind loop variable to local scope - validate item is a valid field value
+      const fieldValue = this.toFieldValue(item);
+      context.locals.set(action.variable, fieldValue);
+      
+      for (const bodyAction of action.body) {
+        this.executeAction(bodyAction, context);
+      }
+    }
+  }
+
+  /**
+   * Convert an unknown value to IRFieldValue, returning null for invalid values
+   */
+  private toFieldValue(value: unknown): IRFieldValue {
+    if (value === null) return null;
+    if (typeof value === 'number') return value;
+    if (typeof value === 'string') return value;
+    if (typeof value === 'boolean') return value;
+    if (Array.isArray(value)) return value;
+    if (typeof value === 'object') return value as Record<string, unknown>;
+    return null;
+  }
+
+  private executeWhile(action: IRWhileAction, context: ExecutionContext): void {
+    let iterations = 0;
+    
+    while (this.evaluateExpression(action.condition, context) && iterations < MAX_WHILE_ITERATIONS) {
+      for (const bodyAction of action.body) {
+        this.executeAction(bodyAction, context);
+      }
+      iterations++;
+    }
+    
+    if (iterations >= MAX_WHILE_ITERATIONS) {
+      console.warn(`While loop exceeded maximum iterations (${MAX_WHILE_ITERATIONS}), stopping`);
     }
   }
 
@@ -308,6 +395,14 @@ export class RuleExecutor {
    */
   private evaluateEntityExpression(expr: IRExpression, context: ExecutionContext): EntityId | null {
     if (expr.type === 'var') {
+      // Check locals first (let bindings), then entity bindings
+      if (context.locals.has(expr.name)) {
+        const value = context.locals.get(expr.name);
+        if (typeof value === 'number') {
+          return value;
+        }
+        return null;
+      }
       const entityId = context.bindings.get(expr.name);
       return entityId !== undefined ? entityId : null;
     }
@@ -336,6 +431,15 @@ export class RuleExecutor {
       return null;
     }
 
+    // For clone expressions, evaluate and return the entity ID
+    if (expr.type === 'clone') {
+      const result = this.evaluateExpression(expr, context);
+      if (typeof result === 'number') {
+        return result;
+      }
+      return null;
+    }
+
     return null;
   }
 
@@ -348,6 +452,10 @@ export class RuleExecutor {
         return expr.value;
 
       case 'var': {
+        // Check locals first (let bindings), then entity bindings
+        if (context.locals.has(expr.name)) {
+          return context.locals.get(expr.name)!;
+        }
         const entityId = context.bindings.get(expr.name);
         return entityId !== undefined ? entityId : null;
       }

@@ -231,6 +231,65 @@ Modules can import definitions from other compiled IR:
 | `despawn` | Remove entity |
 | `add_component` | Add component to entity |
 | `remove_component` | Remove component from entity |
+| `conditional` | Conditional execution (if/else) |
+| `loop` | For-each loop over iterable |
+| `let` | Bind a value to a local variable |
+| `while` | While loop with condition |
+
+#### Let Action
+
+Binds a value to a local variable for use in subsequent actions:
+
+```json
+{
+  "type": "let",
+  "name": "damage",
+  "value": {
+    "type": "binary",
+    "op": "multiply",
+    "left": { "type": "field", "entity": "entity", "component": "Combat", "field": "damage" },
+    "right": { "type": "literal", "value": 1.5 }
+  }
+}
+```
+
+#### Conditional Action
+
+Executes actions based on a condition:
+
+```json
+{
+  "type": "conditional",
+  "condition": { "type": "binary", "op": "gt", "left": ..., "right": ... },
+  "then_actions": [ ... ],
+  "else_actions": [ ... ]
+}
+```
+
+#### Loop Action
+
+Iterates over an array, binding each element to a variable:
+
+```json
+{
+  "type": "loop",
+  "variable": "enemy",
+  "iterable": { "type": "call", "function": "entities_having", "args": [...] },
+  "body": [ ... ]
+}
+```
+
+#### While Action
+
+Repeats actions while a condition is true:
+
+```json
+{
+  "type": "while",
+  "condition": { "type": "binary", "op": "lt", "left": ..., "right": ... },
+  "body": [ ... ]
+}
+```
 
 ---
 
