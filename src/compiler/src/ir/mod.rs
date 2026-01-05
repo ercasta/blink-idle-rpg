@@ -76,6 +76,11 @@ pub struct IRModule {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub initial_state: Option<IRInitialState>,
     
+    /// Choice points metadata (optional, for UI customization)
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(default)]
+    pub choice_points: Vec<IRChoicePoint>,
+    
     /// Source map for debugging (optional, included when --source-map flag is used)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub source_map: Option<SourceMap>,
@@ -438,6 +443,33 @@ pub struct IRBoundFunction {
     pub source: Option<String>,
 }
 
+/// Choice point metadata in IR (describes customizable decision points)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IRChoicePoint {
+    /// Unique identifier for this choice point (function name)
+    pub id: String,
+    /// Human-readable name
+    pub name: String,
+    /// Function signature for display
+    pub signature: String,
+    /// Function parameters
+    pub params: Vec<IRParam>,
+    /// Return type
+    pub return_type: IRType,
+    /// Documentation/description of what this choice does
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub docstring: Option<String>,
+    /// Category for grouping in UI (e.g., "targeting", "strategy", "skills")
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub category: Option<String>,
+    /// Classes/entities this choice applies to
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub applicable_classes: Option<Vec<String>>,
+    /// Default behavior description
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub default_behavior: Option<String>,
+}
+
 /// IR Generator context
 struct IRGenerator {
     component_id_counter: u32,
@@ -549,8 +581,11 @@ impl IRGenerator {
         let initial_state = if entities.is_empty() {
             None
         } else {
-            Some(IRInitialState { entities })
+            Some(IRInitialState { entities: entities.clone() })
         };
+        
+        // Extract choice points from bound functions
+        let choice_points = self.extract_choice_points(&entities);
         
         Ok(IRModule {
             version: "1.0".to_string(),
@@ -566,6 +601,7 @@ impl IRGenerator {
             trackers,
             constants: IndexMap::new(),
             initial_state,
+            choice_points,
             source_map,
         })
     }
@@ -852,6 +888,104 @@ impl IRGenerator {
             return_type: self.convert_type(&func.return_type),
             body,
             source: None, // TODO: Include source text when source map is enabled
+        }
+    }
+    
+    /// Extract choice point metadata from entities with bound functions
+    /// 
+    /// Collects unique choice function signatures across all entities and generates
+    /// metadata that UI tools can use to display customization options.
+    fn extract_choice_points(&self, entities: &[IREntity]) -> Vec<IRChoicePoint> {
+        use std::collections::HashMap;
+        
+        // Use a map to collect unique choice points by function name
+        let mut choice_map: HashMap<String, IRChoicePoint> = HashMap::new();
+        
+        for entity in entities {
+            if let Some(bound_functions) = &entity.bound_functions {
+                for (func_name, bound_func) in bound_functions {
+                    // Only add if we haven't seen this function name before
+                    if !choice_map.contains_key(func_name) {
+                        // Generate signature string
+                        let param_strs: Vec<String> = bound_func.params.iter()
+                            .map(|p| format!("{}: {}", p.name, self.type_to_string(&p.param_type)))
+                            .collect();
+                        let signature = format!(
+                            "choice fn {}({}): {}",
+                            func_name,
+                            param_strs.join(", "),
+                            self.type_to_string(&bound_func.return_type)
+                        );
+                        
+                        // Try to extract entity class from Character component if available
+                        let applicable_classes = entity.components.get("Character")
+                            .and_then(|char_comp| char_comp.get("class"))
+                            .and_then(|class_val| {
+                                if let IRValue::String(class_name) = class_val {
+                                    Some(vec![class_name.clone()])
+                                } else {
+                                    None
+                                }
+                            });
+                        
+                        // Categorize choice points based on function name
+                        let category = if func_name.contains("target") {
+                            Some("targeting".to_string())
+                        } else if func_name.contains("skill") {
+                            Some("skills".to_string())
+                        } else if func_name.contains("flee") || func_name.contains("retreat") {
+                            Some("strategy".to_string())
+                        } else {
+                            None
+                        };
+                        
+                        choice_map.insert(func_name.clone(), IRChoicePoint {
+                            id: func_name.clone(),
+                            name: self.humanize_name(func_name),
+                            signature,
+                            params: bound_func.params.clone(),
+                            return_type: bound_func.return_type.clone(),
+                            docstring: None, // TODO: Extract from comments if available
+                            category,
+                            applicable_classes,
+                            default_behavior: None, // TODO: Could extract from first entity's implementation
+                        });
+                    }
+                }
+            }
+        }
+        
+        // Convert to sorted vector for consistent output
+        let mut choice_points: Vec<_> = choice_map.into_values().collect();
+        choice_points.sort_by(|a, b| a.id.cmp(&b.id));
+        choice_points
+    }
+    
+    /// Convert a snake_case or camelCase function name to a human-readable title
+    fn humanize_name(&self, name: &str) -> String {
+        // Convert snake_case to space-separated words
+        let words: Vec<&str> = name.split('_').collect();
+        let title: Vec<String> = words.iter()
+            .map(|word| {
+                let mut chars = word.chars();
+                match chars.next() {
+                    None => String::new(),
+                    Some(first) => first.to_uppercase().chain(chars).collect(),
+                }
+            })
+            .collect();
+        title.join(" ")
+    }
+    
+    /// Convert an IRType to a string representation for signatures
+    fn type_to_string(&self, typ: &IRType) -> String {
+        match typ {
+            IRType::String => "string".to_string(),
+            IRType::Boolean => "boolean".to_string(),
+            IRType::Number => "number".to_string(),
+            IRType::Entity => "id".to_string(),
+            IRType::List { element } => format!("list<{}>", self.type_to_string(element)),
+            IRType::Map { key, value } => format!("map<{}, {}>", self.type_to_string(key), self.type_to_string(value)),
         }
     }
     
