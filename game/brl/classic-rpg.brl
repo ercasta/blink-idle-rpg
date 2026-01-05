@@ -211,7 +211,8 @@ rule spawn_initial_enemies on GameStart {
         entity.GameState.bossSpawned = false
 
         // Spawn initial wave enemies (spread by small delays)
-        let indices = [0, 1, 2, 3]
+        // Note: Array size should match entity.SpawnConfig.initialEnemyCount
+        let indices = [0, 1, 2, 3, 4]
         for i in indices {
             schedule [delay: 0.05 * (i + 1)] SpawnEnemy {
                 tier: 1
@@ -233,7 +234,8 @@ rule handle_enemy_spawned on EnemySpawned {
     let count = entity.SpawnConfig.initialEnemyCount
 
     // Spawn enemies for this wave
-    let indices = [0, 1, 2, 3]
+    // Note: Array size should match entity.SpawnConfig.initialEnemyCount
+    let indices = [0, 1, 2, 3, 4]
     for i in indices {
         schedule [delay: 0.05 * (i + 1)] SpawnEnemy {
             tier: tier
