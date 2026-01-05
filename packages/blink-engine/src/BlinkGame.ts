@@ -576,6 +576,13 @@ export class BlinkGame {
   }
 
   /**
+   * Clone an existing entity (deep copy of all components)
+   */
+  cloneEntity(sourceId: EntityId, targetId?: EntityId): EntityId {
+    return this.store.cloneEntity(sourceId, targetId);
+  }
+
+  /**
    * Add a component to an entity
    */
   addComponent(entityId: EntityId, componentName: string, data: ComponentData): void {

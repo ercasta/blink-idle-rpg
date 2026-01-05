@@ -51,6 +51,41 @@ export class Store {
   }
 
   /**
+   * Clone an entity (deep copy of all components)
+   * @param sourceId - The entity to clone
+   * @param targetId - Optional ID for the new entity
+   * @returns The ID of the cloned entity
+   */
+  cloneEntity(sourceId: EntityId, targetId?: EntityId): EntityId {
+    const sourceEntity = this.entities.get(sourceId);
+    if (!sourceEntity) {
+      throw new Error(`Source entity ${sourceId} not found`);
+    }
+
+    // Create new entity
+    const newId = this.createEntity(targetId);
+
+    // Deep copy all components
+    for (const [componentName, componentData] of sourceEntity.components) {
+      // Deep copy component data
+      const clonedData: ComponentData = {};
+      for (const [field, value] of Object.entries(componentData)) {
+        // Deep copy arrays and objects, shallow copy primitives
+        if (Array.isArray(value)) {
+          clonedData[field] = [...value];
+        } else if (value !== null && typeof value === 'object') {
+          clonedData[field] = { ...value };
+        } else {
+          clonedData[field] = value;
+        }
+      }
+      this.addComponent(newId, componentName, clonedData);
+    }
+
+    return newId;
+  }
+
+  /**
    * Delete an entity and all its components
    */
   deleteEntity(id: EntityId): boolean {

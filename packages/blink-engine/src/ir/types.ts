@@ -160,7 +160,8 @@ export type IRExpression =
   | IRBinaryExpr
   | IRUnaryExpr
   | IRCallExpr
-  | IRIfExpr;
+  | IRIfExpr
+  | IRCloneExpr;
 
 export interface IRLiteralExpr {
   type: 'literal';
@@ -213,6 +214,17 @@ export interface IRIfExpr {
   condition: IRExpression;
   then: IRExpression;
   else: IRExpression;
+}
+
+export interface IRCloneExpr {
+  type: 'clone';
+  source: IRExpression;
+  overrides?: IRComponentInit[];
+}
+
+export interface IRComponentInit {
+  name: string;
+  fields: Record<string, IRExpression>;
 }
 
 // ===== Functions =====

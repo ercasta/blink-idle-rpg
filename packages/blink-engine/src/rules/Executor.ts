@@ -389,6 +389,31 @@ export class RuleExecutor {
         return this.evaluateExpression(expr.else, context);
       }
 
+      case 'clone': {
+        // Evaluate source entity expression
+        const sourceId = this.evaluateEntityExpression(expr.source, context);
+        if (sourceId === null) {
+          throw new Error('Clone source entity is null');
+        }
+
+        // Clone the entity
+        const newId = context.store.cloneEntity(sourceId);
+
+        // Apply component overrides if any
+        if (expr.overrides && expr.overrides.length > 0) {
+          for (const componentInit of expr.overrides) {
+            const componentData: Record<string, IRFieldValue> = {};
+            for (const [fieldName, fieldExpr] of Object.entries(componentInit.fields)) {
+              componentData[fieldName] = this.evaluateExpression(fieldExpr, context);
+            }
+            // Add or update component with override values
+            context.store.addComponent(newId, componentInit.name, componentData);
+          }
+        }
+
+        return newId;
+      }
+
       default:
         throw new Error(`Unknown expression type: ${(expr as IRExpression).type}`);
     }
