@@ -710,16 +710,22 @@ export class BlinkGame {
   // ===== Private methods =====
 
   private scheduleNextFrame(): void {
+    console.log('[ScheduleNextFrame] Scheduling next frame');
     if (typeof requestAnimationFrame !== 'undefined') {
       this.animationFrameId = requestAnimationFrame(this.gameLoop.bind(this));
+      console.log('[ScheduleNextFrame] Used requestAnimationFrame');
     } else {
       // Fallback for non-browser environments
       setTimeout(() => this.gameLoop(), 16);
+      console.log('[ScheduleNextFrame] Used setTimeout fallback');
     }
   }
 
   private gameLoop(): void {
+    console.log('[GameLoop] ENTERED gameLoop', { isRunning: this.isRunning, isPaused: this.isPaused });
+    
     if (!this.isRunning || this.isPaused) {
+      console.log('[GameLoop] Exiting early - not running or paused');
       return;
     }
     
