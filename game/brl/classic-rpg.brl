@@ -140,6 +140,11 @@ component HeroInfo {
     playstyle: string
 }
 
+// Marks an entity as a hero template (not a spawned hero)
+component HeroTemplate {
+    isTemplate: boolean
+}
+
 // Spawn configuration (used by BDL)
 component SpawnConfig {
     bossEveryKills: integer
@@ -338,6 +343,16 @@ rule level_up_stats on LevelUp {
 rule boss_defeated_victory on EnemyDefeated {
     entity.GameState.enemiesDefeated += 1
     schedule CheckVictory {
+    }
+}
+
+// Spawn a replacement enemy when one is defeated
+rule spawn_replacement_enemy on EnemyDefeated {
+    if entity.GameState.enemiesDefeated < 1000 && entity.GameState.gameOver == false {
+        // Schedule spawning of a new enemy to maintain combat
+        schedule [delay: 0.1] SpawnEnemy {
+            tier: 1
+        }
     }
 }
 

@@ -2917,6 +2917,15 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
     
     // Enemy templates - loaded from enemies.json file (no longer hardcoded)
     
+    // ========================================================================
+    // ENEMY SPAWNING - NOW HANDLED BY BRL RULES
+    // ========================================================================
+    // Enemy spawning is now handled entirely by BRL rules using the 'clone' keyword.
+    // The spawn_enemy_from_template rule clones enemy templates from initial_state.
+    // The spawn_replacement_enemy rule spawns new enemies when one is defeated.
+    // These functions are no longer needed and kept only for reference.
+    
+    /*
     // Spawn a new enemy
     function spawnEnemy() {
       // Select enemy based on how many have been defeated
@@ -3000,6 +3009,7 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
         game.setComponentField(heroId, 'Target', 'entity', randomEnemy);
       }
     }
+    */
     
     // Initialize game
     // ========================================================================
@@ -3032,7 +3042,6 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
         return;
       }
       
-      // Use IR as-is (heroes will be created dynamically below)
       
       game = BlinkEngine.BlinkGame.createSync({
         debug: false,
@@ -3041,7 +3050,20 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
         maxEventsPerFrame: 1000
       });
       
-      game.loadRulesFromObject(ir);
+      // Filter out hero templates from initial_state before loading
+      // Hero templates (entities with HeroTemplate component) are only for UI selection
+      // Actual hero entities (0-3) will be created below based on player selection
+      const filteredIR = {
+        ...ir,
+        initial_state: {
+          entities: ir.initial_state.entities.filter(entity => {
+            // Keep all entities EXCEPT hero templates
+            return !entity.components.HeroTemplate;
+          })
+        }
+      };
+      
+      game.loadRulesFromObject(filteredIR);
       
       // Create hero entities dynamically from selected characters
       selectedCharacters.forEach((char, index) => {
@@ -3176,7 +3198,20 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
         maxEventsPerFrame: 1000 // Process more events per frame for speed
       });
       
-      game.loadRulesFromObject(ir);
+      // Filter out hero templates from initial_state before loading
+      // Hero templates (entities with HeroTemplate component) are only for UI selection
+      // This loadRulesFromObject is for the old demo flow (not hero selection)
+      const filteredIR = {
+        ...ir,
+        initial_state: {
+          entities: ir.initial_state.entities.filter(entity => {
+            // Keep all entities EXCEPT hero templates
+            return !entity.components.HeroTemplate;
+          })
+        }
+      };
+      
+      game.loadRulesFromObject(filteredIR);
       
       // Initialize character data
       updateCharacterData();
@@ -3472,50 +3507,9 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
                 }
               }
             } else {
-              // Enemy died
-              // Query all entities with Team component to find alive enemies
-              const allTeamEntities = game.query('Team', 'Target');
-              const aliveEnemies = [];
-              
-              for (const entityId of allTeamEntities) {
-                const team = game.getComponent(entityId, 'Team');
-                if (team && !team.isPlayer && entityId !== deadEntityId) {
-                  aliveEnemies.push(entityId);
-                }
-              }
-              
-              // Remove the dead enemy first
-              game.removeEntity(deadEntityId);
-              
-              // Spawn a new enemy to replace it (unless game is over)
-              let newEnemyId = null;
-              if (!gameState.gameOver && gameState.enemiesDefeated < 1000) {
-                newEnemyId = spawnEnemy();
-              }
-              
-              // Retarget any hero that was targeting this dead enemy
-              // Also schedule new attack events to prevent heroes from stopping
-              for (let heroId = 0; heroId <= 3; heroId++) {
-                const target = game.getComponent(heroId, 'Target');
-                const health = game.getComponent(heroId, 'Health');
-                const isAlive = health && health.current > 0;
-                
-                if (target && target.entity === deadEntityId) {
-                  // Retarget to the new enemy if spawned, or a random alive enemy
-                  if (newEnemyId !== null) {
-                    game.setComponentField(heroId, 'Target', 'entity', newEnemyId);
-                  } else if (aliveEnemies.length > 0) {
-                    const randomTarget = aliveEnemies[Math.floor(Math.random() * aliveEnemies.length)];
-                    game.setComponentField(heroId, 'Target', 'entity', randomTarget);
-                  }
-                  
-                  // Schedule a new attack to prevent hero from stopping
-                  // This ensures the attack chain continues even if the previous attack failed
-                  if (isAlive) {
-                    game.scheduleEvent('DoAttack', 0.1, { source: heroId });
-                  }
-                }
-              }
+              // Enemy died - Now handled by BRL rules
+              // BRL spawn_replacement_enemy rule will spawn a new enemy
+              // BRL retargeting system (every 2s) will handle dead targets
               
               // Only log every 10th kill for summary
               if (gameState.enemiesDefeated % 10 === 0) {
