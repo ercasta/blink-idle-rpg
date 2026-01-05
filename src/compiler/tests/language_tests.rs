@@ -580,3 +580,51 @@ fn test_len_builtin_function() {
     let result = compile(source, &CompilerOptions::default());
     assert!(result.is_ok(), "len() builtin function should compile: {:?}", result.err());
 }
+
+/// Test entity cloning without overrides
+#[test]
+fn test_clone_entity_simple() {
+    let source = r#"
+        component Health {
+            current: integer
+            max: integer
+        }
+        
+        rule clone_rule on CloneEvent {
+            let cloned = clone entity
+        }
+    "#;
+    
+    let result = compile(source, &CompilerOptions::default());
+    assert!(result.is_ok(), "Simple entity clone should compile: {:?}", result.err());
+}
+
+/// Test entity cloning with component overrides
+#[test]
+fn test_clone_entity_with_overrides() {
+    let source = r#"
+        component Health {
+            current: integer
+            max: integer
+        }
+        
+        component Name {
+            value: string
+        }
+        
+        rule clone_rule on CloneEvent {
+            let cloned = clone entity {
+                Health {
+                    current: 100
+                    max: 100
+                }
+                Name {
+                    value: "Clone"
+                }
+            }
+        }
+    "#;
+    
+    let result = compile(source, &CompilerOptions::default());
+    assert!(result.is_ok(), "Entity clone with overrides should compile: {:?}", result.err());
+}

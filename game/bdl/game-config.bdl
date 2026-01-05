@@ -70,3 +70,14 @@ entity @spawn_config {
         initialEnemyCount: 5
     }
 }
+
+// -----------------------------------------------------------------------------
+// ENEMY TEMPLATE COMPENDIUM
+// References to all enemy templates for spawning
+// -----------------------------------------------------------------------------
+
+entity @enemy_compendium {
+    EnemyCompendium {
+        entries: []
+    }
+}

@@ -51,6 +51,55 @@ export class Store {
   }
 
   /**
+   * Clone an entity (deep copy of all components)
+   * @param sourceId - The entity to clone
+   * @param targetId - Optional ID for the new entity
+   * @returns The ID of the cloned entity
+   */
+  cloneEntity(sourceId: EntityId, targetId?: EntityId): EntityId {
+    const sourceEntity = this.entities.get(sourceId);
+    if (!sourceEntity) {
+      throw new Error(`Source entity ${sourceId} not found`);
+    }
+
+    // Create new entity
+    const newId = this.createEntity(targetId);
+
+    // Deep copy all components
+    for (const [componentName, componentData] of sourceEntity.components) {
+      // Deep copy component data
+      const clonedData: ComponentData = this.deepClone(componentData);
+      this.addComponent(newId, componentName, clonedData);
+    }
+
+    return newId;
+  }
+
+  /**
+   * Deep clone a value (handles nested objects and arrays)
+   */
+  private deepClone<T>(value: T): T {
+    // Handle primitives and null
+    if (value === null || typeof value !== 'object') {
+      return value;
+    }
+
+    // Handle arrays
+    if (Array.isArray(value)) {
+      return value.map(item => this.deepClone(item)) as unknown as T;
+    }
+
+    // Handle objects
+    const cloned: any = {};
+    for (const key in value) {
+      if (value.hasOwnProperty(key)) {
+        cloned[key] = this.deepClone((value as any)[key]);
+      }
+    }
+    return cloned as T;
+  }
+
+  /**
    * Delete an entity and all its components
    */
   deleteEntity(id: EntityId): boolean {

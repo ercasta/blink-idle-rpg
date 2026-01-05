@@ -3128,15 +3128,16 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
         handleSimulationEvent(event);
       });
       
-      // Spawn initial set of enemies (still in UI for now - Proposal #4 would move this to BRL)
-      spawnInitialEnemies(5);
+      // Enemy spawning now handled by BRL rules
+      // Initial enemies will be spawned via spawn_initial_enemies rule triggered by GameStart
+      // spawnInitialEnemies(5); // REMOVED - now in BRL
       
       // NEW: Schedule GameStart event to trigger BRL initialization
-      // This will automatically start hero attacks and retargeting system
+      // This will automatically start hero attacks, retargeting system, AND spawn enemies
       game.scheduleEvent('GameStart', 0, {});
       
-      // Emit EnemySpawned to ensure retargeting activates
-      game.scheduleEvent('EnemySpawned', 0.1, { wave: 1 });
+      // EnemySpawned event now triggered by BRL after spawning completes
+      // game.scheduleEvent('EnemySpawned', 0.1, { wave: 1 }); // REMOVED - now in BRL
       
       renderParties();
       refreshLeaderboard();
@@ -3199,16 +3200,16 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
         game.setDevMode(true);
       }
       
-      // Spawn initial set of enemies (5 enemies to start) 
-      // (still in UI for now - Proposal #4 would move this to BRL)
-      spawnInitialEnemies(5);
+      // Enemy spawning now handled by BRL rules
+      // Initial enemies will be spawned via spawn_initial_enemies rule triggered by GameStart
+      // spawnInitialEnemies(5); // REMOVED - now in BRL
       
       // NEW: Schedule GameStart event to trigger BRL initialization
-      // This will automatically start hero attacks and retargeting system
+      // This will automatically start hero attacks, retargeting system, AND spawn enemies
       game.scheduleEvent('GameStart', 0, {});
       
-      // Emit EnemySpawned to ensure retargeting activates
-      game.scheduleEvent('EnemySpawned', 0.1, { wave: 1 });
+      // EnemySpawned event now triggered by BRL after spawning completes
+      // game.scheduleEvent('EnemySpawned', 0.1, { wave: 1 }); // REMOVED - now in BRL
       
       renderParties();
       addLogEntry('system', 'Battle initialized! Ready for 1000 fights. Press Start to begin.');

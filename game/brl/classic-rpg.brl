@@ -58,6 +58,11 @@ component Enemy {
     expReward: integer
 }
 
+// Marks an entity as an enemy template (not a spawned enemy)
+component EnemyTemplate {
+    isTemplate: boolean
+}
+
 // Holds references to all enemy templates / entries in the game
 // Holds references to all enemy templates / entries in the game
 component EnemyCompendium {
@@ -177,6 +182,63 @@ rule start_retargeting_system on GameStart {
         // Schedule first retargeting check in 2 seconds
         schedule [delay: 2.0] CheckAllTargets {
         }
+    }
+}
+
+// Rule 3: Spawn initial enemies when game begins
+rule spawn_initial_enemies on GameStart {
+    if entity.SpawnConfig {
+        let count = entity.SpawnConfig.initialEnemyCount
+        // Schedule multiple enemy spawn events with small delays
+        schedule [delay: 0.05] SpawnEnemy {
+            tier: 1
+        }
+        schedule [delay: 0.10] SpawnEnemy {
+            tier: 1
+        }
+        schedule [delay: 0.15] SpawnEnemy {
+            tier: 1
+        }
+        schedule [delay: 0.20] SpawnEnemy {
+            tier: 1
+        }
+        schedule [delay: 0.25] SpawnEnemy {
+            tier: 1
+        }
+        // Emit signal that enemies were spawned
+        schedule [delay: 0.30] EnemySpawned {
+            wave: 1
+        }
+    }
+}
+
+// ============================================================================
+// ENEMY SPAWNING RULES
+// ============================================================================
+
+// Spawn a single enemy by cloning a template
+rule spawn_enemy_from_template on SpawnEnemy {
+    // Find enemy templates matching the requested tier
+    let templates = entities having EnemyTemplate
+    
+    // For now, just clone the first template we find (tier 1 goblin)
+    // TODO: Add filtering by tier and random selection once BRL supports it
+    let templateId = templates[0]
+    
+    // Clone the template and mark it as not a template
+    let newEnemy = clone templateId {
+        EnemyTemplate {
+            isTemplate: false
+        }
+    }
+    
+    // Assign a random player target (0-3)
+    // TODO: Use random() function once available
+    newEnemy.Target.entity = 0
+    
+    // Schedule the enemy's first attack
+    schedule [delay: 0.1] DoAttack {
+        source: newEnemy
     }
 }
 

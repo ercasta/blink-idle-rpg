@@ -2,7 +2,7 @@
   "version": "1.0",
   "module": "unnamed",
   "metadata": {
-    "compiled_at": "2026-01-19T12:09:08Z",
+    "compiled_at": "2026-01-19T12:46:56Z",
     "compiler_version": "0.1.0"
   },
   "components": [
@@ -206,6 +206,18 @@
     },
     {
       "id": 8,
+      "name": "EnemyTemplate",
+      "fields": [
+        {
+          "name": "isTemplate",
+          "type": {
+            "type": "boolean"
+          }
+        }
+      ]
+    },
+    {
+      "id": 9,
       "name": "EnemyCompendium",
       "fields": [
         {
@@ -220,7 +232,7 @@
       ]
     },
     {
-      "id": 9,
+      "id": 10,
       "name": "Skills",
       "fields": [
         {
@@ -256,7 +268,7 @@
       ]
     },
     {
-      "id": 10,
+      "id": 11,
       "name": "Buffs",
       "fields": [
         {
@@ -292,7 +304,7 @@
       ]
     },
     {
-      "id": 11,
+      "id": 12,
       "name": "GameState",
       "fields": [
         {
@@ -340,7 +352,7 @@
       ]
     },
     {
-      "id": 12,
+      "id": 13,
       "name": "RunStats",
       "fields": [
         {
@@ -388,7 +400,7 @@
       ]
     },
     {
-      "id": 13,
+      "id": 14,
       "name": "FleeConfig",
       "fields": [
         {
@@ -412,7 +424,7 @@
       ]
     },
     {
-      "id": 14,
+      "id": 15,
       "name": "SkillCooldown",
       "fields": [
         {
@@ -442,7 +454,7 @@
       ]
     },
     {
-      "id": 15,
+      "id": 16,
       "name": "ChoiceContext",
       "fields": [
         {
@@ -466,7 +478,7 @@
       ]
     },
     {
-      "id": 16,
+      "id": 17,
       "name": "HeroInfo",
       "fields": [
         {
@@ -502,7 +514,7 @@
       ]
     },
     {
-      "id": 17,
+      "id": 18,
       "name": "SpawnConfig",
       "fields": [
         {
@@ -651,6 +663,147 @@
     },
     {
       "id": 2,
+      "name": "spawn_initial_enemies",
+      "trigger": {
+        "type": "event",
+        "event": "GameStart"
+      },
+      "actions": [
+        {
+          "type": "conditional",
+          "condition": {
+            "type": "var",
+            "name": "SpawnConfig"
+          },
+          "then_actions": [
+            {
+              "type": "schedule",
+              "event": "SpawnEnemy",
+              "delay": {
+                "type": "literal",
+                "value": 0.05
+              },
+              "fields": {
+                "tier": {
+                  "type": "literal",
+                  "value": 1.0
+                }
+              }
+            },
+            {
+              "type": "schedule",
+              "event": "SpawnEnemy",
+              "delay": {
+                "type": "literal",
+                "value": 0.1
+              },
+              "fields": {
+                "tier": {
+                  "type": "literal",
+                  "value": 1.0
+                }
+              }
+            },
+            {
+              "type": "schedule",
+              "event": "SpawnEnemy",
+              "delay": {
+                "type": "literal",
+                "value": 0.15
+              },
+              "fields": {
+                "tier": {
+                  "type": "literal",
+                  "value": 1.0
+                }
+              }
+            },
+            {
+              "type": "schedule",
+              "event": "SpawnEnemy",
+              "delay": {
+                "type": "literal",
+                "value": 0.2
+              },
+              "fields": {
+                "tier": {
+                  "type": "literal",
+                  "value": 1.0
+                }
+              }
+            },
+            {
+              "type": "schedule",
+              "event": "SpawnEnemy",
+              "delay": {
+                "type": "literal",
+                "value": 0.25
+              },
+              "fields": {
+                "tier": {
+                  "type": "literal",
+                  "value": 1.0
+                }
+              }
+            },
+            {
+              "type": "schedule",
+              "event": "EnemySpawned",
+              "delay": {
+                "type": "literal",
+                "value": 0.3
+              },
+              "fields": {
+                "wave": {
+                  "type": "literal",
+                  "value": 1.0
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "spawn_enemy_from_template",
+      "trigger": {
+        "type": "event",
+        "event": "SpawnEnemy"
+      },
+      "actions": [
+        {
+          "type": "modify",
+          "entity": {
+            "type": "var",
+            "name": "newEnemy"
+          },
+          "component": "Target",
+          "field": "entity",
+          "op": "set",
+          "value": {
+            "type": "literal",
+            "value": 0.0
+          }
+        },
+        {
+          "type": "schedule",
+          "event": "DoAttack",
+          "delay": {
+            "type": "literal",
+            "value": 0.1
+          },
+          "fields": {
+            "source": {
+              "type": "var",
+              "name": "newEnemy"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 4,
       "name": "attack_rule",
       "trigger": {
         "type": "event",
@@ -739,7 +892,7 @@
       ]
     },
     {
-      "id": 3,
+      "id": 5,
       "name": "death_check",
       "trigger": {
         "type": "event",
@@ -778,7 +931,7 @@
       ]
     },
     {
-      "id": 4,
+      "id": 6,
       "name": "enemy_death_handler",
       "trigger": {
         "type": "event",
@@ -847,7 +1000,7 @@
       ]
     },
     {
-      "id": 5,
+      "id": 7,
       "name": "player_death_handler",
       "trigger": {
         "type": "event",
@@ -896,7 +1049,7 @@
       ]
     },
     {
-      "id": 6,
+      "id": 8,
       "name": "grant_experience",
       "trigger": {
         "type": "event",
@@ -941,7 +1094,7 @@
       ]
     },
     {
-      "id": 7,
+      "id": 9,
       "name": "level_up_check",
       "trigger": {
         "type": "event",
@@ -1050,7 +1203,7 @@
       ]
     },
     {
-      "id": 8,
+      "id": 10,
       "name": "level_up_stats",
       "trigger": {
         "type": "event",
@@ -1116,7 +1269,7 @@
       ]
     },
     {
-      "id": 9,
+      "id": 11,
       "name": "boss_defeated_victory",
       "trigger": {
         "type": "event",
@@ -1144,7 +1297,7 @@
       ]
     },
     {
-      "id": 10,
+      "id": 12,
       "name": "use_skill_power_strike",
       "trigger": {
         "type": "event",
@@ -1187,7 +1340,7 @@
       ]
     },
     {
-      "id": 11,
+      "id": 13,
       "name": "use_skill_fireball",
       "trigger": {
         "type": "event",
@@ -1262,7 +1415,7 @@
       ]
     },
     {
-      "id": 12,
+      "id": 14,
       "name": "use_skill_heal",
       "trigger": {
         "type": "event",
@@ -1337,7 +1490,7 @@
       ]
     },
     {
-      "id": 13,
+      "id": 15,
       "name": "use_skill_backstab",
       "trigger": {
         "type": "event",
@@ -1380,7 +1533,7 @@
       ]
     },
     {
-      "id": 14,
+      "id": 16,
       "name": "mana_regen",
       "trigger": {
         "type": "event",
@@ -1437,7 +1590,7 @@
       ]
     },
     {
-      "id": 15,
+      "id": 17,
       "name": "spawn_next_enemy",
       "trigger": {
         "type": "event",
@@ -1547,7 +1700,7 @@
       ]
     },
     {
-      "id": 16,
+      "id": 18,
       "name": "count_player_death",
       "trigger": {
         "type": "event",
@@ -1571,7 +1724,7 @@
       ]
     },
     {
-      "id": 17,
+      "id": 19,
       "name": "apply_death_penalty",
       "trigger": {
         "type": "event",
@@ -1647,7 +1800,7 @@
       ]
     },
     {
-      "id": 18,
+      "id": 20,
       "name": "game_over_check",
       "trigger": {
         "type": "event",
@@ -1681,7 +1834,7 @@
       ]
     },
     {
-      "id": 19,
+      "id": 21,
       "name": "victory_check",
       "trigger": {
         "type": "event",
@@ -1762,7 +1915,7 @@
       ]
     },
     {
-      "id": 20,
+      "id": 22,
       "name": "acquire_skill",
       "trigger": {
         "type": "event",
@@ -1815,7 +1968,7 @@
       ]
     },
     {
-      "id": 21,
+      "id": 23,
       "name": "flee_battle",
       "trigger": {
         "type": "event",
@@ -1956,7 +2109,7 @@
       ]
     },
     {
-      "id": 22,
+      "id": 24,
       "name": "despawn_enemies",
       "trigger": {
         "type": "event",
@@ -2009,7 +2162,7 @@
       ]
     },
     {
-      "id": 23,
+      "id": 25,
       "name": "update_flee_cooldown",
       "trigger": {
         "type": "event",
@@ -2052,7 +2205,7 @@
       ]
     },
     {
-      "id": 24,
+      "id": 26,
       "name": "complete_run",
       "trigger": {
         "type": "event",
@@ -2110,7 +2263,7 @@
       ]
     },
     {
-      "id": 25,
+      "id": 27,
       "name": "start_global_retargeting",
       "trigger": {
         "type": "event",
@@ -2179,7 +2332,7 @@
       ]
     },
     {
-      "id": 26,
+      "id": 28,
       "name": "check_entity_target",
       "trigger": {
         "type": "event",
@@ -2253,7 +2406,7 @@
       ]
     },
     {
-      "id": 27,
+      "id": 29,
       "name": "reschedule_retargeting",
       "trigger": {
         "type": "event",
@@ -2300,7 +2453,7 @@
       ]
     },
     {
-      "id": 28,
+      "id": 30,
       "name": "find_new_target",
       "trigger": {
         "type": "event",
@@ -4677,6 +4830,9 @@
             "isBoss": false,
             "expReward": 25.0
           },
+          "EnemyTemplate": {
+            "isTemplate": true
+          },
           "Buffs": {
             "damageBonus": 0.0,
             "defenseBonus": 0.0,
@@ -4730,6 +4886,9 @@
             "tier": 2.0,
             "isBoss": false,
             "expReward": 35.0
+          },
+          "EnemyTemplate": {
+            "isTemplate": true
           },
           "Buffs": {
             "damageBonus": 0.0,
@@ -4785,6 +4944,9 @@
             "isBoss": false,
             "expReward": 40.0
           },
+          "EnemyTemplate": {
+            "isTemplate": true
+          },
           "Buffs": {
             "damageBonus": 0.0,
             "defenseBonus": 0.0,
@@ -4838,6 +5000,9 @@
             "tier": 3.0,
             "isBoss": false,
             "expReward": 50.0
+          },
+          "EnemyTemplate": {
+            "isTemplate": true
           },
           "Buffs": {
             "damageBonus": 0.0,
@@ -4893,6 +5058,9 @@
             "isBoss": false,
             "expReward": 75.0
           },
+          "EnemyTemplate": {
+            "isTemplate": true
+          },
           "Buffs": {
             "damageBonus": 0.0,
             "defenseBonus": 0.0,
@@ -4946,6 +5114,9 @@
             "tier": 4.0,
             "isBoss": false,
             "expReward": 80.0
+          },
+          "EnemyTemplate": {
+            "isTemplate": true
           },
           "Buffs": {
             "damageBonus": 0.0,
@@ -5001,6 +5172,9 @@
             "isBoss": false,
             "expReward": 150.0
           },
+          "EnemyTemplate": {
+            "isTemplate": true
+          },
           "Buffs": {
             "damageBonus": 0.0,
             "defenseBonus": 0.0,
@@ -5055,6 +5229,9 @@
             "isBoss": true,
             "expReward": 300.0
           },
+          "EnemyTemplate": {
+            "isTemplate": true
+          },
           "Buffs": {
             "damageBonus": 0.0,
             "defenseBonus": 0.0,
@@ -5108,6 +5285,9 @@
             "tier": 6.0,
             "isBoss": true,
             "expReward": 500.0
+          },
+          "EnemyTemplate": {
+            "isTemplate": true
           },
           "Buffs": {
             "damageBonus": 0.0,
@@ -5170,6 +5350,15 @@
             "healthScaleRate": 200.0,
             "damageScaleRate": 300.0,
             "initialEnemyCount": 5.0
+          }
+        }
+      },
+      {
+        "id": 43,
+        "variable": "enemy_compendium",
+        "components": {
+          "EnemyCompendium": {
+            "entries": null
           }
         }
       }
