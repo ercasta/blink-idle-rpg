@@ -68,21 +68,35 @@ export class Store {
     // Deep copy all components
     for (const [componentName, componentData] of sourceEntity.components) {
       // Deep copy component data
-      const clonedData: ComponentData = {};
-      for (const [field, value] of Object.entries(componentData)) {
-        // Deep copy arrays and objects, shallow copy primitives
-        if (Array.isArray(value)) {
-          clonedData[field] = [...value];
-        } else if (value !== null && typeof value === 'object') {
-          clonedData[field] = { ...value };
-        } else {
-          clonedData[field] = value;
-        }
-      }
+      const clonedData: ComponentData = this.deepClone(componentData);
       this.addComponent(newId, componentName, clonedData);
     }
 
     return newId;
+  }
+
+  /**
+   * Deep clone a value (handles nested objects and arrays)
+   */
+  private deepClone<T>(value: T): T {
+    // Handle primitives and null
+    if (value === null || typeof value !== 'object') {
+      return value;
+    }
+
+    // Handle arrays
+    if (Array.isArray(value)) {
+      return value.map(item => this.deepClone(item)) as unknown as T;
+    }
+
+    // Handle objects
+    const cloned: any = {};
+    for (const key in value) {
+      if (value.hasOwnProperty(key)) {
+        cloned[key] = this.deepClone((value as any)[key]);
+      }
+    }
+    return cloned as T;
   }
 
   /**
