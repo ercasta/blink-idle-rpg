@@ -268,6 +268,37 @@ fn test_let_statement() {
     assert!(result.is_ok(), "Let statement should compile");
 }
 
+/// Test let statement generates IR action
+#[test]
+fn test_let_statement_ir_generation() {
+    let source = r#"
+        component Health {
+            current: integer
+            max: integer
+        }
+        
+        rule calc_rule on CalcEvent {
+            let damage = 10
+            entity.Health.current -= damage
+        }
+    "#;
+    
+    let result = compile(source, &CompilerOptions::default());
+    assert!(result.is_ok(), "Let statement should compile");
+    
+    let ir = result.unwrap();
+    assert_eq!(ir.rules.len(), 1);
+    
+    // Verify that let statement generates an IR action
+    let rule = &ir.rules[0];
+    assert_eq!(rule.actions.len(), 2, "Should have 2 actions: let and modify");
+    
+    // First action should be a let action
+    let ir_json = serde_json::to_string(&rule.actions[0]).unwrap();
+    assert!(ir_json.contains(r#""type":"let""#), "First action should be a let action");
+    assert!(ir_json.contains(r#""name":"damage""#), "Let action should have variable name");
+}
+
 /// Test schedule statement
 #[test]
 fn test_schedule_statement() {

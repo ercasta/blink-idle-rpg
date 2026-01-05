@@ -2,7 +2,7 @@
   "version": "1.0",
   "module": "unnamed",
   "metadata": {
-    "compiled_at": "2026-01-19T12:46:56Z",
+    "compiled_at": "2026-01-19T15:22:55Z",
     "compiler_version": "0.1.0"
   },
   "components": [
@@ -593,6 +593,22 @@
           },
           "then_actions": [
             {
+              "type": "let",
+              "name": "stagger",
+              "value": {
+                "type": "binary",
+                "op": "multiply",
+                "left": {
+                  "type": "literal",
+                  "value": 0.1
+                },
+                "right": {
+                  "type": "var",
+                  "name": "id"
+                }
+              }
+            },
+            {
               "type": "schedule",
               "event": "DoAttack",
               "delay": {
@@ -676,6 +692,16 @@
             "name": "SpawnConfig"
           },
           "then_actions": [
+            {
+              "type": "let",
+              "name": "count",
+              "value": {
+                "type": "field",
+                "entity": "entity",
+                "component": "SpawnConfig",
+                "field": "initialEnemyCount"
+              }
+            },
             {
               "type": "schedule",
               "event": "SpawnEnemy",
@@ -773,6 +799,60 @@
       },
       "actions": [
         {
+          "type": "let",
+          "name": "templates",
+          "value": {
+            "type": "call",
+            "function": "entities_having",
+            "args": [
+              {
+                "type": "literal",
+                "value": "EnemyTemplate"
+              }
+            ]
+          }
+        },
+        {
+          "type": "let",
+          "name": "templateId",
+          "value": {
+            "type": "call",
+            "function": "get",
+            "args": [
+              {
+                "type": "var",
+                "name": "templates"
+              },
+              {
+                "type": "literal",
+                "value": 0.0
+              }
+            ]
+          }
+        },
+        {
+          "type": "let",
+          "name": "newEnemy",
+          "value": {
+            "type": "clone",
+            "source": {
+              "type": "var",
+              "name": "templateId"
+            },
+            "overrides": [
+              {
+                "name": "EnemyTemplate",
+                "fields": {
+                  "isTemplate": {
+                    "type": "literal",
+                    "value": false
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
           "type": "modify",
           "entity": {
             "type": "var",
@@ -846,6 +926,36 @@
           },
           "then_actions": [
             {
+              "type": "let",
+              "name": "target",
+              "value": {
+                "type": "field",
+                "entity": "entity",
+                "component": "Target",
+                "field": "entity"
+              }
+            },
+            {
+              "type": "let",
+              "name": "damage",
+              "value": {
+                "type": "binary",
+                "op": "add",
+                "left": {
+                  "type": "field",
+                  "entity": "entity",
+                  "component": "Combat",
+                  "field": "damage"
+                },
+                "right": {
+                  "type": "field",
+                  "entity": "entity",
+                  "component": "Buffs",
+                  "field": "damageBonus"
+                }
+              }
+            },
+            {
               "type": "modify",
               "entity": {
                 "type": "var",
@@ -870,6 +980,34 @@
                 "target": {
                   "type": "var",
                   "name": "id"
+                }
+              }
+            },
+            {
+              "type": "let",
+              "name": "delay",
+              "value": {
+                "type": "binary",
+                "op": "divide",
+                "left": {
+                  "type": "literal",
+                  "value": 1.0
+                },
+                "right": {
+                  "type": "binary",
+                  "op": "add",
+                  "left": {
+                    "type": "field",
+                    "entity": "entity",
+                    "component": "Combat",
+                    "field": "attackSpeed"
+                  },
+                  "right": {
+                    "type": "field",
+                    "entity": "entity",
+                    "component": "Buffs",
+                    "field": "hasteBonus"
+                  }
                 }
               }
             },
@@ -1976,6 +2114,26 @@
       },
       "actions": [
         {
+          "type": "let",
+          "name": "timeSinceFlee",
+          "value": {
+            "type": "binary",
+            "op": "subtract",
+            "left": {
+              "type": "field",
+              "entity": "entity",
+              "component": "RunStats",
+              "field": "simulationTime"
+            },
+            "right": {
+              "type": "field",
+              "entity": "entity",
+              "component": "RunStats",
+              "field": "lastFleeTime"
+            }
+          }
+        },
+        {
           "type": "conditional",
           "condition": {
             "type": "binary",
@@ -2170,6 +2328,26 @@
       },
       "actions": [
         {
+          "type": "let",
+          "name": "timeSinceFlee",
+          "value": {
+            "type": "binary",
+            "op": "subtract",
+            "left": {
+              "type": "field",
+              "entity": "entity",
+              "component": "RunStats",
+              "field": "simulationTime"
+            },
+            "right": {
+              "type": "field",
+              "entity": "entity",
+              "component": "RunStats",
+              "field": "lastFleeTime"
+            }
+          }
+        },
+        {
           "type": "conditional",
           "condition": {
             "type": "binary",
@@ -2357,6 +2535,16 @@
           },
           "then_actions": [
             {
+              "type": "let",
+              "name": "target",
+              "value": {
+                "type": "field",
+                "entity": "entity",
+                "component": "Target",
+                "field": "entity"
+              }
+            },
+            {
               "type": "conditional",
               "condition": {
                 "type": "binary",
@@ -2460,6 +2648,14 @@
         "event": "FindNewTarget"
       },
       "actions": [
+        {
+          "type": "let",
+          "name": "seeker",
+          "value": {
+            "type": "var",
+            "name": "seeker"
+          }
+        },
         {
           "type": "modify",
           "entity": {

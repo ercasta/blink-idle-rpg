@@ -109,7 +109,16 @@ export interface IRFilter {
 
 // ===== Actions =====
 
-export type IRAction = IRModifyAction | IRScheduleAction | IREmitAction | IRSpawnAction | IRDespawnAction;
+export type IRAction = 
+  | IRModifyAction 
+  | IRScheduleAction 
+  | IREmitAction 
+  | IRSpawnAction 
+  | IRDespawnAction
+  | IRConditionalAction
+  | IRLoopAction
+  | IRLetAction
+  | IRWhileAction;
 
 export interface IRModifyAction {
   type: 'modify';
@@ -147,6 +156,36 @@ export interface IRSpawnAction {
 export interface IRDespawnAction {
   type: 'despawn';
   entity: IRExpression;
+  source_location?: SourceLocation;
+}
+
+export interface IRConditionalAction {
+  type: 'conditional';
+  condition: IRExpression;
+  then_actions: IRAction[];
+  else_actions?: IRAction[];
+  source_location?: SourceLocation;
+}
+
+export interface IRLoopAction {
+  type: 'loop';
+  variable: string;
+  iterable: IRExpression;
+  body: IRAction[];
+  source_location?: SourceLocation;
+}
+
+export interface IRLetAction {
+  type: 'let';
+  name: string;
+  value: IRExpression;
+  source_location?: SourceLocation;
+}
+
+export interface IRWhileAction {
+  type: 'while';
+  condition: IRExpression;
+  body: IRAction[];
   source_location?: SourceLocation;
 }
 
