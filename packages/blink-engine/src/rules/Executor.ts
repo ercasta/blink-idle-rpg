@@ -33,6 +33,11 @@ export interface ExecutionContext {
 }
 
 /**
+ * Maximum iterations for while loops to prevent infinite loops
+ */
+const MAX_WHILE_ITERATIONS = 10000;
+
+/**
  * Execute rules against an event
  */
 export class RuleExecutor {
@@ -264,8 +269,9 @@ export class RuleExecutor {
     }
 
     for (const item of iterable) {
-      // Bind loop variable to local scope
-      context.locals.set(action.variable, item as IRFieldValue);
+      // Bind loop variable to local scope - validate item is a valid field value
+      const fieldValue = this.toFieldValue(item);
+      context.locals.set(action.variable, fieldValue);
       
       for (const bodyAction of action.body) {
         this.executeAction(bodyAction, context);
@@ -273,20 +279,31 @@ export class RuleExecutor {
     }
   }
 
+  /**
+   * Convert an unknown value to IRFieldValue, returning null for invalid values
+   */
+  private toFieldValue(value: unknown): IRFieldValue {
+    if (value === null) return null;
+    if (typeof value === 'number') return value;
+    if (typeof value === 'string') return value;
+    if (typeof value === 'boolean') return value;
+    if (Array.isArray(value)) return value;
+    if (typeof value === 'object') return value as Record<string, unknown>;
+    return null;
+  }
+
   private executeWhile(action: IRWhileAction, context: ExecutionContext): void {
-    // Safety limit to prevent infinite loops
-    const maxIterations = 10000;
     let iterations = 0;
     
-    while (this.evaluateExpression(action.condition, context) && iterations < maxIterations) {
+    while (this.evaluateExpression(action.condition, context) && iterations < MAX_WHILE_ITERATIONS) {
       for (const bodyAction of action.body) {
         this.executeAction(bodyAction, context);
       }
       iterations++;
     }
     
-    if (iterations >= maxIterations) {
-      console.warn('While loop exceeded maximum iterations, stopping');
+    if (iterations >= MAX_WHILE_ITERATIONS) {
+      console.warn(`While loop exceeded maximum iterations (${MAX_WHILE_ITERATIONS}), stopping`);
     }
   }
 
