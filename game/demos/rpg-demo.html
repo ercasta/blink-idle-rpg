@@ -2831,7 +2831,7 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
     // Load IR from file (fail-fast; no embedded fallback)
     async function loadDefaultIR() {
       // Try GitHub Pages path first, then local dev path
-      const paths = ['data/classic-rpg.ir.json', '../ir/classic-rpg.ir.json'];
+      const paths = ['classic-rpg.ir.json', 'data/classic-rpg.ir.json', '../ir/classic-rpg.ir.json'];
       
       for (const path of paths) {
         try {
@@ -3263,6 +3263,12 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
         const health = game.getComponent(entityId, 'Health');
         
         if (!char || !health || !team) continue;
+        
+        // Skip enemy templates (they're for cloning only, not for display)
+        const enemyTemplate = game.getComponent(entityId, 'EnemyTemplate');
+        if (enemyTemplate && enemyTemplate.isTemplate) {
+          continue;
+        }
         
         if (team.isPlayer) {
           // It's a player character
