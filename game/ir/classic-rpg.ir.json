@@ -2,7 +2,7 @@
   "version": "1.0",
   "module": "unnamed",
   "metadata": {
-    "compiled_at": "2026-01-19T16:11:41Z",
+    "compiled_at": "2026-01-19T16:19:09Z",
     "compiler_version": "0.1.0"
   },
   "components": [
@@ -515,6 +515,18 @@
     },
     {
       "id": 18,
+      "name": "HeroTemplate",
+      "fields": [
+        {
+          "name": "isTemplate",
+          "type": {
+            "type": "boolean"
+          }
+        }
+      ]
+    },
+    {
+      "id": 19,
       "name": "SpawnConfig",
       "fields": [
         {
@@ -2869,6 +2881,9 @@
             "difficulty": "Easy",
             "role": "Tank / Melee DPS",
             "playstyle": "Get in close and deal consistent damage while absorbing enemy attacks"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         },
         "bound_functions": {
@@ -3015,6 +3030,9 @@
             "difficulty": "Easy",
             "role": "Tank / Defensive",
             "playstyle": "Extreme durability and defense, absorbs massive amounts of damage"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         },
         "bound_functions": {
@@ -3161,6 +3179,9 @@
             "difficulty": "Medium",
             "role": "Melee DPS / Bruiser",
             "playstyle": "Fast-paced melee combat with balanced offense and defense"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         }
       },
@@ -3221,6 +3242,9 @@
             "difficulty": "Easy",
             "role": "Heavy DPS / Tank",
             "playstyle": "Devastating slow attacks that hit extremely hard"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         }
       },
@@ -3281,6 +3305,9 @@
             "difficulty": "Hard",
             "role": "Melee DPS / Glass Cannon",
             "playstyle": "Extremely aggressive high-speed melee with low survivability"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         }
       },
@@ -3341,6 +3368,9 @@
             "difficulty": "Medium",
             "role": "Ranged DPS / AoE",
             "playstyle": "Maximize spell damage while managing mana and staying out of danger"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         },
         "bound_functions": {
@@ -3487,6 +3517,9 @@
             "difficulty": "Hard",
             "role": "Ranged DPS / Burst",
             "playstyle": "Maximum spell power with lowest survivability - nuclear glass cannon"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         }
       },
@@ -3547,6 +3580,9 @@
             "difficulty": "Medium",
             "role": "Ranged DPS / Control",
             "playstyle": "Balanced caster with defensive capabilities and crowd control"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         }
       },
@@ -3607,6 +3643,9 @@
             "difficulty": "Medium",
             "role": "Ranged DPS / Sustained",
             "playstyle": "Rapid-fire spell casting for consistent damage output"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         }
       },
@@ -3667,6 +3706,9 @@
             "difficulty": "Easy",
             "role": "Ranged DPS / Sustain",
             "playstyle": "Efficient spell usage with excellent mana regeneration"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         }
       },
@@ -3727,6 +3769,9 @@
             "difficulty": "Medium",
             "role": "Melee DPS / Assassin",
             "playstyle": "Focus on eliminating priority targets with high burst damage and crits"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         },
         "bound_functions": {
@@ -3873,6 +3918,9 @@
             "difficulty": "Hard",
             "role": "Melee DPS / DoT",
             "playstyle": "Apply poison effects and let damage over time do the work"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         }
       },
@@ -3933,6 +3981,9 @@
             "difficulty": "Easy",
             "role": "Melee DPS / Balanced",
             "playstyle": "Well-rounded assassin with good damage and survivability"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         }
       },
@@ -3993,6 +4044,9 @@
             "difficulty": "Hard",
             "role": "Melee DPS / Hyper Carry",
             "playstyle": "Lightning-fast attacks with maximum crit - dies if touched"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         }
       },
@@ -4053,6 +4107,9 @@
             "difficulty": "Medium",
             "role": "Melee DPS / Precision",
             "playstyle": "Slower but harder-hitting strikes with good positioning"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         }
       },
@@ -4113,6 +4170,9 @@
             "difficulty": "Easy",
             "role": "Healer / Support",
             "playstyle": "Keep allies alive with healing while contributing moderate damage"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         },
         "bound_functions": {
@@ -4259,6 +4319,9 @@
             "difficulty": "Easy",
             "role": "Healer / Pure Support",
             "playstyle": "Maximum healing power - keep allies alive at all costs"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         }
       },
@@ -4319,6 +4382,9 @@
             "difficulty": "Medium",
             "role": "Hybrid DPS / Support",
             "playstyle": "Balance between dealing holy damage and supporting allies"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         }
       },
@@ -4379,6 +4445,9 @@
             "difficulty": "Medium",
             "role": "Tank / Support",
             "playstyle": "Prevent damage with shields while providing emergency healing"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         }
       },
@@ -4439,6 +4508,9 @@
             "difficulty": "Hard",
             "role": "Support / Buffer",
             "playstyle": "Enhance allies with buffs while maintaining healing support"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         }
       },
@@ -4499,6 +4571,9 @@
             "difficulty": "Medium",
             "role": "Ranged DPS / Single Target",
             "playstyle": "Maintain distance and deliver precise, high-damage attacks from range"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         }
       },
@@ -4559,6 +4634,9 @@
             "difficulty": "Easy",
             "role": "Ranged DPS / Sustained",
             "playstyle": "Consistent ranged damage with good survivability"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         }
       },
@@ -4619,6 +4697,9 @@
             "difficulty": "Medium",
             "role": "Ranged DPS / Rapid Fire",
             "playstyle": "Rapid arrow volleys - death by a thousand cuts"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         }
       },
@@ -4679,6 +4760,9 @@
             "difficulty": "Medium",
             "role": "Ranged DPS / Burst",
             "playstyle": "Devastating single shots - each arrow is a kill shot"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         }
       },
@@ -4739,6 +4823,9 @@
             "difficulty": "Easy",
             "role": "Ranged DPS / Utility",
             "playstyle": "Well-rounded ranger with pet support and good versatility"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         }
       },
@@ -4799,6 +4886,9 @@
             "difficulty": "Easy",
             "role": "Hybrid Tank / Support",
             "playstyle": "Balance between dealing damage, tanking, and supporting allies"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         }
       },
@@ -4859,6 +4949,9 @@
             "difficulty": "Easy",
             "role": "Melee DPS / Tank",
             "playstyle": "Holy warrior dealing bonus damage to undead and demons"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         }
       },
@@ -4919,6 +5012,9 @@
             "difficulty": "Easy",
             "role": "Tank / Protector",
             "playstyle": "Maximum protection - intercept attacks meant for allies"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         }
       },
@@ -4979,6 +5075,9 @@
             "difficulty": "Medium",
             "role": "Melee DPS / Bruiser",
             "playstyle": "Aggressive holy warrior - offense is the best defense"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         }
       },
@@ -5039,6 +5138,9 @@
             "difficulty": "Easy",
             "role": "Hybrid / Versatile",
             "playstyle": "Jack of all trades - adapts to any party composition"
+          },
+          "HeroTemplate": {
+            "isTemplate": true
           }
         }
       },

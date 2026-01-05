@@ -140,6 +140,11 @@ component HeroInfo {
     playstyle: string
 }
 
+// Marks an entity as a hero template (not a spawned hero)
+component HeroTemplate {
+    isTemplate: boolean
+}
+
 // Spawn configuration (used by BDL)
 component SpawnConfig {
     bossEveryKills: integer

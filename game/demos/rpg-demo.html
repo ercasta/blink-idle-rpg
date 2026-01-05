@@ -3042,7 +3042,6 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
         return;
       }
       
-      // Use IR as-is (heroes will be created dynamically below)
       
       game = BlinkEngine.BlinkGame.createSync({
         debug: false,
@@ -3051,7 +3050,20 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
         maxEventsPerFrame: 1000
       });
       
-      game.loadRulesFromObject(ir);
+      // Filter out hero templates from initial_state before loading
+      // Hero templates (entities with HeroTemplate component) are only for UI selection
+      // Actual hero entities (0-3) will be created below based on player selection
+      const filteredIR = {
+        ...ir,
+        initial_state: {
+          entities: ir.initial_state.entities.filter(entity => {
+            // Keep all entities EXCEPT hero templates
+            return !entity.components.HeroTemplate;
+          })
+        }
+      };
+      
+      game.loadRulesFromObject(filteredIR);
       
       // Create hero entities dynamically from selected characters
       selectedCharacters.forEach((char, index) => {
@@ -3186,7 +3198,20 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
         maxEventsPerFrame: 1000 // Process more events per frame for speed
       });
       
-      game.loadRulesFromObject(ir);
+      // Filter out hero templates from initial_state before loading
+      // Hero templates (entities with HeroTemplate component) are only for UI selection
+      // This loadRulesFromObject is for the old demo flow (not hero selection)
+      const filteredIR = {
+        ...ir,
+        initial_state: {
+          entities: ir.initial_state.entities.filter(entity => {
+            // Keep all entities EXCEPT hero templates
+            return !entity.components.HeroTemplate;
+          })
+        }
+      };
+      
+      game.loadRulesFromObject(filteredIR);
       
       // Initialize character data
       updateCharacterData();
