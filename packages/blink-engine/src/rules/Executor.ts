@@ -544,6 +544,18 @@ export class RuleExecutor {
         return newId;
       }
 
+      case 'has_component': {
+        // Evaluate entity expression to get the entity ID
+        const entityId = this.evaluateEntityExpression(expr.entity, context);
+        if (entityId === null || entityId === undefined) {
+          return false;
+        }
+        
+        // Check if the entity has the specified component
+        const component = context.store.getComponent(entityId, expr.component);
+        return component !== undefined;
+      }
+
       default:
         throw new Error(`Unknown expression type: ${(expr as IRExpression).type}`);
     }

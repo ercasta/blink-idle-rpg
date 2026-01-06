@@ -200,7 +200,8 @@ export type IRExpression =
   | IRUnaryExpr
   | IRCallExpr
   | IRIfExpr
-  | IRCloneExpr;
+  | IRCloneExpr
+  | IRHasComponentExpr;
 
 export interface IRLiteralExpr {
   type: 'literal';
@@ -259,6 +260,12 @@ export interface IRCloneExpr {
   type: 'clone';
   source: IRExpression;
   overrides?: IRComponentInit[];
+}
+
+export interface IRHasComponentExpr {
+  type: 'has_component';
+  entity: IRExpression;
+  component: string;
 }
 
 export interface IRComponentInit {
