@@ -306,9 +306,9 @@ rule spawn_enemy_from_template on SpawnEnemy {
         }
     }
     
-    // Assign a random player target (0-3)
-    // TODO: Use random() function once available
-    newEnemy.Target.entity = 0
+    // Target will be assigned by the retargeting system
+    // Set to null initially so retargeting finds a valid player
+    newEnemy.Target.entity = null
     
     // Schedule the enemy's first attack
     schedule [delay: 0.1] DoAttack {
@@ -329,8 +329,8 @@ rule spawn_lord_vexar on SpawnLordVexar {
         }
     }
 
-    // Mark as the active target for players and start its attack
-    newBoss.Target.entity = 0
+    // Target will be assigned by the retargeting system
+    newBoss.Target.entity = null
     schedule [delay: 0.5] DoAttack {
         source: newBoss
     }

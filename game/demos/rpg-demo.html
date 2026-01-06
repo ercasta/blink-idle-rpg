@@ -3492,8 +3492,9 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
       game.loadRulesFromObject(filteredIR);
       
       // Create hero entities dynamically from selected characters
+      // Use entity IDs starting from 100 to avoid conflicts with enemy templates (0-8) and config entities (9-13)
       selectedCharacters.forEach((char, index) => {
-        const entityId = index;
+        const entityId = 100 + index;
         game.createEntity(entityId);
         
         game.addComponent(entityId, 'Character', {
@@ -3525,7 +3526,7 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
         });
         
         game.addComponent(entityId, 'Target', {
-          entity: 4 + index // Will be updated when enemies spawn
+          entity: null // Will be set by retargeting system when enemies spawn
         });
         
         game.addComponent(entityId, 'Team', {
