@@ -1,7 +1,12 @@
 # Blink Idle RPG - Local Development Pipeline
 # This Makefile allows you to run build and test pipelines locally
 
-.PHONY: help all clean build-compiler build-compiler-ts compile-brl build-packages test demo-package install-packages dev-setup dev
+.PHONY: help all clean build-compiler-ts install-packages build-packages test demo-package dev-setup dev
+
+# Bundle output locations
+DEMOS_DIR=game/demos
+ENGINE_BUNDLE=$(DEMOS_DIR)/blink-engine.bundle.js
+COMPILER_BUNDLE=$(DEMOS_DIR)/blink-compiler.bundle.js
 
 # When set to true, include source_map in IR output for dev tools
 SOURCE_MAP_FLAG=--source-map
@@ -11,16 +16,14 @@ help:
 	@echo "Blink Idle RPG - Local Pipeline Commands"
 	@echo ""
 	@echo "Available targets:"
-	@echo "  make all              - Build everything (compiler, packages, demos)"
-	@echo "  make dev-setup        - Quick setup for development (TypeScript only, no Rust)"
+	@echo "  make all              - Build everything (packages, demos)"
+	@echo "  make dev-setup        - Quick setup for development (TypeScript only)"
 	@echo "  make dev              - Build for development (TypeScript compiler + engine)"
-	@echo "  make build-compiler   - Build the BRL compiler (Rust)"
 	@echo "  make build-compiler-ts - Build the TypeScript BRL compiler"
-	@echo "  make compile-brl      - Compile all BRL files to IR (requires Rust compiler)"
 	@echo "  make install-packages - Install npm dependencies for packages"
-	@echo "  make build-packages   - Build TypeScript packages (blink-engine, blink-test)"
-	@echo "  make test             - Run all tests (compiler + packages)"
-	@echo "  make test-compiler    - Run compiler tests only"
+	@echo "  make build-packages   - Build TypeScript packages (blink-engine, blink-test, blink-compiler-ts)"
+	@echo "  make test             - Run all tests (packages)"
+	@echo "  make test-compiler-ts - Run TypeScript compiler tests only"
 	@echo "  make test-packages    - Run package tests only"
 	@echo "  make test-examples    - Run example tests"
 	@echo "  make demo-package     - Create demo package for distribution"
@@ -28,9 +31,9 @@ help:
 	@echo ""
 
 # Build everything
-all: build-compiler build-wasm compile-brl install-packages build-packages
+all: install-packages build-packages
 
-# Quick development setup (TypeScript only, no Rust required)
+# Quick development setup (TypeScript only)
 dev-setup:
 	@echo "Setting up development environment (TypeScript only)..."
 	@echo "Installing dependencies..."
@@ -39,12 +42,13 @@ dev-setup:
 	@echo "Building packages..."
 	cd packages/blink-engine && npm run build && npm run build:bundle
 	cd packages/blink-compiler-ts && npm run build && npm run build:bundle
-	@echo "Copying compiler bundle to demos directory..."
-	cp packages/blink-compiler-ts/dist/blink-compiler.bundle.js game/demos/
+	@echo "Verifying bundles..."
+	@test -f $(ENGINE_BUNDLE) || (echo "Error: Engine bundle not found at $(ENGINE_BUNDLE)" && exit 1)
+	@test -f $(COMPILER_BUNDLE) || (echo "Error: Compiler bundle not found at $(COMPILER_BUNDLE)" && exit 1)
 	@echo ""
 	@echo "Development setup complete!"
 	@echo "Open game/demos/rpg-demo.html in a browser to play."
-	@echo "The game will compile BRL/BDL files in real-time."
+	@echo "The game will compile BRL/BDL files in real-time using the TypeScript compiler."
 
 # Build for development (TypeScript compiler + engine)
 dev: build-compiler-ts build-packages-dev
@@ -56,78 +60,23 @@ build-compiler-ts:
 	@echo "Building TypeScript BRL compiler..."
 	cd packages/blink-compiler-ts && npm install && npm run build && npm run build:bundle
 	@echo "TypeScript compiler built successfully"
-	cp packages/blink-compiler-ts/dist/blink-compiler.bundle.js game/demos/
+	@test -f $(COMPILER_BUNDLE) || (echo "Error: Compiler bundle not found at $(COMPILER_BUNDLE)" && exit 1)
 
-# Build packages for development (without Rust compilation)
+# Build packages for development
 build-packages-dev:
 	@echo "Building blink-engine..."
 	cd packages/blink-engine && npm install && npm run build && npm run build:bundle
-	@echo "Development packages built successfully (bundle already in demos directory)"
+	@echo "Development packages built successfully"
 
 # Clean build artifacts
 clean:
 	@echo "Cleaning build artifacts..."
-	rm -rf src/compiler/target
 	rm -rf packages/blink-engine/dist
 	rm -rf packages/blink-test/dist
 	rm -rf packages/blink-compiler-ts/dist
 	rm -rf demo-package
 	rm -rf blink-demo-package.zip
 	@echo "Clean complete"
-
-# Build the Rust compiler
-build-compiler:
-	@echo "Building BRL compiler..."
-	cd src/compiler && cargo build --release
-	@echo "Compiler built successfully"
-
-# Build the WASM compiler
-build-wasm:
-	@echo "Building WASM compiler..."
-	cd src/compiler && wasm-pack build --target web --out-dir ../../packages/blink-compiler-wasm/wasm
-	@echo "Building WASM TypeScript wrapper..."
-	cd packages/blink-compiler-wasm && npm install && npm run build
-	@echo "WASM compiler built successfully"
-
-# Compile all BRL files to IR
-compile-brl: build-compiler
-	@echo "Compiling BRL files to IR..."
-	mkdir -p game/ir
-	cd src/compiler && \
-	for brl_file in ../../game/brl/*.brl; do \
-		filename=$$(basename "$$brl_file" .brl); \
-			if [ "$$filename" = "classic-rpg" ]; then \
-				echo "Compiling classic-rpg with Easy scenario..."; \
-				./target/release/blink-compiler compile -i "$$brl_file" -o "../../game/ir/$${filename}-easy.ir.json" --pretty $(SOURCE_MAP_FLAG) \
-					--include ../../game/bdl/heroes.bdl \
-					--include ../../game/bdl/enemies.bdl \
-					--include ../../game/bdl/scenario-easy.bdl; \
-				echo "Compiled $${filename}.brl (Easy) -> $${filename}-easy.ir.json"; \
-				echo "Compiling classic-rpg with Normal scenario..."; \
-				./target/release/blink-compiler compile -i "$$brl_file" -o "../../game/ir/$${filename}-normal.ir.json" --pretty $(SOURCE_MAP_FLAG) \
-					--include ../../game/bdl/heroes.bdl \
-					--include ../../game/bdl/enemies.bdl \
-					--include ../../game/bdl/scenario-normal.bdl; \
-				echo "Compiled $${filename}.brl (Normal) -> $${filename}-normal.ir.json"; \
-				echo "Compiling classic-rpg with Hard scenario..."; \
-				./target/release/blink-compiler compile -i "$$brl_file" -o "../../game/ir/$${filename}-hard.ir.json" --pretty $(SOURCE_MAP_FLAG) \
-					--include ../../game/bdl/heroes.bdl \
-					--include ../../game/bdl/enemies.bdl \
-					--include ../../game/bdl/scenario-hard.bdl; \
-				echo "Compiled $${filename}.brl (Hard) -> $${filename}-hard.ir.json"; \
-				echo "Compiling classic-rpg with legacy game-config (for backward compatibility)..."; \
-				./target/release/blink-compiler compile -i "$$brl_file" -o "../../game/ir/$${filename}.ir.json" --pretty $(SOURCE_MAP_FLAG) \
-					--include ../../game/bdl/heroes.bdl \
-					--include ../../game/bdl/enemies.bdl \
-					--include ../../game/bdl/game-config.bdl; \
-				echo "Compiled $${filename}.brl (Legacy) -> $${filename}.ir.json"; \
-		else \
-			./target/release/blink-compiler compile -i "$$brl_file" -o "../../game/ir/$${filename}.ir.json" --pretty; \
-			echo "Compiled $${filename}.brl -> $${filename}.ir.json"; \
-		fi; \
-	done
-	@echo "IR files generated:"
-	ls -la game/ir/*.ir.json
 
 # Install npm dependencies
 install-packages:
@@ -138,30 +87,19 @@ install-packages:
 	@echo "Dependencies installed"
 
 # Build TypeScript packages and copy artifacts to demo directory
-build-packages: compile-brl build-wasm
+build-packages:
 	@echo "Building blink-engine..."
 	cd packages/blink-engine && npm run build
 	@echo "Building browser bundle..."
 	cd packages/blink-engine && npm run build:bundle
 	@echo "Building TypeScript compiler..."
 	cd packages/blink-compiler-ts && npm run build && npm run build:bundle
-	@echo "Copying IR files to demo data directory..."
-	mkdir -p game/demos/data
-	cp game/ir/*.ir.json game/demos/data/
-	@echo "Copying bundles to demos directory..."
-	cp -f packages/blink-compiler-ts/dist/blink-compiler.bundle.js game/demos/ || true
 	@echo "Building blink-test..."
 	cd packages/blink-test && npm run build
 	@echo "Packages built successfully"
 
 # Run all tests
-test: test-compiler test-packages
-
-# Run compiler tests
-test-compiler:
-	@echo "Running compiler tests..."
-	cd src/compiler && cargo test
-	@echo "Compiler tests complete"
+test: test-compiler-ts test-packages
 
 # Run TypeScript compiler tests
 test-compiler-ts:
@@ -170,7 +108,7 @@ test-compiler-ts:
 	@echo "TypeScript compiler tests complete"
 
 # Run package tests (only unit tests, not example tests)
-test-packages: build-packages compile-brl
+test-packages: build-packages
 	@echo "Running blink-engine tests..."
 	cd packages/blink-engine && npm test
 	@echo "Running blink-test tests..."
@@ -178,10 +116,10 @@ test-packages: build-packages compile-brl
 	@echo "Package tests complete"
 
 # Run example tests
-test-examples: build-packages compile-brl
+test-examples: build-packages
 	@echo "Running example tests..."
 	cd game/tests && npm install
-	@echo "Note: boss-spawn.test.ts may fail - it requires IR with init_entities"
+	@echo "Note: Some tests may require pre-compiled IR files"
 	-cd game/tests && npm test
 	@echo "Example tests complete (some may have failed - check output above)"
 
@@ -193,8 +131,8 @@ demo-package: dev
 	@echo "Copying demo HTML and JS files..."
 	cp game/demos/index.html demo-package/
 	cp game/demos/rpg-demo.html demo-package/
-	cp game/demos/blink-engine.bundle.js demo-package/
-	cp game/demos/blink-compiler.bundle.js demo-package/
+	cp $(ENGINE_BUNDLE) demo-package/
+	cp $(COMPILER_BUNDLE) demo-package/
 	cp game/demos/README.md demo-package/
 	
 	@echo "Copying source files for in-browser compilation..."

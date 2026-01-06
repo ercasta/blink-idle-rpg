@@ -1,17 +1,5 @@
 # Multi-stage Dockerfile for Blink Idle RPG
-# Stage 1: Build the Rust compiler
-FROM rust:1.92 AS rust-builder
-
-WORKDIR /build
-
-# Copy only the compiler source
-COPY src/compiler ./src/compiler
-
-# Build the compiler in release mode
-WORKDIR /build/src/compiler
-RUN cargo build --release
-
-# Stage 2: Build Node.js packages
+# Stage 1: Build Node.js packages and TypeScript compiler
 FROM node:20 AS node-builder
 
 WORKDIR /build
@@ -19,19 +7,27 @@ WORKDIR /build
 # Copy package files first for better layer caching
 COPY packages/blink-engine/package*.json ./packages/blink-engine/
 COPY packages/blink-test/package*.json ./packages/blink-test/
+COPY packages/blink-compiler-ts/package*.json ./packages/blink-compiler-ts/
 
 # Install dependencies
 RUN cd packages/blink-engine && npm install
 RUN cd packages/blink-test && npm install
+RUN cd packages/blink-compiler-ts && npm install
 
-# Copy source code and build
+# Copy source code
 COPY packages/blink-engine ./packages/blink-engine
 COPY packages/blink-test ./packages/blink-test
+COPY packages/blink-compiler-ts ./packages/blink-compiler-ts
 
-RUN cd packages/blink-engine && npm run build
+# Create game/demos directory for bundles
+RUN mkdir -p game/demos
+
+# Build packages (bundles will be created in game/demos)
+RUN cd packages/blink-engine && npm run build && npm run build:bundle
 RUN cd packages/blink-test && npm run build
+RUN cd packages/blink-compiler-ts && npm run build && npm run build:bundle
 
-# Stage 3: Runtime image
+# Stage 2: Runtime image
 FROM node:20-slim
 
 # Install serve for serving static files
@@ -39,18 +35,16 @@ RUN npm install -g serve
 
 WORKDIR /workspace
 
-# Copy built compiler from rust-builder
-COPY --from=rust-builder /build/src/compiler/target/release/blink-compiler /usr/local/bin/
-
-# Copy built packages
+# Copy built packages from node-builder
 COPY --from=node-builder /build/packages ./packages
 
-# Copy example files and demos
+# Copy bundles that were created during build
+COPY --from=node-builder /build/game/demos/blink-engine.bundle.js ./game/demos/
+COPY --from=node-builder /build/game/demos/blink-compiler.bundle.js ./game/demos/
+
+# Copy example files and demos from the repository
 COPY game ./game
 COPY Makefile ./
-
-# Create directories for IR files if they don't exist
-RUN mkdir -p game/ir
 
 # Copy entrypoint script
 COPY docker-entrypoint.sh /usr/local/bin/

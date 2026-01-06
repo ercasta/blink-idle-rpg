@@ -19,50 +19,52 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       
-      - name: Set up Rust
-        uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: |
+            packages/blink-engine/package-lock.json
+            packages/blink-compiler-ts/package-lock.json
       
-      - name: Build compiler
+      - name: Install package dependencies
         run: |
-          Set-Location src\compiler
-          cargo build --release
-          Write-Host "Compiler built successfully"
+          Set-Location packages\blink-engine
+          npm ci
+          Set-Location ..\blink-compiler-ts
+          npm ci
           Set-Location ..\..
         shell: pwsh
       
-      - name: Compile BRL to IR
+      - name: Build TypeScript compiler
         run: |
-          New-Item -ItemType Directory -Path game\ir -Force
-          Set-Location src\compiler
-          # Build list of BCL files for inclusion in source map
-          $bclIncludes = @()
-          Get-ChildItem ..\..\game\bcl\*.bcl -ErrorAction SilentlyContinue | ForEach-Object {
-            $bclIncludes += "--include"
-            $bclIncludes += $_.FullName
-          }
-          # Compile all BRL files to IR with source maps for debugging support
-          # Note: BDL files are only included for classic-rpg.brl since they depend on its component definitions
-          Get-ChildItem ..\..\game\brl\*.brl | ForEach-Object {
-            $filename = $_.BaseName
-            if ($filename -eq "classic-rpg") {
-              # classic-rpg.brl gets BDL files included (heroes, enemies, game-config)
-              $args = @("compile", "-i", $_.FullName, "-o", "..\..\game\ir\$filename.ir.json", "--pretty", "--source-map") + $bclIncludes + @(
-                "--include", "..\..\game\bdl\heroes.bdl",
-                "--include", "..\..\game\bdl\enemies.bdl",
-                "--include", "..\..\game\bdl\game-config.bdl"
-              )
-              & .\target\release\blink-compiler.exe $args
-              Write-Host "Compiled $filename.brl -> $filename.ir.json (with source map including BCL/BDL)"
-            } else {
-              # Other BRL files only get BCL files (no BDL dependencies)
-              $args = @("compile", "-i", $_.FullName, "-o", "..\..\game\ir\$filename.ir.json", "--pretty", "--source-map") + $bclIncludes
-              & .\target\release\blink-compiler.exe $args
-              Write-Host "Compiled $filename.brl -> $filename.ir.json (with source map including BCL)"
-            }
-          }
+          Write-Host "Building TypeScript compiler..."
+          Set-Location packages\blink-compiler-ts
+          npm run build
+          npm run build:bundle
           Set-Location ..\..
-          Write-Host "IR files generated:"
-          Get-ChildItem game\ir\*.ir.json
+          Write-Host "TypeScript compiler built successfully"
+        shell: pwsh
+      
+      - name: Build engine
+        run: |
+          Write-Host "Building blink-engine..."
+          Set-Location packages\blink-engine
+          npm run build
+          npm run build:bundle
+          Set-Location ..\..
+          Write-Host "Verifying bundles were created..."
+          if (-Not (Test-Path game\demos\blink-engine.bundle.js)) {
+            Write-Error "Error: Engine bundle not found"
+            exit 1
+          }
+          if (-Not (Test-Path game\demos\blink-compiler.bundle.js)) {
+            Write-Error "Error: Compiler bundle not found"
+            exit 1
+          }
+          Get-Item game\demos\blink-engine.bundle.js | Select-Object Name, Length
+          Get-Item game\demos\blink-compiler.bundle.js | Select-Object Name, Length
         shell: pwsh
       
       - name: Create demo package directory
@@ -74,13 +76,17 @@ jobs:
           Copy-Item game\demos\index.html demo-package\
           Copy-Item game\demos\rpg-demo.html demo-package\
           Copy-Item game\demos\blink-engine.bundle.js demo-package\
+          Copy-Item game\demos\blink-compiler.bundle.js demo-package\
           Copy-Item game\demos\README.md demo-package\
         shell: pwsh
       
-      - name: Copy game rule files from examples
+      - name: Copy source files for in-browser compilation
         run: |
-          # Copy IR files
-          Copy-Item game\ir\classic-rpg.ir.json demo-package\
+          # Copy BRL/BDL source files
+          New-Item -ItemType Directory -Path demo-package\brl -Force
+          New-Item -ItemType Directory -Path demo-package\bdl -Force
+          Copy-Item game\brl\*.brl demo-package\brl\
+          Copy-Item game\bdl\*.bdl demo-package\bdl\
           
           # Copy BCL files
           Copy-Item game\bcl\warrior-skills.bcl demo-package\
@@ -159,7 +165,8 @@ jobs:
             - Classic RPG demo (`rpg-demo.html`)
             - Demo launcher (`index.html`)
             - Blink engine bundle
-            - Example game files (BRL, IR, BCL)
+            - TypeScript compiler bundle (compiles BRL/BDL in-browser)
+            - Example game files (BRL, BDL, BCL)
             - Complete documentation
             
             See `README.md` in the package for more details.
