@@ -6,6 +6,9 @@ description = "Compiler for Blink Rule Language (BRL) - produces IR for Blink en
 license = "MIT"
 repository = "https://github.com/ercasta/blink-idle-rpg"
 
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = false
+
 [lib]
 name = "blink_compiler"
 path = "src/lib.rs"

@@ -4,6 +4,9 @@
  * This package provides a browser-compatible compiler for BRL/BCL source code.
  */
 
+// Import the generated WASM bindings
+import init, * as wasm from '../wasm/blink_compiler.js';
+
 export interface CompileResult {
   success: boolean;
   ir?: string;
@@ -51,8 +54,8 @@ export interface Compiler {
   getVersion(): string;
 }
 
-let wasmModule: any = null;
-let initPromise: Promise<any> | null = null;
+let isInitialized = false;
+let initPromise: Promise<void> | null = null;
 
 /**
  * Initialize the WASM compiler
@@ -60,45 +63,36 @@ let initPromise: Promise<any> | null = null;
  * This must be called before using the compiler. The WASM module is loaded
  * and cached for subsequent use.
  * 
- * @param wasmUrl - URL to the WASM file (default: './blink_compiler_bg.wasm')
+ * @param wasmUrl - URL to the WASM file (default: auto-detected)
  * @returns Promise that resolves to the initialized compiler
  */
 export async function initCompiler(wasmUrl?: string): Promise<Compiler> {
-  // If already initialized, return cached module
-  if (wasmModule) {
-    return createCompilerAPI(wasmModule);
+  // If already initialized, return immediately
+  if (isInitialized) {
+    return createCompilerAPI();
   }
   
   // If initialization is in progress, wait for it
   if (initPromise) {
     await initPromise;
-    return createCompilerAPI(wasmModule);
+    return createCompilerAPI();
   }
   
   // Start initialization
   initPromise = (async () => {
     try {
-      // Dynamic import of the WASM module
-      // This assumes wasm-pack has generated the bindings
-      const url = wasmUrl || new URL('./wasm/blink_compiler_bg.wasm', import.meta.url);
-      
-      // Load the WASM module
-      const response = await fetch(url);
-      const buffer = await response.arrayBuffer();
-      
-      // We need to import the wasm-bindgen generated JS
-      // For now, we'll use a simplified approach that assumes the WASM exports
-      // are available directly after instantiation
-      const { instance } = await WebAssembly.instantiate(buffer, {});
-      
-      wasmModule = instance.exports;
-      
-      // Call init function if it exists
-      if (wasmModule.init) {
-        wasmModule.init();
+      // Initialize the WASM module
+      if (wasmUrl) {
+        await init(wasmUrl);
+      } else {
+        // Auto-detect WASM path
+        await init();
       }
       
-      return wasmModule;
+      // Call the module's init function to set up panic hooks
+      wasm.init();
+      
+      isInitialized = true;
     } catch (error) {
       initPromise = null;
       throw new Error(`Failed to initialize WASM compiler: ${error}`);
@@ -106,21 +100,25 @@ export async function initCompiler(wasmUrl?: string): Promise<Compiler> {
   })();
   
   await initPromise;
-  return createCompilerAPI(wasmModule);
+  return createCompilerAPI();
 }
 
 /**
- * Create the compiler API from the WASM module
+ * Create the compiler API
  */
-function createCompilerAPI(wasm: any): Compiler {
+function createCompilerAPI(): Compiler {
+  if (!isInitialized) {
+    throw new Error('Compiler not initialized. Call initCompiler() first.');
+  }
+  
   return {
     compile(source: string, pretty = false, sourceMap = false): CompileResult {
       try {
         const result = wasm.compile(source, pretty, sourceMap);
         return {
-          success: result.success(),
-          ir: result.ir() || undefined,
-          error: result.error() || undefined,
+          success: result.success,
+          ir: result.ir,
+          error: result.error,
         };
       } catch (error) {
         return {
@@ -141,15 +139,15 @@ function createCompilerAPI(wasm: any): Compiler {
         const includesJson = JSON.stringify(includes);
         const result = wasm.compile_with_includes(
           source,
-          sourcePath,
+          sourcePath || undefined,
           includesJson,
           pretty,
           sourceMap
         );
         return {
-          success: result.success(),
-          ir: result.ir() || undefined,
-          error: result.error() || undefined,
+          success: result.success,
+          ir: result.ir,
+          error: result.error,
         };
       } catch (error) {
         return {
@@ -173,5 +171,5 @@ function createCompilerAPI(wasm: any): Compiler {
  * Check if the compiler is initialized
  */
 export function isCompilerReady(): boolean {
-  return wasmModule !== null;
+  return isInitialized;
 }
