@@ -3593,6 +3593,7 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
     async function resetGame() {
       if (game) {
         game.destroy();
+        game = null;
       }
       
       // Reset UI
@@ -3600,11 +3601,20 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
       gameBanner.style.display = 'none';
       logContainer.innerHTML = '';
       
-      // Reinitialize
-      await initGame();
+      // Reset party selection
+      partySlots = [null, null, null, null];
       
+      // Show party selection screen and hide game screen
+      gameScreen.classList.remove('active');
+      partySelectionScreen.style.display = 'block';
+      
+      // Re-render character selection to reset carousels
+      renderCharacterSelection();
+      
+      // Reset buttons
       startBtn.disabled = false;
       pauseBtn.disabled = true;
+      fleeBtn.disabled = true;
     }
     
     // Event listeners

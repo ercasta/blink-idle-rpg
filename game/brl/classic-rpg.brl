@@ -160,6 +160,7 @@ component SpawnConfig {
     bossEveryKills: integer
     tierProgressionKills: integer
     maxTier: integer
+    wavesPerTier: integer
     healthScaleRate: integer
     damageScaleRate: integer
     initialEnemyCount: integer
@@ -412,11 +413,18 @@ rule respawn_player on RespawnPlayer {
 }
 
 // Grant experience to players when enemy defeated
+// This rule fires once for the GameState entity to avoid granting XP multiple times
 rule grant_experience on EnemyDefeated {
-    if entity.Team.isPlayer {
-        entity.Character.experience += 50
-        schedule CheckLevelUp {
-            source: entity.id
+    if entity.GameState {
+        // Find all player entities and grant them XP
+        let players = entities having Team
+        for player in players {
+            if player.Team.isPlayer {
+                player.Character.experience += 50
+                schedule CheckLevelUp {
+                    source: player.id
+                }
+            }
         }
     }
 }
@@ -466,7 +474,7 @@ rule boss_defeated_victory on EnemyDefeated {
 
 // Spawn a replacement enemy when one is defeated
 rule spawn_replacement_enemy on EnemyDefeated {
-    if entity.GameState.enemiesDefeated < 1000 && entity.GameState.gameOver == false {
+    if entity.GameState.enemiesDefeated < 1000 && entity.GameState.gameOver == false && entity.GameState.bossSpawned == false {
         // Spawn enemy from current tier to maintain combat
         let currentTier = entity.GameState.currentTier
         schedule [delay: 0.1] SpawnEnemy {
