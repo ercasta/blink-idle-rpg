@@ -27,7 +27,9 @@ dist/
 build/
 *.wasm
 
-# Generated files (but keep IR files in game/ir and game/demos/data)
+# Generated files - IR files and bundles
+*.ir.json
+*.bundle.js
 *.ir.generated.json
 
 # Demo package artifacts

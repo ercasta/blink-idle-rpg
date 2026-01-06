@@ -3592,6 +3592,8 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
       
       // NEW: Schedule GameStart event to trigger BRL initialization
       // This will automatically start hero attacks, retargeting system, AND spawn enemies
+      // Let GameStart run on all entities, rules will filter by component checks
+      console.info('Scheduling GameStart event (global)');
       game.scheduleEvent('GameStart', 0, {});
       
       // EnemySpawned event now triggered by BRL after spawning completes
@@ -3676,6 +3678,8 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
       
       // NEW: Schedule GameStart event to trigger BRL initialization
       // This will automatically start hero attacks, retargeting system, AND spawn enemies
+      // Let GameStart run on all entities, rules will filter by component checks
+      console.info('Scheduling GameStart event (global)');
       game.scheduleEvent('GameStart', 0, {});
       
       // EnemySpawned event now triggered by BRL after spawning completes

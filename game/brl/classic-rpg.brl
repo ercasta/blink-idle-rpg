@@ -617,23 +617,35 @@ rule acquire_skill on AcquireSkill {
 
 // Flee from battle - player initiates retreat
 rule flee_battle on FleeFromBattle {
-    if entity.RunStats && entity.FleeConfig {
+    // Find the entity with RunStats
+    let runStatsEntities = entities having RunStats
+    let fleeConfigEntities = entities having FleeConfig
+    
+    if runStatsEntities[0] && fleeConfigEntities[0] {
+        let runStatsEntity = runStatsEntities[0]
+        let fleeConfigEntity = fleeConfigEntities[0]
+        
         // Check cooldown
-        let timeSinceFlee = entity.RunStats.simulationTime - entity.RunStats.lastFleeTime
-        if timeSinceFlee >= entity.FleeConfig.fleeCooldown {
+        let timeSinceFlee = runStatsEntity.RunStats.simulationTime - runStatsEntity.RunStats.lastFleeTime
+        if timeSinceFlee >= fleeConfigEntity.FleeConfig.fleeCooldown {
             // Apply retreat penalty
-            entity.RunStats.retreatCount += 1
-            entity.RunStats.retreatPenalty += entity.FleeConfig.retreatTimePenalty
-            entity.RunStats.lastFleeTime = entity.RunStats.simulationTime
-            entity.RunStats.canFlee = false
-            entity.RunStats.totalTime = entity.RunStats.simulationTime + entity.RunStats.retreatPenalty + entity.RunStats.deathPenalty
+            runStatsEntity.RunStats.retreatCount += 1
+            runStatsEntity.RunStats.retreatPenalty += fleeConfigEntity.FleeConfig.retreatTimePenalty
+            runStatsEntity.RunStats.lastFleeTime = runStatsEntity.RunStats.simulationTime
+            runStatsEntity.RunStats.canFlee = false
+            runStatsEntity.RunStats.totalTime = runStatsEntity.RunStats.simulationTime + runStatsEntity.RunStats.retreatPenalty + runStatsEntity.RunStats.deathPenalty
             
             // Mark all enemies for despawn
             schedule DespawnAllEnemies {
             }
             
-            // Spawn new wave after retreat
-            schedule [delay: 0.5] SpawnEnemyWave {
+            // Find entity with GameState and SpawnConfig to target SpawnEnemyWave
+            let gameStateEntities = entities having GameState
+            if gameStateEntities[0] {
+                // Spawn new wave after retreat, targeting the GameState entity
+                schedule [delay: 0.5] SpawnEnemyWave {
+                    target: gameStateEntities[0].id
+                }
             }
             
             schedule UpdateRunStats {
@@ -649,6 +661,17 @@ rule despawn_enemies on DespawnAllEnemies {
         entity.Health.current = 0
         schedule RemoveEntity {
             target: entity.id
+        }
+    }
+}
+
+// Spawn a new wave after fleeing
+rule spawn_wave_after_flee on SpawnEnemyWave {
+    if entity.GameState && entity.SpawnConfig {
+        // Trigger EnemySpawned to spawn the next wave
+        // This reuses the existing wave spawning logic
+        schedule [delay: 0.1] EnemySpawned {
+            wave: entity.GameState.currentWave
         }
     }
 }

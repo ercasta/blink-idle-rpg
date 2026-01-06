@@ -51,26 +51,42 @@ jobs:
         run: |
           mkdir -p game/ir
           cd src/compiler
-          # Build list of BCL files for inclusion in source map
-          BCL_INCLUDES=""
-          for bcl_file in ../../game/bcl/*.bcl; do
-            if [ -f "$bcl_file" ]; then
-              BCL_INCLUDES="$BCL_INCLUDES --include $bcl_file"
-            fi
-          done
-          # Build list of BDL files for inclusion in source map
-          BDL_INCLUDES=""
-          for bdl_file in ../../game/bdl/*.bdl; do
-            if [ -f "$bdl_file" ]; then
-              BDL_INCLUDES="$BDL_INCLUDES --include $bdl_file"
-            fi
-          done
-          # Compile all BRL files to IR with source maps for debugging support
+          # Compile each BRL file with its scenario variants
           for brl_file in ../../game/brl/*.brl; do
             if [ -f "$brl_file" ]; then
               filename=$(basename "$brl_file" .brl)
-              ./target/release/blink-compiler compile -i "$brl_file" -o "../../game/ir/${filename}.ir.json" --pretty --source-map $BCL_INCLUDES $BDL_INCLUDES
-              echo "Compiled ${filename}.brl -> ${filename}.ir.json (with source map including BCL/BDL)"
+              if [ "$filename" = "classic-rpg" ]; then
+                echo "Compiling classic-rpg with Easy scenario..."
+                ./target/release/blink-compiler compile -i "$brl_file" -o "../../game/ir/${filename}-easy.ir.json" --pretty --source-map \
+                  --include ../../game/bdl/heroes.bdl \
+                  --include ../../game/bdl/enemies.bdl \
+                  --include ../../game/bdl/scenario-easy.bdl
+                echo "Compiled ${filename}.brl (Easy) -> ${filename}-easy.ir.json"
+                
+                echo "Compiling classic-rpg with Normal scenario..."
+                ./target/release/blink-compiler compile -i "$brl_file" -o "../../game/ir/${filename}-normal.ir.json" --pretty --source-map \
+                  --include ../../game/bdl/heroes.bdl \
+                  --include ../../game/bdl/enemies.bdl \
+                  --include ../../game/bdl/scenario-normal.bdl
+                echo "Compiled ${filename}.brl (Normal) -> ${filename}-normal.ir.json"
+                
+                echo "Compiling classic-rpg with Hard scenario..."
+                ./target/release/blink-compiler compile -i "$brl_file" -o "../../game/ir/${filename}-hard.ir.json" --pretty --source-map \
+                  --include ../../game/bdl/heroes.bdl \
+                  --include ../../game/bdl/enemies.bdl \
+                  --include ../../game/bdl/scenario-hard.bdl
+                echo "Compiled ${filename}.brl (Hard) -> ${filename}-hard.ir.json"
+                
+                echo "Compiling classic-rpg with legacy game-config (for backward compatibility)..."
+                ./target/release/blink-compiler compile -i "$brl_file" -o "../../game/ir/${filename}.ir.json" --pretty --source-map \
+                  --include ../../game/bdl/heroes.bdl \
+                  --include ../../game/bdl/enemies.bdl \
+                  --include ../../game/bdl/game-config.bdl
+                echo "Compiled ${filename}.brl (Legacy) -> ${filename}.ir.json"
+              else
+                ./target/release/blink-compiler compile -i "$brl_file" -o "../../game/ir/${filename}.ir.json" --pretty --source-map
+                echo "Compiled ${filename}.brl -> ${filename}.ir.json"
+              fi
             fi
           done
           cd ../..
@@ -89,13 +105,17 @@ jobs:
           echo "Building blink-engine..."
           cd packages/blink-engine
           npm run build
+          echo "Building browser bundle..."
+          npm run build:bundle
           cd ../..
           
           echo "Building blink-test..."
           cd packages/blink-test
           npm run build
           cd ../..
-      
+          
+          echo "Verifying bundle was created..."
+          ls -lh game/demos/blink-engine.bundle.js      
       - name: Prepare deployment directory
         run: |
           mkdir -p _site

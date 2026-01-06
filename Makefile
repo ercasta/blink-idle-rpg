@@ -90,12 +90,15 @@ install-packages:
 	cd packages/blink-test && npm install
 	@echo "Dependencies installed"
 
-# Build TypeScript packages
-build-packages:
+# Build TypeScript packages and copy artifacts to demo directory
+build-packages: compile-brl
 	@echo "Building blink-engine..."
 	cd packages/blink-engine && npm run build
 	@echo "Building browser bundle..."
 	cd packages/blink-engine && npm run build:bundle
+	@echo "Copying IR files to demo data directory..."
+	mkdir -p game/demos/data
+	cp game/ir/*.ir.json game/demos/data/
 	@echo "Building blink-test..."
 	cd packages/blink-test && npm run build
 	@echo "Packages built successfully"
