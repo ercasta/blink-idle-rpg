@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 // GAME STATE ENTITY
 // Tracks overall game progress
+// Combined with SpawnConfig since the BRL rules access both on the same entity
 // -----------------------------------------------------------------------------
 
 game_state = new entity {
@@ -24,6 +25,15 @@ game_state = new entity {
         currentTier: 1
         waveInTier: 1
         bossSpawned: false
+    }
+    SpawnConfig {
+        bossEveryKills: 100
+        tierProgressionKills: 50
+        maxTier: 6
+        wavesPerTier: 300
+        healthScaleRate: 200
+        damageScaleRate: 300
+        initialEnemyCount: 5
     }
 }
 
@@ -54,24 +64,6 @@ flee_config = new entity {
         retreatTimePenalty: 10.0
         deathTimePenaltyMultiplier: 5.0
         fleeCooldown: 5.0
-    }
-}
-
-// -----------------------------------------------------------------------------
-// ENEMY SPAWN CONFIGURATION
-// Defines enemy spawn progression rules
-// These values are used by the spawn system
-// -----------------------------------------------------------------------------
-
-spawn_config = new entity {
-    SpawnConfig {
-        bossEveryKills: 100
-        tierProgressionKills: 50
-        maxTier: 6
-        wavesPerTier: 300
-        healthScaleRate: 200
-        damageScaleRate: 300
-        initialEnemyCount: 5
     }
 }
 
