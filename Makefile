@@ -63,9 +63,6 @@ build-compiler-ts:
 build-packages-dev:
 	@echo "Building blink-engine..."
 	cd packages/blink-engine && npm install && npm run build && npm run build:bundle
-	@echo "Copying engine bundle to demos directory..."
-	mkdir -p game/demos
-	cp packages/blink-engine/dist/blink-engine.bundle.js game/demos/
 	@echo "Development packages built successfully"
 
 # Clean build artifacts
@@ -94,10 +91,6 @@ build-packages:
 	cd packages/blink-engine && npm run build:bundle
 	@echo "Building TypeScript compiler..."
 	cd packages/blink-compiler-ts && npm run build && npm run build:bundle
-	@echo "Copying bundles to demos directory..."
-	mkdir -p game/demos
-	cp packages/blink-engine/dist/blink-engine.bundle.js game/demos/
-	cp packages/blink-compiler-ts/dist/blink-compiler.bundle.js game/demos/
 	@echo "Building blink-test..."
 	cd packages/blink-test && npm run build
 	@echo "Packages built successfully"

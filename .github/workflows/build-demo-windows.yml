@@ -55,8 +55,8 @@ jobs:
           npm run build:bundle
           Set-Location ..\..
           Write-Host "Verifying bundles were created..."
-          Get-Item packages\blink-engine\dist\blink-engine.bundle.js | Select-Object Name, Length
-          Get-Item packages\blink-compiler-ts\dist\blink-compiler.bundle.js | Select-Object Name, Length
+          Get-Item game\demos\blink-engine.bundle.js | Select-Object Name, Length
+          Get-Item game\demos\blink-compiler.bundle.js | Select-Object Name, Length
         shell: pwsh
       
       - name: Create demo package directory
@@ -67,8 +67,8 @@ jobs:
         run: |
           Copy-Item game\demos\index.html demo-package\
           Copy-Item game\demos\rpg-demo.html demo-package\
-          Copy-Item packages\blink-engine\dist\blink-engine.bundle.js demo-package\
-          Copy-Item packages\blink-compiler-ts\dist\blink-compiler.bundle.js demo-package\
+          Copy-Item game\demos\blink-engine.bundle.js demo-package\
+          Copy-Item game\demos\blink-compiler.bundle.js demo-package\
           Copy-Item game\demos\README.md demo-package\
         shell: pwsh
       

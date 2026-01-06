@@ -53,8 +53,8 @@ jobs:
           npm run build:bundle
           cd ../..
           echo "Verifying bundles were created..."
-          ls -lh packages/blink-engine/dist/blink-engine.bundle.js
-          ls -lh packages/blink-compiler-ts/dist/blink-compiler.bundle.js
+          ls -lh game/demos/blink-engine.bundle.js
+          ls -lh game/demos/blink-compiler.bundle.js
       
       - name: Create demo package directory
         run: mkdir -p demo-package
@@ -63,8 +63,8 @@ jobs:
         run: |
           cp game/demos/index.html demo-package/
           cp game/demos/rpg-demo.html demo-package/
-          cp packages/blink-engine/dist/blink-engine.bundle.js demo-package/
-          cp packages/blink-compiler-ts/dist/blink-compiler.bundle.js demo-package/
+          cp game/demos/blink-engine.bundle.js demo-package/
+          cp game/demos/blink-compiler.bundle.js demo-package/
           cp game/demos/README.md demo-package/
       
       - name: Copy source files for in-browser compilation

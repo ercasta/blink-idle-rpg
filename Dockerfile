@@ -14,11 +14,15 @@ RUN cd packages/blink-engine && npm install
 RUN cd packages/blink-test && npm install
 RUN cd packages/blink-compiler-ts && npm install
 
-# Copy source code and build
+# Copy source code
 COPY packages/blink-engine ./packages/blink-engine
 COPY packages/blink-test ./packages/blink-test
 COPY packages/blink-compiler-ts ./packages/blink-compiler-ts
 
+# Create game/demos directory for bundles
+RUN mkdir -p game/demos
+
+# Build packages (bundles will be created in game/demos)
 RUN cd packages/blink-engine && npm run build && npm run build:bundle
 RUN cd packages/blink-test && npm run build
 RUN cd packages/blink-compiler-ts && npm run build && npm run build:bundle
@@ -34,14 +38,12 @@ WORKDIR /workspace
 # Copy built packages from node-builder
 COPY --from=node-builder /build/packages ./packages
 
-# Copy example files and demos
+# Copy bundles that were created during build
+COPY --from=node-builder /build/game/demos/*.bundle.js ./game/demos/
+
+# Copy example files and demos from the repository
 COPY game ./game
 COPY Makefile ./
-
-# Copy compiled bundles to demos directory
-RUN mkdir -p game/demos && \
-    cp packages/blink-engine/dist/blink-engine.bundle.js game/demos/ && \
-    cp packages/blink-compiler-ts/dist/blink-compiler.bundle.js game/demos/
 
 # Copy entrypoint script
 COPY docker-entrypoint.sh /usr/local/bin/

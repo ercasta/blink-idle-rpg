@@ -73,8 +73,8 @@ jobs:
           cd ../..
           
           echo "Verifying bundles were created..."
-          ls -lh packages/blink-engine/dist/blink-engine.bundle.js
-          ls -lh packages/blink-compiler-ts/dist/blink-compiler.bundle.js      
+          ls -lh game/demos/blink-engine.bundle.js
+          ls -lh game/demos/blink-compiler.bundle.js      
       - name: Prepare deployment directory
         run: |
           mkdir -p _site
@@ -83,8 +83,8 @@ jobs:
           echo "Copying demo files..."
           cp game/demos/index.html _site/
           cp game/demos/rpg-demo.html _site/
-          cp packages/blink-engine/dist/blink-engine.bundle.js _site/
-          cp packages/blink-compiler-ts/dist/blink-compiler.bundle.js _site/
+          cp game/demos/blink-engine.bundle.js _site/
+          cp game/demos/blink-compiler.bundle.js _site/
           
           # Copy BRL/BCL/BDL source files for runtime compilation
           echo "Copying source files for runtime compilation..."
