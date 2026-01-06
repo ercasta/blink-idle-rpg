@@ -29,8 +29,10 @@ build/
 
 # Generated files - IR files and bundles
 *.ir.json
-*.bundle.js
 *.ir.generated.json
+
+# Allow demo bundles to be committed for out-of-box experience
+!game/demos/*.bundle.js
 
 # Demo package artifacts
 demo-package/
