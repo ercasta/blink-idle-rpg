@@ -2804,8 +2804,8 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
     // ========================================================================
     
     // Configuration constants for BCL loading
-    const BCL_GITHUB_PAGES_PATH = 'game-files/';  // Path on GitHub Pages deployment
-    const BCL_LOCAL_DEV_PATH = '../bcl/';          // Path for local development
+    const BCL_GITHUB_PAGES_PATH = '/game-files/';  // Path on GitHub Pages deployment (absolute to site root)
+    const BCL_LOCAL_DEV_PATH = '/game/bcl/';      // Path for local development (absolute to site root)
     const BCL_DOCSTRING_SEARCH_LENGTH = 500;       // Characters to search before function for docstring
     const BCL_COMMENT_CONTEXT_LENGTH = 300;        // Characters to search for comments
     
@@ -2990,7 +2990,11 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
         path,
         `../brl/${path}`,
         `../bdl/${path}`,
-        `data/${path}`
+        `data/${path}`,
+        `/game/${path}`,
+        `/game/brl/${path}`,
+        `/game/bdl/${path}`,
+        `/game-files/${path}`
       ];
       
       for (const tryPath of paths) {
