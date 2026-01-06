@@ -3069,6 +3069,7 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
       console.info(`  - Rules: ${compileResult.ir.rules.length}`);
       console.info(`  - Functions: ${compileResult.ir.functions.length}`);
       console.info(`  - Entities: ${compileResult.ir.initial_state?.entities?.length || 0}`);
+      console.info(`  - Choice points: ${compileResult.ir.choice_points?.length || 0}`);
       
       return compileResult.ir;
     }
