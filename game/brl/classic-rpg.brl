@@ -224,28 +224,30 @@ rule start_retargeting_system on GameStart {
 }
 
 // Rule 3: Spawn initial enemies when game begins
+// This rule fires for ALL entities when GameStart occurs
+// We only want to execute on the entity with SpawnConfig (entity 41)
+// Since checking "if entity.SpawnConfig" doesn't work in the compiler yet,
+// we'll use a field access which will return null/fail for entities without the component
 rule spawn_initial_enemies on GameStart {
-    if entity.SpawnConfig {
-        let count = entity.SpawnConfig.initialEnemyCount
-        // Initialize tiered wave tracking
-        entity.GameState.currentTier = 1
-        entity.GameState.waveInTier = 1
-        entity.GameState.currentWave = 1
-        entity.GameState.bossSpawned = false
+    let count = entity.SpawnConfig.initialEnemyCount
+    // Initialize tiered wave tracking
+    entity.GameState.currentTier = 1
+    entity.GameState.waveInTier = 1
+    entity.GameState.currentWave = 1
+    entity.GameState.bossSpawned = false
 
-        // Spawn initial wave enemies (spread by small delays)
-        // Note: Array size should match entity.SpawnConfig.initialEnemyCount
-        let indices = [0, 1, 2, 3, 4]
-        for i in indices {
-            schedule [delay: 0.05 * (i + 1)] SpawnEnemy {
-                tier: 1
-            }
+    // Spawn initial wave enemies (spread by small delays)
+    // Note: Array size should match entity.SpawnConfig.initialEnemyCount
+    let indices = [0, 1, 2, 3, 4]
+    for i in indices {
+        schedule [delay: 0.05 * (i + 1)] SpawnEnemy {
+            tier: 1
         }
+    }
 
-        // Notify that the first wave spawned
-        schedule [delay: 0.3] EnemySpawned {
-            wave: 1
-        }
+    // Notify that the first wave spawned
+    schedule [delay: 0.3] EnemySpawned {
+        wave: 1
     }
 }
 
