@@ -3080,39 +3080,12 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
         throw new Error(`Unknown scenario: ${scenarioId}`);
       }
       
-      // First, try to compile from source files if the TypeScript compiler is available
-      if (typeof BlinkCompiler !== 'undefined' && BlinkCompiler.compile) {
-        try {
-          return await compileScenario(scenarioId);
-        } catch (error) {
-          console.warn(`Failed to compile scenario from source: ${error.message}`);
-          console.warn('Falling back to pre-compiled IR file...');
-        }
+      // Compile from source files - fail fast if compilation fails
+      if (typeof BlinkCompiler === 'undefined' || !BlinkCompiler.compile) {
+        throw new Error('BlinkCompiler is not available. Cannot compile scenario from source.');
       }
       
-      // Fallback: Try to load pre-compiled IR files
-      const paths = [
-        scenario.irFile,
-        `data/${scenario.irFile}`,
-        `../ir/${scenario.irFile}`
-      ];
-      
-      for (const path of paths) {
-        try {
-          console.debug(`Attempting to load scenario IR from: ${path}`);
-          const response = await fetch(path);
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-          const data = await response.json();
-          console.info(`Successfully loaded ${scenario.name} scenario from ${path}`);
-          return data;
-        } catch (error) {
-          console.warn(`Failed to load from ${path}:`, error.message);
-        }
-      }
-      
-      throw new Error(`Failed to load ${scenario.name} IR from all paths`);
+      return await compileScenario(scenarioId);
     }
     
     function renderScenarios() {
