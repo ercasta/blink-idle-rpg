@@ -1,7 +1,7 @@
 /**
  * Blink Engine Browser Bundle
  * Auto-generated from TypeScript source - DO NOT EDIT MANUALLY
- * Build date: 2026-01-06T09:13:16.321Z
+ * Build date: 2026-01-06T09:14:59.584Z
  */
 
 "use strict";
@@ -682,7 +682,7 @@ var BlinkEngine = (() => {
           fields[key] = this.evaluateExpression(expr, context);
         }
       }
-      const eventId = context.timeline.schedule(action.event, delay, {
+      context.timeline.schedule(action.event, delay, {
         source: source ?? void 0,
         target: target ?? void 0,
         fields: Object.keys(fields).length > 0 ? fields : void 0
@@ -703,7 +703,7 @@ var BlinkEngine = (() => {
           fields[key] = this.evaluateExpression(expr, context);
         }
       }
-      const eventId = context.timeline.scheduleImmediate(action.event, {
+      context.timeline.scheduleImmediate(action.event, {
         fields: Object.keys(fields).length > 0 ? fields : void 0
       });
       if (context.traceCallback) {

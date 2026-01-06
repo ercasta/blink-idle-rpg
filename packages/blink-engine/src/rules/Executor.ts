@@ -365,7 +365,7 @@ export class RuleExecutor {
       }
     }
 
-    const eventId = context.timeline.schedule(action.event, delay, {
+    context.timeline.schedule(action.event, delay, {
       source: source ?? undefined,
       target: target ?? undefined,
       fields: Object.keys(fields).length > 0 ? fields : undefined,
@@ -391,7 +391,7 @@ export class RuleExecutor {
       }
     }
 
-    const eventId = context.timeline.scheduleImmediate(action.event, {
+    context.timeline.scheduleImmediate(action.event, {
       fields: Object.keys(fields).length > 0 ? fields : undefined,
     });
 
