@@ -1,0 +1,35 @@
+{
+  "name": "@blink/compiler-wasm",
+  "version": "0.1.0",
+  "description": "Blink Compiler - WebAssembly bindings for browser use",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "keywords": [
+    "compiler",
+    "brl",
+    "bcl",
+    "wasm",
+    "webassembly"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^25.0.3",
+    "typescript": "^5.3.0"
+  },
+  "files": [
+    "dist/**/*",
+    "wasm/**/*"
+  ],
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  }
+}
