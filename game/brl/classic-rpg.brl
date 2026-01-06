@@ -70,6 +70,14 @@ component FinalBoss {
     isFinalBoss: boolean
 }
 
+// Component that marks when Lord Vexar has been defeated
+// This component is created on the GameState entity when the final boss is defeated
+// Used for testing and verification that the game ended properly
+component LordVexarDefeated {
+    defeatedAt: float
+    defeatedByHeroCount: integer
+}
+
 // Holds references to all enemy templates / entries in the game
 // Holds references to all enemy templates / entries in the game
 component EnemyCompendium {
@@ -398,6 +406,16 @@ rule player_death_handler on Death {
 
 // When a player is defeated, schedule a respawn after 120 seconds
 rule respawn_on_player_defeated on PlayerDefeated {
+    // Don't respawn players if Lord Vexar has been defeated (game is over)
+    // Find the GameState entity to check if game is over
+    let gameStates = entities having GameState
+    if gameStates.count > 0 {
+        let gameState = gameStates[0]
+        if gameState.GameState.gameOver && gameState.GameState.victory {
+            return
+        }
+    }
+    
     // Schedule respawn for the dead player after 120s
     schedule [delay: 120.0] RespawnPlayer {
         player: event.player
@@ -482,6 +500,16 @@ rule boss_defeated_victory on EnemyDefeated {
                 entity.GameState.bossDefeated = true
                 entity.GameState.victory = true
                 entity.GameState.gameOver = true
+                
+                // Add LordVexarDefeated component to track this specific victory
+                entity.LordVexarDefeated.defeatedAt = entity.RunStats.simulationTime
+                entity.LordVexarDefeated.defeatedByHeroCount = 4
+                
+                // Emit dedicated LordVexarDefeated event
+                schedule LordVexarDefeated {
+                    boss: defeated
+                }
+                
                 schedule GameOver {
                     victory: true
                 }
@@ -493,6 +521,11 @@ rule boss_defeated_victory on EnemyDefeated {
 // Spawn a replacement enemy when one is defeated
 rule spawn_replacement_enemy on EnemyDefeated {
     if entity.GameState {
+        // Don't spawn new enemies if Lord Vexar has been defeated
+        if entity.LordVexarDefeated {
+            return
+        }
+        
         if entity.GameState.enemiesDefeated < 1000 && entity.GameState.gameOver == false && entity.GameState.bossSpawned == false {
             // Spawn enemy from current tier to maintain combat
             let currentTier = entity.GameState.currentTier
