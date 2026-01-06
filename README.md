@@ -84,7 +84,14 @@ Available targets:
 
 ### Try the Demo
 
-To run the demos, serve them using a local web server:
+**First, build the required files:**
+
+```bash
+# From repository root - builds TypeScript bundles
+make dev-setup
+```
+
+Then serve the demos using a local web server:
 
 ```bash
 cd game/demos
