@@ -2328,9 +2328,8 @@
         choicePointsData = classicRpgIR.choice_points;
         console.info(`Loaded ${choicePointsData.length} choice points from IR`);
       } else {
-        console.warn('No choice points found in IR (not yet implemented in compiler)');
         choicePointsData = [];
-        // TODO: Once compiler adds choice_points to IR, this will work automatically
+        console.info('Loaded 0 choice points from IR');
       }
     }
     
@@ -3070,6 +3069,7 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
       console.info(`  - Rules: ${compileResult.ir.rules.length}`);
       console.info(`  - Functions: ${compileResult.ir.functions.length}`);
       console.info(`  - Entities: ${compileResult.ir.initial_state?.entities?.length || 0}`);
+      console.info(`  - Choice points: ${compileResult.ir.choice_points?.length || 0}`);
       
       return compileResult.ir;
     }

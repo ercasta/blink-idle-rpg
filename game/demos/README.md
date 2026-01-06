@@ -4,6 +4,23 @@ Browser-based demos showcasing the Blink engine. **Works on mobile and desktop!*
 
 ## 🚀 Quick Start
 
+### Step 1: Build the Required Files
+
+Before running the demos, you need to build the JavaScript bundles from TypeScript source:
+
+```bash
+# From the repository root
+make dev-setup
+```
+
+This will:
+- Install npm dependencies
+- Build the Blink engine bundle
+- Build the TypeScript compiler bundle
+- Copy bundles to the `game/demos/` directory
+
+### Step 2: Serve the Demos
+
 To run the demos, you need to serve them using a local web server:
 
 ### Option 1: Using npx serve (Recommended)
@@ -110,6 +127,10 @@ The demo package is automatically built via GitHub Actions for Windows and Linux
 This makes it easy for interested players to learn how Blink games work and even create their own modifications.
 
 ## Troubleshooting
+
+**Q: I get "BlinkCompiler is not available" or files fail to load**
+- Make sure you've run `make dev-setup` from the repository root to build the required bundle files
+- The bundle files (`blink-engine.bundle.js` and `blink-compiler.bundle.js`) are generated and not included in git
 
 **Q: The demo doesn't work when I serve it**
 - Make sure JavaScript is enabled in your browser
