@@ -39,7 +39,8 @@ WORKDIR /workspace
 COPY --from=node-builder /build/packages ./packages
 
 # Copy bundles that were created during build
-COPY --from=node-builder /build/game/demos/*.bundle.js ./game/demos/
+COPY --from=node-builder /build/game/demos/blink-engine.bundle.js ./game/demos/
+COPY --from=node-builder /build/game/demos/blink-compiler.bundle.js ./game/demos/
 
 # Copy example files and demos from the repository
 COPY game ./game

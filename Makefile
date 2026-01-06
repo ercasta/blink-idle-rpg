@@ -3,6 +3,11 @@
 
 .PHONY: help all clean build-compiler-ts install-packages build-packages test demo-package dev-setup dev
 
+# Bundle output locations
+DEMOS_DIR=game/demos
+ENGINE_BUNDLE=$(DEMOS_DIR)/blink-engine.bundle.js
+COMPILER_BUNDLE=$(DEMOS_DIR)/blink-compiler.bundle.js
+
 # When set to true, include source_map in IR output for dev tools
 SOURCE_MAP_FLAG=--source-map
 
@@ -37,10 +42,9 @@ dev-setup:
 	@echo "Building packages..."
 	cd packages/blink-engine && npm run build && npm run build:bundle
 	cd packages/blink-compiler-ts && npm run build && npm run build:bundle
-	@echo "Copying compiler bundle to demos directory..."
-	mkdir -p game/demos
-	cp packages/blink-compiler-ts/dist/blink-compiler.bundle.js game/demos/
-	cp packages/blink-engine/dist/blink-engine.bundle.js game/demos/
+	@echo "Verifying bundles..."
+	@test -f $(ENGINE_BUNDLE) || (echo "Error: Engine bundle not found at $(ENGINE_BUNDLE)" && exit 1)
+	@test -f $(COMPILER_BUNDLE) || (echo "Error: Compiler bundle not found at $(COMPILER_BUNDLE)" && exit 1)
 	@echo ""
 	@echo "Development setup complete!"
 	@echo "Open game/demos/rpg-demo.html in a browser to play."
@@ -56,8 +60,7 @@ build-compiler-ts:
 	@echo "Building TypeScript BRL compiler..."
 	cd packages/blink-compiler-ts && npm install && npm run build && npm run build:bundle
 	@echo "TypeScript compiler built successfully"
-	mkdir -p game/demos
-	cp packages/blink-compiler-ts/dist/blink-compiler.bundle.js game/demos/
+	@test -f $(COMPILER_BUNDLE) || (echo "Error: Compiler bundle not found at $(COMPILER_BUNDLE)" && exit 1)
 
 # Build packages for development
 build-packages-dev:
@@ -128,8 +131,8 @@ demo-package: dev
 	@echo "Copying demo HTML and JS files..."
 	cp game/demos/index.html demo-package/
 	cp game/demos/rpg-demo.html demo-package/
-	cp game/demos/blink-engine.bundle.js demo-package/
-	cp game/demos/blink-compiler.bundle.js demo-package/
+	cp $(ENGINE_BUNDLE) demo-package/
+	cp $(COMPILER_BUNDLE) demo-package/
 	cp game/demos/README.md demo-package/
 	
 	@echo "Copying source files for in-browser compilation..."

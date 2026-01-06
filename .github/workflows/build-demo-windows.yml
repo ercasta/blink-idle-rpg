@@ -55,6 +55,14 @@ jobs:
           npm run build:bundle
           Set-Location ..\..
           Write-Host "Verifying bundles were created..."
+          if (-Not (Test-Path game\demos\blink-engine.bundle.js)) {
+            Write-Error "Error: Engine bundle not found"
+            exit 1
+          }
+          if (-Not (Test-Path game\demos\blink-compiler.bundle.js)) {
+            Write-Error "Error: Compiler bundle not found"
+            exit 1
+          }
           Get-Item game\demos\blink-engine.bundle.js | Select-Object Name, Length
           Get-Item game\demos\blink-compiler.bundle.js | Select-Object Name, Length
         shell: pwsh

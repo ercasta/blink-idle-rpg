@@ -53,6 +53,8 @@ jobs:
           npm run build:bundle
           cd ../..
           echo "Verifying bundles were created..."
+          test -f game/demos/blink-engine.bundle.js || (echo "Error: Engine bundle not found" && exit 1)
+          test -f game/demos/blink-compiler.bundle.js || (echo "Error: Compiler bundle not found" && exit 1)
           ls -lh game/demos/blink-engine.bundle.js
           ls -lh game/demos/blink-compiler.bundle.js
       
