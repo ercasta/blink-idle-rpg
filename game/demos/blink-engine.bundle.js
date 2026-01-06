@@ -1,7 +1,7 @@
 /**
  * Blink Engine Browser Bundle
  * Auto-generated from TypeScript source - DO NOT EDIT MANUALLY
- * Build date: 2026-01-06T08:34:27.005Z
+ * Build date: 2026-01-06T08:59:04.435Z
  */
 
 "use strict";
@@ -464,7 +464,7 @@ var BlinkEngine = (() => {
     /**
      * Execute a rule against an event and entity
      */
-    executeRule(rule, event, store, timeline) {
+    executeRule(rule, event, store, timeline, traceCallback) {
       const entities = this.getFilteredEntities(rule, store, event);
       for (const entityId of entities) {
         const bindings = this.createBindings(rule, event, entityId);
@@ -475,8 +475,10 @@ var BlinkEngine = (() => {
           bindings,
           params: /* @__PURE__ */ new Map(),
           functions: this.functions,
-          locals: /* @__PURE__ */ new Map()
+          locals: /* @__PURE__ */ new Map(),
           // Initialize empty locals map
+          traceCallback
+          // Pass trace callback through context
         };
         if (rule.condition) {
           const conditionResult = this.evaluateExpression(rule.condition, context);
@@ -680,11 +682,19 @@ var BlinkEngine = (() => {
           fields[key] = this.evaluateExpression(expr, context);
         }
       }
-      context.timeline.schedule(action.event, delay, {
+      const eventId = context.timeline.schedule(action.event, delay, {
         source: source ?? void 0,
         target: target ?? void 0,
         fields: Object.keys(fields).length > 0 ? fields : void 0
       });
+      if (context.traceCallback) {
+        const targetTime = context.timeline.getTime() + delay;
+        context.traceCallback(
+          "event_scheduled",
+          `Scheduled ${action.event} at time ${targetTime.toFixed(2)}s (delay: ${delay}s)${source !== void 0 ? ` from entity ${source}` : ""}${target !== void 0 ? ` to entity ${target}` : ""}`,
+          action
+        );
+      }
     }
     executeEmit(action, context) {
       const fields = {};
@@ -693,9 +703,16 @@ var BlinkEngine = (() => {
           fields[key] = this.evaluateExpression(expr, context);
         }
       }
-      context.timeline.scheduleImmediate(action.event, {
+      const eventId = context.timeline.scheduleImmediate(action.event, {
         fields: Object.keys(fields).length > 0 ? fields : void 0
       });
+      if (context.traceCallback) {
+        context.traceCallback(
+          "event_scheduled",
+          `Emitted ${action.event} immediately (at current time)`,
+          action
+        );
+      }
     }
     executeDespawn(action, context) {
       const entityId = this.evaluateEntityExpression(action.entity, context);
@@ -967,15 +984,19 @@ var BlinkEngine = (() => {
       // trackerCallbacks removed
       this.simulationCallbacks = /* @__PURE__ */ new Set();
       this.debugCallbacks = /* @__PURE__ */ new Set();
+      this.traceCallbacks = /* @__PURE__ */ new Set();
       this.ir = null;
       this.devMode = false;
+      this.enableTrace = false;
       this.options = {
         debug: options.debug ?? false,
         msPerFrame: options.msPerFrame ?? 16,
         // Default: 16ms per frame (simulates ~60fps at 1x speed)
         maxEventsPerFrame: options.maxEventsPerFrame ?? 100,
-        devMode: options.devMode ?? false
+        devMode: options.devMode ?? false,
+        enableTrace: options.enableTrace ?? false
       };
+      this.enableTrace = this.options.enableTrace;
       this.devMode = this.options.devMode;
       this.store = new Store();
       this.timeline = new Timeline();
@@ -1126,12 +1147,43 @@ var BlinkEngine = (() => {
       if (!event) {
         return null;
       }
+      this.emitTraceEvent({
+        type: "event_fired",
+        time: this.timeline.getTime(),
+        event,
+        details: `Event: ${event.eventType}${event.source !== void 0 ? ` from entity ${event.source}` : ""}${event.target !== void 0 ? ` to entity ${event.target}` : ""}`
+      });
       const matchingRules = this.executor.getMatchingRules(event.eventType);
+      if (this.enableTrace && matchingRules.length > 0) {
+        this.emitTraceEvent({
+          type: "rule_matched",
+          time: this.timeline.getTime(),
+          event,
+          details: `Matched ${matchingRules.length} rule(s) for event ${event.eventType}`
+        });
+      }
       for (const rule of matchingRules) {
+        this.emitTraceEvent({
+          type: "rule_triggered",
+          time: this.timeline.getTime(),
+          event,
+          rule,
+          details: `Rule: ${rule.name || "unnamed"}`
+        });
+        const traceCallback = this.enableTrace ? (type, details, action) => {
+          this.emitTraceEvent({
+            type,
+            time: this.timeline.getTime(),
+            event,
+            rule,
+            action,
+            details
+          });
+        } : void 0;
         if (this.devMode) {
-          this.executeRuleWithDebug(rule, event);
+          this.executeRuleWithDebug(rule, event, traceCallback);
         } else {
-          this.executor.executeRule(rule, event, this.store, this.timeline);
+          this.executor.executeRule(rule, event, this.store, this.timeline, traceCallback);
         }
       }
       const result = {
@@ -1144,14 +1196,14 @@ var BlinkEngine = (() => {
     /**
      * Execute a rule with debug events emitted
      */
-    executeRuleWithDebug(rule, event) {
+    executeRuleWithDebug(rule, event, traceCallback) {
       this.emitDebugEvent({
         type: "rule_start",
         rule,
         sourceLocation: rule.source_location,
         time: this.timeline.getTime()
       });
-      this.executor.executeRule(rule, event, this.store, this.timeline);
+      this.executor.executeRule(rule, event, this.store, this.timeline, traceCallback);
       this.emitDebugEvent({
         type: "rule_end",
         rule,
@@ -1237,11 +1289,31 @@ var BlinkEngine = (() => {
       return () => this.debugCallbacks.delete(callback);
     }
     /**
+     * Subscribe to trace events (for event firing and rule triggering trace)
+     */
+    onTrace(callback) {
+      this.traceCallbacks.add(callback);
+      return () => this.traceCallbacks.delete(callback);
+    }
+    /**
      * Enable or disable dev mode (step-by-step debugging)
      */
     setDevMode(enabled) {
       this.devMode = enabled;
       this.options.devMode = enabled;
+    }
+    /**
+     * Enable or disable trace mode (event firing and rule triggering trace)
+     */
+    setTraceEnabled(enabled) {
+      this.enableTrace = enabled;
+      this.options.enableTrace = enabled;
+    }
+    /**
+     * Check if trace mode is enabled
+     */
+    getTraceEnabled() {
+      return this.enableTrace;
     }
     /**
      * Check if dev mode is enabled
@@ -1519,6 +1591,18 @@ var BlinkEngine = (() => {
           callback(event);
         } catch (error) {
           console.error("[BlinkGame] Error in debug callback:", error);
+        }
+      }
+    }
+    emitTraceEvent(event) {
+      if (!this.enableTrace) {
+        return;
+      }
+      for (const callback of this.traceCallbacks) {
+        try {
+          callback(event);
+        } catch (error) {
+          console.error("[BlinkGame] Error in trace callback:", error);
         }
       }
     }
