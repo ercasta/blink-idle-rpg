@@ -31,6 +31,11 @@ jobs:
       
       - name: Set up Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          target: wasm32-unknown-unknown
+      
+      - name: Install wasm-pack
+        run: cargo install wasm-pack
       
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -40,6 +45,7 @@ jobs:
           cache-dependency-path: |
             packages/blink-engine/package-lock.json
             packages/blink-test/package-lock.json
+            packages/blink-compiler-wasm/package-lock.json
       
       - name: Build compiler
         run: |
@@ -99,6 +105,24 @@ jobs:
           npm ci
           cd ../blink-test
           npm ci
+          cd ../blink-compiler-wasm
+          npm ci
+          cd ../..
+      
+      - name: Build WASM compiler
+        run: |
+          echo "Building WASM compiler..."
+          cd src/compiler
+          wasm-pack build --target web --out-dir ../../packages/blink-compiler-wasm/wasm
+          cd ../..
+          
+          echo "Building WASM TypeScript wrapper..."
+          cd packages/blink-compiler-wasm
+          npm run build
+          cd ../..
+          
+          echo "Verifying WASM module was created..."
+          ls -lh packages/blink-compiler-wasm/wasm/blink_compiler_bg.wasm
       
       - name: Build packages
         run: |
@@ -126,6 +150,22 @@ jobs:
           cp game/demos/rpg-demo.html _site/
           cp game/demos/blink-engine.bundle.js _site/
           
+          # Copy WASM compiler files
+          echo "Copying WASM compiler..."
+          mkdir -p _site/wasm
+          cp packages/blink-compiler-wasm/wasm/*.wasm _site/wasm/
+          cp packages/blink-compiler-wasm/wasm/*.js _site/wasm/
+          cp packages/blink-compiler-wasm/dist/*.js _site/wasm/
+          echo "Copied WASM compiler files to _site/wasm/"
+          
+          # Copy BRL/BCL/BDL source files for runtime compilation
+          echo "Copying source files for runtime compilation..."
+          mkdir -p _site/game
+          cp -r game/brl _site/game/
+          cp -r game/bcl _site/game/
+          cp -r game/bdl _site/game/
+          echo "Copied source files to _site/game/"
+          
           # Copy data files for runtime use
           echo "Copying data files..."
           mkdir -p _site/data
@@ -133,7 +173,7 @@ jobs:
             cp game/data/characters.json _site/data/
           fi
           
-          # Copy IR files for runtime use (demos need these)
+          # Copy IR files for runtime use (demos need these for fallback)
           if ls game/ir/*.ir.json 1> /dev/null 2>&1; then
             cp game/ir/*.ir.json _site/data/
             echo "Copied IR files to _site/data/"

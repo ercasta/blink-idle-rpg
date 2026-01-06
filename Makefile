@@ -28,7 +28,7 @@ help:
 	@echo ""
 
 # Build everything
-all: build-compiler compile-brl install-packages build-packages
+all: build-compiler build-wasm compile-brl install-packages build-packages
 
 # Quick development setup (TypeScript only, no Rust required)
 dev-setup:
@@ -83,6 +83,14 @@ build-compiler:
 	cd src/compiler && cargo build --release
 	@echo "Compiler built successfully"
 
+# Build the WASM compiler
+build-wasm:
+	@echo "Building WASM compiler..."
+	cd src/compiler && wasm-pack build --target web --out-dir ../../packages/blink-compiler-wasm/wasm
+	@echo "Building WASM TypeScript wrapper..."
+	cd packages/blink-compiler-wasm && npm install && npm run build
+	@echo "WASM compiler built successfully"
+
 # Compile all BRL files to IR
 compile-brl: build-compiler
 	@echo "Compiling BRL files to IR..."
@@ -132,7 +140,7 @@ install-packages:
 	@echo "Dependencies installed"
 
 # Build TypeScript packages and copy artifacts to demo directory
-build-packages: compile-brl
+build-packages: compile-brl build-wasm
 	@echo "Building blink-engine..."
 	cd packages/blink-engine && npm run build
 	@echo "Building browser bundle..."
