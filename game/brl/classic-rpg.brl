@@ -205,10 +205,12 @@ rule initialize_hero_attacks on GameStart {
 
 // Rule 2: Start retargeting system when game begins
 rule start_retargeting_system on GameStart {
-    if entity.GameState.retargetingActive == false {
-        entity.GameState.retargetingActive = true
-        // Schedule first retargeting check in 2 seconds
-        schedule [delay: 2.0] CheckAllTargets {
+    if entity.GameState {
+        if entity.GameState.retargetingActive == false {
+            entity.GameState.retargetingActive = true
+            // Schedule first retargeting check in 2 seconds
+            schedule [delay: 2.0] CheckAllTargets {
+            }
         }
     }
 }
@@ -241,44 +243,46 @@ rule spawn_initial_enemies on GameStart {
 
 // Handle a wave starting: spawn its enemies and schedule the next wave
 rule handle_enemy_spawned on EnemySpawned {
-    // Determine current tier and wave index
-    let tier = entity.GameState.currentTier
-    let waveIndex = entity.GameState.waveInTier
-    let count = entity.SpawnConfig.initialEnemyCount
+    if entity.GameState && entity.SpawnConfig {
+        // Determine current tier and wave index
+        let tier = entity.GameState.currentTier
+        let waveIndex = entity.GameState.waveInTier
+        let count = entity.SpawnConfig.initialEnemyCount
 
-    // Spawn enemies for this wave
-    // Note: Array size should match entity.SpawnConfig.initialEnemyCount
-    let indices = [0, 1, 2, 3, 4]
-    for i in indices {
-        schedule [delay: 0.05 * (i + 1)] SpawnEnemy {
-            tier: tier
-        }
-    }
-
-    // If this is the final tier, spawn the named final boss once
-    if tier == entity.SpawnConfig.maxTier {
-        if entity.GameState.bossSpawned == false {
-            schedule [delay: 1.0] SpawnLordVexar {
+        // Spawn enemies for this wave
+        // Note: Array size should match entity.SpawnConfig.initialEnemyCount
+        let indices = [0, 1, 2, 3, 4]
+        for i in indices {
+            schedule [delay: 0.05 * (i + 1)] SpawnEnemy {
+                tier: tier
             }
-            entity.GameState.bossSpawned = true
         }
-        // Do not schedule further waves after boss spawn
-        return
-    }
 
-    // Schedule the next wave: advance waveInTier/tier counters
-    let nextWaveIndex = waveIndex + 1
-    if nextWaveIndex > entity.SpawnConfig.wavesPerTier {
-        entity.GameState.currentTier = tier + 1
-        entity.GameState.waveInTier = 1
-    } else {
-        entity.GameState.waveInTier = nextWaveIndex
-    }
-    entity.GameState.currentWave += 1
+        // If this is the final tier, spawn the named final boss once
+        if tier == entity.SpawnConfig.maxTier {
+            if entity.GameState.bossSpawned == false {
+                schedule [delay: 1.0] SpawnLordVexar {
+                }
+                entity.GameState.bossSpawned = true
+            }
+            // Do not schedule further waves after boss spawn
+            return
+        }
 
-    // Schedule next EnemySpawned event for the next wave
-    schedule [delay: 2.0] EnemySpawned {
-        wave: entity.GameState.currentWave
+        // Schedule the next wave: advance waveInTier/tier counters
+        let nextWaveIndex = waveIndex + 1
+        if nextWaveIndex > entity.SpawnConfig.wavesPerTier {
+            entity.GameState.currentTier = tier + 1
+            entity.GameState.waveInTier = 1
+        } else {
+            entity.GameState.waveInTier = nextWaveIndex
+        }
+        entity.GameState.currentWave += 1
+
+        // Schedule next EnemySpawned event for the next wave
+        schedule [delay: 2.0] EnemySpawned {
+            wave: entity.GameState.currentWave
+        }
     }
 }
 
@@ -469,16 +473,18 @@ rule level_up_stats on LevelUp {
 
 // Track enemy defeats and check victory
 rule boss_defeated_victory on EnemyDefeated {
-    entity.GameState.enemiesDefeated += 1
-    // If this was the named final boss, finish the run with victory.
-    if event.isBoss {
-        let defeated = event.enemy
-        if defeated.Enemy.name == "Lord Vexar" {
-            entity.GameState.bossDefeated = true
-            entity.GameState.victory = true
-            entity.GameState.gameOver = true
-            schedule GameOver {
-                victory: true
+    if entity.GameState {
+        entity.GameState.enemiesDefeated += 1
+        // If this was the named final boss, finish the run with victory.
+        if event.isBoss {
+            let defeated = event.enemy
+            if defeated.Enemy.name == "Lord Vexar" {
+                entity.GameState.bossDefeated = true
+                entity.GameState.victory = true
+                entity.GameState.gameOver = true
+                schedule GameOver {
+                    victory: true
+                }
             }
         }
     }
@@ -486,11 +492,13 @@ rule boss_defeated_victory on EnemyDefeated {
 
 // Spawn a replacement enemy when one is defeated
 rule spawn_replacement_enemy on EnemyDefeated {
-    if entity.GameState.enemiesDefeated < 1000 && entity.GameState.gameOver == false && entity.GameState.bossSpawned == false {
-        // Spawn enemy from current tier to maintain combat
-        let currentTier = entity.GameState.currentTier
-        schedule [delay: 0.1] SpawnEnemy {
-            tier: currentTier
+    if entity.GameState {
+        if entity.GameState.enemiesDefeated < 1000 && entity.GameState.gameOver == false && entity.GameState.bossSpawned == false {
+            // Spawn enemy from current tier to maintain combat
+            let currentTier = entity.GameState.currentTier
+            schedule [delay: 0.1] SpawnEnemy {
+                tier: currentTier
+            }
         }
     }
 }
@@ -540,14 +548,18 @@ rule mana_regen on ManaRegen {
 
 // Count player deaths
 rule count_player_death on PlayerDefeated {
-    entity.GameState.playerDeaths += 1
+    if entity.GameState {
+        entity.GameState.playerDeaths += 1
+    }
 }
 
 // Apply death penalty to run stats
 rule apply_death_penalty on PlayerDefeated {
-    entity.RunStats.deathPenalty += entity.FleeConfig.retreatTimePenalty * entity.FleeConfig.deathTimePenaltyMultiplier
-    entity.RunStats.totalTime = entity.RunStats.simulationTime + entity.RunStats.retreatPenalty + entity.RunStats.deathPenalty
-    schedule UpdateRunStats {
+    if entity.RunStats && entity.FleeConfig {
+        entity.RunStats.deathPenalty += entity.FleeConfig.retreatTimePenalty * entity.FleeConfig.deathTimePenaltyMultiplier
+        entity.RunStats.totalTime = entity.RunStats.simulationTime + entity.RunStats.retreatPenalty + entity.RunStats.deathPenalty
+        schedule UpdateRunStats {
+        }
     }
 }
 
@@ -572,25 +584,27 @@ rule acquire_skill on AcquireSkill {
 
 // Flee from battle - player initiates retreat
 rule flee_battle on FleeFromBattle {
-    // Check cooldown
-    let timeSinceFlee = entity.RunStats.simulationTime - entity.RunStats.lastFleeTime
-    if timeSinceFlee >= entity.FleeConfig.fleeCooldown {
-        // Apply retreat penalty
-        entity.RunStats.retreatCount += 1
-        entity.RunStats.retreatPenalty += entity.FleeConfig.retreatTimePenalty
-        entity.RunStats.lastFleeTime = entity.RunStats.simulationTime
-        entity.RunStats.canFlee = false
-        entity.RunStats.totalTime = entity.RunStats.simulationTime + entity.RunStats.retreatPenalty + entity.RunStats.deathPenalty
-        
-        // Mark all enemies for despawn
-        schedule DespawnAllEnemies {
-        }
-        
-        // Spawn new wave after retreat
-        schedule [delay: 0.5] SpawnEnemyWave {
-        }
-        
-        schedule UpdateRunStats {
+    if entity.RunStats && entity.FleeConfig {
+        // Check cooldown
+        let timeSinceFlee = entity.RunStats.simulationTime - entity.RunStats.lastFleeTime
+        if timeSinceFlee >= entity.FleeConfig.fleeCooldown {
+            // Apply retreat penalty
+            entity.RunStats.retreatCount += 1
+            entity.RunStats.retreatPenalty += entity.FleeConfig.retreatTimePenalty
+            entity.RunStats.lastFleeTime = entity.RunStats.simulationTime
+            entity.RunStats.canFlee = false
+            entity.RunStats.totalTime = entity.RunStats.simulationTime + entity.RunStats.retreatPenalty + entity.RunStats.deathPenalty
+            
+            // Mark all enemies for despawn
+            schedule DespawnAllEnemies {
+            }
+            
+            // Spawn new wave after retreat
+            schedule [delay: 0.5] SpawnEnemyWave {
+            }
+            
+            schedule UpdateRunStats {
+            }
         }
     }
 }
@@ -608,32 +622,38 @@ rule despawn_enemies on DespawnAllEnemies {
 
 // Update flee cooldown timer
 rule update_flee_cooldown on UpdateRunStats {
-    let timeSinceFlee = entity.RunStats.simulationTime - entity.RunStats.lastFleeTime
-    if timeSinceFlee >= entity.FleeConfig.fleeCooldown {
-        entity.RunStats.canFlee = true
+    if entity.RunStats && entity.FleeConfig {
+        let timeSinceFlee = entity.RunStats.simulationTime - entity.RunStats.lastFleeTime
+        if timeSinceFlee >= entity.FleeConfig.fleeCooldown {
+            entity.RunStats.canFlee = true
+        }
     }
 }
 
 // Complete run and save to leaderboard
 rule complete_run on GameOver {
-    schedule SaveRunToLeaderboard {
-        completionTime: entity.RunStats.totalTime
-        enemiesDefeated: entity.GameState.enemiesDefeated
-        playerDeaths: entity.GameState.playerDeaths
-        retreats: entity.RunStats.retreatCount
-        retreatPenalty: entity.RunStats.retreatPenalty
-        deathPenalty: entity.RunStats.deathPenalty
-        victory: entity.GameState.victory
+    if entity.RunStats && entity.GameState {
+        schedule SaveRunToLeaderboard {
+            completionTime: entity.RunStats.totalTime
+            enemiesDefeated: entity.GameState.enemiesDefeated
+            playerDeaths: entity.GameState.playerDeaths
+            retreats: entity.RunStats.retreatCount
+            retreatPenalty: entity.RunStats.retreatPenalty
+            deathPenalty: entity.RunStats.deathPenalty
+            victory: entity.GameState.victory
+        }
     }
 }
 
 // Start global recurring retargeting when game begins
 rule start_global_retargeting on EnemySpawned {
     // Only start retargeting once, when first enemy spawns
-    if entity.GameState.currentWave == 1 && entity.GameState.retargetingActive == false {
-        entity.GameState.retargetingActive = true
-        // Schedule first retargeting check in 2 seconds
-        schedule [delay: 2.0] CheckAllTargets {
+    if entity.GameState {
+        if entity.GameState.currentWave == 1 && entity.GameState.retargetingActive == false {
+            entity.GameState.retargetingActive = true
+            // Schedule first retargeting check in 2 seconds
+            schedule [delay: 2.0] CheckAllTargets {
+            }
         }
     }
 }
@@ -657,9 +677,11 @@ rule check_entity_target on CheckAllTargets {
 // This rule only fires for the GameState entity to ensure single reschedule
 rule reschedule_retargeting on CheckAllTargets {
     // Only fire for entity with GameState component
-    if entity.GameState.retargetingActive && entity.GameState.gameOver == false {
-        // Schedule next check in 2 seconds
-        schedule [delay: 2.0] CheckAllTargets {
+    if entity.GameState {
+        if entity.GameState.retargetingActive && entity.GameState.gameOver == false {
+            // Schedule next check in 2 seconds
+            schedule [delay: 2.0] CheckAllTargets {
+            }
         }
     }
 }
