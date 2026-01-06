@@ -3493,11 +3493,16 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
       
       // Load config and enemy template entities from the filtered IR
       // These entities are needed for the BRL rules to work properly
+      console.info(`Loading ${filteredIR.initial_state.entities.length} entities from IR`);
       filteredIR.initial_state.entities.forEach((entity) => {
         game.createEntity(entity.id);
         Object.entries(entity.components).forEach(([componentName, componentData]) => {
           game.addComponent(entity.id, componentName, componentData);
         });
+        // Log config entities
+        if (entity.components.GameState || entity.components.SpawnConfig) {
+          console.info(`Loaded config entity ${entity.id}:`, Object.keys(entity.components));
+        }
       });
       
       // Create hero entities dynamically from selected characters
@@ -3591,10 +3596,12 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
       // spawnInitialEnemies(5); // REMOVED - now in BRL
       
       // NEW: Schedule GameStart event to trigger BRL initialization
-      // This will automatically start hero attacks, retargeting system, AND spawn enemies
-      // Let GameStart run on all entities, rules will filter by component checks
-      console.info('Scheduling GameStart event (global)');
-      game.scheduleEvent('GameStart', 0, {});
+      // Schedule a single global GameStart event - the engine will dispatch it to all entities
+      // Rules filter by component checks (e.g., if entity.SpawnConfig)
+      console.info('Scheduling global GameStart event');
+      // Note: The Blink engine dispatches global events to all entities automatically
+      // The spawn_initial_enemies rule will only run on entities with SpawnConfig component
+      game.scheduleEvent('GameStart', 0);
       
       // EnemySpawned event now triggered by BRL after spawning completes
       // game.scheduleEvent('EnemySpawned', 0.1, { wave: 1 }); // REMOVED - now in BRL
@@ -3677,10 +3684,9 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
       // spawnInitialEnemies(5); // REMOVED - now in BRL
       
       // NEW: Schedule GameStart event to trigger BRL initialization
-      // This will automatically start hero attacks, retargeting system, AND spawn enemies
-      // Let GameStart run on all entities, rules will filter by component checks
-      console.info('Scheduling GameStart event (global)');
-      game.scheduleEvent('GameStart', 0, {});
+      // Schedule a single global GameStart event - the engine will dispatch it to all entities
+      console.info('Scheduling global GameStart event');
+      game.scheduleEvent('GameStart', 0);
       
       // EnemySpawned event now triggered by BRL after spawning completes
       // game.scheduleEvent('EnemySpawned', 0.1, { wave: 1 }); // REMOVED - now in BRL
