@@ -3592,17 +3592,9 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
       
       // NEW: Schedule GameStart event to trigger BRL initialization
       // This will automatically start hero attacks, retargeting system, AND spawn enemies
-      // IMPORTANT: GameStart must target the entity with SpawnConfig for the rule to match
-      const spawnConfigEntityIds = game.query('SpawnConfig');
-      if (spawnConfigEntityIds && spawnConfigEntityIds.length > 0) {
-        const spawnConfigEntityId = spawnConfigEntityIds[0];
-        console.info(`Scheduling GameStart on entity ${spawnConfigEntityId} with SpawnConfig`);
-        game.scheduleEvent('GameStart', 0, { target: spawnConfigEntityId });
-      } else {
-        console.error('No entity with SpawnConfig found! Enemies will not spawn.');
-        // Fallback: schedule without target (won't work but won't crash)
-        game.scheduleEvent('GameStart', 0, {});
-      }
+      // Let GameStart run on all entities, rules will filter by component checks
+      console.info('Scheduling GameStart event (global)');
+      game.scheduleEvent('GameStart', 0, {});
       
       // EnemySpawned event now triggered by BRL after spawning completes
       // game.scheduleEvent('EnemySpawned', 0.1, { wave: 1 }); // REMOVED - now in BRL
@@ -3686,17 +3678,9 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
       
       // NEW: Schedule GameStart event to trigger BRL initialization
       // This will automatically start hero attacks, retargeting system, AND spawn enemies
-      // IMPORTANT: GameStart must target the entity with SpawnConfig for the rule to match
-      const spawnConfigEntityIds2 = game.query('SpawnConfig');
-      if (spawnConfigEntityIds2 && spawnConfigEntityIds2.length > 0) {
-        const spawnConfigEntityId2 = spawnConfigEntityIds2[0];
-        console.info(`Scheduling GameStart on entity ${spawnConfigEntityId2} with SpawnConfig`);
-        game.scheduleEvent('GameStart', 0, { target: spawnConfigEntityId2 });
-      } else {
-        console.error('No entity with SpawnConfig found! Enemies will not spawn.');
-        // Fallback: schedule without target (won't work but won't crash)
-        game.scheduleEvent('GameStart', 0, {});
-      }
+      // Let GameStart run on all entities, rules will filter by component checks
+      console.info('Scheduling GameStart event (global)');
+      game.scheduleEvent('GameStart', 0, {});
       
       // EnemySpawned event now triggered by BRL after spawning completes
       // game.scheduleEvent('EnemySpawned', 0.1, { wave: 1 }); // REMOVED - now in BRL
