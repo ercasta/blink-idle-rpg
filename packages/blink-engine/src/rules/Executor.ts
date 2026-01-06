@@ -547,7 +547,7 @@ export class RuleExecutor {
       case 'has_component': {
         // Evaluate entity expression to get the entity ID
         const entityId = this.evaluateEntityExpression(expr.entity, context);
-        if (entityId === null || entityId === undefined) {
+        if (entityId == null) {
           return false;
         }
         

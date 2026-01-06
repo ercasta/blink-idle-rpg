@@ -483,6 +483,10 @@ export class CodeGenerator {
         };
       
       case 'has_component':
+        // Generate has_component expression for "entity has ComponentName" syntax.
+        // At runtime, if the entity expression evaluates to null/undefined,
+        // the expression returns false. Otherwise, it checks if the entity
+        // has the specified component attached.
         return {
           type: 'has_component',
           entity: this.generateExpression(expr.entity),
