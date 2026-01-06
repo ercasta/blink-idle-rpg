@@ -1,7 +1,7 @@
 # Blink Idle RPG - Local Development Pipeline
 # This Makefile allows you to run build and test pipelines locally
 
-.PHONY: help all clean build-compiler compile-brl build-packages test demo-package install-packages
+.PHONY: help all clean build-compiler build-wasm compile-brl build-packages test demo-package install-packages
 
 # When set to true, include source_map in IR output for dev tools
 SOURCE_MAP_FLAG=--source-map
@@ -11,8 +11,9 @@ help:
 	@echo "Blink Idle RPG - Local Pipeline Commands"
 	@echo ""
 	@echo "Available targets:"
-	@echo "  make all              - Build everything (compiler, packages, demos)"
+	@echo "  make all              - Build everything (compiler, WASM, packages, demos)"
 	@echo "  make build-compiler   - Build the BRL compiler (Rust)"
+	@echo "  make build-wasm       - Build the WASM compiler for browser use"
 	@echo "  make compile-brl      - Compile all BRL files to IR"
 	@echo "  make install-packages - Install npm dependencies for packages"
 	@echo "  make build-packages   - Build TypeScript packages (blink-engine, blink-test)"
@@ -25,7 +26,7 @@ help:
 	@echo ""
 
 # Build everything
-all: build-compiler compile-brl install-packages build-packages
+all: build-compiler build-wasm compile-brl install-packages build-packages
 
 # Clean build artifacts
 clean:
@@ -33,6 +34,8 @@ clean:
 	rm -rf src/compiler/target
 	rm -rf packages/blink-engine/dist
 	rm -rf packages/blink-test/dist
+	rm -rf packages/blink-compiler-wasm/dist
+	rm -rf packages/blink-compiler-wasm/wasm
 	rm -rf demo-package
 	rm -rf blink-demo-package.zip
 	@echo "Clean complete"
@@ -42,6 +45,14 @@ build-compiler:
 	@echo "Building BRL compiler..."
 	cd src/compiler && cargo build --release
 	@echo "Compiler built successfully"
+
+# Build the WASM compiler
+build-wasm:
+	@echo "Building WASM compiler..."
+	cd src/compiler && wasm-pack build --target web --out-dir ../../packages/blink-compiler-wasm/wasm
+	@echo "Building WASM TypeScript wrapper..."
+	cd packages/blink-compiler-wasm && npm install && npm run build
+	@echo "WASM compiler built successfully"
 
 # Compile all BRL files to IR
 compile-brl: build-compiler
@@ -88,10 +99,11 @@ install-packages:
 	@echo "Installing npm dependencies..."
 	cd packages/blink-engine && npm install
 	cd packages/blink-test && npm install
+	cd packages/blink-compiler-wasm && npm install
 	@echo "Dependencies installed"
 
 # Build TypeScript packages and copy artifacts to demo directory
-build-packages: compile-brl
+build-packages: compile-brl build-wasm
 	@echo "Building blink-engine..."
 	cd packages/blink-engine && npm run build
 	@echo "Building browser bundle..."

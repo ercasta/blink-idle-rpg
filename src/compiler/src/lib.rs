@@ -44,6 +44,10 @@ pub mod parser;
 pub mod analyzer;
 pub mod ir;
 
+// WebAssembly bindings (only compiled for wasm32 target)
+#[cfg(target_arch = "wasm32")]
+pub mod wasm;
+
 use thiserror::Error;
 
 use crate::analyzer::TypedModule;
