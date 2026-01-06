@@ -29,14 +29,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       
-      - name: Set up Rust
-        uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          target: wasm32-unknown-unknown
-      
-      - name: Install wasm-pack
-        run: cargo install wasm-pack
-      
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -45,59 +37,7 @@ jobs:
           cache-dependency-path: |
             packages/blink-engine/package-lock.json
             packages/blink-test/package-lock.json
-            packages/blink-compiler-wasm/package-lock.json
-      
-      - name: Build compiler
-        run: |
-          cd src/compiler
-          cargo build --release
-          echo "Compiler built successfully"
-      
-      - name: Compile BRL to IR
-        run: |
-          mkdir -p game/ir
-          cd src/compiler
-          # Compile each BRL file with its scenario variants
-          for brl_file in ../../game/brl/*.brl; do
-            if [ -f "$brl_file" ]; then
-              filename=$(basename "$brl_file" .brl)
-              if [ "$filename" = "classic-rpg" ]; then
-                echo "Compiling classic-rpg with Easy scenario..."
-                ./target/release/blink-compiler compile -i "$brl_file" -o "../../game/ir/${filename}-easy.ir.json" --pretty --source-map \
-                  --include ../../game/bdl/heroes.bdl \
-                  --include ../../game/bdl/enemies.bdl \
-                  --include ../../game/bdl/scenario-easy.bdl
-                echo "Compiled ${filename}.brl (Easy) -> ${filename}-easy.ir.json"
-                
-                echo "Compiling classic-rpg with Normal scenario..."
-                ./target/release/blink-compiler compile -i "$brl_file" -o "../../game/ir/${filename}-normal.ir.json" --pretty --source-map \
-                  --include ../../game/bdl/heroes.bdl \
-                  --include ../../game/bdl/enemies.bdl \
-                  --include ../../game/bdl/scenario-normal.bdl
-                echo "Compiled ${filename}.brl (Normal) -> ${filename}-normal.ir.json"
-                
-                echo "Compiling classic-rpg with Hard scenario..."
-                ./target/release/blink-compiler compile -i "$brl_file" -o "../../game/ir/${filename}-hard.ir.json" --pretty --source-map \
-                  --include ../../game/bdl/heroes.bdl \
-                  --include ../../game/bdl/enemies.bdl \
-                  --include ../../game/bdl/scenario-hard.bdl
-                echo "Compiled ${filename}.brl (Hard) -> ${filename}-hard.ir.json"
-                
-                echo "Compiling classic-rpg with legacy game-config (for backward compatibility)..."
-                ./target/release/blink-compiler compile -i "$brl_file" -o "../../game/ir/${filename}.ir.json" --pretty --source-map \
-                  --include ../../game/bdl/heroes.bdl \
-                  --include ../../game/bdl/enemies.bdl \
-                  --include ../../game/bdl/game-config.bdl
-                echo "Compiled ${filename}.brl (Legacy) -> ${filename}.ir.json"
-              else
-                ./target/release/blink-compiler compile -i "$brl_file" -o "../../game/ir/${filename}.ir.json" --pretty --source-map
-                echo "Compiled ${filename}.brl -> ${filename}.ir.json"
-              fi
-            fi
-          done
-          cd ../..
-          echo "IR files generated:"
-          ls -la game/ir/*.ir.json || echo "No IR files found"
+            packages/blink-compiler-ts/package-lock.json
       
       - name: Install package dependencies
         run: |
@@ -105,24 +45,18 @@ jobs:
           npm ci
           cd ../blink-test
           npm ci
-          cd ../blink-compiler-wasm
+          cd ../blink-compiler-ts
           npm ci
           cd ../..
       
-      - name: Build WASM compiler
+      - name: Build TypeScript compiler
         run: |
-          echo "Building WASM compiler..."
-          cd src/compiler
-          wasm-pack build --target web --out-dir ../../packages/blink-compiler-wasm/wasm
-          cd ../..
-          
-          echo "Building WASM TypeScript wrapper..."
-          cd packages/blink-compiler-wasm
+          echo "Building TypeScript compiler..."
+          cd packages/blink-compiler-ts
           npm run build
+          npm run build:bundle
           cd ../..
-          
-          echo "Verifying WASM module was created..."
-          ls -lh packages/blink-compiler-wasm/wasm/blink_compiler_bg.wasm
+          echo "TypeScript compiler built successfully"
       
       - name: Build packages
         run: |
@@ -138,8 +72,9 @@ jobs:
           npm run build
           cd ../..
           
-          echo "Verifying bundle was created..."
-          ls -lh game/demos/blink-engine.bundle.js      
+          echo "Verifying bundles were created..."
+          ls -lh packages/blink-engine/dist/blink-engine.bundle.js
+          ls -lh packages/blink-compiler-ts/dist/blink-compiler.bundle.js      
       - name: Prepare deployment directory
         run: |
           mkdir -p _site
@@ -148,15 +83,8 @@ jobs:
           echo "Copying demo files..."
           cp game/demos/index.html _site/
           cp game/demos/rpg-demo.html _site/
-          cp game/demos/blink-engine.bundle.js _site/
-          
-          # Copy WASM compiler files
-          echo "Copying WASM compiler..."
-          mkdir -p _site/wasm
-          cp packages/blink-compiler-wasm/wasm/*.wasm _site/wasm/
-          cp packages/blink-compiler-wasm/wasm/*.js _site/wasm/
-          cp packages/blink-compiler-wasm/dist/*.js _site/wasm/
-          echo "Copied WASM compiler files to _site/wasm/"
+          cp packages/blink-engine/dist/blink-engine.bundle.js _site/
+          cp packages/blink-compiler-ts/dist/blink-compiler.bundle.js _site/
           
           # Copy BRL/BCL/BDL source files for runtime compilation
           echo "Copying source files for runtime compilation..."
@@ -173,13 +101,7 @@ jobs:
             cp game/data/characters.json _site/data/
           fi
           
-          # Copy IR files for runtime use (demos need these for fallback)
-          if ls game/ir/*.ir.json 1> /dev/null 2>&1; then
-            cp game/ir/*.ir.json _site/data/
-            echo "Copied IR files to _site/data/"
-          fi
-          
-          # Copy game files (BRL, BCL, IR) for users to download
+          # Copy game files (BRL, BCL, BDL) for users to download
           echo "Copying game files..."
           mkdir -p _site/game-files
           
@@ -193,9 +115,9 @@ jobs:
             cp game/bcl/*.bcl _site/game-files/
           fi
           
-          # Copy IR files if they exist
-          if ls game/ir/*.ir.json 1> /dev/null 2>&1; then
-            cp game/ir/*.ir.json _site/game-files/
+          # Copy BDL files if they exist
+          if ls game/bdl/*.bdl 1> /dev/null 2>&1; then
+            cp game/bdl/*.bdl _site/game-files/
           fi
           
           # Create a simple index for game files
@@ -257,7 +179,7 @@ jobs:
           <body>
             <div class="container">
               <h1>🎮 Blink Idle RPG - Game Files</h1>
-              <p style="text-align: center; color: #888;">Download game rule files, intermediate representation, and player strategies</p>
+              <p style="text-align: center; color: #888;">Download game source files</p>
               
               <div class="section">
                 <h2>📜 BRL Files (Game Rules)</h2>
@@ -272,9 +194,9 @@ jobs:
               </div>
               
               <div class="section">
-                <h2>⚙️ IR Files (Intermediate Representation)</h2>
-                <p>Compiled game rules ready for execution by the game engine.</p>
-                <ul id="ir-files"></ul>
+                <h2>📦 BDL Files (Data Definitions)</h2>
+                <p>Blink Data Language files define game entities and data.</p>
+                <ul id="bdl-files"></ul>
               </div>
               
               <div style="text-align: center; margin-top: 40px;">
@@ -293,7 +215,7 @@ jobs:
                   
                   const brlList = document.getElementById('brl-files');
                   const bclList = document.getElementById('bcl-files');
-                  const irList = document.getElementById('ir-files');
+                  const bdlList = document.getElementById('bdl-files');
                   
                   links.forEach(link => {
                     const href = link.getAttribute('href');
@@ -310,8 +232,8 @@ jobs:
                       brlList.appendChild(li);
                     } else if (href.endsWith('.bcl')) {
                       bclList.appendChild(li);
-                    } else if (href.endsWith('.ir.json')) {
-                      irList.appendChild(li);
+                    } else if (href.endsWith('.bdl')) {
+                      bdlList.appendChild(li);
                     }
                   });
                   
@@ -322,8 +244,8 @@ jobs:
                   if (bclList.children.length === 0) {
                     bclList.innerHTML = '<li style="color: #666;">No BCL files available</li>';
                   }
-                  if (irList.children.length === 0) {
-                    irList.innerHTML = '<li style="color: #666;">No IR files available</li>';
+                  if (bdlList.children.length === 0) {
+                    bdlList.innerHTML = '<li style="color: #666;">No BDL files available</li>';
                   }
                 })
                 .catch(err => {

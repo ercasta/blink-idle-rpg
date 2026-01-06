@@ -19,46 +19,42 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       
-      - name: Set up Rust
-        uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: |
+            packages/blink-engine/package-lock.json
+            packages/blink-compiler-ts/package-lock.json
       
-      - name: Build compiler
+      - name: Install package dependencies
         run: |
-          cd src/compiler
-          cargo build --release
-          echo "Compiler built successfully"
-      
-      - name: Compile BRL to IR
-        run: |
-          mkdir -p game/ir
-          cd src/compiler
-          # Build list of BCL files for inclusion in source map
-          BCL_INCLUDES=""
-          for bcl_file in ../../game/bcl/*.bcl; do
-            if [ -f "$bcl_file" ]; then
-              BCL_INCLUDES="$BCL_INCLUDES --include $bcl_file"
-            fi
-          done
-          # Compile all BRL files to IR with source maps for debugging support
-          # Note: BDL files are only included for classic-rpg.brl since they depend on its component definitions
-          for brl_file in ../../game/brl/*.brl; do
-            filename=$(basename "$brl_file" .brl)
-            if [ "$filename" = "classic-rpg" ]; then
-              # classic-rpg.brl gets BDL files included (heroes, enemies, game-config)
-              ./target/release/blink-compiler compile -i "$brl_file" -o "../../game/ir/${filename}.ir.json" --pretty --source-map $BCL_INCLUDES \
-                --include ../../game/bdl/heroes.bdl \
-                --include ../../game/bdl/enemies.bdl \
-                --include ../../game/bdl/game-config.bdl
-              echo "Compiled ${filename}.brl -> ${filename}.ir.json (with source map including BCL/BDL)"
-            else
-              # Other BRL files only get BCL files (no BDL dependencies)
-              ./target/release/blink-compiler compile -i "$brl_file" -o "../../game/ir/${filename}.ir.json" --pretty --source-map $BCL_INCLUDES
-              echo "Compiled ${filename}.brl -> ${filename}.ir.json (with source map including BCL)"
-            fi
-          done
+          cd packages/blink-engine
+          npm ci
+          cd ../blink-compiler-ts
+          npm ci
           cd ../..
-          echo "IR files generated:"
-          ls -la game/ir/*.ir.json
+      
+      - name: Build TypeScript compiler
+        run: |
+          echo "Building TypeScript compiler..."
+          cd packages/blink-compiler-ts
+          npm run build
+          npm run build:bundle
+          cd ../..
+          echo "TypeScript compiler built successfully"
+      
+      - name: Build engine
+        run: |
+          echo "Building blink-engine..."
+          cd packages/blink-engine
+          npm run build
+          npm run build:bundle
+          cd ../..
+          echo "Verifying bundles were created..."
+          ls -lh packages/blink-engine/dist/blink-engine.bundle.js
+          ls -lh packages/blink-compiler-ts/dist/blink-compiler.bundle.js
       
       - name: Create demo package directory
         run: mkdir -p demo-package
@@ -67,13 +63,17 @@ jobs:
         run: |
           cp game/demos/index.html demo-package/
           cp game/demos/rpg-demo.html demo-package/
-          cp game/demos/blink-engine.bundle.js demo-package/
+          cp packages/blink-engine/dist/blink-engine.bundle.js demo-package/
+          cp packages/blink-compiler-ts/dist/blink-compiler.bundle.js demo-package/
           cp game/demos/README.md demo-package/
       
-      - name: Copy game rule files from examples
+      - name: Copy source files for in-browser compilation
         run: |
-          # Copy IR files
-          cp game/ir/classic-rpg.ir.json demo-package/
+          # Copy BRL/BDL source files
+          mkdir -p demo-package/brl
+          mkdir -p demo-package/bdl
+          cp game/brl/*.brl demo-package/brl/
+          cp game/bdl/*.bdl demo-package/bdl/
           
           # Copy BCL files
           cp game/bcl/warrior-skills.bcl demo-package/
@@ -148,7 +148,8 @@ jobs:
             - Classic RPG demo (`rpg-demo.html`)
             - Demo launcher (`index.html`)
             - Blink engine bundle
-            - Example game files (BRL, IR, BCL)
+            - TypeScript compiler bundle (compiles BRL/BDL in-browser)
+            - Example game files (BRL, BDL, BCL)
             - Complete documentation
             
             See `README.md` in the package for more details.
