@@ -1,7 +1,7 @@
 /**
  * Blink Engine Browser Bundle
  * Auto-generated from TypeScript source - DO NOT EDIT MANUALLY
- * Build date: 2026-01-06T09:08:14.783Z
+ * Build date: 2026-01-06T09:13:16.321Z
  */
 
 "use strict";

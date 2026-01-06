@@ -66,7 +66,7 @@ export interface DebugEvent {
  * Trace event emitted during event firing and rule triggering
  */
 export interface TraceEvent {
-  type: 'event_fired' | 'event_scheduled' | 'rule_matched' | 'rule_triggered' | 'action_executed';
+  type: 'event_fired' | 'event_scheduled' | 'rule_matched' | 'rule_triggered';
   time: number;
   event?: ScheduledEvent;
   rule?: IRRule;
@@ -341,7 +341,7 @@ export class BlinkGame {
       // Create trace callback if tracing is enabled
       const traceCallback = this.enableTrace ? (type: string, details: string, action?: IRAction) => {
         this.emitTraceEvent({
-          type: type as any,
+          type: type as TraceEvent['type'],
           time: this.timeline.getTime(),
           event,
           rule,
