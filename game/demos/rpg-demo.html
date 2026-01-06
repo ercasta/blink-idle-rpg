@@ -501,6 +501,207 @@
       accent-color: #e94560;
     }
     
+    /* Scenario Selection Screen */
+    #scenario-selection-screen {
+      background: rgba(0,0,0,0.3);
+      border-radius: 15px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    #scenario-selection-screen h2 {
+      color: #c9956b;
+      text-align: center;
+      margin-top: 0;
+      font-size: 1.4rem;
+    }
+    
+    .scenarios-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      margin-bottom: 25px;
+    }
+    
+    .scenario-card {
+      background: rgba(0,0,0,0.4);
+      border: 2px solid rgba(201, 149, 107, 0.3);
+      border-radius: 10px;
+      padding: 20px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-align: center;
+    }
+    
+    .scenario-card:hover {
+      border-color: #c9956b;
+      box-shadow: 0 0 20px rgba(201, 149, 107, 0.3);
+      transform: translateY(-3px);
+    }
+    
+    .scenario-card.easy { border-color: rgba(74, 222, 128, 0.4); }
+    .scenario-card.normal { border-color: rgba(59, 130, 246, 0.4); }
+    .scenario-card.hard { border-color: rgba(239, 68, 68, 0.4); }
+    
+    .scenario-card.easy:hover { border-color: #4ade80; box-shadow: 0 0 20px rgba(74, 222, 128, 0.3); }
+    .scenario-card.normal:hover { border-color: #3b82f6; box-shadow: 0 0 20px rgba(59, 130, 246, 0.3); }
+    .scenario-card.hard:hover { border-color: #ef4444; box-shadow: 0 0 20px rgba(239, 68, 68, 0.3); }
+    
+    .scenario-name {
+      font-size: 1.3rem;
+      font-weight: bold;
+      margin-bottom: 8px;
+      color: #c9956b;
+    }
+    
+    .scenario-difficulty {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: bold;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+    }
+    
+    .scenario-difficulty.easy {
+      background: rgba(74, 222, 128, 0.2);
+      color: #4ade80;
+      border: 1px solid rgba(74, 222, 128, 0.4);
+    }
+    
+    .scenario-difficulty.normal {
+      background: rgba(59, 130, 246, 0.2);
+      color: #3b82f6;
+      border: 1px solid rgba(59, 130, 246, 0.4);
+    }
+    
+    .scenario-difficulty.hard {
+      background: rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+      border: 1px solid rgba(239, 68, 68, 0.4);
+    }
+    
+    .scenario-description {
+      color: #aaa;
+      font-size: 0.9rem;
+      margin-bottom: 15px;
+      line-height: 1.4;
+    }
+    
+    .scenario-stats {
+      background: rgba(0,0,0,0.3);
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 12px;
+      text-align: left;
+    }
+    
+    .scenario-stat {
+      display: flex;
+      justify-content: space-between;
+      padding: 5px 0;
+      color: #8a7a68;
+      font-size: 0.85rem;
+    }
+    
+    .scenario-stat-label {
+      color: #c9956b;
+      font-weight: 500;
+    }
+    
+    .scenario-stat-value {
+      color: #d4c4b0;
+    }
+    
+    .scenario-compilation-info {
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      border-radius: 10px;
+      padding: 15px;
+      margin-top: 20px;
+    }
+    
+    .scenario-compilation-info h3 {
+      color: #60a5fa;
+      margin-top: 0;
+      margin-bottom: 10px;
+      font-size: 1.1rem;
+    }
+    
+    .scenario-compilation-info p {
+      color: #aaa;
+      font-size: 0.85rem;
+      line-height: 1.6;
+      margin-bottom: 15px;
+    }
+    
+    .scenario-compilation-info code {
+      background: rgba(0,0,0,0.4);
+      padding: 2px 6px;
+      border-radius: 3px;
+      color: #7dd3fc;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85em;
+    }
+    
+    .compilation-steps {
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 15px;
+    }
+    
+    .compilation-step {
+      background: rgba(0,0,0,0.3);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+      flex: 1;
+      min-width: 140px;
+    }
+    
+    .compilation-step strong {
+      color: #60a5fa;
+      display: block;
+      margin-bottom: 6px;
+      font-size: 0.85rem;
+    }
+    
+    .compilation-step code {
+      color: #7dd3fc;
+      font-size: 0.75rem;
+      display: block;
+      margin: 3px 0;
+    }
+    
+    .step-desc {
+      color: #888;
+      font-size: 0.7rem;
+      display: block;
+      margin-top: 6px;
+      font-style: italic;
+    }
+    
+    .compilation-arrow {
+      color: #60a5fa;
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+    
+    @media (max-width: 900px) {
+      .compilation-steps {
+        flex-direction: column;
+      }
+      
+      .compilation-arrow {
+        transform: rotate(90deg);
+      }
+    }
+    
     /* Party Selection Screen */
     #party-selection-screen {
       background: rgba(0,0,0,0.3);
@@ -1393,8 +1594,56 @@
     <h1>⚔️ Blink Idle RPG</h1>
     <p class="subtitle">Classic RPG Demo - Heroes vs Monsters Battle!</p>
     
+    <!-- Scenario Selection Screen -->
+    <div id="scenario-selection-screen">
+      <h2>🎯 Choose Your Scenario 🎯</h2>
+      <p class="selection-instructions">
+        Select a game scenario to begin your adventure. Each scenario has different difficulty, enemy spawn rates, and penalties.
+      </p>
+      
+      <div class="scenarios-container" id="scenarios-container">
+        <!-- Scenarios will be loaded dynamically -->
+      </div>
+      
+      <div class="scenario-compilation-info">
+        <h3>📚 How Scenarios Work</h3>
+        <p>
+          Each scenario is compiled from the same BRL (Blink Rule Language) file but with different BDL (Blink Data Language) configuration files.
+          The compiler combines <code>classic-rpg.brl</code> with <code>heroes.bdl</code>, <code>enemies.bdl</code>, and a scenario-specific BDL file
+          (e.g., <code>scenario-easy.bdl</code>) to generate the final IR (Intermediate Representation) file that the game engine executes.
+        </p>
+        <div class="compilation-steps">
+          <div class="compilation-step">
+            <strong>1. BRL (Rules)</strong><br>
+            <code>classic-rpg.brl</code><br>
+            <span class="step-desc">Game logic & components</span>
+          </div>
+          <div class="compilation-arrow">+</div>
+          <div class="compilation-step">
+            <strong>2. BDL (Data)</strong><br>
+            <code>heroes.bdl</code><br>
+            <code>enemies.bdl</code><br>
+            <code>scenario-*.bdl</code><br>
+            <span class="step-desc">Heroes, enemies & config</span>
+          </div>
+          <div class="compilation-arrow">→</div>
+          <div class="compilation-step">
+            <strong>3. Compiler</strong><br>
+            <code>blink-compiler</code><br>
+            <span class="step-desc">Processes & validates</span>
+          </div>
+          <div class="compilation-arrow">→</div>
+          <div class="compilation-step">
+            <strong>4. IR (Output)</strong><br>
+            <code>classic-rpg-*.ir.json</code><br>
+            <span class="step-desc">Executable game file</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    
     <!-- Party Selection Screen -->
-    <div id="party-selection-screen">
+    <div id="party-selection-screen" style="display: none;">
       <h2>⚔️ Choose Your Party ⚔️</h2>
       <p class="selection-instructions">
         Select a hero for each of the 4 slots. Use the arrows to browse through available heroes. You cannot select the same hero twice.
@@ -1694,6 +1943,41 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" integrity="sha384-OLBgp1GsljhM2TJ+sbHjaiH9txEUvgdDTAzHv2P24donTt6/529l+9Ua0vFImLlb" crossorigin="anonymous"></script>
   
   <script>
+    // ========================================================================
+    // SCENARIO SELECTION STATE
+    // ========================================================================
+    
+    let selectedScenario = null;
+    let loadedIRData = null;
+    
+    // Scenario definitions
+    const SCENARIOS = [
+      {
+        id: 'easy',
+        name: 'Casual Adventure',
+        difficulty: 'Easy',
+        irFile: 'classic-rpg-easy.ir.json',
+        bdlFile: 'scenario-easy.bdl',
+        cssClass: 'easy'
+      },
+      {
+        id: 'normal',
+        name: 'Classic Campaign',
+        difficulty: 'Normal',
+        irFile: 'classic-rpg-normal.ir.json',
+        bdlFile: 'scenario-normal.bdl',
+        cssClass: 'normal'
+      },
+      {
+        id: 'hard',
+        name: 'Nightmare Mode',
+        difficulty: 'Hard',
+        irFile: 'classic-rpg-hard.ir.json',
+        bdlFile: 'scenario-hard.bdl',
+        cssClass: 'hard'
+      }
+    ];
+    
     // ========================================================================
     // PARTY SELECTION STATE
     // ========================================================================
@@ -2688,6 +2972,132 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
     }
     
     // ========================================================================
+    // SCENARIO SELECTION FUNCTIONS
+    // ========================================================================
+    
+    async function loadScenarioIR(scenarioId) {
+      const scenario = SCENARIOS.find(s => s.id === scenarioId);
+      if (!scenario) {
+        throw new Error(`Unknown scenario: ${scenarioId}`);
+      }
+      
+      // Try different paths for the IR file
+      const paths = [
+        scenario.irFile,
+        `data/${scenario.irFile}`,
+        `../ir/${scenario.irFile}`
+      ];
+      
+      for (const path of paths) {
+        try {
+          console.debug(`Attempting to load scenario IR from: ${path}`);
+          const response = await fetch(path);
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          const data = await response.json();
+          console.info(`Successfully loaded ${scenario.name} scenario from ${path}`);
+          return data;
+        } catch (error) {
+          console.warn(`Failed to load from ${path}:`, error.message);
+        }
+      }
+      
+      throw new Error(`Failed to load ${scenario.name} IR from all paths`);
+    }
+    
+    function renderScenarios() {
+      const scenariosContainer = document.getElementById('scenarios-container');
+      
+      scenariosContainer.innerHTML = SCENARIOS.map(scenario => `
+        <div class="scenario-card ${scenario.cssClass}" onclick="selectScenario('${scenario.id}')">
+          <div class="scenario-name">${scenario.name}</div>
+          <div class="scenario-difficulty ${scenario.cssClass}">${scenario.difficulty}</div>
+          <div class="scenario-description" id="scenario-desc-${scenario.id}">Loading scenario data...</div>
+          <div class="scenario-stats" id="scenario-stats-${scenario.id}">
+            <div class="scenario-stat">
+              <span class="scenario-stat-label">Loading...</span>
+            </div>
+          </div>
+        </div>
+      `).join('');
+      
+      // Load each scenario's metadata
+      SCENARIOS.forEach(async (scenario) => {
+        try {
+          const ir = await loadScenarioIR(scenario.id);
+          
+          // Extract ScenarioInfo from IR
+          if (ir && ir.initial_state && ir.initial_state.entities) {
+            const scenarioEntity = ir.initial_state.entities.find(e => e.components.ScenarioInfo);
+            if (scenarioEntity && scenarioEntity.components.ScenarioInfo) {
+              const info = scenarioEntity.components.ScenarioInfo;
+              
+              // Update description
+              document.getElementById(`scenario-desc-${scenario.id}`).textContent = info.description;
+              
+              // Update stats
+              document.getElementById(`scenario-stats-${scenario.id}`).innerHTML = `
+                <div class="scenario-stat">
+                  <span class="scenario-stat-label">Respawn Time:</span>
+                  <span class="scenario-stat-value">${info.respawnTime}</span>
+                </div>
+                <div class="scenario-stat">
+                  <span class="scenario-stat-label">Death Penalty:</span>
+                  <span class="scenario-stat-value">${info.deathPenalty}</span>
+                </div>
+                <div class="scenario-stat">
+                  <span class="scenario-stat-label">Enemies/Wave:</span>
+                  <span class="scenario-stat-value">${info.enemiesPerWave}</span>
+                </div>
+                <div class="scenario-stat">
+                  <span class="scenario-stat-label">Boss Frequency:</span>
+                  <span class="scenario-stat-value">${info.bossFrequency}</span>
+                </div>
+              `;
+            }
+          }
+        } catch (error) {
+          console.error(`Failed to load scenario ${scenario.id}:`, error);
+          document.getElementById(`scenario-desc-${scenario.id}`).textContent = 
+            'Failed to load scenario. Please refresh the page.';
+        }
+      });
+    }
+    
+    async function selectScenario(scenarioId) {
+      const scenario = SCENARIOS.find(s => s.id === scenarioId);
+      if (!scenario) return;
+      
+      selectedScenario = scenario;
+      console.info(`Selected scenario: ${scenario.name}`);
+      
+      try {
+        // Load the scenario's IR
+        loadedIRData = await loadScenarioIR(scenarioId);
+        classicRpgIR = loadedIRData; // Set global IR variable
+        
+        // Hide scenario selection, show party selection
+        document.getElementById('scenario-selection-screen').style.display = 'none';
+        document.getElementById('party-selection-screen').style.display = 'block';
+        
+        // Extract characters and enemies from the loaded IR
+        extractCharactersFromIR();
+        extractEnemiesFromIR();
+        
+        // Load source files from IR for dev mode (if IR has source_map)
+        loadSourceFilesFromIR();
+        
+        // Render the party selection UI
+        renderCharacterSelection();
+        
+      } catch (error) {
+        console.error(`Failed to load scenario ${scenarioId}:`, error);
+        alert(`Failed to load ${scenario.name}. Please try again or select a different scenario.`);
+      }
+    }
+    
+    // ========================================================================
     // START GAME WITH SELECTED PARTY
     // ========================================================================
     confirmPartyBtn.addEventListener('click', () => {
@@ -3673,26 +4083,18 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
     
     // Initialize on load
     window.addEventListener('load', async () => {
-      // Load IR (this is the source of truth for rules/components/functions)
-      await loadDefaultIR();
+      console.info('🎮 Initializing Blink Idle RPG...');
       
-      // Extract character and enemy data from IR.initial_state
-      // BDL entities are now compiled into IR.initial_state by the compiler
-      if (classicRpgIR) {
-        extractCharactersFromIR();
-        extractEnemiesFromIR();
-        renderCharacterSelection();
-      } else {
-        console.error('Failed to load IR - cannot proceed');
-        alert('Failed to load game data. Please refresh the page.');
-        return;
-      }
+      // NEW: Render scenario selection screen instead of loading default IR
+      renderScenarios();
       
-      // Load source files from IR for dev mode (if IR has source_map)
-      loadSourceFilesFromIR();
-      
-      // Initialize BCL system (loads choice points from IR if available)
+      // Initialize BCL system (this will be finalized when scenario is selected)
       await initBclSystem();
+      
+      // Initialize leaderboard
+      refreshLeaderboard();
+      
+      console.info('✅ Page initialization complete - awaiting scenario selection');
     });
     
     // Accordion toggle function
