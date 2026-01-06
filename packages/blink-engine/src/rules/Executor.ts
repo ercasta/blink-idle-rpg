@@ -30,6 +30,7 @@ export interface ExecutionContext {
   params: Map<string, IRFieldValue>;
   functions: Map<string, IRFunction>;
   locals: Map<string, IRFieldValue>;  // Local variables from let statements
+  traceCallback?: (type: string, details: string, action?: IRAction) => void;  // Optional trace callback
 }
 
 /**
@@ -80,7 +81,8 @@ export class RuleExecutor {
     rule: IRRule,
     event: ScheduledEvent,
     store: Store,
-    timeline: Timeline
+    timeline: Timeline,
+    traceCallback?: (type: string, details: string, action?: IRAction) => void
   ): void {
     // Get entities that match the filter
     const entities = this.getFilteredEntities(rule, store, event);
@@ -97,6 +99,7 @@ export class RuleExecutor {
         params: new Map(),
         functions: this.functions,
         locals: new Map(),  // Initialize empty locals map
+        traceCallback,  // Pass trace callback through context
       };
 
       // Check condition
@@ -367,6 +370,16 @@ export class RuleExecutor {
       target: target ?? undefined,
       fields: Object.keys(fields).length > 0 ? fields : undefined,
     });
+
+    // Emit trace event if callback is provided
+    if (context.traceCallback) {
+      const targetTime = context.timeline.getTime() + delay;
+      context.traceCallback(
+        'event_scheduled',
+        `Scheduled ${action.event} at time ${targetTime.toFixed(2)}s (delay: ${delay}s)${source !== undefined ? ` from entity ${source}` : ''}${target !== undefined ? ` to entity ${target}` : ''}`,
+        action
+      );
+    }
   }
 
   private executeEmit(action: IREmitAction, context: ExecutionContext): void {
@@ -381,6 +394,15 @@ export class RuleExecutor {
     context.timeline.scheduleImmediate(action.event, {
       fields: Object.keys(fields).length > 0 ? fields : undefined,
     });
+
+    // Emit trace event if callback is provided
+    if (context.traceCallback) {
+      context.traceCallback(
+        'event_scheduled',
+        `Emitted ${action.event} immediately (at current time)`,
+        action
+      );
+    }
   }
 
   private executeDespawn(action: IRDespawnAction, context: ExecutionContext): void {

@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blink RPG - Trace Test</title>
+  <style>
+    body {
+      font-family: monospace;
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 20px;
+    }
+    h1 {
+      color: #4ade80;
+    }
+    #controls {
+      margin-bottom: 20px;
+    }
+    button {
+      padding: 10px 20px;
+      margin-right: 10px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    #trace-output {
+      background: #2d2d2d;
+      border: 1px solid #444;
+      padding: 10px;
+      height: 600px;
+      overflow-y: auto;
+      font-size: 12px;
+    }
+    .trace-event {
+      margin-bottom: 5px;
+      padding: 3px;
+    }
+    .trace-event-fired {
+      color: #4ade80;
+    }
+    .trace-event-scheduled {
+      color: #fbbf24;
+    }
+    .trace-rule-matched {
+      color: #60a5fa;
+    }
+    .trace-rule-triggered {
+      color: #818cf8;
+    }
+    #stats {
+      background: #2d2d2d;
+      border: 1px solid #444;
+      padding: 10px;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Blink RPG - Trace Test</h1>
+  
+  <div id="stats">
+    <div>Time: <span id="time">0.00</span>s</div>
+    <div>Events Fired: <span id="events-fired">0</span></div>
+    <div>Events Scheduled: <span id="events-scheduled">0</span></div>
+    <div>Rules Triggered: <span id="rules-triggered">0</span></div>
+    <div>Running: <span id="running">No</span></div>
+    <div>Has Events: <span id="has-events">No</span></div>
+  </div>
+
+  <div id="controls">
+    <button id="start-btn">Start</button>
+    <button id="pause-btn">Pause</button>
+    <button id="stop-btn">Stop</button>
+    <button id="step-btn">Step</button>
+    <button id="clear-btn">Clear Trace</button>
+  </div>
+
+  <div id="trace-output"></div>
+
+  <script src="./blink-engine.bundle.js"></script>
+  <script>
+    const BlinkGame = BlinkEngine.BlinkGame;
+
+    let game = null;
+    let eventsFired = 0;
+    let eventsScheduled = 0;
+    let rulesTriggered = 0;
+
+    const traceOutput = document.getElementById('trace-output');
+    const statsTime = document.getElementById('time');
+    const statsEventsFired = document.getElementById('events-fired');
+    const statsEventsScheduled = document.getElementById('events-scheduled');
+    const statsRulesTriggered = document.getElementById('rules-triggered');
+    const statsRunning = document.getElementById('running');
+    const statsHasEvents = document.getElementById('has-events');
+
+    function addTraceEntry(event) {
+      const div = document.createElement('div');
+      div.className = `trace-event trace-${event.type.replace('_', '-')}`;
+      
+      const timestamp = `[${event.time.toFixed(2)}s]`;
+      const type = event.type.toUpperCase().replace('_', ' ');
+      
+      div.textContent = `${timestamp} ${type}: ${event.details}`;
+      
+      traceOutput.appendChild(div);
+      
+      // Auto-scroll to bottom
+      traceOutput.scrollTop = traceOutput.scrollHeight;
+      
+      // Update stats
+      if (event.type === 'event_fired') {
+        eventsFired++;
+        statsEventsFired.textContent = eventsFired;
+      } else if (event.type === 'event_scheduled') {
+        eventsScheduled++;
+        statsEventsScheduled.textContent = eventsScheduled;
+      } else if (event.type === 'rule_triggered') {
+        rulesTriggered++;
+        statsRulesTriggered.textContent = rulesTriggered;
+      }
+      
+      statsTime.textContent = event.time.toFixed(2);
+    }
+
+    function updateStats() {
+      if (game) {
+        statsRunning.textContent = game.getIsRunning() ? 'Yes' : 'No';
+        statsHasEvents.textContent = game.hasEvents() ? 'Yes' : 'No';
+      }
+    }
+
+    async function initGame() {
+      // Create game with tracing enabled
+      game = BlinkGame.createSync({
+        enableTrace: true,
+        debug: true,
+        msPerFrame: 100  // Process 100ms of simulation per frame
+      });
+
+      // Subscribe to trace events
+      game.onTrace((event) => {
+        addTraceEntry(event);
+      });
+
+      // Subscribe to simulation events
+      game.onSimulation((event) => {
+        console.log('[Simulation]', event);
+        updateStats();
+      });
+
+      // Load the game rules
+      const response = await fetch('./classic-rpg.ir.json');
+      const ir = await response.json();
+      await game.loadRulesFromObject(ir);
+
+      // Schedule initial GameStart event to trigger the game
+      game.scheduleEvent('GameStart', 0, {});
+
+      console.log('Game initialized with trace enabled');
+      updateStats();
+    }
+
+    // Controls
+    document.getElementById('start-btn').addEventListener('click', () => {
+      if (game) {
+        game.start();
+        updateStats();
+      }
+    });
+
+    document.getElementById('pause-btn').addEventListener('click', () => {
+      if (game) {
+        if (game.getIsPaused()) {
+          game.resume();
+        } else {
+          game.pause();
+        }
+        updateStats();
+      }
+    });
+
+    document.getElementById('stop-btn').addEventListener('click', () => {
+      if (game) {
+        game.stop();
+        updateStats();
+      }
+    });
+
+    document.getElementById('step-btn').addEventListener('click', () => {
+      if (game) {
+        game.step();
+        updateStats();
+      }
+    });
+
+    document.getElementById('clear-btn').addEventListener('click', () => {
+      traceOutput.innerHTML = '';
+      eventsFired = 0;
+      eventsScheduled = 0;
+      rulesTriggered = 0;
+      statsEventsFired.textContent = '0';
+      statsEventsScheduled.textContent = '0';
+      statsRulesTriggered.textContent = '0';
+    });
+
+    // Initialize on load
+    initGame();
+  </script>
+</body>
+</html>

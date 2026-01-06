@@ -676,12 +676,7 @@ rule find_new_target on FindNewTarget {
     // advanced entity queries. The UI will still handle initial target assignment
     // but this rule ensures targets are reassigned when they die.
     
-    // For now, just clear the target and schedule a new attack
-    // The UI-side retargeting will handle finding a new target
+    // Clear the target - the UI-side retargeting will handle finding a new target
+    // Do not schedule a DoAttack here - it will be scheduled once a valid target is assigned
     seeker.Target.entity = null
-    
-    // Schedule an attack to continue combat flow
-    schedule [delay: 0.1] DoAttack {
-        source: seeker.id
-    }
 }

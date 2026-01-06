@@ -15,6 +15,7 @@ export type {
   StepResult,
   SimulationEvent,
   DebugEvent,
+  TraceEvent,
 } from './BlinkGame';
 
 // IR types and loader
