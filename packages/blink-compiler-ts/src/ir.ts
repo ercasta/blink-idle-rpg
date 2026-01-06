@@ -1,33 +1,16 @@
 /**
- * Blink IR Types
- * Based on the IR specification in doc/ir-specification.md
+ * Intermediate Representation (IR) types for Blink compiler
+ * These types match the format expected by the blink-engine
  */
 
 // ===== Source Mapping =====
 
-/**
- * Source location for debugging and error reporting
- */
-export interface SourceLocation {
-  file: string;
-  line: number;
-  column: number;
-  endLine?: number;
-  endColumn?: number;
-}
-
-/**
- * Source file entry for source mapping
- */
 export interface SourceFile {
   path: string;
   content: string;
   language: 'brl' | 'bcl' | 'bdl';
 }
 
-/**
- * Source map for the entire IR module
- */
 export interface SourceMap {
   files: SourceFile[];
 }
@@ -42,15 +25,16 @@ export interface IRModule {
   rules: IRRule[];
   functions: IRFunction[];
   trackers?: IRTracker[];
+  constants?: Record<string, IRValue>;
   initial_state?: IRInitialState;
+  choice_points?: IRChoicePoint[];
   source_map?: SourceMap;
 }
 
 export interface IRMetadata {
-  compiled_at?: string;
-  compiler_version?: string;
+  compiled_at: string;
+  compiler_version: string;
   source_hash?: string;
-  include_source_map?: boolean;
 }
 
 // ===== Components =====
@@ -59,47 +43,44 @@ export interface IRComponent {
   id: number;
   name: string;
   fields: IRField[];
-  source_location?: SourceLocation;
 }
 
 export interface IRField {
   name: string;
-  type: IRFieldType;
-  default?: IRFieldValue;
+  type: IRType;
+  default?: IRValue;
 }
 
-export type IRFieldType = 'number' | 'string' | 'boolean' | 'entity' | IRListType | IRMapType;
+export type IRType =
+  | { type: 'number' }
+  | { type: 'string' }
+  | { type: 'boolean' }
+  | { type: 'entity' }
+  | { type: 'list'; element: IRType }
+  | { type: 'map'; key: IRType; value: IRType };
 
-export interface IRListType {
-  type: 'list';
-  element: IRFieldType;
-}
-
-export interface IRMapType {
-  type: 'map';
-  key: IRFieldType;
-  value: IRFieldType;
-}
-
-// Using a simpler type to avoid circular reference
-export type IRFieldValue = number | string | boolean | null | unknown[] | Record<string, unknown>;
+export type IRValue =
+  | null
+  | boolean
+  | number
+  | string
+  | IRValue[]
+  | { [key: string]: IRValue };
 
 // ===== Rules =====
 
 export interface IRRule {
   id: number;
-  name: string;
+  name?: string;
   trigger: IRTrigger;
   filter?: IRFilter;
   condition?: IRExpression;
   actions: IRAction[];
-  source_location?: SourceLocation;
 }
 
 export interface IRTrigger {
   type: 'event' | 'spawn' | 'tick';
   event?: string;
-  interval?: number;
   bindings?: Record<string, string>;
 }
 
@@ -109,11 +90,11 @@ export interface IRFilter {
 
 // ===== Actions =====
 
-export type IRAction = 
-  | IRModifyAction 
-  | IRScheduleAction 
-  | IREmitAction 
-  | IRSpawnAction 
+export type IRAction =
+  | IRModifyAction
+  | IRScheduleAction
+  | IREmitAction
+  | IRSpawnAction
   | IRDespawnAction
   | IRConditionalAction
   | IRLoopAction
@@ -127,7 +108,6 @@ export interface IRModifyAction {
   field: string;
   op: 'set' | 'add' | 'subtract' | 'multiply' | 'divide';
   value: IRExpression;
-  source_location?: SourceLocation;
 }
 
 export interface IRScheduleAction {
@@ -137,26 +117,22 @@ export interface IRScheduleAction {
   target?: IRExpression;
   delay?: IRExpression;
   fields?: Record<string, IRExpression>;
-  source_location?: SourceLocation;
 }
 
 export interface IREmitAction {
   type: 'emit';
   event: string;
   fields?: Record<string, IRExpression>;
-  source_location?: SourceLocation;
 }
 
 export interface IRSpawnAction {
   type: 'spawn';
-  components: Record<string, Record<string, IRExpression>>;
-  source_location?: SourceLocation;
+  components: IRComponentInit[];
 }
 
 export interface IRDespawnAction {
   type: 'despawn';
   entity: IRExpression;
-  source_location?: SourceLocation;
 }
 
 export interface IRConditionalAction {
@@ -164,7 +140,6 @@ export interface IRConditionalAction {
   condition: IRExpression;
   then_actions: IRAction[];
   else_actions?: IRAction[];
-  source_location?: SourceLocation;
 }
 
 export interface IRLoopAction {
@@ -172,21 +147,18 @@ export interface IRLoopAction {
   variable: string;
   iterable: IRExpression;
   body: IRAction[];
-  source_location?: SourceLocation;
 }
 
 export interface IRLetAction {
   type: 'let';
   name: string;
   value: IRExpression;
-  source_location?: SourceLocation;
 }
 
 export interface IRWhileAction {
   type: 'while';
   condition: IRExpression;
   body: IRAction[];
-  source_location?: SourceLocation;
 }
 
 // ===== Expressions =====
@@ -205,7 +177,7 @@ export type IRExpression =
 
 export interface IRLiteralExpr {
   type: 'literal';
-  value: IRFieldValue;
+  value: IRValue;
 }
 
 export interface IRFieldExpr {
@@ -239,7 +211,7 @@ export type BinaryOp =
 
 export interface IRUnaryExpr {
   type: 'unary';
-  op: 'not' | 'neg';
+  op: 'not' | 'negate';
   expr: IRExpression;
 }
 
@@ -279,21 +251,16 @@ export interface IRFunction {
   id: number;
   name: string;
   params: IRParam[];
-  return_type: IRReturnType;
+  return_type: IRType;
   body: IRExpression;
-  source_location?: SourceLocation;
 }
 
 export interface IRParam {
   name: string;
-  type: IRFieldType;
+  type: IRType;
 }
 
-export interface IRReturnType {
-  type: IRFieldType;
-}
-
-// ===== Trackers =====
+// ===== Trackers (legacy) =====
 
 export interface IRTracker {
   id: number;
@@ -309,30 +276,34 @@ export interface IRInitialState {
 
 export interface IREntityDefinition {
   id: number | string;
-  /** Variable name for the entity (e.g., "warrior" from `warrior = new entity`)
-   * This replaces the old @name syntax. Entities are nameless; variables reference them.
-   */
   variable?: string;
-  components: Record<string, Record<string, IRFieldValue>>;
-  /** Bound choice functions stored directly on the entity */
+  components: Record<string, Record<string, IRValue>>;
   bound_functions?: IRBoundFunctions;
 }
 
 // ===== Bound Functions =====
 
-/**
- * Maps function names to their definitions, stored directly on entities
- */
 export interface IRBoundFunctions {
   [functionName: string]: IRBoundFunction;
 }
 
-/**
- * A choice function bound directly to an entity (from BDL)
- */
 export interface IRBoundFunction {
   params: IRParam[];
-  return_type: IRReturnType;
+  return_type: IRType;
   body: IRExpression;
-  source?: string; // Original BCL/BDL source for UI display
+  source?: string;
+}
+
+// ===== Choice Points =====
+
+export interface IRChoicePoint {
+  id: string;
+  name: string;
+  signature: string;
+  params: IRParam[];
+  return_type: IRType;
+  docstring?: string;
+  category?: string;
+  applicable_classes?: string[];
+  default_behavior?: string;
 }

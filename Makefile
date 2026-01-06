@@ -1,7 +1,7 @@
 # Blink Idle RPG - Local Development Pipeline
 # This Makefile allows you to run build and test pipelines locally
 
-.PHONY: help all clean build-compiler build-wasm compile-brl build-packages test demo-package install-packages
+.PHONY: help all clean build-compiler build-compiler-ts compile-brl build-packages test demo-package install-packages dev-setup dev
 
 # When set to true, include source_map in IR output for dev tools
 SOURCE_MAP_FLAG=--source-map
@@ -11,10 +11,12 @@ help:
 	@echo "Blink Idle RPG - Local Pipeline Commands"
 	@echo ""
 	@echo "Available targets:"
-	@echo "  make all              - Build everything (compiler, WASM, packages, demos)"
+	@echo "  make all              - Build everything (compiler, packages, demos)"
+	@echo "  make dev-setup        - Quick setup for development (TypeScript only, no Rust)"
+	@echo "  make dev              - Build for development (TypeScript compiler + engine)"
 	@echo "  make build-compiler   - Build the BRL compiler (Rust)"
-	@echo "  make build-wasm       - Build the WASM compiler for browser use"
-	@echo "  make compile-brl      - Compile all BRL files to IR"
+	@echo "  make build-compiler-ts - Build the TypeScript BRL compiler"
+	@echo "  make compile-brl      - Compile all BRL files to IR (requires Rust compiler)"
 	@echo "  make install-packages - Install npm dependencies for packages"
 	@echo "  make build-packages   - Build TypeScript packages (blink-engine, blink-test)"
 	@echo "  make test             - Run all tests (compiler + packages)"
@@ -28,14 +30,49 @@ help:
 # Build everything
 all: build-compiler build-wasm compile-brl install-packages build-packages
 
+# Quick development setup (TypeScript only, no Rust required)
+dev-setup:
+	@echo "Setting up development environment (TypeScript only)..."
+	@echo "Installing dependencies..."
+	cd packages/blink-engine && npm install
+	cd packages/blink-compiler-ts && npm install
+	@echo "Building packages..."
+	cd packages/blink-engine && npm run build && npm run build:bundle
+	cd packages/blink-compiler-ts && npm run build && npm run build:bundle
+	@echo "Copying compiler bundle to demos directory..."
+	cp packages/blink-compiler-ts/dist/blink-compiler.bundle.js game/demos/
+	@echo ""
+	@echo "Development setup complete!"
+	@echo "Open game/demos/rpg-demo.html in a browser to play."
+	@echo "The game will compile BRL/BDL files in real-time."
+
+# Build for development (TypeScript compiler + engine)
+dev: build-compiler-ts build-packages-dev
+	@echo "Development build complete!"
+	@echo "Open game/demos/rpg-demo.html in a browser to play."
+
+# Build TypeScript compiler
+build-compiler-ts:
+	@echo "Building TypeScript BRL compiler..."
+	cd packages/blink-compiler-ts && npm install && npm run build && npm run build:bundle
+	@echo "TypeScript compiler built successfully"
+	cp packages/blink-compiler-ts/dist/blink-compiler.bundle.js game/demos/
+
+# Build packages for development (without Rust compilation)
+build-packages-dev:
+	@echo "Building blink-engine..."
+	cd packages/blink-engine && npm install && npm run build && npm run build:bundle
+	@echo "Copying engine bundle to demos directory..."
+	cp packages/blink-engine/dist/blink-engine.bundle.js game/demos/
+	@echo "Development packages built successfully"
+
 # Clean build artifacts
 clean:
 	@echo "Cleaning build artifacts..."
 	rm -rf src/compiler/target
 	rm -rf packages/blink-engine/dist
 	rm -rf packages/blink-test/dist
-	rm -rf packages/blink-compiler-wasm/dist
-	rm -rf packages/blink-compiler-wasm/wasm
+	rm -rf packages/blink-compiler-ts/dist
 	rm -rf demo-package
 	rm -rf blink-demo-package.zip
 	@echo "Clean complete"
@@ -99,7 +136,7 @@ install-packages:
 	@echo "Installing npm dependencies..."
 	cd packages/blink-engine && npm install
 	cd packages/blink-test && npm install
-	cd packages/blink-compiler-wasm && npm install
+	cd packages/blink-compiler-ts && npm install
 	@echo "Dependencies installed"
 
 # Build TypeScript packages and copy artifacts to demo directory
@@ -108,9 +145,14 @@ build-packages: compile-brl build-wasm
 	cd packages/blink-engine && npm run build
 	@echo "Building browser bundle..."
 	cd packages/blink-engine && npm run build:bundle
+	@echo "Building TypeScript compiler..."
+	cd packages/blink-compiler-ts && npm run build && npm run build:bundle
 	@echo "Copying IR files to demo data directory..."
 	mkdir -p game/demos/data
 	cp game/ir/*.ir.json game/demos/data/
+	@echo "Copying bundles to demos directory..."
+	cp packages/blink-engine/dist/blink-engine.bundle.js game/demos/
+	cp packages/blink-compiler-ts/dist/blink-compiler.bundle.js game/demos/
 	@echo "Building blink-test..."
 	cd packages/blink-test && npm run build
 	@echo "Packages built successfully"
@@ -123,6 +165,12 @@ test-compiler:
 	@echo "Running compiler tests..."
 	cd src/compiler && cargo test
 	@echo "Compiler tests complete"
+
+# Run TypeScript compiler tests
+test-compiler-ts:
+	@echo "Running TypeScript compiler tests..."
+	cd packages/blink-compiler-ts && npm test
+	@echo "TypeScript compiler tests complete"
 
 # Run package tests (only unit tests, not example tests)
 test-packages: build-packages compile-brl
@@ -141,7 +189,7 @@ test-examples: build-packages compile-brl
 	@echo "Example tests complete (some may have failed - check output above)"
 
 # Create demo package for distribution
-demo-package: compile-brl
+demo-package: dev
 	@echo "Creating demo package..."
 	mkdir -p demo-package
 	
@@ -149,10 +197,16 @@ demo-package: compile-brl
 	cp game/demos/index.html demo-package/
 	cp game/demos/rpg-demo.html demo-package/
 	cp game/demos/blink-engine.bundle.js demo-package/
+	cp game/demos/blink-compiler.bundle.js demo-package/
 	cp game/demos/README.md demo-package/
 	
-	@echo "Copying game rule files..."
-	cp game/ir/classic-rpg.ir.json demo-package/
+	@echo "Copying source files for in-browser compilation..."
+	mkdir -p demo-package/brl
+	mkdir -p demo-package/bdl
+	cp game/brl/*.brl demo-package/brl/
+	cp game/bdl/*.bdl demo-package/bdl/
+	
+	@echo "Copying BCL files..."
 	cp game/bcl/warrior-skills.bcl demo-package/
 	cp game/bcl/mage-skills.bcl demo-package/
 	cp game/bcl/rogue-skills.bcl demo-package/

@@ -1608,9 +1608,9 @@
       <div class="scenario-compilation-info">
         <h3>📚 How Scenarios Work</h3>
         <p>
-          Each scenario is compiled from the same BRL (Blink Rule Language) file but with different BDL (Blink Data Language) configuration files.
-          The compiler combines <code>classic-rpg.brl</code> with <code>heroes.bdl</code>, <code>enemies.bdl</code>, and a scenario-specific BDL file
-          (e.g., <code>scenario-easy.bdl</code>) to generate the final IR (Intermediate Representation) file that the game engine executes.
+          Each scenario is compiled <strong>in real-time in your browser</strong> from the same BRL (Blink Rule Language) file but with different BDL (Blink Data Language) configuration files.
+          The TypeScript compiler combines <code>classic-rpg.brl</code> with <code>heroes.bdl</code>, <code>enemies.bdl</code>, and a scenario-specific BDL file
+          (e.g., <code>scenario-easy.bdl</code>) to generate the final IR (Intermediate Representation) that the game engine executes.
         </p>
         <div class="compilation-steps">
           <div class="compilation-step">
@@ -1628,15 +1628,15 @@
           </div>
           <div class="compilation-arrow">→</div>
           <div class="compilation-step">
-            <strong>3. Compiler</strong><br>
-            <code>blink-compiler</code><br>
-            <span class="step-desc">Processes & validates</span>
+            <strong>3. In-Browser Compiler</strong><br>
+            <code>blink-compiler-ts</code><br>
+            <span class="step-desc">Compiles on page load</span>
           </div>
           <div class="compilation-arrow">→</div>
           <div class="compilation-step">
-            <strong>4. IR (Output)</strong><br>
-            <code>classic-rpg-*.ir.json</code><br>
-            <span class="step-desc">Executable game file</span>
+            <strong>4. In-Memory IR</strong><br>
+            <code>IR JSON object</code><br>
+            <span class="step-desc">Ready to execute</span>
           </div>
         </div>
       </div>
@@ -1938,6 +1938,9 @@
 
   <!-- Load the Blink Engine bundle -->
   <script src="blink-engine.bundle.js"></script>
+  
+  <!-- Load the TypeScript compiler for in-browser BRL/BDL compilation -->
+  <script src="blink-compiler.bundle.js"></script>
   
   <!-- Load JSZip for BCL extraction -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" integrity="sha384-OLBgp1GsljhM2TJ+sbHjaiH9txEUvgdDTAzHv2P24donTt6/529l+9Ua0vFImLlb" crossorigin="anonymous"></script>
@@ -2975,13 +2978,119 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
     // SCENARIO SELECTION FUNCTIONS
     // ========================================================================
     
+    // Cache for fetched source files to avoid re-fetching
+    const sourceFileCache = {};
+    
+    // Fetch a source file with caching
+    async function fetchSourceFile(path) {
+      if (sourceFileCache[path]) {
+        return sourceFileCache[path];
+      }
+      
+      const paths = [
+        path,
+        `../brl/${path}`,
+        `../bdl/${path}`,
+        `data/${path}`
+      ];
+      
+      for (const tryPath of paths) {
+        try {
+          const response = await fetch(tryPath);
+          if (!response.ok) continue;
+          const content = await response.text();
+          sourceFileCache[path] = content;
+          console.debug(`Loaded source file: ${path}`);
+          return content;
+        } catch (error) {
+          // Try next path
+        }
+      }
+      
+      throw new Error(`Failed to load source file: ${path}`);
+    }
+    
+    // Compile BRL and BDL source files to IR using the TypeScript compiler
+    async function compileScenario(scenarioId) {
+      const scenario = SCENARIOS.find(s => s.id === scenarioId);
+      if (!scenario) {
+        throw new Error(`Unknown scenario: ${scenarioId}`);
+      }
+      
+      console.info(`Compiling ${scenario.name} scenario from source files...`);
+      
+      // Load source files
+      const sources = [];
+      
+      // 1. Load the main BRL file (classic-rpg.brl)
+      const brlContent = await fetchSourceFile('classic-rpg.brl');
+      sources.push({
+        path: 'classic-rpg.brl',
+        content: brlContent,
+        language: 'brl'
+      });
+      
+      // 2. Load heroes.bdl
+      const heroesContent = await fetchSourceFile('heroes.bdl');
+      sources.push({
+        path: 'heroes.bdl',
+        content: heroesContent,
+        language: 'bdl'
+      });
+      
+      // 3. Load enemies.bdl
+      const enemiesContent = await fetchSourceFile('enemies.bdl');
+      sources.push({
+        path: 'enemies.bdl',
+        content: enemiesContent,
+        language: 'bdl'
+      });
+      
+      // 4. Load scenario-specific BDL file
+      const scenarioContent = await fetchSourceFile(scenario.bdlFile);
+      sources.push({
+        path: scenario.bdlFile,
+        content: scenarioContent,
+        language: 'bdl'
+      });
+      
+      // Compile using the TypeScript compiler
+      const compileResult = BlinkCompiler.compile(sources, {
+        moduleName: `classic-rpg-${scenarioId}`,
+        includeSourceMap: true
+      });
+      
+      if (compileResult.errors.length > 0) {
+        console.error('Compilation errors:', compileResult.errors);
+        throw new Error(`Compilation failed: ${compileResult.errors.map(e => e.message).join(', ')}`);
+      }
+      
+      console.info(`Successfully compiled ${scenario.name} scenario:`);
+      console.info(`  - Components: ${compileResult.ir.components.length}`);
+      console.info(`  - Rules: ${compileResult.ir.rules.length}`);
+      console.info(`  - Functions: ${compileResult.ir.functions.length}`);
+      console.info(`  - Entities: ${compileResult.ir.initial_state?.entities?.length || 0}`);
+      
+      return compileResult.ir;
+    }
+    
     async function loadScenarioIR(scenarioId) {
       const scenario = SCENARIOS.find(s => s.id === scenarioId);
       if (!scenario) {
         throw new Error(`Unknown scenario: ${scenarioId}`);
       }
       
-      // Try different paths for the IR file
+      // First, try to compile from source files if the TypeScript compiler is available
+      if (typeof BlinkCompiler !== 'undefined' && BlinkCompiler.compile) {
+        try {
+          return await compileScenario(scenarioId);
+        } catch (error) {
+          console.warn(`Failed to compile scenario from source: ${error.message}`);
+          console.warn('Falling back to pre-compiled IR file...');
+        }
+      }
+      
+      // Fallback: Try to load pre-compiled IR files
       const paths = [
         scenario.irFile,
         `data/${scenario.irFile}`,
