@@ -3491,6 +3491,15 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
       
       game.loadRulesFromObject(filteredIR);
       
+      // Load config and enemy template entities from the filtered IR
+      // These entities are needed for the BRL rules to work properly
+      filteredIR.initial_state.entities.forEach((entity) => {
+        game.createEntity(entity.id);
+        Object.entries(entity.components).forEach(([componentName, componentData]) => {
+          game.addComponent(entity.id, componentName, componentData);
+        });
+      });
+      
       // Create hero entities dynamically from selected characters
       // Use entity IDs starting from 100 to avoid conflicts with enemy templates (0-8) and config entities (9-13)
       selectedCharacters.forEach((char, index) => {

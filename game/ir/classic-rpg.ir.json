@@ -2,7 +2,7 @@
   "version": "1.0",
   "module": "unnamed",
   "metadata": {
-    "compiled_at": "2026-01-20T10:53:28Z",
+    "compiled_at": "2026-01-20T11:02:50Z",
     "compiler_version": "0.1.0"
   },
   "components": [
@@ -6320,6 +6320,15 @@
             "currentTier": 1.0,
             "waveInTier": 1.0,
             "bossSpawned": false
+          },
+          "SpawnConfig": {
+            "bossEveryKills": 100.0,
+            "tierProgressionKills": 50.0,
+            "maxTier": 6.0,
+            "wavesPerTier": 300.0,
+            "healthScaleRate": 200.0,
+            "damageScaleRate": 300.0,
+            "initialEnemyCount": 5.0
           }
         }
       },
@@ -6351,21 +6360,6 @@
       },
       {
         "id": 42,
-        "variable": "spawn_config",
-        "components": {
-          "SpawnConfig": {
-            "bossEveryKills": 100.0,
-            "tierProgressionKills": 50.0,
-            "maxTier": 6.0,
-            "wavesPerTier": 300.0,
-            "healthScaleRate": 200.0,
-            "damageScaleRate": 300.0,
-            "initialEnemyCount": 5.0
-          }
-        }
-      },
-      {
-        "id": 43,
         "variable": "enemy_compendium",
         "components": {
           "EnemyCompendium": {
@@ -6489,7 +6483,7 @@
       },
       {
         "path": "../../game/bdl/game-config.bdl",
-        "content": "// =============================================================================\n// BLINK IDLE RPG - Game Configuration\n// =============================================================================\n// This file contains game configuration entities:\n// - Game state tracking\n// - Run statistics\n// - Flee/retreat configuration\n// =============================================================================\n\n// -----------------------------------------------------------------------------\n// GAME STATE ENTITY\n// Tracks overall game progress\n// -----------------------------------------------------------------------------\n\ngame_state = new entity {\n    GameState {\n        currentWave: 1\n        enemiesDefeated: 0\n        playerDeaths: 0\n        bossDefeated: false\n        gameOver: false\n        victory: false\n        retargetingActive: false\n        currentTier: 1\n        waveInTier: 1\n        bossSpawned: false\n    }\n}\n\n// -----------------------------------------------------------------------------\n// RUN STATISTICS ENTITY\n// Tracks the current run for leaderboard\n// -----------------------------------------------------------------------------\n\nrun_stats = new entity {\n    RunStats {\n        simulationTime: 0.0\n        retreatCount: 0\n        retreatPenalty: 0.0\n        deathPenalty: 0.0\n        totalTime: 0.0\n        canFlee: true\n        lastFleeTime: -999.0\n    }\n}\n\n// -----------------------------------------------------------------------------\n// FLEE CONFIGURATION ENTITY\n// Defines penalties and cooldowns for the flee mechanic\n// -----------------------------------------------------------------------------\n\nflee_config = new entity {\n    FleeConfig {\n        retreatTimePenalty: 10.0\n        deathTimePenaltyMultiplier: 5.0\n        fleeCooldown: 5.0\n    }\n}\n\n// -----------------------------------------------------------------------------\n// ENEMY SPAWN CONFIGURATION\n// Defines enemy spawn progression rules\n// These values are used by the spawn system\n// -----------------------------------------------------------------------------\n\nspawn_config = new entity {\n    SpawnConfig {\n        bossEveryKills: 100\n        tierProgressionKills: 50\n        maxTier: 6\n        wavesPerTier: 300\n        healthScaleRate: 200\n        damageScaleRate: 300\n        initialEnemyCount: 5\n    }\n}\n\n// -----------------------------------------------------------------------------\n// ENEMY TEMPLATE COMPENDIUM\n// References to all enemy templates for spawning\n// -----------------------------------------------------------------------------\n\nenemy_compendium = new entity {\n    EnemyCompendium {\n        entries: []\n    }\n}\n",
+        "content": "// =============================================================================\n// BLINK IDLE RPG - Game Configuration\n// =============================================================================\n// This file contains game configuration entities:\n// - Game state tracking\n// - Run statistics\n// - Flee/retreat configuration\n// =============================================================================\n\n// -----------------------------------------------------------------------------\n// GAME STATE ENTITY\n// Tracks overall game progress\n// Combined with SpawnConfig since the BRL rules access both on the same entity\n// -----------------------------------------------------------------------------\n\ngame_state = new entity {\n    GameState {\n        currentWave: 1\n        enemiesDefeated: 0\n        playerDeaths: 0\n        bossDefeated: false\n        gameOver: false\n        victory: false\n        retargetingActive: false\n        currentTier: 1\n        waveInTier: 1\n        bossSpawned: false\n    }\n    SpawnConfig {\n        bossEveryKills: 100\n        tierProgressionKills: 50\n        maxTier: 6\n        wavesPerTier: 300\n        healthScaleRate: 200\n        damageScaleRate: 300\n        initialEnemyCount: 5\n    }\n}\n\n// -----------------------------------------------------------------------------\n// RUN STATISTICS ENTITY\n// Tracks the current run for leaderboard\n// -----------------------------------------------------------------------------\n\nrun_stats = new entity {\n    RunStats {\n        simulationTime: 0.0\n        retreatCount: 0\n        retreatPenalty: 0.0\n        deathPenalty: 0.0\n        totalTime: 0.0\n        canFlee: true\n        lastFleeTime: -999.0\n    }\n}\n\n// -----------------------------------------------------------------------------\n// FLEE CONFIGURATION ENTITY\n// Defines penalties and cooldowns for the flee mechanic\n// -----------------------------------------------------------------------------\n\nflee_config = new entity {\n    FleeConfig {\n        retreatTimePenalty: 10.0\n        deathTimePenaltyMultiplier: 5.0\n        fleeCooldown: 5.0\n    }\n}\n\n// -----------------------------------------------------------------------------\n// ENEMY TEMPLATE COMPENDIUM\n// References to all enemy templates for spawning\n// -----------------------------------------------------------------------------\n\nenemy_compendium = new entity {\n    EnemyCompendium {\n        entries: []\n    }\n}\n",
         "language": "bdl"
       }
     ]

@@ -2,7 +2,7 @@
   "version": "1.0",
   "module": "unnamed",
   "metadata": {
-    "compiled_at": "2026-01-20T10:53:28Z",
+    "compiled_at": "2026-01-20T11:02:50Z",
     "compiler_version": "0.1.0"
   },
   "components": [
@@ -6334,21 +6334,6 @@
       },
       {
         "id": 41,
-        "variable": "spawn_config",
-        "components": {
-          "SpawnConfig": {
-            "bossEveryKills": 150.0,
-            "tierProgressionKills": 75.0,
-            "maxTier": 6.0,
-            "wavesPerTier": 300.0,
-            "healthScaleRate": 100.0,
-            "damageScaleRate": 150.0,
-            "initialEnemyCount": 3.0
-          }
-        }
-      },
-      {
-        "id": 42,
         "variable": "game_state",
         "components": {
           "GameState": {
@@ -6362,11 +6347,20 @@
             "currentTier": 1.0,
             "waveInTier": 1.0,
             "bossSpawned": false
+          },
+          "SpawnConfig": {
+            "bossEveryKills": 150.0,
+            "tierProgressionKills": 75.0,
+            "maxTier": 6.0,
+            "wavesPerTier": 300.0,
+            "healthScaleRate": 100.0,
+            "damageScaleRate": 150.0,
+            "initialEnemyCount": 3.0
           }
         }
       },
       {
-        "id": 43,
+        "id": 42,
         "variable": "run_stats",
         "components": {
           "RunStats": {
@@ -6381,7 +6375,7 @@
         }
       },
       {
-        "id": 44,
+        "id": 43,
         "variable": "enemy_compendium",
         "components": {
           "EnemyCompendium": {
@@ -6505,7 +6499,7 @@
       },
       {
         "path": "../../game/bdl/scenario-easy.bdl",
-        "content": "// =============================================================================\n// BLINK IDLE RPG - Easy Scenario Configuration\n// =============================================================================\n// This scenario is designed for casual players and new players.\n// Features:\n// - Lower enemy spawn rate (3 enemies per wave vs 5 normal)\n// - Easier enemy progression (50% slower scaling)\n// - Lower retreat/death penalties (5s retreat, 3x death penalty)\n// - Bosses appear less frequently (every 150 kills vs 100)\n// =============================================================================\n\n// Scenario metadata component (will be added to BRL)\n// This provides UI information about the scenario\nscenario_info = new entity {\n    ScenarioInfo {\n        id: \"easy\"\n        name: \"Casual Adventure\"\n        description: \"A relaxed journey perfect for newcomers. Lower enemy spawn rates, easier progression, and reduced penalties.\"\n        difficulty: \"Easy\"\n        respawnTime: \"5 seconds\"\n        deathPenalty: \"3x (15 seconds)\"\n        enemiesPerWave: \"3\"\n        bossFrequency: \"Every 150 enemies\"\n    }\n}\n\n// Override game configuration for easy scenario\nflee_config = new entity {\n    FleeConfig {\n        retreatTimePenalty: 5.0           // 5 seconds (down from 10)\n        deathTimePenaltyMultiplier: 3.0   // 3x = 15 seconds (down from 5x = 50)\n        fleeCooldown: 5.0                 // Same as normal\n    }\n}\n\nspawn_config = new entity {\n    SpawnConfig {\n        bossEveryKills: 150               // Bosses every 150 kills (up from 100)\n        tierProgressionKills: 75          // Tier progression every 75 kills (up from 50)\n        maxTier: 6                        // Same max tier\n        wavesPerTier: 300                 // Same waves per tier\n        healthScaleRate: 100              // 50% slower health scaling (down from 200)\n        damageScaleRate: 150              // 50% slower damage scaling (down from 300)\n        initialEnemyCount: 3              // 3 enemies per wave (down from 5)\n    }\n}\n\n// Game state and run statistics (same across all scenarios)\ngame_state = new entity {\n    GameState {\n        currentWave: 1\n        enemiesDefeated: 0\n        playerDeaths: 0\n        bossDefeated: false\n        gameOver: false\n        victory: false\n        retargetingActive: false\n        currentTier: 1\n        waveInTier: 1\n        bossSpawned: false\n    }\n}\n\nrun_stats = new entity {\n    RunStats {\n        simulationTime: 0.0\n        retreatCount: 0\n        retreatPenalty: 0.0\n        deathPenalty: 0.0\n        totalTime: 0.0\n        canFlee: true\n        lastFleeTime: -999.0\n    }\n}\n\nenemy_compendium = new entity {\n    EnemyCompendium {\n        entries: []\n    }\n}\n",
+        "content": "// =============================================================================\n// BLINK IDLE RPG - Easy Scenario Configuration\n// =============================================================================\n// This scenario is designed for casual players and new players.\n// Features:\n// - Lower enemy spawn rate (3 enemies per wave vs 5 normal)\n// - Easier enemy progression (50% slower scaling)\n// - Lower retreat/death penalties (5s retreat, 3x death penalty)\n// - Bosses appear less frequently (every 150 kills vs 100)\n// =============================================================================\n\n// Scenario metadata component (will be added to BRL)\n// This provides UI information about the scenario\nscenario_info = new entity {\n    ScenarioInfo {\n        id: \"easy\"\n        name: \"Casual Adventure\"\n        description: \"A relaxed journey perfect for newcomers. Lower enemy spawn rates, easier progression, and reduced penalties.\"\n        difficulty: \"Easy\"\n        respawnTime: \"5 seconds\"\n        deathPenalty: \"3x (15 seconds)\"\n        enemiesPerWave: \"3\"\n        bossFrequency: \"Every 150 enemies\"\n    }\n}\n\n// Override game configuration for easy scenario\nflee_config = new entity {\n    FleeConfig {\n        retreatTimePenalty: 5.0           // 5 seconds (down from 10)\n        deathTimePenaltyMultiplier: 3.0   // 3x = 15 seconds (down from 5x = 50)\n        fleeCooldown: 5.0                 // Same as normal\n    }\n}\n\n// Game state and run statistics (combined with SpawnConfig)\n// The BRL rules access both GameState and SpawnConfig on the same entity\ngame_state = new entity {\n    GameState {\n        currentWave: 1\n        enemiesDefeated: 0\n        playerDeaths: 0\n        bossDefeated: false\n        gameOver: false\n        victory: false\n        retargetingActive: false\n        currentTier: 1\n        waveInTier: 1\n        bossSpawned: false\n    }\n    SpawnConfig {\n        bossEveryKills: 150               // Bosses every 150 kills (up from 100)\n        tierProgressionKills: 75          // Tier progression every 75 kills (up from 50)\n        maxTier: 6                        // Same max tier\n        wavesPerTier: 300                 // Same waves per tier\n        healthScaleRate: 100              // 50% slower health scaling (down from 200)\n        damageScaleRate: 150              // 50% slower damage scaling (down from 300)\n        initialEnemyCount: 3              // 3 enemies per wave (down from 5)\n    }\n}\n\nrun_stats = new entity {\n    RunStats {\n        simulationTime: 0.0\n        retreatCount: 0\n        retreatPenalty: 0.0\n        deathPenalty: 0.0\n        totalTime: 0.0\n        canFlee: true\n        lastFleeTime: -999.0\n    }\n}\n\nenemy_compendium = new entity {\n    EnemyCompendium {\n        entries: []\n    }\n}\n",
         "language": "bdl"
       }
     ]

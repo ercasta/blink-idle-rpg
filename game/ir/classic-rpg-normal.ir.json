@@ -2,7 +2,7 @@
   "version": "1.0",
   "module": "unnamed",
   "metadata": {
-    "compiled_at": "2026-01-20T10:53:28Z",
+    "compiled_at": "2026-01-20T11:02:50Z",
     "compiler_version": "0.1.0"
   },
   "components": [
@@ -6334,21 +6334,6 @@
       },
       {
         "id": 41,
-        "variable": "spawn_config",
-        "components": {
-          "SpawnConfig": {
-            "bossEveryKills": 100.0,
-            "tierProgressionKills": 50.0,
-            "maxTier": 6.0,
-            "wavesPerTier": 300.0,
-            "healthScaleRate": 200.0,
-            "damageScaleRate": 300.0,
-            "initialEnemyCount": 5.0
-          }
-        }
-      },
-      {
-        "id": 42,
         "variable": "game_state",
         "components": {
           "GameState": {
@@ -6362,11 +6347,20 @@
             "currentTier": 1.0,
             "waveInTier": 1.0,
             "bossSpawned": false
+          },
+          "SpawnConfig": {
+            "bossEveryKills": 100.0,
+            "tierProgressionKills": 50.0,
+            "maxTier": 6.0,
+            "wavesPerTier": 300.0,
+            "healthScaleRate": 200.0,
+            "damageScaleRate": 300.0,
+            "initialEnemyCount": 5.0
           }
         }
       },
       {
-        "id": 43,
+        "id": 42,
         "variable": "run_stats",
         "components": {
           "RunStats": {
@@ -6381,7 +6375,7 @@
         }
       },
       {
-        "id": 44,
+        "id": 43,
         "variable": "enemy_compendium",
         "components": {
           "EnemyCompendium": {
@@ -6505,7 +6499,7 @@
       },
       {
         "path": "../../game/bdl/scenario-normal.bdl",
-        "content": "// =============================================================================\n// BLINK IDLE RPG - Normal Scenario Configuration\n// =============================================================================\n// This is the standard balanced scenario.\n// Features:\n// - Standard enemy spawn rate (5 enemies per wave)\n// - Balanced enemy progression\n// - Standard retreat/death penalties (10s retreat, 5x death penalty)\n// - Bosses appear every 100 kills\n// =============================================================================\n\n// Scenario metadata component\n// This provides UI information about the scenario\nscenario_info = new entity {\n    ScenarioInfo {\n        id: \"normal\"\n        name: \"Classic Campaign\"\n        description: \"The standard Blink RPG experience with balanced difficulty and progression. Recommended for most players.\"\n        difficulty: \"Normal\"\n        respawnTime: \"10 seconds\"\n        deathPenalty: \"5x (50 seconds)\"\n        enemiesPerWave: \"5\"\n        bossFrequency: \"Every 100 enemies\"\n    }\n}\n\n// Standard game configuration (this is the original balance)\nflee_config = new entity {\n    FleeConfig {\n        retreatTimePenalty: 10.0          // 10 seconds\n        deathTimePenaltyMultiplier: 5.0   // 5x = 50 seconds\n        fleeCooldown: 5.0                 // 5 seconds between flees\n    }\n}\n\nspawn_config = new entity {\n    SpawnConfig {\n        bossEveryKills: 100               // Bosses every 100 kills\n        tierProgressionKills: 50          // Tier progression every 50 kills\n        maxTier: 6                        // Maximum tier\n        wavesPerTier: 300                 // Waves per tier\n        healthScaleRate: 200              // Health scaling rate\n        damageScaleRate: 300              // Damage scaling rate\n        initialEnemyCount: 5              // 5 enemies per wave\n    }\n}\n\n// Game state and run statistics (same across all scenarios)\ngame_state = new entity {\n    GameState {\n        currentWave: 1\n        enemiesDefeated: 0\n        playerDeaths: 0\n        bossDefeated: false\n        gameOver: false\n        victory: false\n        retargetingActive: false\n        currentTier: 1\n        waveInTier: 1\n        bossSpawned: false\n    }\n}\n\nrun_stats = new entity {\n    RunStats {\n        simulationTime: 0.0\n        retreatCount: 0\n        retreatPenalty: 0.0\n        deathPenalty: 0.0\n        totalTime: 0.0\n        canFlee: true\n        lastFleeTime: -999.0\n    }\n}\n\nenemy_compendium = new entity {\n    EnemyCompendium {\n        entries: []\n    }\n}\n",
+        "content": "// =============================================================================\n// BLINK IDLE RPG - Normal Scenario Configuration\n// =============================================================================\n// This is the standard balanced scenario.\n// Features:\n// - Standard enemy spawn rate (5 enemies per wave)\n// - Balanced enemy progression\n// - Standard retreat/death penalties (10s retreat, 5x death penalty)\n// - Bosses appear every 100 kills\n// =============================================================================\n\n// Scenario metadata component\n// This provides UI information about the scenario\nscenario_info = new entity {\n    ScenarioInfo {\n        id: \"normal\"\n        name: \"Classic Campaign\"\n        description: \"The standard Blink RPG experience with balanced difficulty and progression. Recommended for most players.\"\n        difficulty: \"Normal\"\n        respawnTime: \"10 seconds\"\n        deathPenalty: \"5x (50 seconds)\"\n        enemiesPerWave: \"5\"\n        bossFrequency: \"Every 100 enemies\"\n    }\n}\n\n// Standard game configuration (this is the original balance)\nflee_config = new entity {\n    FleeConfig {\n        retreatTimePenalty: 10.0          // 10 seconds\n        deathTimePenaltyMultiplier: 5.0   // 5x = 50 seconds\n        fleeCooldown: 5.0                 // 5 seconds between flees\n    }\n}\n\n// Game state and run statistics (combined with SpawnConfig)\n// The BRL rules access both GameState and SpawnConfig on the same entity\ngame_state = new entity {\n    GameState {\n        currentWave: 1\n        enemiesDefeated: 0\n        playerDeaths: 0\n        bossDefeated: false\n        gameOver: false\n        victory: false\n        retargetingActive: false\n        currentTier: 1\n        waveInTier: 1\n        bossSpawned: false\n    }\n    SpawnConfig {\n        bossEveryKills: 100               // Bosses every 100 kills\n        tierProgressionKills: 50          // Tier progression every 50 kills\n        maxTier: 6                        // Maximum tier\n        wavesPerTier: 300                 // Waves per tier\n        healthScaleRate: 200              // Health scaling rate\n        damageScaleRate: 300              // Damage scaling rate\n        initialEnemyCount: 5              // 5 enemies per wave\n    }\n}\n\nrun_stats = new entity {\n    RunStats {\n        simulationTime: 0.0\n        retreatCount: 0\n        retreatPenalty: 0.0\n        deathPenalty: 0.0\n        totalTime: 0.0\n        canFlee: true\n        lastFleeTime: -999.0\n    }\n}\n\nenemy_compendium = new entity {\n    EnemyCompendium {\n        entries: []\n    }\n}\n",
         "language": "bdl"
       }
     ]

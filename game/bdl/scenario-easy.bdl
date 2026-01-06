@@ -33,19 +33,8 @@ flee_config = new entity {
     }
 }
 
-spawn_config = new entity {
-    SpawnConfig {
-        bossEveryKills: 150               // Bosses every 150 kills (up from 100)
-        tierProgressionKills: 75          // Tier progression every 75 kills (up from 50)
-        maxTier: 6                        // Same max tier
-        wavesPerTier: 300                 // Same waves per tier
-        healthScaleRate: 100              // 50% slower health scaling (down from 200)
-        damageScaleRate: 150              // 50% slower damage scaling (down from 300)
-        initialEnemyCount: 3              // 3 enemies per wave (down from 5)
-    }
-}
-
-// Game state and run statistics (same across all scenarios)
+// Game state and run statistics (combined with SpawnConfig)
+// The BRL rules access both GameState and SpawnConfig on the same entity
 game_state = new entity {
     GameState {
         currentWave: 1
@@ -58,6 +47,15 @@ game_state = new entity {
         currentTier: 1
         waveInTier: 1
         bossSpawned: false
+    }
+    SpawnConfig {
+        bossEveryKills: 150               // Bosses every 150 kills (up from 100)
+        tierProgressionKills: 75          // Tier progression every 75 kills (up from 50)
+        maxTier: 6                        // Same max tier
+        wavesPerTier: 300                 // Same waves per tier
+        healthScaleRate: 100              // 50% slower health scaling (down from 200)
+        damageScaleRate: 150              // 50% slower damage scaling (down from 300)
+        initialEnemyCount: 3              // 3 enemies per wave (down from 5)
     }
 }
 
