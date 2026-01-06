@@ -51,11 +51,30 @@ compile-brl: build-compiler
 	for brl_file in ../../game/brl/*.brl; do \
 		filename=$$(basename "$$brl_file" .brl); \
 			if [ "$$filename" = "classic-rpg" ]; then \
+				echo "Compiling classic-rpg with Easy scenario..."; \
+				./target/release/blink-compiler compile -i "$$brl_file" -o "../../game/ir/$${filename}-easy.ir.json" --pretty $(SOURCE_MAP_FLAG) \
+					--include ../../game/bdl/heroes.bdl \
+					--include ../../game/bdl/enemies.bdl \
+					--include ../../game/bdl/scenario-easy.bdl; \
+				echo "Compiled $${filename}.brl (Easy) -> $${filename}-easy.ir.json"; \
+				echo "Compiling classic-rpg with Normal scenario..."; \
+				./target/release/blink-compiler compile -i "$$brl_file" -o "../../game/ir/$${filename}-normal.ir.json" --pretty $(SOURCE_MAP_FLAG) \
+					--include ../../game/bdl/heroes.bdl \
+					--include ../../game/bdl/enemies.bdl \
+					--include ../../game/bdl/scenario-normal.bdl; \
+				echo "Compiled $${filename}.brl (Normal) -> $${filename}-normal.ir.json"; \
+				echo "Compiling classic-rpg with Hard scenario..."; \
+				./target/release/blink-compiler compile -i "$$brl_file" -o "../../game/ir/$${filename}-hard.ir.json" --pretty $(SOURCE_MAP_FLAG) \
+					--include ../../game/bdl/heroes.bdl \
+					--include ../../game/bdl/enemies.bdl \
+					--include ../../game/bdl/scenario-hard.bdl; \
+				echo "Compiled $${filename}.brl (Hard) -> $${filename}-hard.ir.json"; \
+				echo "Compiling classic-rpg with legacy game-config (for backward compatibility)..."; \
 				./target/release/blink-compiler compile -i "$$brl_file" -o "../../game/ir/$${filename}.ir.json" --pretty $(SOURCE_MAP_FLAG) \
 					--include ../../game/bdl/heroes.bdl \
 					--include ../../game/bdl/enemies.bdl \
 					--include ../../game/bdl/game-config.bdl; \
-			echo "Compiled $${filename}.brl with BDL files -> $${filename}.ir.json"; \
+				echo "Compiled $${filename}.brl (Legacy) -> $${filename}.ir.json"; \
 		else \
 			./target/release/blink-compiler compile -i "$$brl_file" -o "../../game/ir/$${filename}.ir.json" --pretty; \
 			echo "Compiled $${filename}.brl -> $${filename}.ir.json"; \

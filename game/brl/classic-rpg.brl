@@ -166,6 +166,18 @@ component SpawnConfig {
     initialEnemyCount: integer
 }
 
+// Scenario information for scenario selection UI (used by BDL)
+component ScenarioInfo {
+    id: string
+    name: string
+    description: string
+    difficulty: string
+    respawnTime: string
+    deathPenalty: string
+    enemiesPerWave: string
+    bossFrequency: string
+}
+
 // Helper function to calculate damage
 fn calculate_damage(base: float, bonus: float): float {
     return base + bonus
