@@ -80,9 +80,7 @@ interface ResolvedGameTestOptions {
   maxSteps: number;
   maxTime: number;
   debug: boolean;
-  timeScale: number;
   maxEventsPerFrame: number;
-  discreteTimeStep: number;
   devMode: boolean;
 }
 
@@ -104,17 +102,13 @@ export class GameTest {
       maxSteps: options.maxSteps ?? 10000,
       maxTime: options.maxTime ?? 3600,
       debug: options.debug ?? false,
-      timeScale: options.timeScale ?? 1.0,
       maxEventsPerFrame: options.maxEventsPerFrame ?? 100,
-      discreteTimeStep: options.discreteTimeStep ?? 0,
       devMode: options.devMode ?? false,
     };
     
     this.game = BlinkGame.createSync({
       debug: this.options.debug,
-      timeScale: this.options.timeScale,
       maxEventsPerFrame: this.options.maxEventsPerFrame,
-      discreteTimeStep: this.options.discreteTimeStep,
       devMode: this.options.devMode,
     });
     
