@@ -1,8 +1,3 @@
-//! WebAssembly bindings for the Blink Compiler
-//!
-//! This module provides JavaScript-accessible functions for compiling BRL/BCL source
-//! code to IR in the browser.
-
 use wasm_bindgen::prelude::*;
 use serde::{Serialize, Deserialize};
 
@@ -18,6 +13,14 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 pub fn init() {
     #[cfg(feature = "console_error_panic_hook")]
     console_error_panic_hook::set_once();
+}
+
+/// Include file input structure
+#[derive(Deserialize)]
+struct IncludeFileInput {
+    path: String,
+    content: String,
+    language: String,
 }
 
 /// Result of compilation
@@ -116,22 +119,11 @@ pub fn compile_with_includes(
         optimize: false,
     };
     
-    // Parse includes JSON
-    let includes_vec: Result<Vec<(String, String, String)>, _> = 
-        serde_json::from_str(includes)
-        .map(|v: Vec<serde_json::Value>| {
-            v.into_iter()
-                .filter_map(|item| {
-                    let path = item.get("path")?.as_str()?.to_string();
-                    let content = item.get("content")?.as_str()?.to_string();
-                    let language = item.get("language")?.as_str()?.to_string();
-                    Some((path, content, language))
-                })
-                .collect()
-        });
-    
-    let includes_vec = match includes_vec {
-        Ok(v) => v,
+    // Parse includes JSON with proper struct deserialization
+    let includes_vec: Vec<(String, String, String)> = match serde_json::from_str::<Vec<IncludeFileInput>>(includes) {
+        Ok(inputs) => inputs.into_iter()
+            .map(|input| (input.path, input.content, input.language))
+            .collect(),
         Err(e) => return CompileResult {
             success: false,
             ir: None,

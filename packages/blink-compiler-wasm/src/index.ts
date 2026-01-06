@@ -139,7 +139,7 @@ function createCompilerAPI(): Compiler {
         const includesJson = JSON.stringify(includes);
         const result = wasm.compile_with_includes(
           source,
-          sourcePath || undefined,
+          sourcePath,
           includesJson,
           pretty,
           sourceMap
