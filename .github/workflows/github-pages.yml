@@ -81,6 +81,10 @@ jobs:
         run: |
           mkdir -p _site
           
+          # Disable Jekyll processing to allow serving .brl, .bcl, .bdl files
+          echo "Creating .nojekyll file to disable Jekyll..."
+          touch _site/.nojekyll
+          
           # Copy demo HTML and JS files
           echo "Copying demo files..."
           cp game/demos/index.html _site/
