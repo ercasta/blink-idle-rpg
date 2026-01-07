@@ -370,7 +370,12 @@ rule attack_rule on DoAttack {
         }
         
         // Schedule next attack
-        let delay = 1 / (entity.Combat.attackSpeed + entity.Buffs.hasteBonus)
+        // Ensure attackSpeed + hasteBonus is positive to avoid division by zero or negative delays
+        let attackSpeedTotal = entity.Combat.attackSpeed + entity.Buffs.hasteBonus
+        if attackSpeedTotal <= 0 {
+            attackSpeedTotal = 0.1  // Minimum attack speed to prevent infinite loops
+        }
+        let delay = 1 / attackSpeedTotal
         schedule [delay: delay] DoAttack {
             source: entity.id
         }
