@@ -431,9 +431,18 @@ export class RuleExecutor {
     
     if (expr.type === 'field') {
       // Field access that returns an entity ID
-      const entityRef = typeof expr.entity === 'string'
-        ? context.bindings.get(expr.entity)
-        : this.evaluateEntityExpression(expr.entity, context);
+      let entityRef: EntityId | null | undefined;
+      if (typeof expr.entity === 'string') {
+        // Check locals first (for loop variables and let bindings), then entity bindings
+        const localValue = context.locals.get(expr.entity);
+        if (localValue !== undefined && typeof localValue === 'number') {
+          entityRef = localValue;
+        } else {
+          entityRef = context.bindings.get(expr.entity);
+        }
+      } else {
+        entityRef = this.evaluateEntityExpression(expr.entity, context);
+      }
       
       if (entityRef === null || entityRef === undefined) {
         return null;
@@ -487,9 +496,18 @@ export class RuleExecutor {
       }
 
       case 'field': {
-        const entityRef = typeof expr.entity === 'string'
-          ? context.bindings.get(expr.entity)
-          : this.evaluateEntityExpression(expr.entity as IRExpression, context);
+        let entityRef: EntityId | null | undefined;
+        if (typeof expr.entity === 'string') {
+          // Check locals first (for loop variables and let bindings), then entity bindings
+          const localValue = context.locals.get(expr.entity);
+          if (localValue !== undefined && typeof localValue === 'number') {
+            entityRef = localValue;
+          } else {
+            entityRef = context.bindings.get(expr.entity);
+          }
+        } else {
+          entityRef = this.evaluateEntityExpression(expr.entity as IRExpression, context);
+        }
         
         if (entityRef === null || entityRef === undefined) {
           return null;
@@ -645,6 +663,47 @@ export class RuleExecutor {
           return evaluatedArgs[0].length;
         }
         return evaluatedArgs[0] != null ? 1 : 0;
+      case 'list':
+        // Create a list from the evaluated arguments
+        return evaluatedArgs;
+      case 'entities_having': {
+        // Query entities that have the specified component
+        if (evaluatedArgs.length !== 1) {
+          throw new Error(`entities_having expects 1 argument, got ${evaluatedArgs.length}`);
+        }
+        const componentName = evaluatedArgs[0];
+        if (typeof componentName !== 'string') {
+          throw new Error(`entities_having expects a string argument, got ${typeof componentName}`);
+        }
+        return context.store.query(componentName);
+      }
+      case 'get': {
+        // Array/object index access: get(array, index)
+        if (evaluatedArgs.length !== 2) {
+          throw new Error(`get expects 2 arguments, got ${evaluatedArgs.length}`);
+        }
+        const obj = evaluatedArgs[0];
+        const index = evaluatedArgs[1];
+        if (Array.isArray(obj)) {
+          if (typeof index !== 'number') {
+            throw new Error(`get expects a number index for arrays, got ${typeof index}`);
+          }
+          // Check bounds to avoid accessing out-of-bounds
+          if (index < 0 || index >= obj.length) {
+            return null;
+          }
+          const result = obj[index];
+          return result !== undefined ? (result as IRFieldValue) : null;
+        }
+        if (typeof obj === 'object' && obj !== null) {
+          if (typeof index !== 'string') {
+            throw new Error(`get expects a string key for objects, got ${typeof index}`);
+          }
+          const result = (obj as Record<string, unknown>)[index];
+          return result !== undefined ? (result as IRFieldValue) : null;
+        }
+        return null;
+      }
     }
 
     // User-defined functions
