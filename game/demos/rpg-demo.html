@@ -2821,7 +2821,15 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
       ];
       
       loadedBCLFiles = [];
-      const basePaths = [BCL_GITHUB_PAGES_PATH, BCL_LOCAL_DEV_PATH]; // Try GitHub Pages path first, then local dev path
+      const basePaths = [BCL_GITHUB_PAGES_PATH, BCL_LOCAL_DEV_PATH];
+      
+      // Add GitHub Pages paths with base path only if base path is detected
+      if (BASE_PATH) {
+        basePaths.push(
+          `${BASE_PATH}${BCL_GITHUB_PAGES_PATH}`,
+          `${BASE_PATH}${BCL_LOCAL_DEV_PATH}`
+        );
+      }
       
       for (const filename of bclFiles) {
         let loaded = false;
@@ -2980,6 +2988,29 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
     // Cache for fetched source files to avoid re-fetching
     const sourceFileCache = {};
     
+    // Detect base path for GitHub Pages deployment (e.g., /blink-idle-rpg/)
+    // Cache this value to avoid redundant pathname parsing
+    const BASE_PATH = (function() {
+      const pathParts = window.location.pathname.split('/').filter(p => p);
+      // If we're in a GitHub Pages deployment with repo name in path
+      // e.g., /blink-idle-rpg/index.html or /blink-idle-rpg/rpg-demo.html
+      // The first path segment should be the repo name (not 'game', 'demos', or a file)
+      if (pathParts.length > 0) {
+        const firstSegment = pathParts[0];
+        // Heuristic: if first segment doesn't look like a directory in the project structure,
+        // it's likely the repo name in a GitHub Pages URL
+        if (firstSegment !== 'game' && 
+            firstSegment !== 'demos' && 
+            !firstSegment.endsWith('.html')) {
+          return '/' + firstSegment;
+        }
+      }
+      return '';
+    })();
+    
+    // Log the detected base path for debugging
+    console.info(`BASE_PATH detected: "${BASE_PATH}" (window.location.pathname: ${window.location.pathname})`);
+    
     // Fetch a source file with caching
     async function fetchSourceFile(path) {
       if (sourceFileCache[path]) {
@@ -2997,19 +3028,30 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
         `/game-files/${path}`
       ];
       
+      // Add GitHub Pages paths with base path only if base path is detected
+      if (BASE_PATH) {
+        paths.push(
+          `${BASE_PATH}/game/${path}`,
+          `${BASE_PATH}/game/brl/${path}`,
+          `${BASE_PATH}/game/bdl/${path}`,
+          `${BASE_PATH}/game-files/${path}`
+        );
+      }
+      
       for (const tryPath of paths) {
         try {
           const response = await fetch(tryPath);
           if (!response.ok) continue;
           const content = await response.text();
           sourceFileCache[path] = content;
-          console.debug(`Loaded source file: ${path}`);
+          console.info(`✓ Loaded source file: ${path} from ${tryPath}`);
           return content;
         } catch (error) {
           // Try next path
         }
       }
       
+      console.error(`✗ Failed to load source file: ${path} (tried ${paths.length} paths)`);
       throw new Error(`Failed to load source file: ${path}`);
     }
     
@@ -3344,7 +3386,19 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
     // Load IR from file (fail-fast; no embedded fallback)
     async function loadDefaultIR() {
       // Try GitHub Pages path first, then local dev path
-      const paths = ['classic-rpg.ir.json', 'data/classic-rpg.ir.json', '../ir/classic-rpg.ir.json'];
+      const paths = [
+        'classic-rpg.ir.json', 
+        'data/classic-rpg.ir.json', 
+        '../ir/classic-rpg.ir.json'
+      ];
+      
+      // Add GitHub Pages paths with base path only if base path is detected
+      if (BASE_PATH) {
+        paths.push(
+          `${BASE_PATH}/data/classic-rpg.ir.json`,
+          `${BASE_PATH}/game/ir/classic-rpg.ir.json`
+        );
+      }
       
       for (const path of paths) {
         try {
