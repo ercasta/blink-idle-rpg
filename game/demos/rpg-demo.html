@@ -2822,12 +2822,15 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
       
       loadedBCLFiles = [];
       const basePath = getBasePath();
-      const basePaths = [
-        BCL_GITHUB_PAGES_PATH, 
-        BCL_LOCAL_DEV_PATH,
-        `${basePath}${BCL_GITHUB_PAGES_PATH}`,  // GitHub Pages with base path
-        `${basePath}${BCL_LOCAL_DEV_PATH}`       // Local dev with base path
-      ]; // Try GitHub Pages path first, then local dev path
+      const basePaths = [BCL_GITHUB_PAGES_PATH, BCL_LOCAL_DEV_PATH];
+      
+      // Add GitHub Pages paths with base path only if base path is detected
+      if (basePath) {
+        basePaths.push(
+          `${basePath}${BCL_GITHUB_PAGES_PATH}`,
+          `${basePath}${BCL_LOCAL_DEV_PATH}`
+        );
+      }
       
       for (const filename of bclFiles) {
         let loaded = false;
@@ -3012,13 +3015,18 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
         `/game/${path}`,
         `/game/brl/${path}`,
         `/game/bdl/${path}`,
-        `/game-files/${path}`,
-        // GitHub Pages paths with base path
-        `${basePath}/game/${path}`,
-        `${basePath}/game/brl/${path}`,
-        `${basePath}/game/bdl/${path}`,
-        `${basePath}/game-files/${path}`
+        `/game-files/${path}`
       ];
+      
+      // Add GitHub Pages paths with base path only if base path is detected
+      if (basePath) {
+        paths.push(
+          `${basePath}/game/${path}`,
+          `${basePath}/game/brl/${path}`,
+          `${basePath}/game/bdl/${path}`,
+          `${basePath}/game-files/${path}`
+        );
+      }
       
       for (const tryPath of paths) {
         try {
@@ -3371,10 +3379,16 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
       const paths = [
         'classic-rpg.ir.json', 
         'data/classic-rpg.ir.json', 
-        '../ir/classic-rpg.ir.json',
-        `${basePath}/data/classic-rpg.ir.json`,
-        `${basePath}/game/ir/classic-rpg.ir.json`
+        '../ir/classic-rpg.ir.json'
       ];
+      
+      // Add GitHub Pages paths with base path only if base path is detected
+      if (basePath) {
+        paths.push(
+          `${basePath}/data/classic-rpg.ir.json`,
+          `${basePath}/game/ir/classic-rpg.ir.json`
+        );
+      }
       
       for (const path of paths) {
         try {
