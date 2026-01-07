@@ -2821,14 +2821,13 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
       ];
       
       loadedBCLFiles = [];
-      const basePath = BASE_PATH;
       const basePaths = [BCL_GITHUB_PAGES_PATH, BCL_LOCAL_DEV_PATH];
       
       // Add GitHub Pages paths with base path only if base path is detected
-      if (basePath) {
+      if (BASE_PATH) {
         basePaths.push(
-          `${basePath}${BCL_GITHUB_PAGES_PATH}`,
-          `${basePath}${BCL_LOCAL_DEV_PATH}`
+          `${BASE_PATH}${BCL_GITHUB_PAGES_PATH}`,
+          `${BASE_PATH}${BCL_LOCAL_DEV_PATH}`
         );
       }
       
@@ -3015,7 +3014,6 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
         return sourceFileCache[path];
       }
       
-      const basePath = BASE_PATH;
       const paths = [
         path,
         `../brl/${path}`,
@@ -3028,12 +3026,12 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
       ];
       
       // Add GitHub Pages paths with base path only if base path is detected
-      if (basePath) {
+      if (BASE_PATH) {
         paths.push(
-          `${basePath}/game/${path}`,
-          `${basePath}/game/brl/${path}`,
-          `${basePath}/game/bdl/${path}`,
-          `${basePath}/game-files/${path}`
+          `${BASE_PATH}/game/${path}`,
+          `${BASE_PATH}/game/brl/${path}`,
+          `${BASE_PATH}/game/bdl/${path}`,
+          `${BASE_PATH}/game-files/${path}`
         );
       }
       
@@ -3383,7 +3381,6 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
     
     // Load IR from file (fail-fast; no embedded fallback)
     async function loadDefaultIR() {
-      const basePath = BASE_PATH;
       // Try GitHub Pages path first, then local dev path
       const paths = [
         'classic-rpg.ir.json', 
@@ -3392,10 +3389,10 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
       ];
       
       // Add GitHub Pages paths with base path only if base path is detected
-      if (basePath) {
+      if (BASE_PATH) {
         paths.push(
-          `${basePath}/data/classic-rpg.ir.json`,
-          `${basePath}/game/ir/classic-rpg.ir.json`
+          `${BASE_PATH}/data/classic-rpg.ir.json`,
+          `${BASE_PATH}/game/ir/classic-rpg.ir.json`
         );
       }
       
