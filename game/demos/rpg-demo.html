@@ -3505,7 +3505,7 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
       } else {
         // Select based on progression
         const tier = Math.min(6, Math.floor(kills / 50) + 1);
-        const candidates = enemyTemplates.filter(t => !t.boss && t.tier <= tier);
+        const candidates = enemyTemplates.filter(t => !t.enemy.isBoss && t.enemy.tier <= tier);
         template = candidates[Math.floor(Math.random() * candidates.length)];
       }
       
@@ -3516,14 +3516,14 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
       const targetHero = Math.floor(Math.random() * 4);
       
       game.addComponent(enemyId, 'Character', {
-        name: template.name + (template.boss ? '' : ' #' + (kills + 1)),
-        class: template.boss ? 'Boss' : 'Monster',
+        name: template.name + (template.enemy.isBoss ? '' : ' #' + (kills + 1)),
+        class: template.enemy.isBoss ? 'Boss' : 'Monster',
         level: Math.max(1, Math.floor(kills / 20) + 1),
       });
       
       game.addComponent(enemyId, 'Health', {
-        current: template.health * (1 + kills / 200), // Scale with progression
-        max: template.health * (1 + kills / 200),
+        current: template.health.max * (1 + kills / 200), // Scale with progression
+        max: template.health.max * (1 + kills / 200),
       });
       
       game.addComponent(enemyId, 'Mana', {
@@ -3532,9 +3532,9 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
       });
       
       game.addComponent(enemyId, 'Combat', {
-        damage: template.damage * (1 + kills / 300),
+        damage: template.combat.damage * (1 + kills / 300),
         defense: 2 + Math.floor(kills / 50),
-        attackSpeed: template.speed,
+        attackSpeed: template.combat.attackSpeed,
       });
       
       game.addComponent(enemyId, 'Target', {
@@ -3547,9 +3547,9 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
       });
       
       game.addComponent(enemyId, 'Enemy', {
-        tier: template.tier,
-        isBoss: template.boss || false,
-        expReward: template.exp,
+        tier: template.enemy.tier,
+        isBoss: template.enemy.isBoss || false,
+        expReward: template.enemy.expReward,
       });
       
       game.addComponent(enemyId, 'Buffs', {
