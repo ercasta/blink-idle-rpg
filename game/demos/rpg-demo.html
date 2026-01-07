@@ -3008,6 +3008,9 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
       return '';
     })();
     
+    // Log the detected base path for debugging
+    console.info(`BASE_PATH detected: "${BASE_PATH}" (window.location.pathname: ${window.location.pathname})`);
+    
     // Fetch a source file with caching
     async function fetchSourceFile(path) {
       if (sourceFileCache[path]) {
@@ -3041,13 +3044,14 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
           if (!response.ok) continue;
           const content = await response.text();
           sourceFileCache[path] = content;
-          console.debug(`Loaded source file: ${path}`);
+          console.info(`✓ Loaded source file: ${path} from ${tryPath}`);
           return content;
         } catch (error) {
           // Try next path
         }
       }
       
+      console.error(`✗ Failed to load source file: ${path} (tried ${paths.length} paths)`);
       throw new Error(`Failed to load source file: ${path}`);
     }
     
