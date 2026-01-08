@@ -188,16 +188,21 @@ If the browser can't find `blink-engine.bundle.js`:
 
 ### Why Bundles Are Not Committed
 
-The bundles (`*.bundle.js`) are in `.gitignore` because:
+The bundles (`*.bundle.js`) are in `.gitignore` (line 32) and are not tracked in git because:
 
-1. They are generated artifacts (violates "never version derived code" policy)
+1. They are generated artifacts (per "never version derived code" policy)
 2. They can be regenerated from source with `make dev-setup`
 3. Prevents stale file issues and merge conflicts
 4. Reduces repository size
 
-Users must build bundles before running demos:
+**Important**: Users must build bundles locally before running demos:
 ```bash
 make dev-setup
+```
+
+You can verify bundles are not tracked with:
+```bash
+git ls-files game/demos/*.bundle.js  # Should return nothing
 ```
 
 ### Backward Compatibility
@@ -210,6 +215,6 @@ The async engine is **fully backward compatible**:
 
 ## References
 
-- [Async Engine Documentation](docs/async-engine.md) - Detailed documentation from PR #93
-- [Engine Architecture](doc/engine/architecture.md) - Overall engine architecture
-- [BlinkGame.ts](packages/blink-engine/src/BlinkGame.ts) - Source code with async implementation
+- [Async Engine Documentation](../docs/async-engine.md) - Detailed documentation from PR #93
+- [Engine Architecture](../doc/engine/architecture.md) - Overall engine architecture
+- [BlinkGame.ts](../packages/blink-engine/src/BlinkGame.ts) - Source code with async implementation
