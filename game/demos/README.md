@@ -60,6 +60,14 @@ A mobile-friendly landing page that provides:
 - **Speed Control**: Up to 1000x simulation speed
 - **Perfect for**: Extended gameplay and progression testing
 
+### 🧪 async-test.html - Async Engine Test
+
+- **UI Responsiveness Test**: Verifies that the engine processes events asynchronously
+- **Rapid Event Chain**: Creates a chain of events to stress-test the async processing
+- **Interactive Testing**: Click buttons while simulation runs to verify UI remains responsive
+- **Real-time Monitoring**: Watch event counters and logs update in real-time
+- **Perfect for**: Developers testing engine performance and UI responsiveness
+
 ## What The Demos Show
 
 ## How It Works
