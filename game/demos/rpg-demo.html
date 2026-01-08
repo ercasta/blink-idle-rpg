@@ -3610,7 +3610,7 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
       }
       
       
-      game = BlinkEngine.BlinkGame.create({
+      game = await BlinkEngine.BlinkGame.create({
         debug: true,  // Enable debug logging to diagnose event processing
         msPerFrame: 100, // 100ms of simulation time per frame (async engine will yield during processing)
         maxEventsPerFrame: 1000
@@ -3781,7 +3781,7 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
         return;
       }
       
-      game = BlinkEngine.BlinkGame.create({
+      game = await BlinkEngine.BlinkGame.create({
         debug: false,
         msPerFrame: 100, // 100ms of simulation time per frame for async engine
         maxEventsPerFrame: 1000 // Process more events per frame for speed
