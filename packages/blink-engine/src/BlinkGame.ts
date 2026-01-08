@@ -804,7 +804,7 @@ export class BlinkGame {
     }
   }
 
-  private gameLoop(): void {
+  private async gameLoop(): Promise<void> {
     console.log('[GameLoop] ENTERED gameLoop', { isRunning: this.isRunning, isPaused: this.isPaused });
     
     if (!this.isRunning || this.isPaused) {
@@ -820,31 +820,54 @@ export class BlinkGame {
       console.log(`[GameLoop] Advancing ${millisecondsToAdvance}ms, from ${this.timeline.getTime()}ms to target ${targetTime}ms`);
     }
     
-    // Process all events up to target time (or max events per frame)
-    let eventsProcessed = 0;
+    // Process events in smaller batches to keep UI responsive
+    const BATCH_SIZE = 10; // Process 10 events at a time before yielding
+    let totalEventsProcessed = 0;
     
     while (
-      eventsProcessed < this.options.maxEventsPerFrame &&
+      totalEventsProcessed < this.options.maxEventsPerFrame &&
       this.timeline.hasEvents()
     ) {
       const nextEvent = this.timeline.peek();
       if (!nextEvent || nextEvent.time > targetTime) {
-        if (this.options.debug && eventsProcessed === 0 && this.timeline.getTime() < 1000) {
+        if (this.options.debug && totalEventsProcessed === 0 && this.timeline.getTime() < 1000) {
           console.log(`[GameLoop] No events to process: nextEvent=${nextEvent ? nextEvent.eventType + '@' + nextEvent.time + 'ms' : 'null'}, targetTime=${targetTime}ms`);
         }
         break;
       }
       
-      if (this.options.debug && eventsProcessed < 5 && this.timeline.getTime() < 1000) {
-        console.log(`[GameLoop] Processing event: ${nextEvent.eventType} at time ${nextEvent.time}ms`);
+      // Process a batch of events
+      let batchCount = 0;
+      while (
+        batchCount < BATCH_SIZE &&
+        totalEventsProcessed < this.options.maxEventsPerFrame &&
+        this.timeline.hasEvents()
+      ) {
+        const event = this.timeline.peek();
+        if (!event || event.time > targetTime) {
+          break;
+        }
+        
+        if (this.options.debug && totalEventsProcessed < 5 && this.timeline.getTime() < 1000) {
+          console.log(`[GameLoop] Processing event: ${event.eventType} at time ${event.time}ms`);
+        }
+        
+        this.step();
+        batchCount++;
+        totalEventsProcessed++;
       }
       
-      this.step();
-      eventsProcessed++;
+      // Yield control back to the browser every batch to keep UI responsive
+      if (this.timeline.hasEvents()) {
+        const nextEvent = this.timeline.peek();
+        if (nextEvent && nextEvent.time <= targetTime && totalEventsProcessed < this.options.maxEventsPerFrame) {
+          await this.yieldToUI();
+        }
+      }
     }
     
     if (this.options.debug && this.timeline.getTime() < 1000) {
-      console.log(`[GameLoop] Processed ${eventsProcessed} events, timeline now at ${this.timeline.getTime()}ms`);
+      console.log(`[GameLoop] Processed ${totalEventsProcessed} events, timeline now at ${this.timeline.getTime()}ms`);
     }
     
     // Check if simulation is complete
@@ -856,6 +879,27 @@ export class BlinkGame {
     
     // Schedule next frame (wall-clock time only affects UI update rate, not simulation)
     this.scheduleNextFrame();
+  }
+
+  /**
+   * Yield control back to the browser's event loop to keep UI responsive
+   * 
+   * This method is called after processing a batch of events to allow the browser
+   * to handle user input, render updates, and process other tasks. The yielding
+   * is done using setTimeout(0), which schedules the continuation on the next
+   * available event loop iteration.
+   * 
+   * Performance impact: Adds ~1-2ms overhead per yield, but prevents UI blocking
+   * and keeps the interface responsive during heavy event processing.
+   * 
+   * @returns A Promise that resolves after yielding to the browser
+   */
+  private yieldToUI(): Promise<void> {
+    return new Promise(resolve => {
+      // Use setTimeout(0) to yield to the browser
+      // This allows the browser to process user input and render updates
+      setTimeout(resolve, 0);
+    });
   }
 
 
