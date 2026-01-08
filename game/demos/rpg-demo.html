@@ -1798,14 +1798,14 @@
     
     <!-- Speed Control -->
     <div class="speed-control">
-      <label for="speed-slider">Simulation Speed:</label>
-      <input type="range" id="speed-slider" min="1" max="1000" step="10" value="100">
-      <span id="speed-value">100x</span>
+      <label for="speed-slider">Steps per Go:</label>
+      <input type="range" id="speed-slider" min="1" max="500" step="1" value="50">
+      <span id="speed-value">50 steps</span>
     </div>
     
     <!-- Controls -->
     <div class="controls">
-      <button id="start-btn">▶️ Start Battle</button>
+      <button id="start-btn">🎯 Go!</button>
       <button id="pause-btn" class="secondary" disabled>⏸️ Pause</button>
       <button id="flee-btn" class="flee" disabled>🏃 Flee Battle</button>
       <button id="reset-btn" class="secondary">🔄 Reset</button>
@@ -3610,9 +3610,9 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
       }
       
       
-      game = BlinkEngine.BlinkGame.createSync({
+      game = await BlinkEngine.BlinkGame.create({
         debug: true,  // Enable debug logging to diagnose event processing
-        msPerFrame: parseFloat(speedSlider.value) * 16, // Speed multiplier * base 16ms
+        msPerFrame: 100, // 100ms of simulation time per frame (async engine will yield during processing)
         maxEventsPerFrame: 1000
       });
       
@@ -3748,8 +3748,13 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
       
       renderParties();
       refreshLeaderboard();
+      
+      // Set initial game status
+      gameStatusEl.textContent = 'Ready';
+      gameStatusEl.style.color = '#4ade80';
+      
       addLogEntry('system', `⚔️ ${selectedCharacters.map(c => c.name).join(', ')} are ready for battle!`);
-      addLogEntry('system', 'Press Start to begin the adventure!');
+      addLogEntry('system', 'Click "Go!" to run simulation steps.');
     }
     
     async function initGame() {
@@ -3776,9 +3781,9 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
         return;
       }
       
-      game = BlinkEngine.BlinkGame.createSync({
+      game = await BlinkEngine.BlinkGame.create({
         debug: false,
-        msPerFrame: parseFloat(speedSlider.value) * 16, // Speed multiplier * base 16ms
+        msPerFrame: 100, // 100ms of simulation time per frame for async engine
         maxEventsPerFrame: 1000 // Process more events per frame for speed
       });
       
@@ -4016,95 +4021,21 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
     function handleSimulationEvent(event) {
       const processingIndicator = document.getElementById('processing-indicator');
       
+      // In step-based mode, we don't use these events, but keep the handler for compatibility
       switch (event.type) {
         case 'started':
-          gameStatusEl.textContent = 'Running';
+        case 'resumed':
+          gameStatusEl.textContent = 'Ready';
           gameStatusEl.style.color = '#4ade80';
-          processingIndicator.classList.remove('hidden');
           break;
         case 'paused':
-          gameStatusEl.textContent = 'Paused';
-          gameStatusEl.style.color = '#fbbf24';
-          processingIndicator.classList.add('hidden');
-          break;
-        case 'resumed':
-          gameStatusEl.textContent = 'Running';
-          gameStatusEl.style.color = '#4ade80';
-          processingIndicator.classList.remove('hidden');
-          break;
         case 'stopped':
-          gameStatusEl.textContent = 'Stopped';
-          gameStatusEl.style.color = '#f87171';
-          processingIndicator.classList.add('hidden');
+          gameStatusEl.textContent = 'Ready';
+          gameStatusEl.style.color = '#4ade80';
           break;
         case 'completed':
-          gameStatusEl.textContent = 'Complete';
-          gameStatusEl.style.color = '#8b5cf6';
-          processingIndicator.classList.add('hidden');
-          
-          if (!gameState.victory) {
-            // Check if all players are dead
-            const allPlayersDead = Object.values(playerCharacters).every(c => c.health <= 0);
-            if (allPlayersDead) {
-              showGameBanner(false);
-            }
-          }
-          
-          startBtn.disabled = true;
-          pauseBtn.disabled = true;
-          break;
-        case 'step':
-          // Poll game state on each step
-          updateCounter++;
-          const shouldUpdate = updateCounter % 50 === 0;
-          
-          gameTimeEl.textContent = event.time.toFixed(2) + 's';
-          
-          // Update character data from game state (batched to improve performance)
-          if (shouldUpdate) {
-            updateCharacterData();
-            updateUI();
-            renderParties();
-          }
-          
-          // Check for victory/defeat conditions by polling GameState entity
-          const gameStateEntities = game.query('GameState');
-          if (gameStateEntities.length > 0) {
-            const gs = game.getComponent(gameStateEntities[0], 'GameState');
-            if (gs) {
-              // Check for victory
-              if (gs.victory && !gameState.victory) {
-                gameState.victory = true;
-                gameState.gameOver = true;
-                showGameBanner(true);
-              }
-              
-              // Check for game over (all players dead)
-              if (gs.gameOver && !gameState.gameOver) {
-                gameState.gameOver = true;
-                if (!gameState.victory) {
-                  showGameBanner(false);
-                  if (game) {
-                    game.pause();
-                  }
-                }
-              }
-              
-              // Update local game state for UI
-              gameState.wave = gs.currentWave;
-              gameState.enemiesDefeated = gs.enemiesDefeated;
-              gameState.playerDeaths = gs.playerDeaths || 0;
-              
-              // Log kills periodically
-              if (gameState.enemiesDefeated % 10 === 0 && gameState.enemiesDefeated !== lastLoggedKills) {
-                const killsSinceLast = gameState.enemiesDefeated - lastLoggedKills;
-                if (killsSinceLast > 0) {
-                  addLogEntry('death', `⚔️ ${killsSinceLast} enemies defeated! Total: ${gameState.enemiesDefeated}`);
-                  lastLoggedKills = gameState.enemiesDefeated;
-                }
-              }
-            }
-          }
+          gameStatusEl.textContent = 'Ready';
+          gameStatusEl.style.color = '#4ade80';
           break;
       }
       
@@ -4135,15 +4066,23 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
     function updateButtons() {
       if (!game) return;
       
-      const isRunning = game.getIsRunning();
-      const isPaused = game.getIsPaused();
+      const hasEvents = game.hasEvents();
       
-      startBtn.disabled = isRunning && !isPaused;
-      pauseBtn.disabled = !isRunning || isPaused;
-      pauseBtn.textContent = isPaused ? '▶️ Resume' : '⏸️ Pause';
+      // Go button is disabled when game is over or no events remain
+      startBtn.disabled = gameState.gameOver || !hasEvents;
+      
+      // Pause button is no longer used in step-based mode
+      pauseBtn.disabled = true;
+      pauseBtn.style.display = 'none'; // Hide pause button
       
       // Update flee button state
-      fleeBtn.disabled = !isRunning || isPaused || gameState.gameOver || !runState.canFlee;
+      const runStatsEntities = game.query('RunStats');
+      if (runStatsEntities.length > 0) {
+        const runStats = game.getComponent(runStatsEntities[0], 'RunStats');
+        fleeBtn.disabled = gameState.gameOver || !runStats?.canFlee;
+      } else {
+        fleeBtn.disabled = gameState.gameOver;
+      }
     }
     
     function addLogEntry(type, message) {
@@ -4188,27 +4127,55 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
     }
     
     // Event listeners
-    startBtn.addEventListener('click', () => {
-      if (game) {
-        if (game.getIsPaused()) {
-          game.resume();
-        } else {
-          game.start();
+    startBtn.addEventListener('click', async () => {
+      if (game && !gameState.gameOver) {
+        const steps = parseInt(speedSlider.value);
+        addLogEntry('system', `⚡ Running ${steps} simulation steps...`);
+        
+        // Disable button during processing
+        startBtn.disabled = true;
+        
+        try {
+          // Run the specified number of steps with periodic UI updates
+          // Process in chunks to keep UI responsive
+          const chunkSize = 10; // Process 10 steps at a time
+          let processed = 0;
+          
+          while (processed < steps) {
+            const toProcess = Math.min(chunkSize, steps - processed);
+            
+            // Process a chunk of steps
+            for (let i = 0; i < toProcess; i++) {
+              if (!game.hasEvents()) {
+                addLogEntry('system', '⏹️ No more events to process');
+                processed = steps; // Break outer loop
+                break;
+              }
+              game.step();
+              processed++;
+            }
+            
+            // Yield control to browser and update UI after each chunk
+            await new Promise(resolve => setTimeout(resolve, 0));
+            updateCharacterData();
+            updateUI();
+            renderParties();
+          }
+          
+          addLogEntry('system', `✅ Completed ${processed} steps at sim time ${game.getTime().toFixed(2)}s`);
+        } catch (error) {
+          addLogEntry('system', `❌ Error: ${error.message}`);
+        } finally {
+          // Re-enable button
+          startBtn.disabled = false;
         }
-        addLogEntry('system', '⚔️ Battle begins!');
       }
       updateButtons();
     });
     
     pauseBtn.addEventListener('click', () => {
-      if (game) {
-        if (game.getIsPaused()) {
-          game.resume();
-        } else {
-          game.pause();
-        }
-      }
-      updateButtons();
+      // Pause functionality removed - simulation now runs step-by-step
+      // Keep handler for compatibility
     });
     
     resetBtn.addEventListener('click', resetGame);
@@ -4216,12 +4183,8 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
     fleeBtn.addEventListener('click', handleFlee);
     
     speedSlider.addEventListener('input', (e) => {
-      const speed = parseFloat(e.target.value);
-      speedValue.textContent = `${speed}x`;
-      if (game) {
-        // Set msPerFrame: speed multiplier * base 16ms per frame
-        game.setMsPerFrame(speed * 16);
-      }
+      const steps = parseInt(e.target.value);
+      speedValue.textContent = `${steps} step${steps !== 1 ? 's' : ''}`;
     });
     
     // ========================================================================
