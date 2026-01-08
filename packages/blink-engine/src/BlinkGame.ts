@@ -858,8 +858,11 @@ export class BlinkGame {
       }
       
       // Yield control back to the browser every batch to keep UI responsive
-      if (this.timeline.hasEvents() && this.timeline.peek()!.time <= targetTime && totalEventsProcessed < this.options.maxEventsPerFrame) {
-        await this.yieldToUI();
+      if (this.timeline.hasEvents()) {
+        const nextEvent = this.timeline.peek();
+        if (nextEvent && nextEvent.time <= targetTime && totalEventsProcessed < this.options.maxEventsPerFrame) {
+          await this.yieldToUI();
+        }
       }
     }
     
@@ -880,6 +883,16 @@ export class BlinkGame {
 
   /**
    * Yield control back to the browser's event loop to keep UI responsive
+   * 
+   * This method is called after processing a batch of events to allow the browser
+   * to handle user input, render updates, and process other tasks. The yielding
+   * is done using setTimeout(0), which schedules the continuation on the next
+   * available event loop iteration.
+   * 
+   * Performance impact: Adds ~1-2ms overhead per yield, but prevents UI blocking
+   * and keeps the interface responsive during heavy event processing.
+   * 
+   * @returns A Promise that resolves after yielding to the browser
    */
   private yieldToUI(): Promise<void> {
     return new Promise(resolve => {
