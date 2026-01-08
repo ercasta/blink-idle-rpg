@@ -240,13 +240,13 @@ rule spawn_initial_enemies on GameStart {
     // Note: Array size should match entity.SpawnConfig.initialEnemyCount
     let indices = [0, 1, 2, 3, 4]
     for i in indices {
-        schedule [delay: 0.05 * (i + 1)] SpawnEnemy {
+        schedule [delay: 0.5 * (i + 1)] SpawnEnemy {
             tier: 1
         }
     }
 
     // Notify that the first wave spawned
-    schedule [delay: 0.3] EnemySpawned {
+    schedule [delay: 3.0] EnemySpawned {
         wave: 1
     }
 }
@@ -263,7 +263,7 @@ rule handle_enemy_spawned on EnemySpawned {
         // Note: Array size should match entity.SpawnConfig.initialEnemyCount
         let indices = [0, 1, 2, 3, 4]
         for i in indices {
-            schedule [delay: 0.05 * (i + 1)] SpawnEnemy {
+            schedule [delay: 0.5 * (i + 1)] SpawnEnemy {
                 tier: tier
             }
         }
