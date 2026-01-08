@@ -215,6 +215,8 @@ The async engine is **fully backward compatible**:
 
 ## References
 
-- [Async Engine Documentation](../docs/async-engine.md) - Detailed documentation from PR #93
-- [Engine Architecture](../doc/engine/architecture.md) - Overall engine architecture
+- [Async Engine Documentation](../docs/async-engine.md) - Detailed documentation from PR #93 (in `docs/` directory)
+- [Engine Architecture](../doc/engine/architecture.md) - Overall engine architecture (in `doc/` directory)
 - [BlinkGame.ts](../packages/blink-engine/src/BlinkGame.ts) - Source code with async implementation
+
+Note: The repository has both `doc/` and `docs/` directories with different content.
