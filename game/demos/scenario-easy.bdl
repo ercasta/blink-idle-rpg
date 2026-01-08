@@ -1,0 +1,78 @@
+// =============================================================================
+// BLINK IDLE RPG - Easy Scenario Configuration
+// =============================================================================
+// This scenario is designed for casual players and new players.
+// Features:
+// - Lower enemy spawn rate (3 enemies per wave vs 5 normal)
+// - Easier enemy progression (50% slower scaling)
+// - Lower retreat/death penalties (5s retreat, 3x death penalty)
+// - Bosses appear less frequently (every 150 kills vs 100)
+// =============================================================================
+
+// Scenario metadata component (will be added to BRL)
+// This provides UI information about the scenario
+scenario_info = new entity {
+    ScenarioInfo {
+        id: "easy"
+        name: "Casual Adventure"
+        description: "A relaxed journey perfect for newcomers. Lower enemy spawn rates, easier progression, and reduced penalties."
+        difficulty: "Easy"
+        respawnTime: "5 seconds"
+        deathPenalty: "3x (15 seconds)"
+        enemiesPerWave: "3"
+        bossFrequency: "Every 150 enemies"
+    }
+}
+
+// Override game configuration for easy scenario
+flee_config = new entity {
+    FleeConfig {
+        retreatTimePenalty: 5.0           // 5 seconds (down from 10)
+        deathTimePenaltyMultiplier: 3.0   // 3x = 15 seconds (down from 5x = 50)
+        fleeCooldown: 5.0                 // Same as normal
+    }
+}
+
+// Game state and run statistics (combined with SpawnConfig)
+// The BRL rules access both GameState and SpawnConfig on the same entity
+game_state = new entity {
+    GameState {
+        currentWave: 1
+        enemiesDefeated: 0
+        playerDeaths: 0
+        bossDefeated: false
+        gameOver: false
+        victory: false
+        retargetingActive: false
+        currentTier: 1
+        waveInTier: 1
+        bossSpawned: false
+    }
+    SpawnConfig {
+        bossEveryKills: 150               // Bosses every 150 kills (up from 100)
+        tierProgressionKills: 75          // Tier progression every 75 kills (up from 50)
+        maxTier: 6                        // Same max tier
+        wavesPerTier: 300                 // Same waves per tier
+        healthScaleRate: 100              // 50% slower health scaling (down from 200)
+        damageScaleRate: 150              // 50% slower damage scaling (down from 300)
+        initialEnemyCount: 3              // 3 enemies per wave (down from 5)
+    }
+}
+
+run_stats = new entity {
+    RunStats {
+        simulationTime: 0.0
+        retreatCount: 0
+        retreatPenalty: 0.0
+        deathPenalty: 0.0
+        totalTime: 0.0
+        canFlee: true
+        lastFleeTime: -999.0
+    }
+}
+
+enemy_compendium = new entity {
+    EnemyCompendium {
+        entries: []
+    }
+}

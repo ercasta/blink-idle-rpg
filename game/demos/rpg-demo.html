@@ -4137,9 +4137,11 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
         
         try {
           // Run the specified number of steps with periodic UI updates
-          // Process in chunks to keep UI responsive
-          const chunkSize = 10; // Process 10 steps at a time
+          // Process in smaller chunks and update UI less frequently to keep browser responsive
+          const chunkSize = 5; // Process 5 steps at a time
+          const uiUpdateFrequency = 2; // Update UI every 2 chunks (10 steps)
           let processed = 0;
+          let chunkCount = 0;
           
           while (processed < steps) {
             const toProcess = Math.min(chunkSize, steps - processed);
@@ -4155,22 +4157,33 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
               processed++;
             }
             
-            // Yield control to browser and update UI after each chunk
-            await new Promise(resolve => setTimeout(resolve, 0));
-            updateCharacterData();
-            updateUI();
-            renderParties();
+            chunkCount++;
+            
+            // Update UI less frequently to reduce overhead
+            if (chunkCount % uiUpdateFrequency === 0 || processed >= steps) {
+              updateCharacterData();
+              updateUI();
+              renderParties();
+            }
+            
+            // Yield control to browser with a longer delay to ensure UI updates are processed
+            await new Promise(resolve => setTimeout(resolve, 16)); // ~60fps frame time
           }
+          
+          // Final UI update to ensure everything is in sync
+          updateCharacterData();
+          updateUI();
+          renderParties();
           
           addLogEntry('system', `✅ Completed ${processed} steps at sim time ${game.getTime().toFixed(2)}s`);
         } catch (error) {
           addLogEntry('system', `❌ Error: ${error.message}`);
         } finally {
-          // Re-enable button
+          // Re-enable button and update button states
           startBtn.disabled = false;
+          updateButtons();
         }
       }
-      updateButtons();
     });
     
     pauseBtn.addEventListener('click', () => {

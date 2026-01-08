@@ -1,0 +1,2217 @@
+// =============================================================================
+// BLINK IDLE RPG - Hero Definitions
+// =============================================================================
+// This file contains all playable hero character definitions for the game.
+// Each hero has stats, skills, and role information for the party selection UI.
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// WARRIORS - Melee fighters with high health and defense
+// -----------------------------------------------------------------------------
+
+entity {
+    Character {
+        name: "Sir Braveheart"
+        class: "Warrior"
+        level: 1
+        experience: 0
+        experienceToLevel: 100
+    }
+    Health {
+        current: 120
+        max: 120
+    }
+    Mana {
+        current: 30
+        max: 30
+    }
+    Stats {
+        strength: 16
+        dexterity: 10
+        intelligence: 8
+        constitution: 14
+        wisdom: 8
+    }
+    Combat {
+        damage: 18
+        defense: 10
+        attackSpeed: 0.8
+        critChance: 0.1
+        critMultiplier: 1.5
+    }
+    Team {
+        id: "player"
+        isPlayer: true
+    }
+    Skills {
+        skill1: "power_strike"
+        skill2: ""
+        skill3: ""
+        skill4: ""
+        skillPoints: 0
+    }
+    Buffs {
+        damageBonus: 0
+        defenseBonus: 0
+        hasteBonus: 0
+        shieldAmount: 0
+        regenAmount: 0
+    }
+    HeroInfo {
+        id: "warrior"
+        description: "A stalwart defender with unmatched strength. Wields heavy armor and weapons, protecting allies while dealing devastating melee damage."
+        difficulty: "Easy"
+        role: "Tank / Melee DPS"
+        playstyle: "Get in close and deal consistent damage while absorbing enemy attacks"
+    }
+    HeroTemplate {
+        isTemplate: true
+    }
+    
+    // Bound choice functions for Warrior behavior
+    .select_attack_target = choice(character: Character, enemies: list): id {
+        let target = enemies[0]
+        let highestDamage = 0
+        for enemy in enemies {
+            if enemy.Combat.damage > highestDamage {
+                target = enemy
+                highestDamage = enemy.Combat.damage
+            }
+        }
+        return target.id
+    }
+    
+    .select_combat_skill = choice(character: Character & Skills & Health & Combat, allies: list, enemies: list): string {
+        let hp_pct = character.Health.current / character.Health.max
+        if hp_pct < 0.25 {
+            if character.Skills.skill3 == "defensive_stance" {
+                return "defensive_stance"
+            }
+            if character.Skills.skill2 == "shield_bash" {
+                return "shield_bash"
+            }
+        }
+        if character.Skills.skill4 != "" {
+            for enemy in enemies {
+                let enemy_hp_pct = enemy.Health.current / enemy.Health.max
+                if enemy_hp_pct < 0.2 {
+                    return "execute"
+                }
+            }
+        }
+        if enemies.count >= 2 {
+            if character.Skills.skill3 == "cleave" {
+                return "cleave"
+            }
+        }
+        if character.Skills.skill1 == "power_strike" {
+            return "power_strike"
+        }
+        return "basic_attack"
+    }
+    
+    .select_skill_on_levelup = choice(character: Character & Skills, currentLevel: number): string {
+        if currentLevel == 2 {
+            return "power_strike"
+        }
+        if currentLevel == 3 {
+            return "shield_bash"
+        }
+        if currentLevel == 4 {
+            return "defensive_stance"
+        }
+        if currentLevel == 5 {
+            return "cleave"
+        }
+        if currentLevel == 6 {
+            return "battle_cry"
+        }
+        if currentLevel >= 7 {
+            return "execute"
+        }
+        return "power_strike"
+    }
+}
+
+entity {
+    Character {
+        name: "Gorak the Unbreakable"
+        class: "Warrior"
+        level: 1
+        experience: 0
+        experienceToLevel: 100
+    }
+    Health {
+        current: 140
+        max: 140
+    }
+    Mana {
+        current: 20
+        max: 20
+    }
+    Stats {
+        strength: 14
+        dexterity: 8
+        intelligence: 6
+        constitution: 18
+        wisdom: 10
+    }
+    Combat {
+        damage: 15
+        defense: 12
+        attackSpeed: 0.7
+        critChance: 0.05
+        critMultiplier: 1.5
+    }
+    Team {
+        id: "player"
+        isPlayer: true
+    }
+    Skills {
+        skill1: "power_strike"
+        skill2: ""
+        skill3: ""
+        skill4: ""
+        skillPoints: 0
+    }
+    Buffs {
+        damageBonus: 0
+        defenseBonus: 0
+        hasteBonus: 0
+        shieldAmount: 0
+        regenAmount: 0
+    }
+    HeroInfo {
+        id: "warrior2"
+        description: "A veteran warrior forged in countless battles. Specializes in defensive tactics and outlasting enemies through superior endurance."
+        difficulty: "Easy"
+        role: "Tank / Defensive"
+        playstyle: "Extreme durability and defense, absorbs massive amounts of damage"
+    }
+    HeroTemplate {
+        isTemplate: true
+    }
+    
+    // Bound choice functions for Warrior behavior
+    .select_attack_target = choice(character: Character, enemies: list): id {
+        let target = enemies[0]
+        let highestDamage = 0
+        for enemy in enemies {
+            if enemy.Combat.damage > highestDamage {
+                target = enemy
+                highestDamage = enemy.Combat.damage
+            }
+        }
+        return target.id
+    }
+    
+    .select_combat_skill = choice(character: Character & Skills & Health & Combat, allies: list, enemies: list): string {
+        let hp_pct = character.Health.current / character.Health.max
+        if hp_pct < 0.25 {
+            if character.Skills.skill3 == "defensive_stance" {
+                return "defensive_stance"
+            }
+            if character.Skills.skill2 == "shield_bash" {
+                return "shield_bash"
+            }
+        }
+        if character.Skills.skill4 != "" {
+            for enemy in enemies {
+                let enemy_hp_pct = enemy.Health.current / enemy.Health.max
+                if enemy_hp_pct < 0.2 {
+                    return "execute"
+                }
+            }
+        }
+        if enemies.count >= 2 {
+            if character.Skills.skill3 == "cleave" {
+                return "cleave"
+            }
+        }
+        if character.Skills.skill1 == "power_strike" {
+            return "power_strike"
+        }
+        return "basic_attack"
+    }
+    
+    .select_skill_on_levelup = choice(character: Character & Skills, currentLevel: number): string {
+        if currentLevel == 2 {
+            return "power_strike"
+        }
+        if currentLevel == 3 {
+            return "shield_bash"
+        }
+        if currentLevel == 4 {
+            return "defensive_stance"
+        }
+        if currentLevel == 5 {
+            return "cleave"
+        }
+        if currentLevel == 6 {
+            return "battle_cry"
+        }
+        if currentLevel >= 7 {
+            return "execute"
+        }
+        return "power_strike"
+    }
+}
+
+entity {
+    Character {
+        name: "Valkyrie Stormblade"
+        class: "Warrior"
+        level: 1
+        experience: 0
+        experienceToLevel: 100
+    }
+    Health {
+        current: 105
+        max: 105
+    }
+    Mana {
+        current: 35
+        max: 35
+    }
+    Stats {
+        strength: 15
+        dexterity: 14
+        intelligence: 8
+        constitution: 12
+        wisdom: 8
+    }
+    Combat {
+        damage: 20
+        defense: 8
+        attackSpeed: 1.0
+        critChance: 0.1
+        critMultiplier: 1.5
+    }
+    Team {
+        id: "player"
+        isPlayer: true
+    }
+    Skills {
+        skill1: "power_strike"
+        skill2: ""
+        skill3: ""
+        skill4: ""
+        skillPoints: 0
+    }
+    Buffs {
+        damageBonus: 0
+        defenseBonus: 0
+        hasteBonus: 0
+        shieldAmount: 0
+        regenAmount: 0
+    }
+    HeroInfo {
+        id: "warrior3"
+        description: "A fierce warrior who values speed over raw defense. Delivers rapid strikes with medium armor for balanced offense and defense."
+        difficulty: "Medium"
+        role: "Melee DPS / Bruiser"
+        playstyle: "Fast-paced melee combat with balanced offense and defense"
+    }
+    HeroTemplate {
+        isTemplate: true
+    }
+}
+
+entity {
+    Character {
+        name: "Titan Ironheart"
+        class: "Warrior"
+        level: 1
+        experience: 0
+        experienceToLevel: 100
+    }
+    Health {
+        current: 130
+        max: 130
+    }
+    Mana {
+        current: 25
+        max: 25
+    }
+    Stats {
+        strength: 20
+        dexterity: 6
+        intelligence: 6
+        constitution: 16
+        wisdom: 8
+    }
+    Combat {
+        damage: 28
+        defense: 11
+        attackSpeed: 0.5
+        critChance: 0.1
+        critMultiplier: 1.5
+    }
+    Team {
+        id: "player"
+        isPlayer: true
+    }
+    Skills {
+        skill1: "power_strike"
+        skill2: ""
+        skill3: ""
+        skill4: ""
+        skillPoints: 0
+    }
+    Buffs {
+        damageBonus: 0
+        defenseBonus: 0
+        hasteBonus: 0
+        shieldAmount: 0
+        regenAmount: 0
+    }
+    HeroInfo {
+        id: "warrior4"
+        description: "A colossal warrior wielding a massive two-handed weapon. Trades speed for overwhelming power with each strike."
+        difficulty: "Easy"
+        role: "Heavy DPS / Tank"
+        playstyle: "Devastating slow attacks that hit extremely hard"
+    }
+    HeroTemplate {
+        isTemplate: true
+    }
+}
+
+entity {
+    Character {
+        name: "Bladestorm"
+        class: "Warrior"
+        level: 1
+        experience: 0
+        experienceToLevel: 100
+    }
+    Health {
+        current: 95
+        max: 95
+    }
+    Mana {
+        current: 30
+        max: 30
+    }
+    Stats {
+        strength: 16
+        dexterity: 16
+        intelligence: 6
+        constitution: 10
+        wisdom: 8
+    }
+    Combat {
+        damage: 24
+        defense: 6
+        attackSpeed: 1.3
+        critChance: 0.15
+        critMultiplier: 1.5
+    }
+    Team {
+        id: "player"
+        isPlayer: true
+    }
+    Skills {
+        skill1: "power_strike"
+        skill2: ""
+        skill3: ""
+        skill4: ""
+        skillPoints: 0
+    }
+    Buffs {
+        damageBonus: 0
+        defenseBonus: 0
+        hasteBonus: 0
+        shieldAmount: 0
+        regenAmount: 0
+    }
+    HeroInfo {
+        id: "warrior5"
+        description: "A dual-wielding warrior who sacrifices defense for rapid, relentless assault. Glass cannon melee fighter with high risk, high reward."
+        difficulty: "Hard"
+        role: "Melee DPS / Glass Cannon"
+        playstyle: "Extremely aggressive high-speed melee with low survivability"
+    }
+    HeroTemplate {
+        isTemplate: true
+    }
+}
+
+// -----------------------------------------------------------------------------
+// MAGES - Ranged spell casters with high damage but low health
+// -----------------------------------------------------------------------------
+
+entity {
+    Character {
+        name: "Elara Flamecaster"
+        class: "Mage"
+        level: 1
+        experience: 0
+        experienceToLevel: 100
+    }
+    Health {
+        current: 70
+        max: 70
+    }
+    Mana {
+        current: 100
+        max: 100
+    }
+    Stats {
+        strength: 6
+        dexterity: 12
+        intelligence: 18
+        constitution: 8
+        wisdom: 14
+    }
+    Combat {
+        damage: 25
+        defense: 4
+        attackSpeed: 0.6
+        critChance: 0.1
+        critMultiplier: 2.0
+    }
+    Team {
+        id: "player"
+        isPlayer: true
+    }
+    Skills {
+        skill1: "fireball"
+        skill2: ""
+        skill3: ""
+        skill4: ""
+        skillPoints: 0
+    }
+    Buffs {
+        damageBonus: 0
+        defenseBonus: 0
+        hasteBonus: 0
+        shieldAmount: 0
+        regenAmount: 0
+    }
+    HeroInfo {
+        id: "mage"
+        description: "A master of elemental magic who rains destruction from afar. High damage output but fragile - positioning and mana management are key."
+        difficulty: "Medium"
+        role: "Ranged DPS / AoE"
+        playstyle: "Maximize spell damage while managing mana and staying out of danger"
+    }
+    HeroTemplate {
+        isTemplate: true
+    }
+    
+    // Bound choice functions for Mage behavior
+    .select_attack_target = choice(character: Character, enemies: list): id {
+        let target = enemies[0]
+        let lowestHealth = 999999
+        for enemy in enemies {
+            if enemy.Health.current < lowestHealth {
+                target = enemy
+                lowestHealth = enemy.Health.current
+            }
+        }
+        return target.id
+    }
+    
+    .select_combat_skill = choice(character: Character & Skills & Health & Mana & Combat, allies: list, enemies: list): string {
+        let hp_pct = character.Health.current / character.Health.max
+        let mana_pct = character.Mana.current / character.Mana.max
+        if hp_pct < 0.3 && mana_pct > 0.5 {
+            if character.Skills.skill3 == "mana_shield" {
+                return "mana_shield"
+            }
+        }
+        if enemies.count >= 2 && character.Mana.current >= 80 {
+            if character.Skills.skill4 == "meteor" {
+                return "meteor"
+            }
+        }
+        if enemies.count >= 2 && character.Mana.current >= 40 {
+            if character.Skills.skill3 == "blizzard" {
+                return "blizzard"
+            }
+        }
+        if mana_pct > 0.6 {
+            if character.Mana.current >= 50 && character.Skills.skill3 == "pyroblast" {
+                return "pyroblast"
+            }
+            if character.Mana.current >= 20 && character.Skills.skill1 == "fireball" {
+                return "fireball"
+            }
+        }
+        if mana_pct > 0.3 && character.Mana.current >= 15 {
+            if character.Skills.skill2 == "ice_shard" {
+                return "ice_shard"
+            }
+        }
+        if character.Mana.current >= 10 && character.Skills.skill2 == "arcane_missiles" {
+            return "arcane_missiles"
+        }
+        return "basic_attack"
+    }
+    
+    .select_skill_on_levelup = choice(character: Character & Skills, currentLevel: number): string {
+        if currentLevel == 2 {
+            return "fireball"
+        }
+        if currentLevel == 3 {
+            return "ice_shard"
+        }
+        if currentLevel == 4 {
+            return "arcane_missiles"
+        }
+        if currentLevel == 5 {
+            return "blizzard"
+        }
+        if currentLevel == 6 {
+            return "mana_shield"
+        }
+        if currentLevel >= 7 {
+            return "meteor"
+        }
+        return "fireball"
+    }
+}
+
+entity {
+    Character {
+        name: "Zephyr the Archmage"
+        class: "Mage"
+        level: 1
+        experience: 0
+        experienceToLevel: 100
+    }
+    Health {
+        current: 65
+        max: 65
+    }
+    Mana {
+        current: 120
+        max: 120
+    }
+    Stats {
+        strength: 4
+        dexterity: 10
+        intelligence: 20
+        constitution: 6
+        wisdom: 16
+    }
+    Combat {
+        damage: 30
+        defense: 3
+        attackSpeed: 0.5
+        critChance: 0.15
+        critMultiplier: 2.0
+    }
+    Team {
+        id: "player"
+        isPlayer: true
+    }
+    Skills {
+        skill1: "fireball"
+        skill2: ""
+        skill3: ""
+        skill4: ""
+        skillPoints: 0
+    }
+    Buffs {
+        damageBonus: 0
+        defenseBonus: 0
+        hasteBonus: 0
+        shieldAmount: 0
+        regenAmount: 0
+    }
+    HeroInfo {
+        id: "mage2"
+        description: "A brilliant arcane scholar who prioritizes raw magical power. Highest damage potential but requires careful mana management."
+        difficulty: "Hard"
+        role: "Ranged DPS / Burst"
+        playstyle: "Maximum spell power with lowest survivability - nuclear glass cannon"
+    }
+    HeroTemplate {
+        isTemplate: true
+    }
+}
+
+entity {
+    Character {
+        name: "Frost Weaver Selene"
+        class: "Mage"
+        level: 1
+        experience: 0
+        experienceToLevel: 100
+    }
+    Health {
+        current: 80
+        max: 80
+    }
+    Mana {
+        current: 90
+        max: 90
+    }
+    Stats {
+        strength: 6
+        dexterity: 10
+        intelligence: 16
+        constitution: 10
+        wisdom: 14
+    }
+    Combat {
+        damage: 22
+        defense: 6
+        attackSpeed: 0.7
+        critChance: 0.1
+        critMultiplier: 2.0
+    }
+    Team {
+        id: "player"
+        isPlayer: true
+    }
+    Skills {
+        skill1: "fireball"
+        skill2: ""
+        skill3: ""
+        skill4: ""
+        skillPoints: 0
+    }
+    Buffs {
+        damageBonus: 0
+        defenseBonus: 0
+        hasteBonus: 0
+        shieldAmount: 0
+        regenAmount: 0
+    }
+    HeroInfo {
+        id: "mage3"
+        description: "A frost mage who balances damage with survivability. Ice shields provide extra protection while slowing enemies."
+        difficulty: "Medium"
+        role: "Ranged DPS / Control"
+        playstyle: "Balanced caster with defensive capabilities and crowd control"
+    }
+    HeroTemplate {
+        isTemplate: true
+    }
+}
+
+entity {
+    Character {
+        name: "Lightning Caller Volt"
+        class: "Mage"
+        level: 1
+        experience: 0
+        experienceToLevel: 100
+    }
+    Health {
+        current: 72
+        max: 72
+    }
+    Mana {
+        current: 95
+        max: 95
+    }
+    Stats {
+        strength: 6
+        dexterity: 14
+        intelligence: 17
+        constitution: 8
+        wisdom: 12
+    }
+    Combat {
+        damage: 20
+        defense: 4
+        attackSpeed: 0.9
+        critChance: 0.1
+        critMultiplier: 2.0
+    }
+    Team {
+        id: "player"
+        isPlayer: true
+    }
+    Skills {
+        skill1: "fireball"
+        skill2: ""
+        skill3: ""
+        skill4: ""
+        skillPoints: 0
+    }
+    Buffs {
+        damageBonus: 0
+        defenseBonus: 0
+        hasteBonus: 0
+        shieldAmount: 0
+        regenAmount: 0
+    }
+    HeroInfo {
+        id: "mage4"
+        description: "A storm mage specializing in quick-casting lightning spells. Fast casting speed with moderate damage per hit."
+        difficulty: "Medium"
+        role: "Ranged DPS / Sustained"
+        playstyle: "Rapid-fire spell casting for consistent damage output"
+    }
+    HeroTemplate {
+        isTemplate: true
+    }
+}
+
+entity {
+    Character {
+        name: "Sage Emberwick"
+        class: "Mage"
+        level: 1
+        experience: 0
+        experienceToLevel: 100
+    }
+    Health {
+        current: 75
+        max: 75
+    }
+    Mana {
+        current: 110
+        max: 110
+    }
+    Stats {
+        strength: 6
+        dexterity: 12
+        intelligence: 16
+        constitution: 9
+        wisdom: 18
+    }
+    Combat {
+        damage: 23
+        defense: 5
+        attackSpeed: 0.6
+        critChance: 0.1
+        critMultiplier: 2.0
+    }
+    Team {
+        id: "player"
+        isPlayer: true
+    }
+    Skills {
+        skill1: "fireball"
+        skill2: ""
+        skill3: ""
+        skill4: ""
+        skillPoints: 0
+    }
+    Buffs {
+        damageBonus: 0
+        defenseBonus: 0
+        hasteBonus: 0
+        shieldAmount: 0
+        regenAmount: 0
+    }
+    HeroInfo {
+        id: "mage5"
+        description: "A scholarly mage focused on mana efficiency and long-term sustainability. Lower burst but never runs out of mana."
+        difficulty: "Easy"
+        role: "Ranged DPS / Sustain"
+        playstyle: "Efficient spell usage with excellent mana regeneration"
+    }
+    HeroTemplate {
+        isTemplate: true
+    }
+}
+
+// -----------------------------------------------------------------------------
+// ROGUES - Fast melee attackers with high crit chance
+// -----------------------------------------------------------------------------
+
+entity {
+    Character {
+        name: "Shadow"
+        class: "Rogue"
+        level: 1
+        experience: 0
+        experienceToLevel: 100
+    }
+    Health {
+        current: 80
+        max: 80
+    }
+    Mana {
+        current: 50
+        max: 50
+    }
+    Stats {
+        strength: 10
+        dexterity: 18
+        intelligence: 10
+        constitution: 10
+        wisdom: 8
+    }
+    Combat {
+        damage: 22
+        defense: 6
+        attackSpeed: 1.4
+        critChance: 0.25
+        critMultiplier: 2.5
+    }
+    Team {
+        id: "player"
+        isPlayer: true
+    }
+    Skills {
+        skill1: "backstab"
+        skill2: ""
+        skill3: ""
+        skill4: ""
+        skillPoints: 0
+    }
+    Buffs {
+        damageBonus: 0
+        defenseBonus: 0
+        hasteBonus: 0
+        shieldAmount: 0
+        regenAmount: 0
+    }
+    HeroInfo {
+        id: "rogue"
+        description: "Swift and deadly, striking from the shadows. Relies on critical hits and burst damage to eliminate high-priority targets quickly."
+        difficulty: "Medium"
+        role: "Melee DPS / Assassin"
+        playstyle: "Focus on eliminating priority targets with high burst damage and crits"
+    }
+    HeroTemplate {
+        isTemplate: true
+    }
+    
+    // Bound choice functions for Rogue behavior
+    .select_attack_target = choice(character: Character, enemies: list): id {
+        let target = enemies[0]
+        let highestPriority = 0
+        for enemy in enemies {
+            let priority = 0
+            if enemy.Combat.defense < 5 {
+                priority = priority + 50
+            }
+            priority = priority + enemy.Combat.damage
+            let hp_pct = enemy.Health.current / enemy.Health.max
+            if hp_pct < 0.3 {
+                priority = priority + 100
+            }
+            if priority > highestPriority {
+                target = enemy
+                highestPriority = priority
+            }
+        }
+        return target.id
+    }
+    
+    .select_combat_skill = choice(character: Character & Skills & Health & Combat, allies: list, enemies: list): string {
+        let hp_pct = character.Health.current / character.Health.max
+        if hp_pct < 0.25 {
+            if character.Skills.skill3 == "evasion" {
+                return "evasion"
+            }
+            if character.Skills.skill4 == "smoke_bomb" {
+                return "smoke_bomb"
+            }
+        }
+        if character.Skills.skill4 == "assassinate" {
+            for enemy in enemies {
+                let enemy_hp_pct = enemy.Health.current / enemy.Health.max
+                if enemy_hp_pct < 0.15 {
+                    return "assassinate"
+                }
+            }
+        }
+        if enemies.count >= 3 {
+            if character.Skills.skill4 == "blade_flurry" {
+                return "blade_flurry"
+            }
+            if character.Skills.skill3 == "fan_of_knives" {
+                return "fan_of_knives"
+            }
+        }
+        if enemies.count == 1 {
+            if character.Skills.skill3 == "shadowstep" {
+                return "shadowstep"
+            }
+        }
+        if character.Skills.skill1 == "backstab" {
+            return "backstab"
+        }
+        if character.Skills.skill2 == "poison_blade" {
+            return "poison_blade"
+        }
+        if character.Skills.skill2 == "quick_slash" {
+            return "quick_slash"
+        }
+        return "basic_attack"
+    }
+    
+    .select_skill_on_levelup = choice(character: Character & Skills, currentLevel: number): string {
+        if currentLevel == 2 {
+            return "backstab"
+        }
+        if currentLevel == 3 {
+            return "poison_blade"
+        }
+        if currentLevel == 4 {
+            return "quick_slash"
+        }
+        if currentLevel == 5 {
+            return "shadowstep"
+        }
+        if currentLevel == 6 {
+            return "evasion"
+        }
+        if currentLevel >= 7 {
+            return "assassinate"
+        }
+        return "backstab"
+    }
+}
+
+entity {
+    Character {
+        name: "Viper"
+        class: "Rogue"
+        level: 1
+        experience: 0
+        experienceToLevel: 100
+    }
+    Health {
+        current: 75
+        max: 75
+    }
+    Mana {
+        current: 55
+        max: 55
+    }
+    Stats {
+        strength: 8
+        dexterity: 18
+        intelligence: 12
+        constitution: 8
+        wisdom: 10
+    }
+    Combat {
+        damage: 19
+        defense: 5
+        attackSpeed: 1.3
+        critChance: 0.2
+        critMultiplier: 2.5
+    }
+    Team {
+        id: "player"
+        isPlayer: true
+    }
+    Skills {
+        skill1: "backstab"
+        skill2: ""
+        skill3: ""
+        skill4: ""
+        skillPoints: 0
+    }
+    Buffs {
+        damageBonus: 0
+        defenseBonus: 0
+        hasteBonus: 0
+        shieldAmount: 0
+        regenAmount: 0
+    }
+    HeroInfo {
+        id: "rogue2"
+        description: "A poison specialist who weakens enemies over time. Applies deadly toxins that continue damaging after initial strikes."
+        difficulty: "Hard"
+        role: "Melee DPS / DoT"
+        playstyle: "Apply poison effects and let damage over time do the work"
+    }
+    HeroTemplate {
+        isTemplate: true
+    }
+}
+
+entity {
+    Character {
+        name: "Nightblade Kira"
+        class: "Rogue"
+        level: 1
+        experience: 0
+        experienceToLevel: 100
+    }
+    Health {
+        current: 90
+        max: 90
+    }
+    Mana {
+        current: 50
+        max: 50
+    }
+    Stats {
+        strength: 12
+        dexterity: 16
+        intelligence: 10
+        constitution: 12
+        wisdom: 10
+    }
+    Combat {
+        damage: 21
+        defense: 7
+        attackSpeed: 1.2
+        critChance: 0.2
+        critMultiplier: 2.5
+    }
+    Team {
+        id: "player"
+        isPlayer: true
+    }
+    Skills {
+        skill1: "backstab"
+        skill2: ""
+        skill3: ""
+        skill4: ""
+        skillPoints: 0
+    }
+    Buffs {
+        damageBonus: 0
+        defenseBonus: 0
+        hasteBonus: 0
+        shieldAmount: 0
+        regenAmount: 0
+    }
+    HeroInfo {
+        id: "rogue3"
+        description: "A versatile assassin with balanced stats. Reliable critical strikes and good survivability for a rogue."
+        difficulty: "Easy"
+        role: "Melee DPS / Balanced"
+        playstyle: "Well-rounded assassin with good damage and survivability"
+    }
+    HeroTemplate {
+        isTemplate: true
+    }
+}
+
+entity {
+    Character {
+        name: "Ghost"
+        class: "Rogue"
+        level: 1
+        experience: 0
+        experienceToLevel: 100
+    }
+    Health {
+        current: 65
+        max: 65
+    }
+    Mana {
+        current: 45
+        max: 45
+    }
+    Stats {
+        strength: 8
+        dexterity: 20
+        intelligence: 10
+        constitution: 6
+        wisdom: 8
+    }
+    Combat {
+        damage: 25
+        defense: 4
+        attackSpeed: 1.6
+        critChance: 0.3
+        critMultiplier: 2.5
+    }
+    Team {
+        id: "player"
+        isPlayer: true
+    }
+    Skills {
+        skill1: "backstab"
+        skill2: ""
+        skill3: ""
+        skill4: ""
+        skillPoints: 0
+    }
+    Buffs {
+        damageBonus: 0
+        defenseBonus: 0
+        hasteBonus: 0
+        shieldAmount: 0
+        regenAmount: 0
+    }
+    HeroInfo {
+        id: "rogue4"
+        description: "The ultimate glass cannon rogue. Unmatched attack speed and critical chance but extremely fragile."
+        difficulty: "Hard"
+        role: "Melee DPS / Hyper Carry"
+        playstyle: "Lightning-fast attacks with maximum crit - dies if touched"
+    }
+    HeroTemplate {
+        isTemplate: true
+    }
+}
+
+entity {
+    Character {
+        name: "Dagger Master Jin"
+        class: "Rogue"
+        level: 1
+        experience: 0
+        experienceToLevel: 100
+    }
+    Health {
+        current: 85
+        max: 85
+    }
+    Mana {
+        current: 50
+        max: 50
+    }
+    Stats {
+        strength: 14
+        dexterity: 16
+        intelligence: 10
+        constitution: 10
+        wisdom: 10
+    }
+    Combat {
+        damage: 26
+        defense: 6
+        attackSpeed: 1.0
+        critChance: 0.2
+        critMultiplier: 2.5
+    }
+    Team {
+        id: "player"
+        isPlayer: true
+    }
+    Skills {
+        skill1: "backstab"
+        skill2: ""
+        skill3: ""
+        skill4: ""
+        skillPoints: 0
+    }
+    Buffs {
+        damageBonus: 0
+        defenseBonus: 0
+        hasteBonus: 0
+        shieldAmount: 0
+        regenAmount: 0
+    }
+    HeroInfo {
+        id: "rogue5"
+        description: "A disciplined rogue who focuses on precision over speed. Higher damage per hit with controlled, tactical strikes."
+        difficulty: "Medium"
+        role: "Melee DPS / Precision"
+        playstyle: "Slower but harder-hitting strikes with good positioning"
+    }
+    HeroTemplate {
+        isTemplate: true
+    }
+}
+
+// -----------------------------------------------------------------------------
+// CLERICS - Healers and support characters
+// -----------------------------------------------------------------------------
+
+entity {
+    Character {
+        name: "Brother Aldric"
+        class: "Cleric"
+        level: 1
+        experience: 0
+        experienceToLevel: 100
+    }
+    Health {
+        current: 90
+        max: 90
+    }
+    Mana {
+        current: 80
+        max: 80
+    }
+    Stats {
+        strength: 10
+        dexterity: 8
+        intelligence: 12
+        constitution: 12
+        wisdom: 18
+    }
+    Combat {
+        damage: 12
+        defense: 8
+        attackSpeed: 0.7
+        critChance: 0.05
+        critMultiplier: 1.5
+    }
+    Team {
+        id: "player"
+        isPlayer: true
+    }
+    Skills {
+        skill1: "heal"
+        skill2: ""
+        skill3: ""
+        skill4: ""
+        skillPoints: 0
+    }
+    Buffs {
+        damageBonus: 0
+        defenseBonus: 0
+        hasteBonus: 0
+        shieldAmount: 0
+        regenAmount: 0
+    }
+    HeroInfo {
+        id: "cleric"
+        description: "A divine healer who supports allies with healing and protective magic. Keeps the party alive through the toughest battles."
+        difficulty: "Easy"
+        role: "Healer / Support"
+        playstyle: "Keep allies alive with healing while contributing moderate damage"
+    }
+    HeroTemplate {
+        isTemplate: true
+    }
+    
+    // Bound choice functions for Cleric behavior
+    .select_attack_target = choice(character: Character, enemies: list): id {
+        let target = enemies[0]
+        let lowestThreat = 999999
+        for enemy in enemies {
+            let threat = enemy.Combat.damage * (enemy.Health.current / enemy.Health.max)
+            if threat < lowestThreat {
+                target = enemy
+                lowestThreat = threat
+            }
+        }
+        return target.id
+    }
+    
+    .select_combat_skill = choice(character: Character & Skills & Health & Mana & Combat, allies: list, enemies: list): string {
+        let hp_pct = character.Health.current / character.Health.max
+        let mana_pct = character.Mana.current / character.Mana.max
+        for ally in allies {
+            if ally.Health.current <= 0 {
+                if character.Mana.current >= 100 && character.Skills.skill4 == "resurrection" {
+                    return "resurrection"
+                }
+            }
+        }
+        if hp_pct < 0.25 && character.Mana.current >= 15 {
+            if character.Skills.skill1 == "heal" {
+                return "heal"
+            }
+        }
+        let injuredCount = 0
+        for ally in allies {
+            let ally_hp_pct = ally.Health.current / ally.Health.max
+            if ally_hp_pct < 0.6 {
+                injuredCount = injuredCount + 1
+            }
+        }
+        if injuredCount >= 2 && character.Mana.current >= 35 {
+            if character.Skills.skill3 == "group_heal" {
+                return "group_heal"
+            }
+        }
+        for ally in allies {
+            let ally_hp_pct = ally.Health.current / ally.Health.max
+            if ally_hp_pct < 0.3 && character.Mana.current >= 15 {
+                if character.Skills.skill1 == "heal" {
+                    return "heal"
+                }
+            }
+        }
+        for ally in allies {
+            if ally.Character.class == "Warrior" {
+                let ally_hp_pct = ally.Health.current / ally.Health.max
+                if ally_hp_pct < 0.5 && character.Mana.current >= 25 {
+                    if character.Skills.skill3 == "holy_shield" {
+                        return "holy_shield"
+                    }
+                }
+            }
+        }
+        if injuredCount == 0 {
+            if enemies.count >= 2 && character.Mana.current >= 80 {
+                if character.Skills.skill4 == "divine_storm" {
+                    return "divine_storm"
+                }
+            }
+            if character.Mana.current >= 12 && character.Skills.skill2 == "bless" {
+                return "bless"
+            }
+            if character.Mana.current >= 10 && character.Skills.skill2 == "smite" {
+                return "smite"
+            }
+        }
+        if character.Mana.current >= 30 && character.Skills.skill3 == "divine_light" {
+            return "divine_light"
+        }
+        return "basic_attack"
+    }
+    
+    .select_skill_on_levelup = choice(character: Character & Skills, currentLevel: number): string {
+        if currentLevel == 2 {
+            return "heal"
+        }
+        if currentLevel == 3 {
+            return "bless"
+        }
+        if currentLevel == 4 {
+            return "smite"
+        }
+        if currentLevel == 5 {
+            return "group_heal"
+        }
+        if currentLevel == 6 {
+            return "holy_shield"
+        }
+        if currentLevel >= 7 {
+            return "resurrection"
+        }
+        return "heal"
+    }
+}
+
+entity {
+    Character {
+        name: "Sister Lumina"
+        class: "Cleric"
+        level: 1
+        experience: 0
+        experienceToLevel: 100
+    }
+    Health {
+        current: 85
+        max: 85
+    }
+    Mana {
+        current: 100
+        max: 100
+    }
+    Stats {
+        strength: 8
+        dexterity: 8
+        intelligence: 14
+        constitution: 12
+        wisdom: 20
+    }
+    Combat {
+        damage: 10
+        defense: 7
+        attackSpeed: 0.6
+        critChance: 0.05
+        critMultiplier: 1.5
+    }
+    Team {
+        id: "player"
+        isPlayer: true
+    }
+    Skills {
+        skill1: "heal"
+        skill2: ""
+        skill3: ""
+        skill4: ""
+        skillPoints: 0
+    }
+    Buffs {
+        damageBonus: 0
+        defenseBonus: 0
+        hasteBonus: 0
+        shieldAmount: 0
+        regenAmount: 0
+    }
+    HeroInfo {
+        id: "cleric2"
+        description: "A devoted healer who maximizes healing output. Best support in the game but minimal combat capability."
+        difficulty: "Easy"
+        role: "Healer / Pure Support"
+        playstyle: "Maximum healing power - keep allies alive at all costs"
+    }
+    HeroTemplate {
+        isTemplate: true
+    }
+}
+
+entity {
+    Character {
+        name: "Battle Priest Marcus"
+        class: "Cleric"
+        level: 1
+        experience: 0
+        experienceToLevel: 100
+    }
+    Health {
+        current: 100
+        max: 100
+    }
+    Mana {
+        current: 70
+        max: 70
+    }
+    Stats {
+        strength: 14
+        dexterity: 10
+        intelligence: 12
+        constitution: 12
+        wisdom: 14
+    }
+    Combat {
+        damage: 18
+        defense: 8
+        attackSpeed: 0.8
+        critChance: 0.1
+        critMultiplier: 1.5
+    }
+    Team {
+        id: "player"
+        isPlayer: true
+    }
+    Skills {
+        skill1: "heal"
+        skill2: ""
+        skill3: ""
+        skill4: ""
+        skillPoints: 0
+    }
+    Buffs {
+        damageBonus: 0
+        defenseBonus: 0
+        hasteBonus: 0
+        shieldAmount: 0
+        regenAmount: 0
+    }
+    HeroInfo {
+        id: "cleric3"
+        description: "A militant cleric who deals holy damage to enemies. Combines decent damage with moderate healing capabilities."
+        difficulty: "Medium"
+        role: "Hybrid DPS / Support"
+        playstyle: "Balance between dealing holy damage and supporting allies"
+    }
+    HeroTemplate {
+        isTemplate: true
+    }
+}
+
+entity {
+    Character {
+        name: "Shieldbearer Thora"
+        class: "Cleric"
+        level: 1
+        experience: 0
+        experienceToLevel: 100
+    }
+    Health {
+        current: 110
+        max: 110
+    }
+    Mana {
+        current: 75
+        max: 75
+    }
+    Stats {
+        strength: 12
+        dexterity: 8
+        intelligence: 10
+        constitution: 16
+        wisdom: 16
+    }
+    Combat {
+        damage: 11
+        defense: 10
+        attackSpeed: 0.7
+        critChance: 0.05
+        critMultiplier: 1.5
+    }
+    Team {
+        id: "player"
+        isPlayer: true
+    }
+    Skills {
+        skill1: "heal"
+        skill2: ""
+        skill3: ""
+        skill4: ""
+        skillPoints: 0
+    }
+    Buffs {
+        damageBonus: 0
+        defenseBonus: 0
+        hasteBonus: 0
+        shieldAmount: 0
+        regenAmount: 0
+    }
+    HeroInfo {
+        id: "cleric4"
+        description: "A defensive cleric who protects allies with shields and barriers. Focuses on damage prevention over healing."
+        difficulty: "Medium"
+        role: "Tank / Support"
+        playstyle: "Prevent damage with shields while providing emergency healing"
+    }
+    HeroTemplate {
+        isTemplate: true
+    }
+}
+
+entity {
+    Character {
+        name: "Prophet Celestia"
+        class: "Cleric"
+        level: 1
+        experience: 0
+        experienceToLevel: 100
+    }
+    Health {
+        current: 88
+        max: 88
+    }
+    Mana {
+        current: 95
+        max: 95
+    }
+    Stats {
+        strength: 8
+        dexterity: 10
+        intelligence: 16
+        constitution: 10
+        wisdom: 18
+    }
+    Combat {
+        damage: 12
+        defense: 7
+        attackSpeed: 0.7
+        critChance: 0.05
+        critMultiplier: 1.5
+    }
+    Team {
+        id: "player"
+        isPlayer: true
+    }
+    Skills {
+        skill1: "heal"
+        skill2: ""
+        skill3: ""
+        skill4: ""
+        skillPoints: 0
+    }
+    Buffs {
+        damageBonus: 0
+        defenseBonus: 0
+        hasteBonus: 0
+        shieldAmount: 0
+        regenAmount: 0
+    }
+    HeroInfo {
+        id: "cleric5"
+        description: "A mystic healer with powerful buffs and enhanced mana pool. Provides utility beyond just healing."
+        difficulty: "Hard"
+        role: "Support / Buffer"
+        playstyle: "Enhance allies with buffs while maintaining healing support"
+    }
+    HeroTemplate {
+        isTemplate: true
+    }
+}
+
+// -----------------------------------------------------------------------------
+// RANGERS - Ranged physical damage dealers
+// -----------------------------------------------------------------------------
+
+entity {
+    Character {
+        name: "Aria Swiftarrow"
+        class: "Ranger"
+        level: 1
+        experience: 0
+        experienceToLevel: 100
+    }
+    Health {
+        current: 85
+        max: 85
+    }
+    Mana {
+        current: 60
+        max: 60
+    }
+    Stats {
+        strength: 12
+        dexterity: 16
+        intelligence: 10
+        constitution: 10
+        wisdom: 12
+    }
+    Combat {
+        damage: 20
+        defense: 5
+        attackSpeed: 1.2
+        critChance: 0.15
+        critMultiplier: 2.0
+    }
+    Team {
+        id: "player"
+        isPlayer: true
+    }
+    Skills {
+        skill1: "aimed_shot"
+        skill2: ""
+        skill3: ""
+        skill4: ""
+        skillPoints: 0
+    }
+    Buffs {
+        damageBonus: 0
+        defenseBonus: 0
+        hasteBonus: 0
+        shieldAmount: 0
+        regenAmount: 0
+    }
+    HeroInfo {
+        id: "ranger"
+        description: "An expert marksman with deadly precision. Excels at dealing consistent damage from range with high critical strike chance."
+        difficulty: "Medium"
+        role: "Ranged DPS / Single Target"
+        playstyle: "Maintain distance and deliver precise, high-damage attacks from range"
+    }
+    HeroTemplate {
+        isTemplate: true
+    }
+}
+
+entity {
+    Character {
+        name: "Hunter Thornwood"
+        class: "Ranger"
+        level: 1
+        experience: 0
+        experienceToLevel: 100
+    }
+    Health {
+        current: 90
+        max: 90
+    }
+    Mana {
+        current: 55
+        max: 55
+    }
+    Stats {
+        strength: 14
+        dexterity: 16
+        intelligence: 8
+        constitution: 12
+        wisdom: 10
+    }
+    Combat {
+        damage: 22
+        defense: 6
+        attackSpeed: 1.1
+        critChance: 0.15
+        critMultiplier: 2.0
+    }
+    Team {
+        id: "player"
+        isPlayer: true
+    }
+    Skills {
+        skill1: "aimed_shot"
+        skill2: ""
+        skill3: ""
+        skill4: ""
+        skillPoints: 0
+    }
+    Buffs {
+        damageBonus: 0
+        defenseBonus: 0
+        hasteBonus: 0
+        shieldAmount: 0
+        regenAmount: 0
+    }
+    HeroInfo {
+        id: "ranger2"
+        description: "A wilderness ranger who excels at tracking and taking down single targets. Reliable sustained ranged damage."
+        difficulty: "Easy"
+        role: "Ranged DPS / Sustained"
+        playstyle: "Consistent ranged damage with good survivability"
+    }
+    HeroTemplate {
+        isTemplate: true
+    }
+}
+
+entity {
+    Character {
+        name: "Windrunner Lyra"
+        class: "Ranger"
+        level: 1
+        experience: 0
+        experienceToLevel: 100
+    }
+    Health {
+        current: 80
+        max: 80
+    }
+    Mana {
+        current: 60
+        max: 60
+    }
+    Stats {
+        strength: 10
+        dexterity: 18
+        intelligence: 10
+        constitution: 10
+        wisdom: 12
+    }
+    Combat {
+        damage: 18
+        defense: 5
+        attackSpeed: 1.5
+        critChance: 0.15
+        critMultiplier: 2.0
+    }
+    Team {
+        id: "player"
+        isPlayer: true
+    }
+    Skills {
+        skill1: "aimed_shot"
+        skill2: ""
+        skill3: ""
+        skill4: ""
+        skillPoints: 0
+    }
+    Buffs {
+        damageBonus: 0
+        defenseBonus: 0
+        hasteBonus: 0
+        shieldAmount: 0
+        regenAmount: 0
+    }
+    HeroInfo {
+        id: "ranger3"
+        description: "An agile ranger with the fastest attack speed. Lower damage per shot but overwhelming volume of arrows."
+        difficulty: "Medium"
+        role: "Ranged DPS / Rapid Fire"
+        playstyle: "Rapid arrow volleys - death by a thousand cuts"
+    }
+    HeroTemplate {
+        isTemplate: true
+    }
+}
+
+entity {
+    Character {
+        name: "Sniper Hawkeye"
+        class: "Ranger"
+        level: 1
+        experience: 0
+        experienceToLevel: 100
+    }
+    Health {
+        current: 82
+        max: 82
+    }
+    Mana {
+        current: 65
+        max: 65
+    }
+    Stats {
+        strength: 14
+        dexterity: 16
+        intelligence: 12
+        constitution: 10
+        wisdom: 14
+    }
+    Combat {
+        damage: 28
+        defense: 5
+        attackSpeed: 0.8
+        critChance: 0.2
+        critMultiplier: 2.5
+    }
+    Team {
+        id: "player"
+        isPlayer: true
+    }
+    Skills {
+        skill1: "aimed_shot"
+        skill2: ""
+        skill3: ""
+        skill4: ""
+        skillPoints: 0
+    }
+    Buffs {
+        damageBonus: 0
+        defenseBonus: 0
+        hasteBonus: 0
+        shieldAmount: 0
+        regenAmount: 0
+    }
+    HeroInfo {
+        id: "ranger4"
+        description: "A patient marksman who waits for the perfect shot. Slow but extremely powerful attacks with high crit damage."
+        difficulty: "Medium"
+        role: "Ranged DPS / Burst"
+        playstyle: "Devastating single shots - each arrow is a kill shot"
+    }
+    HeroTemplate {
+        isTemplate: true
+    }
+}
+
+entity {
+    Character {
+        name: "Beastmaster Renn"
+        class: "Ranger"
+        level: 1
+        experience: 0
+        experienceToLevel: 100
+    }
+    Health {
+        current: 92
+        max: 92
+    }
+    Mana {
+        current: 70
+        max: 70
+    }
+    Stats {
+        strength: 12
+        dexterity: 14
+        intelligence: 12
+        constitution: 12
+        wisdom: 14
+    }
+    Combat {
+        damage: 19
+        defense: 6
+        attackSpeed: 1.0
+        critChance: 0.15
+        critMultiplier: 2.0
+    }
+    Team {
+        id: "player"
+        isPlayer: true
+    }
+    Skills {
+        skill1: "aimed_shot"
+        skill2: ""
+        skill3: ""
+        skill4: ""
+        skillPoints: 0
+    }
+    Buffs {
+        damageBonus: 0
+        defenseBonus: 0
+        hasteBonus: 0
+        shieldAmount: 0
+        regenAmount: 0
+    }
+    HeroInfo {
+        id: "ranger5"
+        description: "A ranger who commands nature's fury. Balanced stats with good survivability and utility."
+        difficulty: "Easy"
+        role: "Ranged DPS / Utility"
+        playstyle: "Well-rounded ranger with pet support and good versatility"
+    }
+    HeroTemplate {
+        isTemplate: true
+    }
+}
+
+// -----------------------------------------------------------------------------
+// PALADINS - Holy warriors with tank and support abilities
+// -----------------------------------------------------------------------------
+
+entity {
+    Character {
+        name: "Dame Lightbringer"
+        class: "Paladin"
+        level: 1
+        experience: 0
+        experienceToLevel: 100
+    }
+    Health {
+        current: 110
+        max: 110
+    }
+    Mana {
+        current: 70
+        max: 70
+    }
+    Stats {
+        strength: 14
+        dexterity: 10
+        intelligence: 10
+        constitution: 14
+        wisdom: 12
+    }
+    Combat {
+        damage: 16
+        defense: 9
+        attackSpeed: 0.9
+        critChance: 0.1
+        critMultiplier: 1.5
+    }
+    Team {
+        id: "player"
+        isPlayer: true
+    }
+    Skills {
+        skill1: "divine_strike"
+        skill2: ""
+        skill3: ""
+        skill4: ""
+        skillPoints: 0
+    }
+    Buffs {
+        damageBonus: 0
+        defenseBonus: 0
+        hasteBonus: 0
+        shieldAmount: 0
+        regenAmount: 0
+    }
+    HeroInfo {
+        id: "paladin"
+        description: "A holy warrior who balances offense and defense. Can heal allies while dealing respectable damage to enemies."
+        difficulty: "Easy"
+        role: "Hybrid Tank / Support"
+        playstyle: "Balance between dealing damage, tanking, and supporting allies"
+    }
+    HeroTemplate {
+        isTemplate: true
+    }
+}
+
+entity {
+    Character {
+        name: "Justicar Voran"
+        class: "Paladin"
+        level: 1
+        experience: 0
+        experienceToLevel: 100
+    }
+    Health {
+        current: 115
+        max: 115
+    }
+    Mana {
+        current: 65
+        max: 65
+    }
+    Stats {
+        strength: 16
+        dexterity: 10
+        intelligence: 8
+        constitution: 14
+        wisdom: 12
+    }
+    Combat {
+        damage: 20
+        defense: 9
+        attackSpeed: 0.9
+        critChance: 0.1
+        critMultiplier: 1.5
+    }
+    Team {
+        id: "player"
+        isPlayer: true
+    }
+    Skills {
+        skill1: "divine_strike"
+        skill2: ""
+        skill3: ""
+        skill4: ""
+        skillPoints: 0
+    }
+    Buffs {
+        damageBonus: 0
+        defenseBonus: 0
+        hasteBonus: 0
+        shieldAmount: 0
+        regenAmount: 0
+    }
+    HeroInfo {
+        id: "paladin2"
+        description: "A righteous paladin focused on dealing holy damage to evil. Strong offense with divine protection."
+        difficulty: "Easy"
+        role: "Melee DPS / Tank"
+        playstyle: "Holy warrior dealing bonus damage to undead and demons"
+    }
+    HeroTemplate {
+        isTemplate: true
+    }
+}
+
+entity {
+    Character {
+        name: "Guardian Solas"
+        class: "Paladin"
+        level: 1
+        experience: 0
+        experienceToLevel: 100
+    }
+    Health {
+        current: 125
+        max: 125
+    }
+    Mana {
+        current: 70
+        max: 70
+    }
+    Stats {
+        strength: 12
+        dexterity: 8
+        intelligence: 10
+        constitution: 16
+        wisdom: 14
+    }
+    Combat {
+        damage: 14
+        defense: 11
+        attackSpeed: 0.8
+        critChance: 0.1
+        critMultiplier: 1.5
+    }
+    Team {
+        id: "player"
+        isPlayer: true
+    }
+    Skills {
+        skill1: "divine_strike"
+        skill2: ""
+        skill3: ""
+        skill4: ""
+        skillPoints: 0
+    }
+    Buffs {
+        damageBonus: 0
+        defenseBonus: 0
+        hasteBonus: 0
+        shieldAmount: 0
+        regenAmount: 0
+    }
+    HeroInfo {
+        id: "paladin3"
+        description: "A protective paladin who shields allies from harm. Highest defense among paladins with area protection."
+        difficulty: "Easy"
+        role: "Tank / Protector"
+        playstyle: "Maximum protection - intercept attacks meant for allies"
+    }
+    HeroTemplate {
+        isTemplate: true
+    }
+}
+
+entity {
+    Character {
+        name: "Zealot Pyra"
+        class: "Paladin"
+        level: 1
+        experience: 0
+        experienceToLevel: 100
+    }
+    Health {
+        current: 105
+        max: 105
+    }
+    Mana {
+        current: 60
+        max: 60
+    }
+    Stats {
+        strength: 16
+        dexterity: 12
+        intelligence: 8
+        constitution: 12
+        wisdom: 12
+    }
+    Combat {
+        damage: 22
+        defense: 7
+        attackSpeed: 1.0
+        critChance: 0.15
+        critMultiplier: 1.5
+    }
+    Team {
+        id: "player"
+        isPlayer: true
+    }
+    Skills {
+        skill1: "divine_strike"
+        skill2: ""
+        skill3: ""
+        skill4: ""
+        skillPoints: 0
+    }
+    Buffs {
+        damageBonus: 0
+        defenseBonus: 0
+        hasteBonus: 0
+        shieldAmount: 0
+        regenAmount: 0
+    }
+    HeroInfo {
+        id: "paladin4"
+        description: "A fervent holy warrior who sacrifices defense for righteous fury. High damage output with moderate tankiness."
+        difficulty: "Medium"
+        role: "Melee DPS / Bruiser"
+        playstyle: "Aggressive holy warrior - offense is the best defense"
+    }
+    HeroTemplate {
+        isTemplate: true
+    }
+}
+
+entity {
+    Character {
+        name: "Templar Aegis"
+        class: "Paladin"
+        level: 1
+        experience: 0
+        experienceToLevel: 100
+    }
+    Health {
+        current: 112
+        max: 112
+    }
+    Mana {
+        current: 75
+        max: 75
+    }
+    Stats {
+        strength: 14
+        dexterity: 12
+        intelligence: 12
+        constitution: 14
+        wisdom: 14
+    }
+    Combat {
+        damage: 17
+        defense: 9
+        attackSpeed: 0.9
+        critChance: 0.1
+        critMultiplier: 1.5
+    }
+    Team {
+        id: "player"
+        isPlayer: true
+    }
+    Skills {
+        skill1: "divine_strike"
+        skill2: ""
+        skill3: ""
+        skill4: ""
+        skillPoints: 0
+    }
+    Buffs {
+        damageBonus: 0
+        defenseBonus: 0
+        hasteBonus: 0
+        shieldAmount: 0
+        regenAmount: 0
+    }
+    HeroInfo {
+        id: "paladin5"
+        description: "A veteran templar with decades of experience. Perfectly balanced stats make them effective in any situation."
+        difficulty: "Easy"
+        role: "Hybrid / Versatile"
+        playstyle: "Jack of all trades - adapts to any party composition"
+    }
+    HeroTemplate {
+        isTemplate: true
+    }
+}
