@@ -4136,21 +4136,33 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
         startBtn.disabled = true;
         
         try {
-          // Run the specified number of steps
-          for (let i = 0; i < steps; i++) {
-            if (!game.hasEvents()) {
-              addLogEntry('system', '⏹️ No more events to process');
-              break;
+          // Run the specified number of steps with periodic UI updates
+          // Process in chunks to keep UI responsive
+          const chunkSize = 10; // Process 10 steps at a time
+          let processed = 0;
+          
+          while (processed < steps) {
+            const toProcess = Math.min(chunkSize, steps - processed);
+            
+            // Process a chunk of steps
+            for (let i = 0; i < toProcess; i++) {
+              if (!game.hasEvents()) {
+                addLogEntry('system', '⏹️ No more events to process');
+                processed = steps; // Break outer loop
+                break;
+              }
+              game.step();
+              processed++;
             }
-            game.step();
+            
+            // Yield control to browser and update UI after each chunk
+            await new Promise(resolve => setTimeout(resolve, 0));
+            updateCharacterData();
+            updateUI();
+            renderParties();
           }
           
-          // Force UI update after steps
-          updateCharacterData();
-          updateUI();
-          renderParties();
-          
-          addLogEntry('system', `✅ Completed ${steps} steps at sim time ${game.getTime().toFixed(2)}s`);
+          addLogEntry('system', `✅ Completed ${processed} steps at sim time ${game.getTime().toFixed(2)}s`);
         } catch (error) {
           addLogEntry('system', `❌ Error: ${error.message}`);
         } finally {
