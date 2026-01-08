@@ -1,0 +1,78 @@
+// =============================================================================
+// BLINK IDLE RPG - Normal Scenario Configuration
+// =============================================================================
+// This is the standard balanced scenario.
+// Features:
+// - Standard enemy spawn rate (5 enemies per wave)
+// - Balanced enemy progression
+// - Standard retreat/death penalties (10s retreat, 5x death penalty)
+// - Bosses appear every 100 kills
+// =============================================================================
+
+// Scenario metadata component
+// This provides UI information about the scenario
+scenario_info = new entity {
+    ScenarioInfo {
+        id: "normal"
+        name: "Classic Campaign"
+        description: "The standard Blink RPG experience with balanced difficulty and progression. Recommended for most players."
+        difficulty: "Normal"
+        respawnTime: "10 seconds"
+        deathPenalty: "5x (50 seconds)"
+        enemiesPerWave: "5"
+        bossFrequency: "Every 100 enemies"
+    }
+}
+
+// Standard game configuration (this is the original balance)
+flee_config = new entity {
+    FleeConfig {
+        retreatTimePenalty: 10.0          // 10 seconds
+        deathTimePenaltyMultiplier: 5.0   // 5x = 50 seconds
+        fleeCooldown: 5.0                 // 5 seconds between flees
+    }
+}
+
+// Game state and run statistics (combined with SpawnConfig)
+// The BRL rules access both GameState and SpawnConfig on the same entity
+game_state = new entity {
+    GameState {
+        currentWave: 1
+        enemiesDefeated: 0
+        playerDeaths: 0
+        bossDefeated: false
+        gameOver: false
+        victory: false
+        retargetingActive: false
+        currentTier: 1
+        waveInTier: 1
+        bossSpawned: false
+    }
+    SpawnConfig {
+        bossEveryKills: 100               // Bosses every 100 kills
+        tierProgressionKills: 50          // Tier progression every 50 kills
+        maxTier: 6                        // Maximum tier
+        wavesPerTier: 300                 // Waves per tier
+        healthScaleRate: 200              // Health scaling rate
+        damageScaleRate: 300              // Damage scaling rate
+        initialEnemyCount: 5              // 5 enemies per wave
+    }
+}
+
+run_stats = new entity {
+    RunStats {
+        simulationTime: 0.0
+        retreatCount: 0
+        retreatPenalty: 0.0
+        deathPenalty: 0.0
+        totalTime: 0.0
+        canFlee: true
+        lastFleeTime: -999.0
+    }
+}
+
+enemy_compendium = new entity {
+    EnemyCompendium {
+        entries: []
+    }
+}
