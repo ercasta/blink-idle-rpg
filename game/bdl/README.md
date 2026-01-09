@@ -31,7 +31,7 @@ Loading order:
 
 ```bdl
 // Define a hero character
-entity @warrior {
+h = create entity {
     Character {
         name: "Sir Braveheart"
         class: "Warrior"

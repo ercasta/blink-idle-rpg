@@ -17,8 +17,7 @@
 9. [Statements](#statements)
 10. [Functions](#functions)
 11. [Modules](#modules)
-12. [Trackers](#trackers)
-13. [Choice Points](#choice-points)
+12. [Choice Points](#choice-points)
 
 ---
 

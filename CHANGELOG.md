@@ -18,11 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Features Included
 - **Blink Rule Language (BRL)**: Game rules definition language (specification draft)
-- **Blink Compiler**: Rust-based compiler that converts BRL to IR format
-  - Lexer with logo-based tokenization
+- **Blink Compiler**: TypeScript-based compiler that converts BRL to IR format
+  - Lexer with tokenization
   - Parser for BRL syntax
   - IR Generator producing JSON output
-  - CLI tools for compilation and debugging
+  - CLI tools for compilation and debugging (npm-based)
 - **JavaScript Engine**: Browser-based game engine
   - Entity-Component-System (ECS) architecture
   - Event-driven simulation
@@ -57,7 +57,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Testing framework present but limited test coverage
 
 ### Technical Details
-- Rust compiler version: 0.1.0
+-- Compiler: TypeScript implementation (packages/blink-compiler-ts)
 - JavaScript engine version: 0.1.0
 - Target platforms: Windows, Linux, macOS
 - Browser compatibility: Modern browsers with ES6+ support
@@ -66,7 +66,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 No installation required! Download the demo package and open `index.html` in your browser.
 
 For development:
-- Rust 2021 edition (cargo 1.70+)
+- TypeScript compiler and toolchain (Node.js, npm)
 - Node.js LTS (18+ recommended)
 - TypeScript 5.3+
 

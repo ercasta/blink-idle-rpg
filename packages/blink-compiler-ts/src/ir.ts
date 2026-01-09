@@ -24,7 +24,6 @@ export interface IRModule {
   components: IRComponent[];
   rules: IRRule[];
   functions: IRFunction[];
-  trackers?: IRTracker[];
   constants?: Record<string, IRValue>;
   initial_state?: IRInitialState;
   choice_points?: IRChoicePoint[];
@@ -260,13 +259,7 @@ export interface IRParam {
   type: IRType;
 }
 
-// ===== Trackers (legacy) =====
-
-export interface IRTracker {
-  id: number;
-  component: string;
-  event: string;
-}
+// Trackers removed from IR types
 
 // ===== Initial State =====
 

@@ -27,12 +27,12 @@ This document describes the Docker setup testing performed and expected behavior
 - **Development files**: Excludes .git/, .github/, doc/
 - **Generated files**: Excludes *.ir.json as specified in original .gitignore
 
-### ✅ 5. Rust Compiler
-- **Local build successful**: `cargo build --release` completed in 24.37s
-- **Binary created**: 1.6MB executable at `src/compiler/target/release/blink-compiler`
-- **Functionality verified**: Successfully compiles BRL to IR
+### ✅ 5. Compiler (TypeScript)
+- **Local build successful**: `npm run build` completed for `packages/blink-compiler-ts`
+- **Output created**: Compiler package built under `packages/blink-compiler-ts/dist`
+- **Functionality verified**: Successfully compiles BRL to IR via the TypeScript compiler
   ```bash
-  blink-compiler compile -i game/brl/simple-combat.brl -o /tmp/test.ir.json --pretty
+  npx @blink/compiler-ts compile -i game/brl/simple-combat.brl -o /tmp/test.ir.json --pretty
   # Output: Valid 4.3KB IR JSON file
   ```
 
@@ -76,7 +76,7 @@ This document describes the Docker setup testing performed and expected behavior
 ### ⚠️ Full Docker Build (End-to-End)
 - **Status**: Could not complete in CI environment
 - **Reason**: SSL certificate issues with external package registries
-  - cargo: "SSL certificate problem: self-signed certificate in certificate chain"
+  - cargo: "SSL certificate problem: self-signed certificate in certificate chain" (legacy)
   - npm: "SELF_SIGNED_CERT_IN_CHAIN"
 - **Environment-specific**: This is a CI/network infrastructure issue, not a Dockerfile issue
 - **Expected behavior**: Works in normal development environments with standard SSL/TLS

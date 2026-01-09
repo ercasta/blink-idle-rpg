@@ -1,12 +1,13 @@
 #!/bin/bash
 # Helper script to build the Docker image with pre-built compiler
-# This is useful if the Docker build fails due to network issues with cargo
+# This is useful if the Docker build fails due to network issues with package registries
 
 set -e
 
-echo "=== Building Blink Compiler Locally ==="
-cd src/compiler
-cargo build --release
+echo "=== Building Blink Compiler (TypeScript) Locally ==="
+cd packages/blink-compiler-ts
+npm install
+npm run build
 cd ../..
 
 echo ""
@@ -17,9 +18,8 @@ if [ -f .dockerignore ]; then
 fi
 
 cat > .dockerignore << 'EOF'
-# Rust source (we're using pre-built binary)
+# Legacy Rust source (not required for TypeScript compiler)
 **/*.rs.bk
-Cargo.lock
 
 # Node.js
 node_modules/
@@ -38,7 +38,7 @@ yarn-error.log*
 .DS_Store
 Thumbs.db
 
-# Build outputs (except release binary we need)
+# Build outputs
 dist/
 build/
 src/compiler/target/debug/
@@ -94,8 +94,11 @@ RUN npm install -g serve
 
 WORKDIR /workspace
 
-# Copy pre-built compiler from host
-COPY src/compiler/target/release/blink-compiler /usr/local/bin/
+# Copy pre-built TypeScript compiler package from host
+COPY packages/blink-compiler-ts/dist /usr/local/lib/blink-compiler-ts
+
+# Create a small wrapper to invoke the TypeScript compiler as a CLI
+RUN printf '#!/bin/sh\nnode /usr/local/lib/blink-compiler-ts/index.js "$@"' > /usr/local/bin/blink-compiler && chmod +x /usr/local/bin/blink-compiler
 
 # Copy built packages
 COPY --from=node-builder /build/packages ./packages

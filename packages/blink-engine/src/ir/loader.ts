@@ -69,10 +69,7 @@ function validateIR(ir: IRModule): void {
     throw new Error('IR missing functions array');
   }
   
-  // `trackers` is optional (legacy feature); if present, it must be an array
-  if (ir.trackers !== undefined && !Array.isArray(ir.trackers)) {
-    throw new Error('IR trackers field must be an array when present');
-  }
+  // Trackers removed from IR; no validation or handling required
   
   // Validate components
   for (const component of ir.components) {

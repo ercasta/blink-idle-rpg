@@ -10,28 +10,25 @@ This directory contains example Intermediate Representation (IR) files that can 
 
 ## Generating IR Files
 
-To generate the IR files locally, compile the BRL source files:
+To generate the IR files locally, compile the BRL source files using the TypeScript compiler package:
 
 ```bash
-cd src/compiler
-cargo build --release
+cd packages/blink-compiler-ts
+npm install
+npm run build
 
 # Compile all BRL files
-for brl_file in ../../game/brl/*.brl; do
-  filename=$(basename "$brl_file" .brl)
-  ./target/release/blink-compiler compile -i "$brl_file" -o "../../game/ir/${filename}.ir.json" --pretty
-done
+npx @blink/compiler-ts compile -i ../../game/brl/simple-clicker.brl -o ../../game/ir/simple-clicker.ir.json --pretty
 ```
 
-**Windows:**
-```cmd
-cd src\compiler
-cargo build --release
+**Windows (PowerShell / CMD):**
+```powershell
+cd packages\blink-compiler-ts
+npm install
+npm run build
 
-REM Compile all BRL files
-for %%f in (..\..\examples\brl\*.brl) do (
-  .\target\release\blink-compiler.exe compile -i "%%f" -o "..\..\examples\ir\%%~nf.ir.json" --pretty
-)
+# Compile an example BRL file
+npx @blink/compiler-ts compile -i ..\..\game\brl\simple-clicker.brl -o ..\..\game\ir\simple-clicker.ir.json --pretty
 ```
 
 ## Files

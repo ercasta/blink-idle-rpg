@@ -118,21 +118,6 @@ During gameplay, verify the async engine is working:
    - ✅ Scrolling is smooth
    - ✅ Log updates in real-time
 
-### 5. Test the Async Test Page
-
-For a dedicated async engine test, try the async test demo:
-
-```bash
-cd game/demos
-npx serve .
-# Open http://localhost:3000/async-test.html
-```
-
-This page specifically tests:
-- Rapid event chain processing
-- UI interaction during simulation
-- Real-time counter updates
-- Event log updates
 
 ## Performance Characteristics
 

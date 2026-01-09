@@ -70,8 +70,8 @@ make test
 make demo-package
 ```
 
-Available targets:
-- `make build-compiler` - Build the Rust BRL compiler
+- Available targets:
+- `make build-compiler` - Build the TypeScript BRL compiler (packages/blink-compiler-ts)
 - `make compile-brl` - Compile all BRL files to IR
 - `make install-packages` - Install npm dependencies
 - `make build-packages` - Build TypeScript packages
@@ -155,33 +155,20 @@ game.start();
 
 #### Prerequisites
 
-**Windows:**
-- Install Rust from [https://rustup.rs/](https://rustup.rs/)
-  - Download and run `rustup-init.exe`
-  - Follow the installer prompts (default options work fine)
-  - Restart your terminal after installation
-- Verify installation: `cargo --version`
+**All Platforms:**
+- Install Node.js (LTS recommended) and npm
+- Verify installation: `node --version` and `npm --version`
 
-**Linux/macOS:**
-- Install Rust: `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
-- Verify installation: `cargo --version`
-
-#### Building
+##### Building
 
 ```bash
-cd src/compiler
-cargo build
-cargo test
+cd packages/blink-compiler-ts
+npm install
+npm run build
+npm test
 
-# Compile a BRL file
-cargo run -- compile -i ../../examples/brl/simple-clicker.brl --pretty
-```
-
-**Windows Note:** Use backslashes for paths or forward slashes in quotes:
-```cmd
-cargo run -- compile -i ..\..\examples\brl\simple-clicker.brl --pretty
-rem OR
-cargo run -- compile -i "../../examples/brl/simple-clicker.brl" --pretty
+# Compile a BRL file with the TypeScript compiler
+npx @blink/compiler-ts compile -i ../../examples/brl/simple-clicker.brl --pretty
 ```
 
 ### For Testing Game Rules

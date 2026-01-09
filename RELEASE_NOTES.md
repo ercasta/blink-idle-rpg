@@ -48,32 +48,15 @@ That's it! No build process, no installation, no server required.
 
 ### For Developers
 
-#### Building the Rust Compiler
+#### Building the TypeScript Compiler
 
-**Windows:**
-```cmd
-# 1. Download Rust installer from https://rustup.rs/
-# 2. Run rustup-init.exe and follow the prompts
-# 3. Restart your terminal/command prompt
-# 4. Verify installation
-rustup --version
-cargo --version
-
-# 5. Build the compiler
-cd src\compiler
-cargo build
-cargo test
-```
-
-**Linux/macOS:**
+**All Platforms:**
 ```bash
-# Install Rust
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-
-# Build the compiler
-cd src/compiler
-cargo build
-cargo test
+# Install Node.js and npm (LTS recommended)
+cd packages/blink-compiler-ts
+npm install
+npm run build
+npm test
 ```
 
 #### Building the JavaScript Engine

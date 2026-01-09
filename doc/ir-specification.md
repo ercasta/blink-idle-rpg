@@ -13,7 +13,7 @@
 5. [Components](#components)
 6. [Rules](#rules)
 7. [Functions](#functions)
-8. [Trackers](#trackers)
+8. [Expressions](#expressions)
 9. [Expressions](#expressions)
 10. [Choice Functions (BCL)](#choice-functions-bcl)
 11. [Source Map](#source-map)
@@ -24,10 +24,6 @@
 
 ## 1. Overview
 ---
-
-## 8. Trackers
-
-Trackers were removed from the language; the IR `trackers` field is optional and retained only for legacy compatibility. Engines should ignore `trackers` entries and instead rely on rule outputs, emitted events, or other UI-facing mechanisms to deliver state to the front-end.
 
 ---
 - Human-readable format
@@ -58,7 +54,6 @@ Trackers were removed from the language; the IR `trackers` field is optional and
   "components": [...],
   "rules": [...],
   "functions": [...],
-  "trackers": [...],
   "constants": {...},
   "initial_state": {...},
   "choice_functions": [...],
@@ -77,7 +72,6 @@ Trackers were removed from the language; the IR `trackers` field is optional and
 | `components` | Yes | Component type definitions (from BRL) |
 | `rules` | Yes | Game rules (from BRL) |
 | `functions` | Yes | Helper functions (from BRL) |
-| `trackers` | Yes | Tracker definitions (from BRL) |
 | `constants` | No | Named constants |
 | `initial_state` | No | Initial entities (from BDL) |
 | `choice_functions` | No | Player choice functions (from BCL) |
@@ -334,49 +328,6 @@ Engines must provide these built-in functions:
 | `random` | `() -> number` | Random 0.0-1.0 |
 | `random_range` | `(number, number) -> number` | Random in range |
 | `len` | `(any) -> number` | Length of value: returns array length for arrays, 1 for scalars (non-null), 0 for null |
-
----
-
-## 8. Trackers
-
-### 8.1 Tracker Definition
-
-```json
-{
-  "trackers": [
-    {
-      "id": 0,
-      "component": "Health",
-      "event": "DoAttack"
-    },
-    {
-      "id": 1,
-      "component": "Gold",
-      "event": "CollectReward"
-    }
-  ]
-}
-```
-
-### 8.2 Tracker Output
-
-When a tracker fires, engines output:
-
-```json
-{
-  "tracker_id": 0,
-  "event": "DoAttack",
-  "time": 12500,
-  "entities": [
-    {
-      "id": 1,
-      "component": "Health",
-      "before": { "current": 100, "max": 100 },
-      "after": { "current": 85, "max": 100 }
-    }
-  ]
-}
-```
 
 ---
 

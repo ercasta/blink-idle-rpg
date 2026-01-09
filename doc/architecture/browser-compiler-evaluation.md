@@ -28,8 +28,8 @@ Currently, the BRL/BCL compiler is implemented in Rust. For players who want to:
 
 ```
 ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-│  BRL/BCL     │ ──► │    Rust      │ ──► │      IR      │
-│  Source      │     │   Compiler   │     │    (JSON)    │
+│  BRL/BCL     │ ──► │   Compiler   │ ──► │      IR      │
+│  Source      │     │ (TypeScript) │     │    (JSON)    │
 └──────────────┘     └──────────────┘     └──────┬───────┘
                                                   │
                                    ┌──────────────┴──────────────┐
@@ -71,7 +71,7 @@ Compile the existing Rust compiler to WASM and load it in the browser.
 ```
 
 **Implementation Steps:**
-1. Add `wasm32-unknown-unknown` target to Rust compiler
+1. (If using WASM) Add `wasm32-unknown-unknown` target to Rust compiler
 2. Create JavaScript bindings using `wasm-bindgen`
 3. Bundle WASM module with size optimization
 4. Create browser loader/initializer
@@ -99,17 +99,10 @@ Compile the existing Rust compiler to WASM and load it in the browser.
 - Testing: 3-4 days
 
 **Technical Notes:**
-```toml
-# Cargo.toml additions needed
-[lib]
-crate-type = ["cdylib", "rlib"]
-
-[dependencies]
-wasm-bindgen = "0.2.95"
-
-[profile.release]
-opt-level = "z"  # Optimize for size
-lto = true
+```text
+# Build configuration additions (when targeting WASM)
+# If porting to WASM from another language, update your build config
+# (for TypeScript, update package.json and bundler settings; for Rust/WASM, update Cargo.toml)
 ```
 
 ---
@@ -368,31 +361,20 @@ Implement TypeScript compiler for development/preview, use WASM for production c
 
 ### Implementation Plan
 
-#### Phase 1: WASM Build Configuration (Days 1-3)
+#### Phase 1: WASM / Browser Build Configuration (Days 1-3)
 
-```
-src/compiler/
-├── Cargo.toml           # Add wasm-bindgen, cdylib target
-├── src/
-│   ├── lib.rs           # Add wasm_bindgen exports
-│   └── wasm.rs          # WASM-specific bindings (NEW)
-```
+If you target a browser-native compiler you have two primary approaches:
 
-**Cargo.toml additions:**
-```toml
-[lib]
-crate-type = ["cdylib", "rlib"]
+- Use the TypeScript compiler (`packages/blink-compiler-ts`) and bundle it for browser use with a bundler (esbuild/webpack/rollup).
 
-[dependencies]
-wasm-bindgen = "0.2.95"
 
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-console_error_panic_hook = "0.1"
-wee_alloc = "0.4"
+Example steps for a TypeScript/browser build:
 
-[profile.release]
-opt-level = "z"  # Optimize for size
-lto = true
+```text
+# 1. Ensure `packages/blink-compiler-ts` exposes a browser-friendly entry (UMD/ESM)
+# 2. Add bundler config (esbuild/rollup) to package.json scripts
+# 3. Bundle and minify WASM/JS artifacts for distribution
+# 4. Load the bundled compiler in the browser and invoke compile APIs
 ```
 
 #### Phase 2: JavaScript Bindings (Days 4-8)
@@ -554,7 +536,7 @@ The key insight is that **avoiding multiple implementations outweighs bundle siz
 
 ## Next Steps
 
-1. [ ] Add WASM target configuration to `src/compiler/Cargo.toml`
+1. [ ] Add WASM target configuration (if using Rust→WASM) or equivalent bundler settings in `packages/blink-compiler-ts` for browser usage
 2. [ ] Add `wasm-bindgen` dependencies and exports
 3. [ ] Create WASM-specific bindings module (`src/compiler/src/wasm.rs`)
 4. [ ] Create `packages/blink-compiler-wasm` TypeScript wrapper

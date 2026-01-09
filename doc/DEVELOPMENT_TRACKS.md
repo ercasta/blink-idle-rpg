@@ -122,7 +122,7 @@ mkdir -p doc/language/examples
 
 ### Owner Requirements
 - Compiler/parser experience
-- Rust proficiency
+- TypeScript / Node.js proficiency
 - Understanding of Track 1 output
 
 ### Deliverables
@@ -134,21 +134,14 @@ mkdir -p doc/language/examples
 
 ### Files
 ```
-src/compiler/
-├── Cargo.toml           # Project configuration
+packages/blink-compiler-ts/
+├── package.json         # Node/TS package for the compiler
 ├── README.md            # Compiler documentation
 ├── src/
-│   ├── lib.rs           # Library entry point
-│   ├── main.rs          # CLI entry point
-│   ├── lexer/           # Tokenizer (logos-based)
-│   │   └── mod.rs
-│   ├── parser/          # AST builder
-│   │   └── mod.rs
-│   ├── analyzer/        # Semantic analysis
-│   │   └── mod.rs
-│   └── ir/              # IR generator
-│       └── mod.rs
-```
+│   ├── index.ts         # CLI / entry point
+│   ├── ir.ts            # IR model and serialization
+│   └── parser/          # Parser and analyzer
+``` 
 
 ### Dependencies
 - Track 1: Language specification (can start with draft)
@@ -162,20 +155,15 @@ src/compiler/
 
 ### Getting Started
 ```bash
-# The compiler scaffold is already created!
+# The TypeScript compiler scaffold is available under `packages/blink-compiler-ts`
 
-# Build the compiler
-cd src/compiler
-cargo build
+cd packages/blink-compiler-ts
+npm install
+npm run build
+npm test
 
-# Run tests
-cargo test
-
-# Use the CLI (after building)
-cargo run -- compile -i ../../game/brl/simple-clicker.brl --pretty
-
-# Or check a file for errors
-cargo run -- check -i ../../game/brl/simple-combat.brl
+# Use the CLI (after build)
+npx @blink/compiler-ts compile -i ../../game/brl/simple-clicker.brl --pretty
 ```
 
 ### Next Steps
@@ -227,8 +215,8 @@ src/engines/rust/
 
 ### Getting Started
 ```bash
-# Set up Rust project
-cargo new blink-engine-rust --lib
+# Set up Rust engine project (optional)
+# mkdir -p src/engines/rust && initialize project files as needed
 
 # Read architecture doc
 cat doc/engine/architecture.md
@@ -357,10 +345,8 @@ src/engines/batch/
 
 ### Getting Started
 ```bash
-# Set up Rust project
-mkdir -p src/engines/batch
-cd src/engines/batch
-cargo init --name blink-batch
+# Set up batch engine project (optional)
+# mkdir -p src/engines/batch && initialize project files as needed
 
 # Read IR specification
 cat doc/ir-specification.md
@@ -415,9 +401,8 @@ tools/
 cd tools/vscode-blink
 yo code  # VSCode extension generator
 
-# Set up LSP
-cd ../blink-lsp
-cargo new blink-lsp --bin
+# Set up LSP (optional)
+# Create new project in `tools/blink-lsp` (language of your choice)
 ```
 
 ---

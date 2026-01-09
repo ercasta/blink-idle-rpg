@@ -71,7 +71,6 @@ const testIR = {
     }
   ],
   functions: [],
-  trackers: [],
   initial_state: {
     entities: [
       {

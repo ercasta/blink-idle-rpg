@@ -41,7 +41,6 @@ export interface IRModule {
   components: IRComponent[];
   rules: IRRule[];
   functions: IRFunction[];
-  trackers?: IRTracker[];
   initial_state?: IRInitialState;
   source_map?: SourceMap;
 }
@@ -293,13 +292,7 @@ export interface IRReturnType {
   type: IRFieldType;
 }
 
-// ===== Trackers =====
-
-export interface IRTracker {
-  id: number;
-  component: string;
-  event: string;
-}
+// Trackers removed from IR types
 
 // ===== Initial State =====
 

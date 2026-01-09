@@ -33,8 +33,8 @@ doc/
 
 ```
 src/
-└── compiler/                    # Blink Compiler (Rust)
-    ├── Cargo.toml              # Project configuration
+└── packages/blink-compiler-ts/  # Blink Compiler (TypeScript)
+    ├── package.json            # Project configuration
     ├── README.md               # Compiler documentation
     └── src/                    # Source code
         ├── lexer/              # Tokenizer
@@ -58,7 +58,7 @@ The project is organized to allow parallel development with **IR as the central 
 | Track | Folder | Description | Dependencies |
 |-------|--------|-------------|--------------|
 | **Language Design** | `doc/language/` | BRL & BCL specification | None |
-| **Compiler** | `src/compiler/` | Parser, validator, IR gen | Language spec |
+| **Compiler** | `packages/blink-compiler-ts/` | Parser, validator, IR gen | Language spec |
 | **Rust Engine** | `src/engines/rust/` | Native Rust simulation | IR spec only |
 | **JS Engine** | `packages/blink-engine/` | TypeScript implementation | IR spec only |
 | **Batch Engine** | `src/engines/batch/` | Headless testing engine | IR spec only |
@@ -72,7 +72,7 @@ See [architecture/ir-decision.md](architecture/ir-decision.md) for the architect
 ## Getting Started
 
 - **Language Designers**: Start with [language/README.md](language/README.md)
-- **Compiler Developers**: Start with [../src/compiler/README.md](../src/compiler/README.md)
+- **Compiler Developers**: Start with [../packages/blink-compiler-ts/README.md](../packages/blink-compiler-ts/README.md)
 - **Engine Developers**: Start with [ir-specification.md](ir-specification.md) and use examples in [../game/ir/](../game/ir/)
 - **Game Designers**: See [summary.md](summary.md) for game concepts
 - **All Developers**: Read [hie/README.md](hie/README.md) to understand architecture enforcement

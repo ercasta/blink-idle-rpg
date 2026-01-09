@@ -1,7 +1,6 @@
-# Rust
+# Legacy Rust artifacts (compiler removed)
 **/target/
 **/*.rs.bk
-Cargo.lock
 
 # Node.js
 node_modules/

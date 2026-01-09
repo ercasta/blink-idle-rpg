@@ -239,8 +239,8 @@ This script:
 **Alternative Workaround:** If you have a working network connection but Docker doesn't, you can:
 
 ```bash
-# Build compiler locally
-cd src/compiler && cargo build --release && cd ../..
+# Build TypeScript compiler locally
+cd packages/blink-compiler-ts && npm install && npm run build && cd ../..
 
 # Create a simple Dockerfile that uses pre-built binary
 # (See docker-build-with-prebuilt.sh for an example)
@@ -366,7 +366,7 @@ docker system prune -a
 | Feature | Docker | Local Development |
 |---------|--------|-------------------|
 | **Setup Time** | 5-10 minutes (first build) | 15-30 minutes (install tools) |
-| **Dependencies** | Only Docker required | Rust, Node.js, npm, cargo |
+| **Dependencies** | Only Docker required | Node.js, npm |
 | **Isolation** | Fully isolated | Uses system tools |
 | **Reproducibility** | Identical on all machines | May vary by system |
 | **Performance** | ~5-10% slower | Native speed |

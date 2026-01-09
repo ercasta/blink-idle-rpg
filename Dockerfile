@@ -27,6 +27,16 @@ RUN cd packages/blink-engine && npm run build && npm run build:bundle
 RUN cd packages/blink-test && npm run build
 RUN cd packages/blink-compiler-ts && npm run build && npm run build:bundle
 
+# Verify bundles were produced during the build stage (fail fast with diagnostic output)
+RUN if [ -f game/demos/blink-engine.bundle.js ] && [ -f game/demos/blink-compiler.bundle.js ]; then \
+			echo "OK: bundles present:" && ls -lh game/demos; \
+		else \
+			echo "ERROR: expected bundles not found in /build/game/demos"; \
+			echo "Contents of /build/game/demos:"; ls -la game/demos || true; \
+			echo "Listing /build/packages for debugging:"; ls -la packages || true; \
+			false; \
+		fi
+
 # Stage 2: Runtime image
 FROM node:20-slim
 
@@ -38,12 +48,13 @@ WORKDIR /workspace
 # Copy built packages from node-builder
 COPY --from=node-builder /build/packages ./packages
 
-# Copy bundles that were created during build
+# Copy example files and demos from the repository first
+COPY game ./game
+
+# Then copy bundles that were created during build into the repo game/demos
+# This ensures the repo's game/ copy does not overwrite the generated bundles.
 COPY --from=node-builder /build/game/demos/blink-engine.bundle.js ./game/demos/
 COPY --from=node-builder /build/game/demos/blink-compiler.bundle.js ./game/demos/
-
-# Copy example files and demos from the repository
-COPY game ./game
 COPY Makefile ./
 
 # Copy entrypoint script

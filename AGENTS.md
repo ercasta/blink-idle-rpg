@@ -14,9 +14,11 @@ If code fails to load due to missing generated files, fix the build process or d
 
 **ALWAYS** run these checks before submitting a PR to ensure the build passes:
 
-1. **Build the compiler:**
+1. **Build the TypeScript compiler:**
    ```bash
-   make build-compiler
+   cd packages/blink-compiler-ts
+   npm install
+   npm run build
    ```
 
 2. **Build the packages:**
@@ -44,11 +46,13 @@ All commands must complete successfully before submitting a PR. This ensures CI/
 
 ## Language Compilation Test Suite
 
-After making changes to the compiler, run the language compilation test suite:
+After making changes to the compiler, run the TypeScript compiler test suite:
 
 ```bash
-cd src/compiler
-cargo test --test language_tests
+cd packages/blink-compiler-ts
+npm install
+npm run build
+npm test
 ```
 
 This test suite validates:

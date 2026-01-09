@@ -58,18 +58,17 @@ This guide is for:
 #### Prerequisites
 
 Before using BRL, you need:
-- **Rust** (for the compiler): Install from [rustup.rs](https://rustup.rs/)
-- **Node.js** (for the engine): Install from [nodejs.org](https://nodejs.org/)
+- **Node.js & npm** (for the compiler and engine): Install from [nodejs.org](https://nodejs.org/)
 
 
 ### Compiling Your Code
 
 ```bash
-# Compile to IR (Intermediate Representation)
-cargo run -- compile -i clicker.brl -o clicker.ir.json --pretty
+# Compile to IR (Intermediate Representation) using the TypeScript compiler
+npx @blink/compiler-ts compile -i clicker.brl -o clicker.ir.json --pretty
 
 # Check for errors without compiling
-cargo run -- check -i clicker.brl
+npx @blink/compiler-ts check -i clicker.brl
 ```
 
 ### Running Your Game
