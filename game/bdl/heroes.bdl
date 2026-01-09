@@ -78,7 +78,7 @@ entity {
                 highestDamage = enemy.Combat.damage
             }
         }
-        return target.id
+        return target
     }
     
     .select_combat_skill = choice(character: Character & Skills & Health & Combat, allies: list, enemies: list): string {
@@ -99,7 +99,7 @@ entity {
                 }
             }
         }
-        if enemies.count >= 2 {
+        if len(enemies) >= 2 {
             if character.Skills.skill3 == "cleave" {
                 return "cleave"
             }
@@ -202,7 +202,7 @@ entity {
                 highestDamage = enemy.Combat.damage
             }
         }
-        return target.id
+        return target
     }
     
     .select_combat_skill = choice(character: Character & Skills & Health & Combat, allies: list, enemies: list): string {
@@ -223,7 +223,7 @@ entity {
                 }
             }
         }
-        if enemies.count >= 2 {
+        if len(enemies) >= 2 {
             if character.Skills.skill3 == "cleave" {
                 return "cleave"
             }
@@ -510,7 +510,7 @@ entity {
                 lowestHealth = enemy.Health.current
             }
         }
-        return target.id
+        return target
     }
     
     .select_combat_skill = choice(character: Character & Skills & Health & Mana & Combat, allies: list, enemies: list): string {
@@ -521,12 +521,12 @@ entity {
                 return "mana_shield"
             }
         }
-        if enemies.count >= 2 && character.Mana.current >= 80 {
+        if len(enemies) >= 2 && character.Mana.current >= 80 {
             if character.Skills.skill4 == "meteor" {
                 return "meteor"
             }
         }
-        if enemies.count >= 2 && character.Mana.current >= 40 {
+        if len(enemies) >= 2 && character.Mana.current >= 40 {
             if character.Skills.skill3 == "blizzard" {
                 return "blizzard"
             }
@@ -895,7 +895,7 @@ entity {
                 highestPriority = priority
             }
         }
-        return target.id
+        return target
     }
     
     .select_combat_skill = choice(character: Character & Skills & Health & Combat, allies: list, enemies: list): string {
@@ -916,7 +916,7 @@ entity {
                 }
             }
         }
-        if enemies.count >= 3 {
+        if len(enemies) >= 3 {
             if character.Skills.skill4 == "blade_flurry" {
                 return "blade_flurry"
             }
@@ -924,7 +924,7 @@ entity {
                 return "fan_of_knives"
             }
         }
-        if enemies.count == 1 {
+        if len(enemies) == 1 {
             if character.Skills.skill3 == "shadowstep" {
                 return "shadowstep"
             }
@@ -1278,7 +1278,7 @@ entity {
                 lowestThreat = threat
             }
         }
-        return target.id
+        return target
     }
     
     .select_combat_skill = choice(character: Character & Skills & Health & Mana & Combat, allies: list, enemies: list): string {
@@ -1327,7 +1327,7 @@ entity {
             }
         }
         if injuredCount == 0 {
-            if enemies.count >= 2 && character.Mana.current >= 80 {
+            if len(enemies) >= 2 && character.Mana.current >= 80 {
                 if character.Skills.skill4 == "divine_storm" {
                     return "divine_storm"
                 }
