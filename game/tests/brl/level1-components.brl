@@ -1,0 +1,71 @@
+// =============================================================================
+// Test Level 1: Simple Component Definitions
+// =============================================================================
+// This file tests the most basic BRL constructs:
+// - Component definitions with various field types
+// - Simple entity declarations
+// =============================================================================
+
+// Basic component with integer fields
+component Counter {
+    value: integer
+}
+
+// Component with multiple field types
+component Stats {
+    name: string
+    level: integer
+    health: integer
+    maxHealth: integer
+}
+
+// Component with float fields
+component Position {
+    x: float
+    y: float
+}
+
+// Component with boolean field
+component Flags {
+    active: boolean
+    visible: boolean
+}
+
+// Component with optional field
+component Target {
+    entity: id?
+}
+
+// Component with list field
+component Inventory {
+    items: list<id>
+}
+
+// Simple entity with single component
+entity {
+    Counter { value: 0 }
+}
+
+// Entity with multiple components
+entity {
+    Stats { 
+        name: "Test Entity"
+        level: 1
+        health: 100
+        maxHealth: 100
+    }
+    Position {
+        x: 0.0
+        y: 0.0
+    }
+    Flags {
+        active: true
+        visible: true
+    }
+}
+
+// Named entity using new syntax
+test_entity = new entity {
+    Counter { value: 42 }
+    Flags { active: true visible: false }
+}

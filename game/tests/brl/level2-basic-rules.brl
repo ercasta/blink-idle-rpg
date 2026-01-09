@@ -1,0 +1,82 @@
+// =============================================================================
+// Test Level 2: Basic Rules with Events and Actions
+// =============================================================================
+// This file tests basic rule constructs:
+// - Simple rules with events
+// - Modify actions (set, add, subtract)
+// - Schedule actions
+// - Emit actions
+// =============================================================================
+
+// Components for testing rules
+component Counter {
+    value: integer
+}
+
+component Health {
+    current: integer
+    max: integer
+}
+
+component Marker {
+    id: string
+}
+
+// Simple rule that modifies a field
+rule increment_counter on Tick {
+    entity.Counter.value += 1
+}
+
+// Rule that uses set operation
+rule reset_counter on Reset {
+    entity.Counter.value = 0
+}
+
+// Rule that modifies health
+rule take_damage on DamageReceived {
+    entity.Health.current -= 10
+}
+
+// Rule that heals
+rule heal_entity on HealReceived {
+    entity.Health.current += 20
+    if entity.Health.current > entity.Health.max {
+        entity.Health.current = entity.Health.max
+    }
+}
+
+// Rule that schedules another event
+rule start_timer on GameStart {
+    schedule [delay: 1.0] Tick {
+    }
+}
+
+// Rule that schedules recurring events
+rule start_ticking on StartTicking {
+    schedule [delay: 0.5] Tick { }
+    schedule [delay: 1.0] Tick { }
+    schedule [delay: 1.5] Tick { }
+}
+
+// Rule that emits an event immediately
+rule check_death on DamageReceived {
+    if entity.Health.current <= 0 {
+        schedule Death { target: entity }
+    }
+}
+
+// Rule with source binding
+rule process_attack on DoAttack {
+    entity.Health.current -= 10
+}
+
+// Entity for testing
+entity {
+    Counter { value: 0 }
+    Marker { id: "counter_entity" }
+}
+
+entity {
+    Health { current: 100 max: 100 }
+    Marker { id: "health_entity" }
+}

@@ -1,0 +1,140 @@
+// =============================================================================
+// Test Level 3: Conditional Logic and Loops
+// =============================================================================
+// This file tests control flow constructs:
+// - if/else statements
+// - for loops
+// - while loops (if supported)
+// - Nested conditionals
+// - let statements with expressions
+// =============================================================================
+
+// Components for testing control flow
+component Health {
+    current: integer
+    max: integer
+}
+
+component Counter {
+    value: integer
+}
+
+component GameState {
+    phase: string
+    score: integer
+    wave: integer
+}
+
+component Enemy {
+    tier: integer
+    name: string
+}
+
+// Simple if statement
+rule check_health on HealthCheck {
+    if entity.Health.current < 50 {
+        entity.Health.current += 10
+    }
+}
+
+// If-else statement
+rule classify_health on HealthClassify {
+    if entity.Health.current > 75 {
+        schedule HealthStatus { status: "healthy" }
+    } else {
+        schedule HealthStatus { status: "injured" }
+    }
+}
+
+// If-else-if chain
+rule classify_health_detailed on DetailedHealthCheck {
+    if entity.Health.current > 80 {
+        schedule HealthStatus { status: "excellent" }
+    } else if entity.Health.current > 50 {
+        schedule HealthStatus { status: "good" }
+    } else if entity.Health.current > 25 {
+        schedule HealthStatus { status: "injured" }
+    } else {
+        schedule HealthStatus { status: "critical" }
+    }
+}
+
+// Nested conditionals
+rule complex_check on ComplexCheck {
+    if entity.Health.current > 0 {
+        if entity.Health.current < entity.Health.max {
+            entity.Health.current += 5
+        }
+        if entity.Health.current > entity.Health.max {
+            entity.Health.current = entity.Health.max
+        }
+    }
+}
+
+// For loop with list literal
+rule spawn_multiple on SpawnWave {
+    let indices = [0, 1, 2, 3, 4]
+    for i in indices {
+        schedule [delay: 0.1 * i] SpawnEnemy { index: i }
+    }
+}
+
+// For loop with entities having
+rule damage_all_enemies on AreaDamage {
+    let enemies = entities having Enemy
+    for enemy in enemies {
+        enemy.Health.current -= 20
+    }
+}
+
+// Let statement with expression
+rule calculate_damage on CalculateDamage {
+    let baseDamage = 10
+    let modifier = 1.5
+    let totalDamage = baseDamage * modifier
+    entity.Health.current -= totalDamage
+}
+
+// Conditional with comparison operators
+rule wave_progression on WaveComplete {
+    if entity has GameState {
+        if entity.GameState.wave < 10 {
+            entity.GameState.wave += 1
+            entity.GameState.score += 100
+        } else {
+            schedule GameWon { }
+        }
+    }
+}
+
+// Loop with conditional inside
+rule process_enemies on ProcessEnemies {
+    let enemies = entities having Enemy
+    for enemy in enemies {
+        if enemy.Enemy.tier > 2 {
+            schedule BossAlert { boss: enemy }
+        } else {
+            schedule EnemySpotted { enemy: enemy }
+        }
+    }
+}
+
+// Test entity
+entity {
+    Health { current: 100 max: 100 }
+    Counter { value: 0 }
+}
+
+entity {
+    GameState { phase: "playing" score: 0 wave: 1 }
+}
+
+entity {
+    Enemy { tier: 1 name: "Goblin" }
+    Health { current: 30 max: 30 }
+}
+
+entity {
+    Enemy { tier: 3 name: "Dragon" }
+    Health { current: 200 max: 200 }
+}
