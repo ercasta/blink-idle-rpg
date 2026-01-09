@@ -21,7 +21,9 @@ describe('RuleExecutor built-in functions', () => {
   });
 
   /**
-   * Helper to schedule and get the event for testing
+   * Helper to schedule an event at time 0 and immediately pop it for testing
+   * @param eventType The type of event to schedule
+   * @returns The scheduled event, ready to be used in executeRule
    */
   function scheduleAndGetEvent(eventType: string): ScheduledEvent {
     timeline.schedule(eventType, 0);

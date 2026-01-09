@@ -14,7 +14,6 @@ import { compileString, CompileResult } from '@blink/compiler-ts';
 function compileAndCreateGame(source: string): BlinkGame {
   const result = compileString(source, 'brl');
   if (result.errors.length > 0) {
-    console.error('Compilation errors:', result.errors);
     throw new Error(`Compilation failed: ${result.errors.map(e => e.message).join(', ')}`);
   }
   
