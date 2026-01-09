@@ -68,21 +68,6 @@ private yieldToUI(): Promise<void> {
 - **Total Overhead**: Minimal for normal event rates, <5% for extreme scenarios
 - **UI Update Frequency**: Browser can render every ~10-20 events instead of every 100
 
-## Testing
-
-A test page has been created at `game/demos/async-test.html` to verify:
-
-1. **Event Processing**: Rapid event chains are processed correctly
-2. **UI Responsiveness**: UI interactions work while simulation runs
-3. **Counter Updates**: Real-time counter shows events being processed
-4. **Log Updates**: Event log displays in real-time
-
-To test:
-```bash
-cd game/demos
-npx serve .
-# Open http://localhost:3000/async-test.html
-```
 
 ## Backward Compatibility
 
@@ -139,5 +124,4 @@ Testing shows:
 ## Related Files
 
 - `packages/blink-engine/src/BlinkGame.ts` - Main implementation
-- `game/demos/async-test.html` - Test page
 - `packages/blink-engine/README.md` - Engine documentation
