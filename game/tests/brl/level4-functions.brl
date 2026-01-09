@@ -1,0 +1,148 @@
+// =============================================================================
+// Test Level 4: Functions and Expressions
+// =============================================================================
+// This file tests function definitions and complex expressions:
+// - User-defined functions
+// - Built-in functions (min, max, len, etc.)
+// - Binary and unary expressions
+// - Field access expressions
+// - Index access expressions
+// - Has component expressions
+// =============================================================================
+
+// Components for testing functions
+component Health {
+    current: integer
+    max: integer
+}
+
+component Combat {
+    damage: integer
+    defense: integer
+    critChance: float
+    critMultiplier: float
+}
+
+component Stats {
+    strength: integer
+    dexterity: integer
+    intelligence: integer
+}
+
+component Buffs {
+    damageBonus: integer
+    defenseBonus: integer
+}
+
+// User-defined function for damage calculation
+fn calculate_damage(base: number, bonus: number): number {
+    return base + bonus
+}
+
+// Function with min/max
+fn clamp_health(current: number, maxVal: number): number {
+    if current > maxVal {
+        return maxVal
+    }
+    if current < 0 {
+        return 0
+    }
+    return current
+}
+
+// Function for percentage calculation
+fn calculate_percentage(current: number, maximum: number): number {
+    return current / maximum * 100
+}
+
+// Rule using user-defined function
+rule apply_damage on DamageCalculate {
+    let base = entity.Combat.damage
+    let bonus = entity.Buffs.damageBonus
+    let total = calculate_damage(base, bonus)
+    schedule DamageResult { damage: total }
+}
+
+// Rule using built-in min function
+rule cap_health on HealReceived {
+    let newHealth = entity.Health.current + 50
+    let cappedHealth = min(newHealth, entity.Health.max)
+    entity.Health.current = cappedHealth
+}
+
+// Rule using built-in max function
+rule prevent_negative_health on DamageReceived {
+    let newHealth = entity.Health.current - 30
+    entity.Health.current = max(newHealth, 0)
+}
+
+// Rule using len function
+rule count_entities on CountEntities {
+    let healthEntities = entities having Health
+    let count = len(healthEntities)
+    schedule EntityCount { count: count }
+}
+
+// Rule with complex binary expressions
+rule calculate_stats on StatsCalc {
+    let baseDamage = entity.Stats.strength * 2 + entity.Stats.dexterity / 2
+    let baseDefense = entity.Stats.strength / 2 + entity.Stats.dexterity
+    let magicPower = entity.Stats.intelligence * 3
+    schedule StatsResult {
+        damage: baseDamage
+        defense: baseDefense
+        magic: magicPower
+    }
+}
+
+// Rule with comparison expressions
+rule check_critical on CritCheck {
+    let roll = 0.5
+    if roll < entity.Combat.critChance {
+        let damage = entity.Combat.damage * entity.Combat.critMultiplier
+        schedule CriticalHit { damage: damage }
+    } else {
+        schedule NormalHit { damage: entity.Combat.damage }
+    }
+}
+
+// Rule with has component expression
+rule check_buffs on BuffCheck {
+    if entity has Buffs {
+        let totalBonus = entity.Buffs.damageBonus + entity.Buffs.defenseBonus
+        schedule BuffsActive { totalBonus: totalBonus }
+    } else {
+        schedule NoBuffs { }
+    }
+}
+
+// Rule with unary expression
+rule check_active on ActivityCheck {
+    let isInactive = entity.Health.current == 0
+    if isInactive {
+        schedule EntityDead { target: entity }
+    }
+}
+
+// Rule with index access
+rule process_first on ProcessFirst {
+    let healthEntities = entities having Health
+    if len(healthEntities) > 0 {
+        let first = healthEntities[0]
+        first.Health.current -= 10
+    }
+}
+
+// Test entities
+entity {
+    Health { current: 100 max: 100 }
+    Combat { damage: 20 defense: 10 critChance: 0.2 critMultiplier: 2.0 }
+    Stats { strength: 15 dexterity: 12 intelligence: 8 }
+    Buffs { damageBonus: 5 defenseBonus: 3 }
+}
+
+entity {
+    Health { current: 50 max: 50 }
+    Combat { damage: 15 defense: 5 critChance: 0.1 critMultiplier: 1.5 }
+    Stats { strength: 10 dexterity: 10 intelligence: 10 }
+}

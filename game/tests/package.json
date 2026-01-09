@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@blink/engine": "file:../../packages/blink-engine",
+    "@blink/compiler-ts": "file:../../packages/blink-compiler-ts",
     "@blink/test": "file:../../packages/blink-test"
   }
 }

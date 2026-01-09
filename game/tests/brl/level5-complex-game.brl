@@ -1,0 +1,408 @@
+// =============================================================================
+// Test Level 5: Complex Game Logic
+// =============================================================================
+// This file tests complex game mechanics:
+// - Combat system with targeting
+// - Entity cloning
+// - Wave spawning
+// - State machines
+// - Multiple interacting rules
+// =============================================================================
+
+// =============================================================================
+// COMPONENTS
+// =============================================================================
+
+component Character {
+    name: string
+    level: integer
+    experience: integer
+    experienceToLevel: integer
+}
+
+component Health {
+    current: integer
+    max: integer
+}
+
+component Combat {
+    damage: integer
+    defense: integer
+    attackSpeed: float
+}
+
+component Target {
+    entity: id?
+}
+
+component Team {
+    id: string
+    isPlayer: boolean
+}
+
+component Enemy {
+    tier: integer
+    isBoss: boolean
+    expReward: integer
+}
+
+component EnemyTemplate {
+    isTemplate: boolean
+}
+
+component GameState {
+    currentWave: integer
+    enemiesDefeated: integer
+    gameOver: boolean
+    victory: boolean
+}
+
+component SpawnConfig {
+    initialEnemyCount: integer
+    maxTier: integer
+}
+
+// =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
+
+fn calculate_damage(base: number, defense: number): number {
+    let reduced = base - defense / 2
+    if reduced < 1 {
+        return 1
+    }
+    return reduced
+}
+
+fn calculate_exp_for_level(level: number): number {
+    return 100 * level
+}
+
+// =============================================================================
+// GAME INITIALIZATION
+// =============================================================================
+
+rule initialize_game on GameStart {
+    if entity has GameState {
+        // Start the combat system
+        schedule StartCombat { }
+        
+        // Spawn initial enemies
+        let spawnEntities = entities having SpawnConfig
+        if len(spawnEntities) > 0 {
+            schedule SpawnWave { wave: 1 }
+        }
+    }
+}
+
+rule start_player_attacks on StartCombat {
+    if entity.Team.isPlayer {
+        if entity.Health.current > 0 {
+            schedule [delay: 0.1] DoAttack { source: entity }
+        }
+    }
+}
+
+// =============================================================================
+// ENEMY SPAWNING
+// =============================================================================
+
+rule spawn_wave on SpawnWave {
+    if entity has SpawnConfig {
+        let indices = [0, 1, 2]
+        for i in indices {
+            schedule [delay: 0.5 * i] SpawnEnemy { tier: 1 }
+        }
+    }
+}
+
+rule spawn_enemy on SpawnEnemy {
+    if entity has SpawnConfig {
+        // Find enemy templates
+        let templates = entities having EnemyTemplate
+        if len(templates) > 0 {
+            let template = templates[0]
+            
+            // Clone the template
+            let newEnemy = clone template {
+                EnemyTemplate { isTemplate: false }
+            }
+            
+            // Initialize the new enemy's target
+            newEnemy.Target.entity = null
+            
+            // Schedule enemy attack
+            schedule [delay: 0.5] DoAttack { source: newEnemy }
+        }
+    }
+}
+
+// =============================================================================
+// COMBAT SYSTEM
+// =============================================================================
+
+rule attack on DoAttack {
+    if entity.Health.current > 0 {
+        if entity.Target.entity != null {
+            let target = entity.Target.entity
+            
+            // Check target is valid
+            if target.Health {
+                if target.Health.current > 0 {
+                    // Calculate and apply damage
+                    let baseDamage = entity.Combat.damage
+                    let defense = target.Combat.defense
+                    let damage = calculate_damage(baseDamage, defense)
+                    
+                    target.Health.current -= damage
+                    
+                    // Check for death
+                    if target.Health.current <= 0 {
+                        schedule Death { target: target attacker: entity }
+                    }
+                    
+                    // Schedule next attack
+                    let attackDelay = 1 / entity.Combat.attackSpeed
+                    schedule [delay: attackDelay] DoAttack { source: entity }
+                }
+            }
+        } else {
+            // No target, find one
+            schedule FindTarget { seeker: entity }
+        }
+    }
+}
+
+// =============================================================================
+// TARGETING SYSTEM
+// =============================================================================
+
+rule find_target on FindTarget {
+    let seeker = event.seeker
+    
+    if seeker has Team {
+        if seeker.Team.isPlayer {
+            // Player targets enemies
+            let enemies = entities having Enemy
+            for enemy in enemies {
+                if enemy has EnemyTemplate {
+                    if enemy.EnemyTemplate.isTemplate == false {
+                        if enemy.Health.current > 0 {
+                            seeker.Target.entity = enemy
+                            schedule DoAttack { source: seeker }
+                        }
+                    }
+                }
+            }
+        } else {
+            // Enemy targets players
+            let players = entities having Team
+            for player in players {
+                if player.Team.isPlayer {
+                    if player.Health.current > 0 {
+                        seeker.Target.entity = player
+                        schedule DoAttack { source: seeker }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// =============================================================================
+// DEATH AND REWARDS
+// =============================================================================
+
+rule handle_death on Death {
+    let target = event.target
+    let attacker = event.attacker
+    
+    // Check if enemy died
+    if target has Enemy {
+        // Grant experience to players
+        let players = entities having Character
+        for player in players {
+            if player.Team.isPlayer {
+                player.Character.experience += target.Enemy.expReward
+                schedule CheckLevelUp { character: player }
+            }
+        }
+        
+        // Update game state
+        let gameStates = entities having GameState
+        if len(gameStates) > 0 {
+            let state = gameStates[0]
+            state.GameState.enemiesDefeated += 1
+            
+            // Check for wave completion
+            if state.GameState.enemiesDefeated >= 5 {
+                schedule WaveComplete { wave: state.GameState.currentWave }
+            }
+        }
+        
+        // Clear target references
+        schedule ClearTarget { deadEntity: target }
+    }
+    
+    // Check if player died
+    if target has Character {
+        let gameStates = entities having GameState
+        if len(gameStates) > 0 {
+            let state = gameStates[0]
+            
+            // Check if all players dead
+            let playersAlive = 0
+            let players = entities having Character
+            for p in players {
+                if p.Health.current > 0 {
+                    playersAlive += 1
+                }
+            }
+            
+            if playersAlive == 0 {
+                state.GameState.gameOver = true
+                state.GameState.victory = false
+                schedule GameOver { victory: false }
+            }
+        }
+    }
+}
+
+// =============================================================================
+// LEVEL UP SYSTEM
+// =============================================================================
+
+rule check_levelup on CheckLevelUp {
+    let character = event.character
+    
+    if character.Character.experience >= character.Character.experienceToLevel {
+        // Level up!
+        character.Character.level += 1
+        character.Character.experience -= character.Character.experienceToLevel
+        character.Character.experienceToLevel *= 1.5
+        
+        // Increase stats
+        character.Health.max += 10
+        character.Health.current += 10
+        character.Combat.damage += 2
+        
+        schedule LevelUp { character: character newLevel: character.Character.level }
+    }
+}
+
+// =============================================================================
+// WAVE PROGRESSION
+// =============================================================================
+
+rule wave_complete on WaveComplete {
+    if entity has GameState {
+        let currentWave = entity.GameState.currentWave
+        
+        if currentWave >= 3 {
+            // Victory!
+            entity.GameState.victory = true
+            entity.GameState.gameOver = true
+            schedule GameOver { victory: true }
+        } else {
+            // Next wave
+            entity.GameState.currentWave += 1
+            entity.GameState.enemiesDefeated = 0
+            schedule SpawnWave { wave: entity.GameState.currentWave }
+        }
+    }
+}
+
+// =============================================================================
+// CLEANUP
+// =============================================================================
+
+rule clear_dead_targets on ClearTarget {
+    let dead = event.deadEntity
+    
+    // Clear any entity targeting the dead entity
+    let allWithTargets = entities having Target
+    for e in allWithTargets {
+        if e.Target.entity == dead {
+            e.Target.entity = null
+            schedule FindTarget { seeker: e }
+        }
+    }
+}
+
+// =============================================================================
+// INITIAL ENTITIES
+// =============================================================================
+
+// Game state entity
+game_state = new entity {
+    GameState {
+        currentWave: 1
+        enemiesDefeated: 0
+        gameOver: false
+        victory: false
+    }
+    SpawnConfig {
+        initialEnemyCount: 3
+        maxTier: 3
+    }
+}
+
+// Player entity
+player = new entity {
+    Character {
+        name: "Hero"
+        level: 1
+        experience: 0
+        experienceToLevel: 100
+    }
+    Health {
+        current: 100
+        max: 100
+    }
+    Combat {
+        damage: 20
+        defense: 10
+        attackSpeed: 1.0
+    }
+    Target {
+        entity: null
+    }
+    Team {
+        id: "player"
+        isPlayer: true
+    }
+}
+
+// Enemy template
+goblin_template = new entity {
+    Character {
+        name: "Goblin"
+        level: 1
+        experience: 0
+        experienceToLevel: 999
+    }
+    Health {
+        current: 30
+        max: 30
+    }
+    Combat {
+        damage: 8
+        defense: 2
+        attackSpeed: 0.8
+    }
+    Target {
+        entity: null
+    }
+    Team {
+        id: "enemy"
+        isPlayer: false
+    }
+    Enemy {
+        tier: 1
+        isBoss: false
+        expReward: 25
+    }
+    EnemyTemplate {
+        isTemplate: true
+    }
+}

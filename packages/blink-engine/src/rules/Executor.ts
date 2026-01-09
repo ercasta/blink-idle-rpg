@@ -483,9 +483,13 @@ export class RuleExecutor {
         return expr.value;
 
       case 'var': {
-        // Check locals first (let bindings), then entity bindings
+        // Check locals first (let bindings), then params (for function calls), then entity bindings
         if (context.locals.has(expr.name)) {
           return context.locals.get(expr.name)!;
+        }
+        // Check function parameters
+        if (context.params.has(expr.name)) {
+          return context.params.get(expr.name)!;
         }
         const entityId = context.bindings.get(expr.name);
         return entityId !== undefined ? entityId : null;
