@@ -6,7 +6,7 @@ import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert';
 import { RuleExecutor } from './Executor';
 import { Store } from '../ecs/Store';
-import { Timeline } from '../timeline/Timeline';
+import { Timeline, ScheduledEvent } from '../timeline/Timeline';
 import { IRRule } from '../ir/types';
 
 describe('RuleExecutor built-in functions', () => {
@@ -19,6 +19,14 @@ describe('RuleExecutor built-in functions', () => {
     store = new Store();
     timeline = new Timeline();
   });
+
+  /**
+   * Helper to schedule and get the event for testing
+   */
+  function scheduleAndGetEvent(eventType: string): ScheduledEvent {
+    timeline.schedule(eventType, 0);
+    return timeline.pop()!;
+  }
 
   it('should implement list function', () => {
     // Create a rule that uses the list function
@@ -53,7 +61,7 @@ describe('RuleExecutor built-in functions', () => {
 
     // Execute the rule
     executor.loadRules([rule]);
-    const event = timeline.schedule('TestEvent', 0);
+    const event = scheduleAndGetEvent('TestEvent');
     executor.executeRule(rule, event, store, timeline);
 
     // No error should be thrown - the list function should work
@@ -99,7 +107,7 @@ describe('RuleExecutor built-in functions', () => {
 
     // Execute the rule
     executor.loadRules([rule]);
-    const event = timeline.schedule('TestEvent', 0);
+    const event = scheduleAndGetEvent('TestEvent');
     executor.executeRule(rule, event, store, timeline);
 
     // The entities_having function should return the entities with Health
@@ -152,7 +160,7 @@ describe('RuleExecutor built-in functions', () => {
 
     // Execute the rule
     executor.loadRules([rule]);
-    const event = timeline.schedule('TestEvent', 0);
+    const event = scheduleAndGetEvent('TestEvent');
     executor.executeRule(rule, event, store, timeline);
 
     // No error should be thrown - the get function should work
@@ -214,7 +222,7 @@ describe('RuleExecutor built-in functions', () => {
 
     // Execute the rule
     executor.loadRules([rule]);
-    const event = timeline.schedule('TestEvent', 0);
+    const event = scheduleAndGetEvent('TestEvent');
     executor.executeRule(rule, event, store, timeline);
 
     // The loop should iterate over entities and access their fields
