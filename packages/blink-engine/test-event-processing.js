@@ -22,7 +22,6 @@ game.loadRulesFromObject({
     }]
   }],
   functions: [],
-  trackers: [],
   initial_state: { entities: [] }
 });
 

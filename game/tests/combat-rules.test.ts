@@ -116,10 +116,6 @@ const combatIR = {
     }
   ],
   functions: [],
-  trackers: [
-    { id: 0, component: "Health", event: "DoAttack" },
-    { id: 1, component: "Character", event: "Death" }
-  ],
   initial_state: {
     entities: [
       {

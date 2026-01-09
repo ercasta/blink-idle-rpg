@@ -19,7 +19,7 @@ In Blink you define your Rpg party and some decision rules, then the entire game
 - The simulation is based on events
 - Events are entities too, so they have components
 - Triggers activate specific rules in correspondence of events
-- Trackers track key information (entities and components) in correspondence of events, to give feedback to the user. They are a special kind of rule
+- Trackers were removed from the language; use rule-emitted events or logging events to deliver UI feedback instead
 - There is no explicit language for actual game content: it is represented by entities and components, whose initial state can be loaded by the engine; from that point on, rules are used to make the game progress
 
 ## (BRL) Blink Rule Language

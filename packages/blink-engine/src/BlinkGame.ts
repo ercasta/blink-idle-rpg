@@ -196,7 +196,6 @@ export class BlinkGame {
       console.log(`[BlinkGame] Loaded IR module: ${ir.module}`);
       console.log(`[BlinkGame] Components: ${ir.components.length}`);
       console.log(`[BlinkGame] Rules: ${ir.rules.length}`);
-      console.log(`[BlinkGame] Trackers: ${(ir.trackers ?? []).length}`);
     }
   }
 

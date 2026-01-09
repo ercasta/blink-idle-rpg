@@ -90,7 +90,7 @@ Key concepts:
    - `attack_rule`: Deals damage and schedules next attack
    - `death_check`: Emits Death event when health ≤ 0
    - `level_up`: Increases character stats on leveling
-3. **Trackers**: Capture component data on events for UI updates
+3. **Trackers**: (Removed) Use rule-emitted events or `LogEvent` entities to provide UI updates and debugging information
 4. **Events**: Trigger rules and drive the game simulation
 
 ## Mobile Optimization

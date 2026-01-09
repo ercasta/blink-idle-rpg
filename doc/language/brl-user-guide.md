@@ -61,41 +61,6 @@ Before using BRL, you need:
 - **Rust** (for the compiler): Install from [rustup.rs](https://rustup.rs/)
 - **Node.js** (for the engine): Install from [nodejs.org](https://nodejs.org/)
 
-#### Building the Compiler
-
-```bash
-# Clone the repository
-git clone https://github.com/ercasta/blink-idle-rpg.git
-cd blink-idle-rpg
-
-# Build the compiler
-cd src/compiler
-cargo build --release
-
-# Test the compiler
-cargo run -- --help
-```
-
-### Your First BRL Program
-
-Let's create a simple clicker game:
-
-```brl
-// clicker.brl - A simple clicking game
-
-// Define a component to track clicks
-component Clicks {
-    count: integer
-}
-
-// Rule: When a Click event happens, increment the count
-rule handle_click on Click {
-    entity.Clicks.count += 1
-}
-
-// NOTE: Trackers have been removed from the language. Use rule emits or explicit
-// UI events to surface state for the UI.
-```
 
 ### Compiling Your Code
 
@@ -146,9 +111,6 @@ rule RuleName on EventType {
 fn function_name(param: type): return_type {
     return value
 }
-
-// Trackers (UI feedback) — removed from language
-// Use rule emits or UI-specific messages instead
 
 // Modules
 module module_name {
@@ -290,13 +252,22 @@ rule apply_heal on HealEvent {
 }
 ```
 
-#### Step 4: Add Trackers
+#### Step 4: Surface State for UI and Debugging
+
+
 
 ```brl
-// Track health changes for UI
-tracker Health on DamageEvent
-tracker Health on HealEvent
-tracker Character on DamageEvent  // Show names in combat log
+component LogEvent {
+    message: string
+    data: string
+}
+
+rule debug_damage on DamageEvent {
+    schedule LogEvent {
+        message: "Damage applied"
+        data: "amount=" + event.DamageEvent.amount as string
+    }
+}
 ```
 
 ### Tutorial 2: Creating a Combat System
@@ -894,18 +865,9 @@ target.Health.current = 0
 
 ### Debugging Tips
 
-#### 1. Use Trackers Liberally
+#### 1. Surface State via Events
 
-```brl
-// Track everything during development
-tracker Health on DamageEvent
-tracker Character on DamageEvent
-tracker Combat on DamageEvent
-
-// Remove unnecessary trackers for production
-```
-
-#### 2. Add Logging Events
+Use rule-emitted events or lightweight logging events to expose state to the UI and for debugging. Emit structured `LogEvent` entities or other domain events that your UI subscribes to.
 
 ```brl
 component LogEvent {
@@ -919,8 +881,6 @@ rule debug_damage on DamageEvent {
         data: "amount=" + event.DamageEvent.amount as string
     }
 }
-
-tracker LogEvent on LogEvent
 ```
 
 #### 3. Test Incrementally
@@ -1058,12 +1018,7 @@ rule auto_click on AutoClickTick {
     player.Clicks.count += clicks as integer
 }
 
-// === TRACKERS ===
-
-tracker Clicks on Click
-tracker Clicks on BuyUpgrade
-tracker Clicks on AutoClickTick
-tracker Upgrades on BuyUpgrade
+// (Trackers removed — use LogEvent or emit domain events for UI/debugging)
 ```
 
 ### Example 2: Turn-Based Combat
@@ -1168,11 +1123,7 @@ rule process_action on ActionChosen {
     schedule NextTurn { }
 }
 
-// === TRACKERS ===
-
-tracker Health on ActionChosen
-tracker Character on ActionChosen
-tracker CombatState on TurnStart
+// (Trackers removed — use LogEvent or emit domain events for UI/debugging)
 ```
 
 ### Example 3: Inventory System
@@ -1286,12 +1237,7 @@ rule sell_item on SellItem {
     delete item
 }
 
-// === TRACKERS ===
-
-tracker Inventory on PickupItem
-tracker Inventory on SellItem
-tracker Equipment on EquipItem
-tracker Item on PickupItem
+// (Trackers removed — use LogEvent or emit domain events for UI/debugging)
 ```
 
 ---

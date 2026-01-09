@@ -85,7 +85,7 @@ component  rule       on         trigger    event
 entity     if         else       for        while
 fn         return     true       false      null
 schedule   cancel     recurring  module     import
-tracker    when       create     delete     has
+when       create     delete     has
 choice
 ```
 
@@ -535,15 +535,9 @@ import combat.{ DamageEvent, AttackEvent }
 ```
 
 ---
-## 12. Trackers
+<!-- Trackers removed: documentation and language references condensed. -->
 
-Trackers have been removed from the language. Engines and tooling should surface state to the UI using explicit rule outputs, emitted events, or other UI-specific mechanisms rather than a dedicated `tracker` declaration.
-
-Note: legacy IR may contain an optional `trackers` field for backward compatibility; engines should ignore it.
-
----
-
-## 13. Choice Points
+## 12. Choice Points
 
 Choice points are declarations that mark customizable decision points in the game logic. They specify where players can customize behavior through BCL (Blink Choice Language). BRL declares choice points; BCL implements them.
 
@@ -727,7 +721,6 @@ declaration = component_def
             | rule_def
             | function_def
             | module_def
-            | tracker_def
             | choice_point_def ;
 
 component_def = "component" identifier "{" { field_def } "}" ;
@@ -763,4 +756,4 @@ docstring = "///" string_literal ;
 | Version | Date | Changes |
 |---------|------|---------|
 | 0.1.0 | 2024-12-31 | Initial draft |
-| 0.2.0 | 2026-01-04 | Added section 13.7: Entity-Bound Choice Functions |
+| 0.2.0 | 2026-01-04 | Added section 12.7: Entity-Bound Choice Functions |

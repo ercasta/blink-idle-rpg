@@ -100,7 +100,7 @@ const time = test.getTime();
 
 // Get history
 const events = test.getEventHistory();
-const trackers = test.getTrackerHistory();
+// Tracker history API removed; use event history or scheduled LogEvent entries for UI/debugging
 ```
 
 ## Assertions

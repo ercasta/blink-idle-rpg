@@ -255,12 +255,6 @@ const classicRpgIR = {
     }
   ],
   functions: [],
-  trackers: [
-    { id: 0, component: "Health", event: "DoAttack" },
-    { id: 1, component: "Character", event: "Death" },
-    { id: 2, component: "Character", event: "LevelUp" },
-    { id: 3, component: "GameState", event: "EnemyDefeated" }
-  ],
   initial_state: {
     entities: [
       {

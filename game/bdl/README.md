@@ -23,7 +23,7 @@ BDL is designed to be simple and safe - it cannot define behavior, only data.
 BDL files are loaded **after** BRL files because they depend on component definitions from BRL.
 
 Loading order:
-1. `game/brl/*.brl` - Component definitions, rules, trackers
+1. `game/brl/*.brl` - Component definitions and rules
 2. `game/bcl/*.bcl` - Player strategies (optional)
 3. `game/bdl/*.bdl` - Entity data
 

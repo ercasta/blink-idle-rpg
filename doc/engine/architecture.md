@@ -366,69 +366,24 @@ enum FieldValue {
 
 ### 7.5 Examples
 
-BRL syntax:
+Trackers were removed from the language and engine. Instead of declaring `tracker` blocks, author explicit rule actions that emit UI-friendly events or schedule `LogEvent` entities. The UI subscribes to these events and updates accordingly.
+
+BRL alternative (emit UI event):
 ```brl
-// Track Health component on damage events
-tracker Health on DamageEvent
-
-// Track Position on movement
-tracker Position on MoveEvent
-
-// Track multiple components on same event
-tracker Health on DamageEvent
-tracker Character on DamageEvent
-```
-
-Engine behavior:
-```rust
-// When DamageEvent fires and Health tracker is active:
-// Output contains:
-{
-    time: 1.25,
-    event_type: "DamageEvent",
-    component_type: "Health",
-    entities: [
-        {
-            entity_id: EntityId(42),
-            fields: {
-                "current": Integer(75),
-                "maximum": Integer(100),
-                "regeneration": Float(1.5)
-            }
-        },
-        {
-            entity_id: EntityId(43),
-            fields: {
-                "current": Integer(100),
-                "maximum": Integer(100),
-                "regeneration": Float(2.0)
-            }
-        }
-    ]
+rule on_damage on DamageEvent {
+    // Emit a UI-friendly event with necessary context
+    schedule LogEvent {
+        message: "Damage applied",
+        data: "attacker=" + event.DamageEvent.source as string + ", target=" + event.DamageEvent.target as string + ", amount=" + event.DamageEvent.amount as string
+    }
 }
 ```
 
-### 7.6 UI Integration
-
-The UI receives tracker output and can:
-- Build combat logs from Character + Health data
-- Update health bars from Health data
-- Animate movement from Position data
-- Display buff icons from Buff data
-
-Example combat log construction:
+UI behavior:
 ```javascript
-// UI receives two tracker outputs from DamageEvent:
-// 1. Character data (names)
-// 2. Health data (health values)
-
-function buildCombatLog(characterData, healthData, event) {
-    const attacker = characterData.entities.find(e => e.entity_id === event.source);
-    const defender = characterData.entities.find(e => e.entity_id === event.target);
-    const defenderHealth = healthData.entities.find(e => e.entity_id === event.target);
-    
-    return `${attacker.fields.name} hits ${defender.fields.name} for ${event.amount} damage! ` +
-           `(${defenderHealth.fields.current}/${defenderHealth.fields.maximum} HP)`;
+// Subscribe to LogEvent or other emitted UI events
+function handleLogEvent(evt) {
+  // Parse evt.data and update health bars, combat log, animations, etc.
 }
 ```
 
