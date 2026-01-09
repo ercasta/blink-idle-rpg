@@ -492,7 +492,16 @@ export class RuleExecutor {
       }
 
       case 'param': {
-        return context.params.get(expr.name) ?? null;
+        // First check function params
+        const paramValue = context.params.get(expr.name);
+        if (paramValue !== undefined) {
+          return paramValue;
+        }
+        // Then check event fields
+        if (context.event.fields && expr.name in context.event.fields) {
+          return context.event.fields[expr.name] as IRFieldValue;
+        }
+        return null;
       }
 
       case 'field': {

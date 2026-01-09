@@ -8,12 +8,14 @@
 import { tokenize, Token, TokenKind, Span, LexerError } from './lexer';
 import { parse, Parser, ParseError } from './parser';
 import { generate, CodeGenerator, GeneratorOptions } from './codegen';
+import { analyze, SemanticAnalyzer, SemanticError } from './semantic';
 import * as AST from './ast';
 import * as IR from './ir';
 
 export { tokenize, Token, TokenKind, Span, LexerError } from './lexer';
 export { parse, Parser, ParseError } from './parser';
 export { generate, CodeGenerator, GeneratorOptions } from './codegen';
+export { analyze, SemanticAnalyzer, SemanticError } from './semantic';
 export * as AST from './ast';
 export * as IR from './ir';
 
@@ -67,6 +69,7 @@ function positionToLineColumn(source: string, position: number): { line: number;
 export function compile(sources: SourceFile[], options: CompileOptions = {}): CompileResult {
   const errors: CompileError[] = [];
   const modules: AST.Module[] = [];
+  const sourceContents: Map<number, { path: string; content: string }> = new Map();
   
   const generator = new CodeGenerator({
     moduleName: options.moduleName,
@@ -79,11 +82,14 @@ export function compile(sources: SourceFile[], options: CompileOptions = {}): Co
   }
   
   // Parse each source file
+  let moduleIndex = 0;
   for (const source of sources) {
     try {
       const tokens = tokenize(source.content);
       const ast = parse(tokens);
       modules.push(ast);
+      sourceContents.set(moduleIndex, { path: source.path, content: source.content });
+      moduleIndex++;
     } catch (e) {
       if (e instanceof LexerError) {
         const { line, column } = positionToLineColumn(source.content, e.position);
@@ -115,7 +121,38 @@ export function compile(sources: SourceFile[], options: CompileOptions = {}): Co
     }
   }
   
-  // If there are errors, return empty IR
+  // If there are parse errors, return empty IR
+  if (errors.length > 0) {
+    return {
+      ir: {
+        version: '1.0',
+        module: options.moduleName ?? 'unnamed',
+        components: [],
+        rules: [],
+        functions: [],
+      },
+      errors,
+    };
+  }
+  
+  // Perform semantic analysis
+  const semanticErrors = analyze(modules);
+  for (const semErr of semanticErrors) {
+    // Find the source file for this error based on span position
+    // For now, use the first source file as a fallback
+    const sourceInfo = sources[0];
+    const { line, column } = positionToLineColumn(sourceInfo.content, semErr.span.start);
+    errors.push({
+      type: 'semantic',
+      message: semErr.message,
+      file: sourceInfo.path,
+      position: semErr.span.start,
+      line,
+      column,
+    });
+  }
+  
+  // If there are semantic errors, return empty IR
   if (errors.length > 0) {
     return {
       ir: {

@@ -233,6 +233,17 @@ export class CodeGenerator {
   }
 
   private generateAssignment(stmt: AST.AssignmentStatement): IR.IRAction | null {
+    // Handle simple identifier assignment (local variable reassignment)
+    if (stmt.target.type === 'identifier') {
+      // Generate a let action to update the local variable
+      // Note: This works because the executor updates locals via set()
+      return {
+        type: 'let',
+        name: stmt.target.name,
+        value: this.generateExpression(stmt.value),
+      };
+    }
+    
     // Extract entity, component, and field from the target
     if (stmt.target.type === 'field_access') {
       const { entity, component, field } = this.extractFieldAccess(stmt.target);
@@ -554,7 +565,13 @@ export class CodeGenerator {
       }
     }
     
-    // Fallback to var reference
+    // Handle event.field pattern - access event fields
+    if (expr.base.type === 'identifier' && expr.base.name === 'event') {
+      // Generate an event field access - this becomes a param lookup at runtime
+      return { type: 'param', name: expr.field };
+    }
+    
+    // Fallback to var reference (for entity.Component access where Component becomes a var)
     return { type: 'var', name: expr.field };
   }
 
