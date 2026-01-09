@@ -1798,9 +1798,9 @@
     
     <!-- Speed Control -->
     <div class="speed-control">
-      <label for="speed-slider">Steps per Go:</label>
-      <input type="range" id="speed-slider" min="1" max="500" step="1" value="50">
-      <span id="speed-value">50 steps</span>
+      <label for="speed-slider">Simulation Time:</label>
+      <input type="range" id="speed-slider" min="5" max="500" step="5" value="50">
+      <span id="speed-value">50s</span>
     </div>
     
     <!-- Controls -->
@@ -3754,7 +3754,7 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
       gameStatusEl.style.color = '#4ade80';
       
       addLogEntry('system', `⚔️ ${selectedCharacters.map(c => c.name).join(', ')} are ready for battle!`);
-      addLogEntry('system', 'Click "Go!" to run simulation steps.');
+      addLogEntry('system', 'Click "Go!" to run simulation time.');
     }
     
     async function initGame() {
@@ -4129,19 +4129,21 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
     // Event listeners
     startBtn.addEventListener('click', async () => {
       if (game && !gameState.gameOver) {
-        const steps = parseInt(speedSlider.value);
-        addLogEntry('system', `⚡ Running ${steps} simulation steps...`);
+        const targetSimTime = parseFloat(speedSlider.value);
+        const currentTime = game.getTime();
+        const targetTime = currentTime + targetSimTime;
+        
+        addLogEntry('system', `⚡ Running simulation for ${targetSimTime} seconds (until ${targetTime.toFixed(2)}s)...`);
         
         // Disable button during processing
         startBtn.disabled = true;
         
         try {
-          // Run the specified number of steps with periodic UI updates
-          // Process 1 step at a time but update UI infrequently to keep browser responsive
+          // Run until we reach target simulation time
+          let stepsProcessed = 0;
           const uiUpdateInterval = 5; // Update UI every 5 steps
-          let processed = 0;
           
-          while (processed < steps) {
+          while (game.getTime() < targetTime) {
             if (!game.hasEvents()) {
               addLogEntry('system', '⏹️ No more events to process');
               break;
@@ -4149,10 +4151,10 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
             
             // Process one step
             game.step();
-            processed++;
+            stepsProcessed++;
             
             // Update UI periodically, not after every step
-            if (processed % uiUpdateInterval === 0 || processed >= steps) {
+            if (stepsProcessed % uiUpdateInterval === 0) {
               updateCharacterData();
               updateUI();
               renderParties();
@@ -4167,7 +4169,7 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
           updateUI();
           renderParties();
           
-          addLogEntry('system', `✅ Completed ${processed} steps at sim time ${game.getTime().toFixed(2)}s`);
+          addLogEntry('system', `✅ Completed ${stepsProcessed} steps, reached sim time ${game.getTime().toFixed(2)}s`);
         } catch (error) {
           addLogEntry('system', `❌ Error: ${error.message}`);
         } finally {
@@ -4188,8 +4190,8 @@ choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats
     fleeBtn.addEventListener('click', handleFlee);
     
     speedSlider.addEventListener('input', (e) => {
-      const steps = parseInt(e.target.value);
-      speedValue.textContent = `${steps} step${steps !== 1 ? 's' : ''}`;
+      const seconds = parseInt(e.target.value);
+      speedValue.textContent = `${seconds}s`;
     });
     
     // ========================================================================
