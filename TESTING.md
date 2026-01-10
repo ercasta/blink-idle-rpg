@@ -13,7 +13,7 @@ make compile-brl
 ```
 
 ### 2. Game Initialization
-- Open `game/demos/rpg-demo.html`
+-- Open `game/demos/classic-rpg.html`
 - Select 4 heroes
 - Click "Start Adventure"
 - Verify:
@@ -133,4 +133,4 @@ Display updated penalties
 3. `game/bcl/flee-conservative.bcl` - Safe strategy
 4. `game/bcl/flee-aggressive.bcl` - Risky strategy
 5. `game/ir/classic-rpg.ir.json` - Compiled output
-6. `game/demos/rpg-demo.html` - UI layer
+6. `game/demos/classic-rpg.html` - UI layer

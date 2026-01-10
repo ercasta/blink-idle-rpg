@@ -15,7 +15,7 @@ if [ "$1" = "serve" ]; then
     echo ""
     echo "Available demos:"
     echo "  - http://localhost:3000/index.html (Demo launcher - start here!)"
-    echo "  - http://localhost:3000/rpg-demo.html (Classic RPG)"
+    echo "  - http://localhost:3000/classic-rpg.html (Classic RPG)"
     echo ""
     echo "The demos use the TypeScript compiler to compile BRL/BDL files in the browser."
     echo ""

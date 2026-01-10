@@ -191,47 +191,11 @@ npx @blink/compiler-ts compile -i ../../game/brl/simple-clicker.brl --pretty
 4. Event system
 5. Rule executor
 6. Tracker system
-7. Core library (`blink-engine-rust`)
-
-### Files
-```
-src/engines/rust/
-├── ir/           # IR loader
-├── timeline/
-├── ecs/
-├── events/
-├── rules/
-├── trackers/
-└── lib.rs
-```
+7. Core library (typescript)
 
 ### Dependencies
 - **Track 2: IR specification only** (not the compiler implementation)
 - Track 1: For semantic understanding (optional)
-
-### Interfaces Provided
-- Rust Engine API (can be used for dev server, batch processing)
-- Optional WASM compilation (but JS Engine is preferred for browser)
-
-### Getting Started
-```bash
-# Set up Rust engine project (optional)
-# mkdir -p src/engines/rust && initialize project files as needed
-
-# Read architecture doc
-cat doc/engine/architecture.md
-
-# Read IR specification
-cat doc/ir-specification.md
-
-# Use example IR files for testing
-# game/ir/simple-clicker.ir.json - minimal test case
-# game/ir/simple-combat.ir.json  - more complex test case
-
-# Start with IR loader
-mkdir -p src/engines/rust/src/ir
-code src/engines/rust/src/ir/mod.rs
-```
 
 ---
 

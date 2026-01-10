@@ -131,7 +131,8 @@ demo-package: dev
 	@echo "Copying demo HTML and JS files..."
 	cp game/demos/index.html demo-package/
 	cp game/demos/classic-rpg.html demo-package/
-	cp game/demos/rpg-demo.html demo-package/
+	# Copy demo CSS files so styles are available when serving the package
+	cp game/demos/*.css demo-package/ || true
 	cp $(ENGINE_BUNDLE) demo-package/
 	cp $(COMPILER_BUNDLE) demo-package/
 	cp game/demos/README.md demo-package/

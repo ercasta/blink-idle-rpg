@@ -28,7 +28,7 @@ docker-compose up --build
 
 Open your browser and navigate to:
 - **http://localhost:3000** - Demo launcher (start here!)
-- **http://localhost:3000/rpg-demo.html** - Classic RPG demo
+- **http://localhost:3000/classic-rpg.html** - Classic RPG demo
 
 To stop the container:
 ```bash
@@ -130,7 +130,7 @@ docker-compose up -d
   -o /workspace/game/ir/simple-combat.ir.json \
   --pretty
 
-# 4. Open http://localhost:3000/rpg-demo.html in your browser
+# 4. Open http://localhost:3000/classic-rpg.html in your browser
 # 5. Refresh the page to see your changes
 
 # 6. When done, stop the container
