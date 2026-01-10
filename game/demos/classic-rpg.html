@@ -1,4 +1,29 @@
 <!DOCTYPE html>
+<!--
+  Blink Idle RPG - Classic RPG Game
+  
+  This is the main game file for the Blink Idle RPG.
+  
+  ARCHITECTURE:
+  - This file contains the HTML structure and inline JavaScript
+  - Helper functions have been extracted to js/*.js modules (see below)
+  - Game engine: blink-engine.bundle.js (compiled from TypeScript)
+  - Compiler: blink-compiler.bundle.js (for in-browser BRL/BDL compilation)
+  
+  EXTRACTED MODULES:
+  - js/utils.js - General utility functions (escapeHtml, formatting, etc.)
+  - js/character-manager.js - Character/enemy extraction and party management
+  - js/leaderboard.js - Leaderboard save/load/export functionality
+  - js/bcl-customization.js - BCL (AI strategy) customization system
+  - js/game-engine.js - Game engine initialization and simulation
+  
+  DOCUMENTATION:
+  - ARCHITECTURE.md - Complete system architecture and data flow
+  - COMPILATION.md - How BRL/BDL files are compiled to IR
+  - README.md - User guide and development instructions
+  
+  For more information, see the documentation files in this directory.
+-->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -6,13 +31,13 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>Blink Idle RPG - Classic RPG Demo</title>
+  <title>Blink Idle RPG - Classic RPG</title>
   <link rel="stylesheet" href="rpg-demo.css">
 </head>
 <body>
   <div class="container">
     <h1>⚔️ Blink Idle RPG</h1>
-    <p class="subtitle">Classic RPG Demo - Heroes vs Monsters Battle!</p>
+    <p class="subtitle">Classic RPG - Heroes vs Monsters Battle!</p>
     
     <!-- Scenario Selection Screen -->
     <div id="scenario-selection-screen">
