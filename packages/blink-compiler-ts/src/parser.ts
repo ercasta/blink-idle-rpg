@@ -231,11 +231,20 @@ export class Parser {
     // Optional rule name
     let name: string | null = null;
     if (this.check(TokenKind.Identifier)) {
-      name = this.advance().text;
+      // Need to lookahead to distinguish rule name from event name
+      // Syntax: 'rule [name] on EventType alias { ... }'
+      // If we see "identifier on", it's a rule name
+      const nextIsOn = this.peekNext().kind === TokenKind.On;
+      if (nextIsOn) {
+        name = this.advance().text;
+      }
     }
     
     this.consume(TokenKind.On, 'on');
     const triggerEvent = this.consume(TokenKind.Identifier, 'event name').text;
+    
+    // Mandatory event alias
+    const eventAlias = this.consume(TokenKind.Identifier, 'event alias').text;
     
     // Optional condition with 'when'
     let condition: AST.Expr | null = null;
@@ -261,6 +270,7 @@ export class Parser {
       type: 'rule',
       name,
       triggerEvent,
+      eventAlias,
       condition,
       priority,
       body,

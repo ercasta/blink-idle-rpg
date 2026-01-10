@@ -70,8 +70,9 @@ describe('Parser', () => {
   describe('Rule definitions', () => {
     it('should parse simple rule', () => {
       const ast = parseSource(`
-        rule attack on DoAttack {
-          entity.Health.current -= 10
+        rule attack on DoAttack atk {
+          let target = atk.target
+          target.Health.current -= 10
         }
       `);
       expect(ast.items).toHaveLength(1);
@@ -79,36 +80,43 @@ describe('Parser', () => {
       expect(rule.type).toBe('rule');
       expect(rule.name).toBe('attack');
       expect(rule.triggerEvent).toBe('DoAttack');
+      expect(rule.eventAlias).toBe('atk');
     });
 
     it('should parse rule without name', () => {
       const ast = parseSource(`
-        rule on DoAttack {
-          entity.Health.current -= 10
+        rule on DoAttack atk {
+          let target = atk.target
+          target.Health.current -= 10
         }
       `);
       const rule = ast.items[0] as AST.RuleDef;
       expect(rule.name).toBeNull();
+      expect(rule.eventAlias).toBe('atk');
     });
 
     it('should parse rule with when condition', () => {
       const ast = parseSource(`
-        rule attack on DoAttack when entity.Health.current > 0 {
-          entity.Health.current -= 10
+        rule attack on DoAttack atk when atk.source.Health.current > 0 {
+          let target = atk.target
+          target.Health.current -= 10
         }
       `);
       const rule = ast.items[0] as AST.RuleDef;
       expect(rule.condition).not.toBeNull();
+      expect(rule.eventAlias).toBe('atk');
     });
 
     it('should parse rule with priority', () => {
       const ast = parseSource(`
-        rule attack on DoAttack [priority: 100] {
-          entity.Health.current -= 10
+        rule attack on DoAttack atk [priority: 100] {
+          let target = atk.target
+          target.Health.current -= 10
         }
       `);
       const rule = ast.items[0] as AST.RuleDef;
       expect(rule.priority).toBe(100);
+      expect(rule.eventAlias).toBe('atk');
     });
   });
 
@@ -209,7 +217,7 @@ describe('Parser', () => {
   describe('Statements', () => {
     it('should parse let statement', () => {
       const ast = parseSource(`
-        rule test on Test {
+        rule test on Test t {
           let x = 10
         }
       `);
@@ -221,7 +229,7 @@ describe('Parser', () => {
 
     it('should parse let statement with type annotation', () => {
       const ast = parseSource(`
-        rule test on Test {
+        rule test on Test t {
           let x: number = 10
         }
       `);
@@ -232,7 +240,7 @@ describe('Parser', () => {
 
     it('should parse if statement', () => {
       const ast = parseSource(`
-        rule test on Test {
+        rule test on Test t {
           if x > 0 {
             y = 1
           }
@@ -246,7 +254,7 @@ describe('Parser', () => {
 
     it('should parse if-else statement', () => {
       const ast = parseSource(`
-        rule test on Test {
+        rule test on Test t {
           if x > 0 {
             y = 1
           } else {
@@ -261,7 +269,7 @@ describe('Parser', () => {
 
     it('should parse if-else if chain', () => {
       const ast = parseSource(`
-        rule test on Test {
+        rule test on Test t {
           if x > 10 {
             y = 2
           } else if x > 0 {
@@ -278,7 +286,7 @@ describe('Parser', () => {
 
     it('should parse for loop', () => {
       const ast = parseSource(`
-        rule test on Test {
+        rule test on Test t {
           for item in items {
             process(item)
           }
@@ -292,7 +300,7 @@ describe('Parser', () => {
 
     it('should parse while loop', () => {
       const ast = parseSource(`
-        rule test on Test {
+        rule test on Test t {
           while x > 0 {
             x -= 1
           }
@@ -316,7 +324,7 @@ describe('Parser', () => {
 
     it('should parse schedule statement', () => {
       const ast = parseSource(`
-        rule test on Test {
+        rule test on Test t {
           schedule DoAttack { source: entity }
         }
       `);
@@ -328,7 +336,7 @@ describe('Parser', () => {
 
     it('should parse schedule with delay', () => {
       const ast = parseSource(`
-        rule test on Test {
+        rule test on Test t {
           schedule [delay: 2.0] DoAttack { source: entity }
         }
       `);
@@ -339,7 +347,7 @@ describe('Parser', () => {
 
     it('should parse recurring schedule', () => {
       const ast = parseSource(`
-        rule test on Test {
+        rule test on Test t {
           schedule recurring [interval: 1.0] Tick { }
         }
       `);
@@ -350,7 +358,7 @@ describe('Parser', () => {
 
     it('should parse create statement', () => {
       const ast = parseSource(`
-        rule test on Test {
+        rule test on Test t {
           create entity {
             Health { current: 100 }
           }
@@ -363,7 +371,7 @@ describe('Parser', () => {
 
     it('should parse delete statement', () => {
       const ast = parseSource(`
-        rule test on Test {
+        rule test on Test t {
           delete enemy
         }
       `);
@@ -374,7 +382,7 @@ describe('Parser', () => {
 
     it('should parse assignment statements', () => {
       const ast = parseSource(`
-        rule test on Test {
+        rule test on Test t {
           x = 10
           x += 5
           x -= 3
@@ -390,7 +398,7 @@ describe('Parser', () => {
   describe('Expressions', () => {
     it('should parse binary expressions', () => {
       const ast = parseSource(`
-        rule test on Test {
+        rule test on Test t {
           let x = a + b * c
         }
       `);
@@ -401,7 +409,7 @@ describe('Parser', () => {
 
     it('should parse comparison expressions', () => {
       const ast = parseSource(`
-        rule test on Test {
+        rule test on Test t {
           if a > b && c <= d {
             x = 1
           }
@@ -414,7 +422,7 @@ describe('Parser', () => {
 
     it('should parse unary expressions', () => {
       const ast = parseSource(`
-        rule test on Test {
+        rule test on Test t {
           let x = !flag
           let y = -value
         }
@@ -428,7 +436,7 @@ describe('Parser', () => {
 
     it('should parse field access', () => {
       const ast = parseSource(`
-        rule test on Test {
+        rule test on Test t {
           let hp = entity.Health.current
         }
       `);
@@ -439,7 +447,7 @@ describe('Parser', () => {
 
     it('should parse index access', () => {
       const ast = parseSource(`
-        rule test on Test {
+        rule test on Test t {
           let first = items[0]
         }
       `);
@@ -450,7 +458,7 @@ describe('Parser', () => {
 
     it('should parse function calls', () => {
       const ast = parseSource(`
-        rule test on Test {
+        rule test on Test t {
           let result = calculate(a, b)
         }
       `);
@@ -464,7 +472,7 @@ describe('Parser', () => {
 
     it('should parse method calls', () => {
       const ast = parseSource(`
-        rule test on Test {
+        rule test on Test t {
           let result = mylist.length()
         }
       `);
@@ -475,7 +483,7 @@ describe('Parser', () => {
 
     it('should parse list literals', () => {
       const ast = parseSource(`
-        rule test on Test {
+        rule test on Test t {
           let nums = [1, 2, 3]
         }
       `);
@@ -488,7 +496,7 @@ describe('Parser', () => {
 
     it('should parse parenthesized expressions', () => {
       const ast = parseSource(`
-        rule test on Test {
+        rule test on Test t {
           let x = (a + b) * c
         }
       `);
@@ -499,7 +507,7 @@ describe('Parser', () => {
 
     it('should parse entities having expression', () => {
       const ast = parseSource(`
-        rule test on Test {
+        rule test on Test t {
           let enemies = entities having Enemy
         }
       `);
@@ -510,7 +518,7 @@ describe('Parser', () => {
 
     it('should parse has component expression', () => {
       const ast = parseSource(`
-        rule test on Test {
+        rule test on Test t {
           if entity has Health {
             x = 1
           }
@@ -523,7 +531,7 @@ describe('Parser', () => {
 
     it('should parse clone expression', () => {
       const ast = parseSource(`
-        rule test on Test {
+        rule test on Test t {
           let newEnemy = clone template
         }
       `);
@@ -534,7 +542,7 @@ describe('Parser', () => {
 
     it('should parse clone with overrides', () => {
       const ast = parseSource(`
-        rule test on Test {
+        rule test on Test t {
           let newEnemy = clone template {
             Health { current: 200 }
           }
@@ -549,7 +557,7 @@ describe('Parser', () => {
 
     it('should parse entity reference', () => {
       const ast = parseSource(`
-        rule test on Test {
+        rule test on Test t {
           let e = @warrior
         }
       `);
@@ -613,11 +621,15 @@ describe('Parser', () => {
           attackSpeed: float
         }
 
-        rule attack on DoAttack when entity.Health.current > 0 {
-          let damage = entity.Combat.damage
-          entity.Target.entity.Health.current -= damage
-          schedule [delay: 1.0] DoAttack {
-            source: entity
+        rule attack on DoAttack atk {
+          let source = atk.source
+          if source.Health.current > 0 {
+            let damage = source.Combat.damage
+            let target = source.Target.entity
+            target.Health.current -= damage
+            schedule [delay: 1.0] DoAttack {
+              source: source
+            }
           }
         }
 
@@ -631,7 +643,8 @@ describe('Parser', () => {
 
     it('should parse nested control flow', () => {
       const source = `
-        rule complex on Test {
+        rule complex on Test t {
+          let enemies = entities having Enemy
           for enemy in enemies {
             if enemy.Health.current > 0 {
               if enemy.Combat.damage > 10 {

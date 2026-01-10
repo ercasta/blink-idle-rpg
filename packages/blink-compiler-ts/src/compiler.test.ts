@@ -26,8 +26,9 @@ describe('End-to-End Compiler', () => {
           current: integer
           max: integer
         }
-        rule attack on DoAttack {
-          entity.Health.current -= 10
+        rule attack on DoAttack atk {
+          let target = atk.target
+          target.Health.current -= 10
         }
       `, 'brl');
       
@@ -66,8 +67,9 @@ describe('End-to-End Compiler', () => {
         {
           path: 'rules.brl',
           content: `
-            rule attack on DoAttack {
-              entity.Health.current -= entity.Combat.damage
+            rule attack on DoAttack atk {
+              let target = atk.target
+              target.Health.current -= target.Combat.damage
             }
           `,
           language: 'brl',
@@ -158,31 +160,38 @@ describe('End-to-End Compiler', () => {
           isBoss: boolean
         }
 
-        rule attack on DoAttack when entity.Health.current > 0 {
-          if entity.Target.entity != null {
-            let target = entity.Target.entity
-            let damage = entity.Combat.damage
-            target.Health.current -= damage
-            
+        rule attack on DoAttack atk {
+          // Get the source entity from the event
+          let attacker = atk.source
+          if attacker.Health.current > 0 {
+            if attacker.Target.entity != null {
+              let target = attacker.Target.entity
+              let damage = attacker.Combat.damage
+              target.Health.current -= damage
+              
+              if target.Health.current <= 0 {
+                schedule Death { target: target }
+              }
+              
+              let speed = attacker.Combat.attackSpeed
+              if speed > 0 {
+                let delay = 1 / speed
+                schedule [delay: delay] DoAttack { source: attacker }
+              }
+            }
+          }
+        }
+
+        rule enemy_death on Death death {
+          let target = death.target
+          if target has Enemy {
             if target.Health.current <= 0 {
-              schedule Death { target: target }
-            }
-            
-            let speed = entity.Combat.attackSpeed
-            if speed > 0 {
-              let delay = 1 / speed
-              schedule [delay: delay] DoAttack { source: entity }
+              schedule EnemyDefeated { enemy: target }
             }
           }
         }
 
-        rule enemy_death on Death when entity has Enemy {
-          if entity.Health.current <= 0 {
-            schedule EnemyDefeated { enemy: entity }
-          }
-        }
-
-        rule spawn_enemies on GameStart {
+        rule spawn_enemies on GameStart gs {
           let indices = [0, 1, 2, 3, 4]
           for i in indices {
             schedule [delay: 0.5 * i] SpawnEnemy { tier: 1 }
@@ -272,7 +281,7 @@ describe('End-to-End Compiler', () => {
         component Health {
           current: integer
         }
-        rule find_targets on FindTargets {
+        rule find_targets on FindTargets ft {
           let enemies = entities having Enemy
           for enemy in enemies {
             if enemy.Health.current > 0 {
@@ -294,7 +303,7 @@ describe('End-to-End Compiler', () => {
         component Health {
           current: integer
         }
-        rule spawn_enemy on SpawnEnemy {
+        rule spawn_enemy on SpawnEnemy se {
           let templates = entities having EnemyTemplate
           let template = templates[0]
           let newEnemy = clone template {
