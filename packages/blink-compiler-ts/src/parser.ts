@@ -232,8 +232,8 @@ export class Parser {
     let name: string | null = null;
     if (this.check(TokenKind.Identifier)) {
       // Need to lookahead to distinguish rule name from event name
+      // Syntax: 'rule [name] on EventType alias { ... }'
       // If we see "identifier on", it's a rule name
-      // If we see "on identifier identifier", the first identifier after 'on' is the event
       const nextIsOn = this.peekNext().kind === TokenKind.On;
       if (nextIsOn) {
         name = this.advance().text;

@@ -575,16 +575,15 @@ export class CodeGenerator {
       }
     }
     
-    // Handle event.field pattern - access event fields (legacy 'event' keyword)
-    if (expr.base.type === 'identifier' && expr.base.name === 'event') {
-      // Generate an event field access - this becomes a param lookup at runtime
-      return { type: 'param', name: expr.field };
-    }
-    
-    // Handle event alias pattern - access event fields via alias (e.g., gs.field)
-    if (expr.base.type === 'identifier' && this.currentEventAlias && expr.base.name === this.currentEventAlias) {
-      // Generate an event field access - this becomes a param lookup at runtime
-      return { type: 'param', name: expr.field };
+    // Handle event alias or legacy 'event' keyword - both generate event field access IR
+    if (expr.base.type === 'identifier') {
+      const baseName = expr.base.name;
+      const isEventAccess = baseName === 'event' || 
+                           (this.currentEventAlias && baseName === this.currentEventAlias);
+      if (isEventAccess) {
+        // Generate an event field access - this becomes a param lookup at runtime
+        return { type: 'param', name: expr.field };
+      }
     }
     
     // Fallback to var reference (for entity.Component access where Component becomes a var)

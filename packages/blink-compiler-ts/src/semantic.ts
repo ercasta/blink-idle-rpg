@@ -42,7 +42,8 @@ export class SemanticAnalyzer {
   
   // Built-in variables available in rules
   private builtinVariables = new Set([
-    'entity', // The current entity being processed (legacy, being phased out)
+    'entity', // Legacy: still valid for component field access patterns like 'entity.Component.field'
+              // but no longer implicitly iterates over entities in rules
   ]);
 
   /**
@@ -495,7 +496,8 @@ export class SemanticAnalyzer {
   private createChildScope(parent: Scope): Scope {
     return {
       variables: new Set(),
-      eventAliases: parent.eventAliases, // Propagate event aliases to child scope
+      // Create new Set with parent's event aliases to avoid shared reference mutations
+      eventAliases: parent.eventAliases ? new Set(parent.eventAliases) : undefined,
       parent
     };
   }
