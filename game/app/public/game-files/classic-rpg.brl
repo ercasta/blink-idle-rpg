@@ -204,9 +204,9 @@ fn calculate_exp_for_level(level: float): float {
 rule initialize_hero_attacks on GameStart {
     if entity.Team.isPlayer && entity.Health.current > 0 {
         // Stagger attacks by 0.1s per hero to avoid perfect synchronization
-        let stagger = 0.1 * entity.id
+        let stagger = 0.1 * entity
         schedule [delay: stagger] DoAttack {
-            source: entity.id
+            source: entity
         }
     }
 }
@@ -365,7 +365,7 @@ rule attack_rule on DoAttack {
         
         // Emit after attack event
         schedule AfterAttack {
-            attacker: entity.id
+            attacker: entity
             target: target.id
         }
         
@@ -379,7 +379,7 @@ rule attack_rule on DoAttack {
         }
         let delay = 1 / attackSpeedTotal
         schedule [delay: delay] DoAttack {
-            source: entity.id
+            source: entity
         }
     }
 }
@@ -388,7 +388,7 @@ rule attack_rule on DoAttack {
 rule death_check on AfterAttack {
     if entity.Health.current <= 0 {
         schedule Death {
-            target: entity.id
+            target: entity
         }
     }
 }
@@ -397,7 +397,7 @@ rule death_check on AfterAttack {
 rule enemy_death_handler on Death {
     if entity.Enemy.tier > 0 && entity.Health.current <= 0 {
         schedule EnemyDefeated {
-            enemy: entity.id
+            enemy: entity
             expReward: entity.Enemy.expReward
             isBoss: entity.Enemy.isBoss
         }
@@ -408,7 +408,7 @@ rule enemy_death_handler on Death {
 rule player_death_handler on Death {
     if entity.Team.isPlayer && entity.Health.current <= 0 {
         schedule PlayerDefeated {
-            player: entity.id
+            player: entity
         }
     }
 }
@@ -481,11 +481,11 @@ rule level_up_check on CheckLevelUp {
         entity.Skills.skillPoints += 1
         
         schedule LevelUp {
-            source: entity.id
+            source: entity
         }
         
         schedule SkillChoice {
-            source: entity.id
+            source: entity
         }
     }
 }
@@ -580,7 +580,7 @@ rule mana_regen on ManaRegen {
     if entity.Health.current > 0 {
         entity.Mana.current += 5
         schedule [delay: 2] ManaRegen {
-            source: entity.id
+            source: entity
         }
     }
 }
@@ -619,7 +619,7 @@ rule acquire_skill on AcquireSkill {
     if entity.Skills.skillPoints > 0 {
         entity.Skills.skillPoints -= 1
         schedule SkillAcquired {
-            character: entity.id
+            character: entity
         }
     }
 }
@@ -669,7 +669,7 @@ rule despawn_enemies on DespawnAllEnemies {
         // Remove enemy entity (handled by engine)
         entity.Health.current = 0
         schedule RemoveEntity {
-            target: entity.id
+            target: entity
         }
     }
 }
@@ -731,7 +731,7 @@ rule check_entity_target on CheckAllTargets {
         // If no target or target is dead, find a new one
         if target == null || target.Health.current <= 0 {
             schedule FindNewTarget {
-                seeker: entity.id
+                seeker: entity
             }
         }
     }

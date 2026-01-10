@@ -17,8 +17,6 @@
     "build:game": "npm --prefix game/app run build",
     "build:ide": "npm run build:game",
 
-    "copy:bundles": "node -e \"const fs=require('fs'); const path=require('path'); const root=process.cwd(); const files=['blink-compiler.bundle.js','blink-engine.bundle.js']; const destDir=path.join(root,'game','app','public'); if(!fs.existsSync(destDir)) fs.mkdirSync(destDir,{recursive:true}); files.forEach(f=>{ const src=path.join(root,'game','demos',f); const dest=path.join(destDir,f); try{ fs.copyFileSync(src,dest); console.log('copied',f); }catch(e){ console.error('failed to copy',f,e); process.exit(1);} });\"",
-
-    "build": "npm run build:compiler && npm run build:compiler:bundle && npm run build:engine && npm run build:engine:bundle && npm run copy:bundles && npm run build:game"
+    "build": "npm run build:compiler && npm run build:compiler:bundle && npm run build:engine && npm run build:engine:bundle && npm run build:game"
   }
 }

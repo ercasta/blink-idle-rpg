@@ -1,53 +1,3 @@
-/**
- * Blink IDE - Integrated Development Environment
- * 
- * A pure TypeScript/HTML IDE for editing and testing BRL/BCL/BDL code.
- * No backend server required - runs entirely in the browser.
- * 
- * Features:
- * - Edit BRL/BCL/BDL files with separate tabs
- * - Compile code with error display
- * - Inject scripts into running engine without state reset
- * - Manually reset engine state
- * - Inspect entities, components, and rules
- * - Step through simulation (by event or rule)
- * - Save/download source files
- * 
- * FUTURE: Syntax Highlighting Implementation
- * ==========================================
- * The editor currently uses a plain textarea. To add syntax highlighting:
- * 
- * 1. CodeMirror 6 (Recommended):
- *    - Install: npm install @codemirror/view @codemirror/state @codemirror/language
- *    - Create a custom language mode using @codemirror/language
- *    - Define tokens for BRL/BCL/BDL keywords, types, operators
- *    - Example keywords: component, rule, fn, choice, on, if, else, for, return
- *    - Example types: integer, float, string, boolean, id, list
- *    - Benefits: Excellent TypeScript support, modern architecture, tree-shaking
- * 
- * 2. Monaco Editor (VS Code-based):
- *    - Install: npm install monaco-editor @monaco-editor/react
- *    - Register custom language with monarch tokenizer
- *    - Provides rich features like autocomplete, go-to-definition
- *    - Larger bundle size but full IDE experience
- * 
- * 3. Prism.js (Lightweight):
- *    - Install: npm install prismjs
- *    - Define custom language grammar
- *    - Apply to code display (read-only highlighting)
- *    - Smaller bundle, good for display-only scenarios
- * 
- * BRL/BCL/BDL Token Categories:
- * - Keywords: component, rule, fn, choice, tracker, on, if, else, for, in, return
- * - Types: integer, float, string, boolean, id, list, map
- * - Operators: +, -, *, /, ==, !=, <, >, <=, >=, &&, ||, !
- * - Punctuation: {, }, (, ), [, ], :, comma, .
- * - Comments: // single line, multi-line block comments
- * - Strings: double-quoted and single-quoted strings
- * - Numbers: integers, floats
- * - Identifiers: variable and function names
- */
-
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { Editor } from './Editor';
@@ -55,6 +5,7 @@ import { Inspector } from './Inspector';
 import { Toolbar } from './Toolbar';
 import { Console } from './Console';
 import { StepControls } from './StepControls';
+import { useGame } from '../GameContext';
 import type { 
   SourceFile, 
   CompileError, 
@@ -71,42 +22,7 @@ declare global {
       compile: (sources: Array<{ path: string; content: string; language: string }>, options?: { moduleName?: string; includeSourceMap?: boolean }) => { ir: IRModule; errors: CompileError[] };
       compileString: (source: string, language?: string, options?: { moduleName?: string }) => { ir: IRModule; errors: CompileError[] };
     };
-    BlinkEngine?: {
-      BlinkGame: {
-        create: (options?: { debug?: boolean; msPerFrame?: number; maxEventsPerFrame?: number; devMode?: boolean; enableTrace?: boolean }) => Promise<BlinkGameInstance>;
-        createSync: (options?: { debug?: boolean; msPerFrame?: number; maxEventsPerFrame?: number }) => BlinkGameInstance;
-      };
-    };
   }
-}
-
-// Simplified BlinkGame interface for what we need
-interface BlinkGameInstance {
-  loadRulesFromObject: (ir: IRModule) => void;
-  loadRulesFromString: (json: string) => void;
-  mergeRulesFromObject?: (irObject: unknown, options?: { mergeEntities?: boolean; overrideOnConflict?: boolean; reassignRuleIds?: boolean }) => void;
-  mergeRulesFromString?: (json: string, options?: { mergeEntities?: boolean; overrideOnConflict?: boolean; reassignRuleIds?: boolean }) => void;
-  step: () => { time: number; event: { eventType: string } } | null;
-  getTime: () => number;
-  hasEvents: () => boolean;
-  getAllEntities: () => Map<number | string, Map<string, Record<string, unknown>>>;
-  getAllEntityIds: () => (number | string)[];
-  getComponent: (entityId: number | string, componentName: string) => Record<string, unknown> | undefined;
-  getEntityData: (entityId: number | string) => EntityData | null;
-  getRules: () => Array<{ id?: number; name: string; trigger: { event: string } }>;
-  getIR: () => IRModule | null;
-  getIsPaused?: () => boolean;
-  scheduleEvent: (eventType: string, delay?: number, options?: { source?: number; target?: number; fields?: Record<string, unknown> }) => number;
-  reset: () => void;
-  destroy: () => void;
-  setDevMode: (enabled: boolean) => void;
-  setTraceEnabled: (enabled: boolean) => void;
-  onTrace: (callback: (event: TraceEvent) => void) => () => void;
-  onDebug: (callback: (event: { type: string; rule?: { name: string } }) => void) => () => void;
-  createEntity: (id?: number | string) => number | string;
-  addComponent: (entityId: number | string, componentName: string, data: Record<string, unknown>) => void;
-  removeEntity: (entityId: number | string) => void;
-  query: (...componentNames: string[]) => (number | string)[];
 }
 
 interface IDEProps {
@@ -171,6 +87,7 @@ entity {
 `;
 
 export function IDE({ className }: IDEProps) {
+  const { engine } = useGame();
   // Source files state
   const [files, setFiles] = useState<Record<EditorTab, SourceFile>>({
     brl: { id: 'brl-main', name: 'main.brl', content: DEFAULT_BRL, language: 'brl', isDirty: false },
@@ -185,7 +102,6 @@ export function IDE({ className }: IDEProps) {
   const [compiledIR, setCompiledIR] = useState<IRModule | null>(null);
   
   // Engine state
-  const [engine, setEngine] = useState<BlinkGameInstance | null>(null);
   const [simulationTime, setSimulationTime] = useState(0);
   const [isPaused, setIsPaused] = useState(true);
   const [traceEvents, setTraceEvents] = useState<TraceEvent[]>([]);
@@ -252,56 +168,6 @@ export function IDE({ className }: IDEProps) {
     }
   }, [files, log]);
   
-  // Load IR into engine (without reset)
-  const handleLoadIntoEngine = useCallback(async () => {
-    if (!compiledIR) {
-      log('error', 'No compiled IR to load. Compile first.');
-      return;
-    }
-    
-    if (!window.BlinkEngine) {
-      log('error', 'Engine not loaded. Make sure blink-engine.bundle.js is included.');
-      return;
-    }
-    
-    try {
-      // Cleanup previous engine
-      if (engine) {
-        if (traceUnsubscribeRef.current) {
-          traceUnsubscribeRef.current();
-          traceUnsubscribeRef.current = null;
-        }
-        engine.destroy();
-      }
-      
-      // Create new engine
-      const newEngine = await window.BlinkEngine.BlinkGame.create({
-        debug: true,
-        msPerFrame: 100,
-        maxEventsPerFrame: 1000,
-        devMode: true,
-        enableTrace: true,
-      });
-      
-      newEngine.loadRulesFromObject(compiledIR);
-      
-      // Subscribe to trace events
-      traceUnsubscribeRef.current = newEngine.onTrace((event: TraceEvent) => {
-        setTraceEvents(prev => [...prev.slice(-200), event]);
-        if (event.details) {
-          log('trace', `[${event.time.toFixed(2)}s] ${event.type}: ${event.details}`);
-        }
-      });
-      
-      setEngine(newEngine);
-      setSimulationTime(newEngine.getTime());
-      setIsPaused(true);
-      log('success', 'IR loaded into engine. Ready to run.');
-    } catch (err) {
-      log('error', `Failed to load into engine: ${err instanceof Error ? err.message : String(err)}`);
-    }
-  }, [compiledIR, engine, log]);
-  
   // Inject snippet without resetting state
   const handleInjectSnippet = useCallback(() => {
     if (!engine) {
@@ -343,10 +209,9 @@ export function IDE({ className }: IDEProps) {
 
       log('success', 'Snippet compiled with project sources.');
 
-      // If engine supports runtime merge and is paused, merge the compiled IR into the running engine
       if (engine && typeof engine.mergeRulesFromObject === 'function') {
-        const isPaused = typeof engine.getIsPaused === 'function' ? engine.getIsPaused() : isPaused;
-        if (!isPaused) {
+        const isCurrentlyPaused = typeof engine.getIsPaused === 'function' ? engine.getIsPaused() : isPaused;
+        if (!isCurrentlyPaused) {
           log('error', 'Engine must be paused to inject rules at runtime. Pause the engine and try again.');
           return;
         }
@@ -354,7 +219,6 @@ export function IDE({ className }: IDEProps) {
         try {
           (engine.mergeRulesFromObject as any)(result.ir, { mergeEntities: false, overrideOnConflict: true, reassignRuleIds: true });
           log('success', 'Snippet merged into running engine.');
-          // Refresh compiled IR view
           setCompiledIR(result.ir);
         } catch (err) {
           log('error', `Runtime merge failed: ${err instanceof Error ? err.message : String(err)}`);
@@ -511,9 +375,6 @@ export function IDE({ className }: IDEProps) {
       if (traceUnsubscribeRef.current) {
         traceUnsubscribeRef.current();
       }
-      if (engine) {
-        engine.destroy();
-      }
     };
   }, [engine]);
   
@@ -540,7 +401,7 @@ export function IDE({ className }: IDEProps) {
       {/* Toolbar */}
       <Toolbar
         onCompile={handleCompile}
-        onLoadIntoEngine={handleLoadIntoEngine}
+        onLoadIntoEngine={() => log('info', 'Engine is loaded from the Game UI.')}
         onInjectSnippet={handleInjectSnippet}
         onResetEngine={handleResetEngine}
         onDownloadAll={handleDownloadAll}
@@ -625,4 +486,3 @@ export function IDE({ className }: IDEProps) {
   );
 }
 
-export default IDE;

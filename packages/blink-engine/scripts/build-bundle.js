@@ -9,7 +9,7 @@ const fs = require('fs');
 const path = require('path');
 
 const srcDir = path.join(__dirname, '../src');
-const outFile = path.join(__dirname, '../../../game/demos/blink-engine.bundle.js');
+const outFile = path.join(__dirname, '../../../game/app/public/blink-engine.bundle.js');
 
 // Banner to add at the top of the bundle
 const banner = `/**
