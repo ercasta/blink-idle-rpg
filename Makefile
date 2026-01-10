@@ -47,13 +47,13 @@ dev-setup:
 	@test -f $(COMPILER_BUNDLE) || (echo "Error: Compiler bundle not found at $(COMPILER_BUNDLE)" && exit 1)
 	@echo ""
 	@echo "Development setup complete!"
-	@echo "Open game/demos/rpg-demo.html in a browser to play."
+	@echo "Open game/demos/classic-rpg.html in a browser to play."
 	@echo "The game will compile BRL/BDL files in real-time using the TypeScript compiler."
 
 # Build for development (TypeScript compiler + engine)
 dev: build-compiler-ts build-packages-dev
 	@echo "Development build complete!"
-	@echo "Open game/demos/rpg-demo.html in a browser to play."
+	@echo "Open game/demos/classic-rpg.html in a browser to play."
 
 # Build TypeScript compiler
 build-compiler-ts:
@@ -130,6 +130,7 @@ demo-package: dev
 	
 	@echo "Copying demo HTML and JS files..."
 	cp game/demos/index.html demo-package/
+	cp game/demos/classic-rpg.html demo-package/
 	cp game/demos/rpg-demo.html demo-package/
 	cp $(ENGINE_BUNDLE) demo-package/
 	cp $(COMPILER_BUNDLE) demo-package/

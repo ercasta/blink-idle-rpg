@@ -1,0 +1,3160 @@
+<!DOCTYPE html>
+<!--
+  Blink Idle RPG - Classic RPG Game
+  
+  This is the main game file for the Blink Idle RPG.
+  
+  ARCHITECTURE:
+  - This file contains the HTML structure and inline JavaScript
+  - Helper functions have been extracted to js/*.js modules (see below)
+  - Game engine: blink-engine.bundle.js (compiled from TypeScript)
+  - Compiler: blink-compiler.bundle.js (for in-browser BRL/BDL compilation)
+  
+  EXTRACTED MODULES:
+  - js/utils.js - General utility functions (escapeHtml, formatting, etc.)
+  - js/character-manager.js - Character/enemy extraction and party management
+  - js/leaderboard.js - Leaderboard save/load/export functionality
+  - js/bcl-customization.js - BCL (AI strategy) customization system
+  - js/game-engine.js - Game engine initialization and simulation
+  
+  DOCUMENTATION:
+  - ARCHITECTURE.md - Complete system architecture and data flow
+  - COMPILATION.md - How BRL/BDL files are compiled to IR
+  - README.md - User guide and development instructions
+  
+  For more information, see the documentation files in this directory.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>Blink Idle RPG - Classic RPG</title>
+  <link rel="stylesheet" href="rpg-demo.css">
+</head>
+<body>
+  <div class="container">
+    <h1>⚔️ Blink Idle RPG</h1>
+    <p class="subtitle">Classic RPG - Heroes vs Monsters Battle!</p>
+    
+    <!-- Scenario Selection Screen -->
+    <div id="scenario-selection-screen">
+      <h2>🎯 Choose Your Scenario 🎯</h2>
+      <p class="selection-instructions">
+        Select a game scenario to begin your adventure. Each scenario has different difficulty, enemy spawn rates, and penalties.
+      </p>
+      
+      <div class="scenarios-container" id="scenarios-container">
+        <!-- Scenarios will be loaded dynamically -->
+      </div>
+      
+      <div class="scenario-compilation-info">
+        <h3>📚 How Scenarios Work</h3>
+        <p>
+          Each scenario is compiled <strong>in real-time in your browser</strong> from the same BRL (Blink Rule Language) file but with different BDL (Blink Data Language) configuration files.
+          The TypeScript compiler combines <code>classic-rpg.brl</code> with <code>heroes.bdl</code>, <code>enemies.bdl</code>, and a scenario-specific BDL file
+          (e.g., <code>scenario-easy.bdl</code>) to generate the final IR (Intermediate Representation) that the game engine executes.
+        </p>
+        <div class="compilation-steps">
+          <div class="compilation-step">
+            <strong>1. BRL (Rules)</strong><br>
+            <code>classic-rpg.brl</code><br>
+            <span class="step-desc">Game logic & components</span>
+          </div>
+          <div class="compilation-arrow">+</div>
+          <div class="compilation-step">
+            <strong>2. BDL (Data)</strong><br>
+            <code>heroes.bdl</code><br>
+            <code>enemies.bdl</code><br>
+            <code>scenario-*.bdl</code><br>
+            <span class="step-desc">Heroes, enemies & config</span>
+          </div>
+          <div class="compilation-arrow">→</div>
+          <div class="compilation-step">
+            <strong>3. In-Browser Compiler</strong><br>
+            <code>blink-compiler-ts</code><br>
+            <span class="step-desc">Compiles on page load</span>
+          </div>
+          <div class="compilation-arrow">→</div>
+          <div class="compilation-step">
+            <strong>4. In-Memory IR</strong><br>
+            <code>IR JSON object</code><br>
+            <span class="step-desc">Ready to execute</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Party Selection Screen -->
+    <div id="party-selection-screen" style="display: none;">
+      <h2>⚔️ Choose Your Party ⚔️</h2>
+      <p class="selection-instructions">
+        Select a hero for each of the 4 slots. Use the arrows to browse through available heroes. You cannot select the same hero twice.
+      </p>
+      
+      <div class="party-counter">
+        Selected: <span id="selected-count">0</span> / 4
+      </div>
+      
+      <div class="slots-container" id="slots-container">
+        <!-- Slots will be loaded dynamically -->
+      </div>
+      
+      <button class="start-game-btn" id="confirm-party-btn" disabled>
+        🎮 Start Adventure
+      </button>
+    </div>
+    
+    <!-- Game Screen (hidden until party selected) -->
+    <div id="game-screen">
+    
+    <!-- File Upload Section -->
+    <div class="upload-section" style="display: none;">
+      <h2 onclick="toggleAccordion('upload-content')">
+        <span>📁 Load Game Files</span>
+        <span class="accordion-toggle" id="upload-content-toggle">▼</span>
+      </h2>
+      <div class="upload-content" id="upload-content">
+        <div class="upload-row">
+          <div class="upload-item">
+            <label for="ir-file">Game Rules (IR JSON file):</label>
+            <input type="file" id="ir-file" accept=".json,.ir.json">
+            <div class="file-status" id="ir-status">Loading game rules...</div>
+          </div>
+          <div class="upload-item">
+            <label for="bcl-file">Player Choices (BCL ZIP file):</label>
+            <input type="file" id="bcl-file" accept=".zip">
+            <div class="file-status" id="bcl-status">No file loaded - using default strategies</div>
+          </div>
+        </div>
+        <div class="bcl-info" id="bcl-info" style="display: none;">
+          <h3>📜 Loaded BCL Files:</h3>
+          <div class="bcl-file-list" id="bcl-file-list"></div>
+        </div>
+        
+        <!-- Download Links -->
+        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
+          <h3 style="color: #c9956b; margin-bottom: 8px; font-size: 0.9rem;">📦 Download Example Files</h3>
+          <p style="color: #8a7a68; font-size: 0.75rem; margin-bottom: 8px;">Study or modify these game files:</p>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px;">
+            <a href="../data/classic-rpg.ir.json" download style="background: rgba(0,0,0,0.3); padding: 6px 10px; border-radius: 5px; text-decoration: none; color: #7b93a8; font-size: 0.75rem; border: 1px solid rgba(123, 147, 168, 0.3); transition: all 0.3s; display: inline-block;">
+              📋 classic-rpg.ir.json
+            </a>
+            <a href="party-config.bcl.zip" download style="background: rgba(0,0,0,0.3); padding: 6px 10px; border-radius: 5px; text-decoration: none; color: #9ca873; font-size: 0.75rem; border: 1px solid rgba(156, 168, 115, 0.3); transition: all 0.3s; display: inline-block;">
+              📦 party-config.bcl.zip
+            </a>
+          </div>
+          <p style="color: #8a7a68; font-size: 0.7rem; margin-top: 8px; margin-bottom: 0;">
+            💡 <strong>IR files</strong> define game rules. <strong>BCL files</strong> define AI strategies.
+          </p>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Status Bar -->
+    <div class="status-bar">
+      <div class="status-item">
+        <span class="status-label">⏱️ Sim Time:</span>
+        <span class="status-value" id="game-time">0.00s</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">⏳ Total Time:</span>
+        <span class="status-value" id="total-time">0.00s</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">📊 Wave:</span>
+        <span class="status-value" id="current-wave">1</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">💀 Enemies Defeated:</span>
+        <span class="status-value" id="enemies-defeated">0</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">☠️ Player Deaths:</span>
+        <span class="status-value" id="player-deaths">0</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">🎮 Status:</span>
+        <span class="status-value" id="game-status">Ready</span>
+        <span class="processing-indicator hidden" id="processing-indicator">⚙️</span>
+      </div>
+    </div>
+    
+    <!-- Run Statistics -->
+    <div class="run-stats">
+      <h3>📊 Current Run Statistics</h3>
+      <div class="run-stats-grid">
+        <div class="run-stat-item">
+          <span class="run-stat-label">🏃 Retreats:</span>
+          <span class="run-stat-value" id="retreat-count">0</span>
+        </div>
+        <div class="run-stat-item">
+          <span class="run-stat-label">⏱️ Retreat Penalty:</span>
+          <span class="run-stat-value run-stat-penalty" id="retreat-penalty">0s</span>
+        </div>
+        <div class="run-stat-item">
+          <span class="run-stat-label">💀 Death Penalty:</span>
+          <span class="run-stat-value run-stat-penalty" id="death-penalty">0s</span>
+        </div>
+        <div class="run-stat-item">
+          <span class="run-stat-label">⏳ Total Penalties:</span>
+          <span class="run-stat-value run-stat-penalty" id="total-penalties">0s</span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Game Banner -->
+    <div class="game-banner" id="game-banner">
+      <h2 id="banner-text">🎉 Victory! 🎉</h2>
+    </div>
+    
+    <!-- Game Container -->
+    <div class="game-container">
+      <!-- Player Team -->
+      <div class="team-section player-team">
+        <h2 onclick="toggleAccordion('player-party-content')">
+          <div>
+            <span>🛡️ Your Party</span>
+            <div class="team-summary" id="player-summary">4 Heroes</div>
+          </div>
+          <span class="accordion-toggle expanded" id="player-party-content-toggle">▼</span>
+        </h2>
+        <div class="team-content expanded" id="player-party-content">
+          <div id="player-party"></div>
+        </div>
+      </div>
+      
+      <!-- Enemy Team -->
+      <div class="team-section enemy-team">
+        <h2 onclick="toggleAccordion('enemy-party-content')">
+          <div>
+            <span>👹 Enemies</span>
+            <div class="team-summary" id="enemy-summary">5 Monsters</div>
+          </div>
+          <span class="accordion-toggle expanded" id="enemy-party-content-toggle">▼</span>
+        </h2>
+        <div class="team-content expanded" id="enemy-party-content">
+          <div id="enemy-party"></div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Speed Control -->
+    <div class="speed-control">
+      <label for="speed-slider">Simulation Time:</label>
+      <input type="range" id="speed-slider" min="5" max="500" step="5" value="50">
+      <span id="speed-value">50s</span>
+    </div>
+    
+    <!-- Controls -->
+    <div class="controls">
+      <button id="start-btn">🎯 Go!</button>
+      <button id="pause-btn" class="secondary" disabled>⏸️ Pause</button>
+      <button id="flee-btn" class="flee" disabled>🏃 Flee Battle</button>
+      <button id="reset-btn" class="secondary">🔄 Reset</button>
+      <button id="dev-mode-btn" class="secondary">🛠️ Dev Mode</button>
+    </div>
+    
+    <!-- Dev Mode Panel -->
+    <div class="dev-mode-panel" id="dev-mode-panel">
+      <h2 onclick="toggleAccordion('dev-mode-content')">
+        <span>🛠️ Dev Mode - Integrated IDE</span>
+        <span class="accordion-toggle expanded" id="dev-mode-content-toggle">▼</span>
+      </h2>
+      <div class="dev-mode-content expanded" id="dev-mode-content">
+        <div class="debug-controls">
+          <button id="step-btn" class="secondary">⏭️ Step</button>
+          <button id="step-10-btn" class="secondary">⏭️ x10</button>
+          <button id="step-100-btn" class="secondary">⏭️ x100</button>
+          <span style="color: #8a7a68; font-size: 0.85rem;">| Step through BRL/BCL/BDL execution</span>
+        </div>
+        
+        <div class="debug-info" id="debug-info">
+          <div class="debug-info-item">
+            <span class="debug-info-label">Current Rule:</span>
+            <span class="debug-info-value" id="debug-rule">-</span>
+          </div>
+          <div class="debug-info-item">
+            <span class="debug-info-label">Event Type:</span>
+            <span class="debug-info-value" id="debug-event">-</span>
+          </div>
+          <div class="debug-info-item">
+            <span class="debug-info-label">Source Location:</span>
+            <span class="debug-info-value" id="debug-location">-</span>
+          </div>
+        </div>
+        
+        <div class="source-file-tabs" id="source-file-tabs">
+          <button class="source-file-tab active" data-file="brl">📋 BRL Rules</button>
+          <button class="source-file-tab" data-file="bcl">📜 BCL Strategy</button>
+          <button class="source-file-tab" data-file="bdl">📦 BDL Data</button>
+        </div>
+        
+        <div class="source-viewer" id="source-viewer">
+          <pre id="source-code">// Select a file tab above to view source code
+// Enable dev mode and step through execution to see highlighted lines</pre>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Combat Log -->
+    <div class="combat-log">
+      <h2 onclick="toggleAccordion('log-content')">
+        <span>📜 Combat Log</span>
+        <span class="accordion-toggle" id="log-content-toggle">▼</span>
+      </h2>
+      <div class="log-content" id="log-content">
+        <div id="log-container">
+          <div class="log-entry system">
+            <span class="log-time">[0.00s]</span>
+            <span>Waiting for battle to start...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Leaderboard -->
+    <div class="leaderboard-panel">
+      <h2 onclick="toggleAccordion('leaderboard-content')">
+        <span>🏆 Leaderboard - Best Party Builds</span>
+        <span class="accordion-toggle" id="leaderboard-content-toggle">▼</span>
+      </h2>
+      <div class="leaderboard-content" id="leaderboard-content">
+        <div class="leaderboard-actions">
+          <button class="secondary" onclick="refreshLeaderboard()">🔄 Refresh</button>
+          <button class="secondary" onclick="clearLeaderboard()">🗑️ Clear All</button>
+          <button class="secondary" onclick="exportLeaderboard()">💾 Export</button>
+        </div>
+        <div id="leaderboard-table-container">
+          <div class="leaderboard-empty">
+            No runs recorded yet. Complete a game to see your build on the leaderboard!
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    </div><!-- End of game-screen -->
+  </div><!-- End of container -->
+
+  <!-- BCL Customization Modal -->
+  <div class="bcl-modal-overlay" id="bcl-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="bcl-modal-title">
+    <div class="bcl-modal">
+      <div class="bcl-modal-header">
+        <h2 id="bcl-modal-title">🎯 Customize <span id="bcl-modal-hero-name">Hero</span> Strategy</h2>
+        <button class="bcl-modal-close" onclick="closeBclModal()" aria-label="Close modal">×</button>
+      </div>
+      <div class="bcl-modal-body">
+        <div class="bcl-choices-list">
+          <h3>📋 Available Choices</h3>
+          <div id="bcl-choices-container" role="listbox" aria-label="Available choice points">
+            <!-- Choice items will be populated here -->
+          </div>
+        </div>
+        <div class="bcl-editor-panel">
+          <div class="bcl-editor-header">
+            <h3 id="bcl-editor-title">Select a choice to customize</h3>
+            <div class="bcl-editor-signature" id="bcl-editor-signature" style="display: none;"></div>
+            <div class="bcl-editor-docstring" id="bcl-editor-docstring" style="display: none;"></div>
+          </div>
+          <textarea class="bcl-editor-textarea" id="bcl-editor-textarea" placeholder="Select a choice from the list to start editing..." aria-label="BCL code editor"></textarea>
+          <div class="bcl-editor-actions">
+            <button class="success" onclick="saveBclChoice()" aria-label="Save current choice customization">💾 Save Choice</button>
+            <button class="secondary" onclick="resetBclChoice()" aria-label="Reset choice to default implementation">🔄 Reset to Default</button>
+          </div>
+          <div class="bcl-editor-default" id="bcl-editor-default" style="display: none;">
+            <div class="bcl-editor-default-label">Default Behavior:</div>
+            <div class="bcl-editor-default-text" id="bcl-editor-default-text"></div>
+          </div>
+        </div>
+      </div>
+      <div class="bcl-modal-footer">
+        <div class="bcl-footer-info">
+          <span id="bcl-customization-count">0</span> customization(s) saved
+        </div>
+        <div class="bcl-footer-actions">
+          <button class="secondary" onclick="downloadBclDelta()" aria-label="Download BCL delta file">📥 Download BCL Delta</button>
+          <button onclick="closeBclModal()" aria-label="Close and apply customizations">✅ Done</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load the Blink Engine bundle -->
+  <script src="blink-engine.bundle.js"></script>
+  
+  <!-- Load the TypeScript compiler for in-browser BRL/BDL compilation -->
+  <script src="blink-compiler.bundle.js"></script>
+  
+  <!-- Load JSZip for BCL extraction -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" integrity="sha384-OLBgp1GsljhM2TJ+sbHjaiH9txEUvgdDTAzHv2P24donTt6/529l+9Ua0vFImLlb" crossorigin="anonymous"></script>
+  
+  <script>
+    // ========================================================================
+    // SCENARIO SELECTION STATE
+    // ========================================================================
+    
+    let selectedScenario = null;
+    let loadedIRData = null;
+    
+    // Scenario definitions
+    const SCENARIOS = [
+      {
+        id: 'easy',
+        name: 'Casual Adventure',
+        difficulty: 'Easy',
+        irFile: 'classic-rpg-easy.ir.json',
+        bdlFile: 'scenario-easy.bdl',
+        cssClass: 'easy'
+      },
+      {
+        id: 'normal',
+        name: 'Classic Campaign',
+        difficulty: 'Normal',
+        irFile: 'classic-rpg-normal.ir.json',
+        bdlFile: 'scenario-normal.bdl',
+        cssClass: 'normal'
+      },
+      {
+        id: 'hard',
+        name: 'Nightmare Mode',
+        difficulty: 'Hard',
+        irFile: 'classic-rpg-hard.ir.json',
+        bdlFile: 'scenario-hard.bdl',
+        cssClass: 'hard'
+      }
+    ];
+    
+    // ========================================================================
+    // PARTY SELECTION STATE
+    // ========================================================================
+    let availableCharacters = [];
+    let partySlots = [null, null, null, null]; // 4 slots for heroes
+    let currentHeroIndex = [0, 1, 2, 3]; // Current hero index for each slot's carousel (start with different heroes)
+    const MAX_PARTY_SIZE = 4;
+    
+    // DOM elements for party selection
+    const partySelectionScreen = document.getElementById('party-selection-screen');
+    const gameScreen = document.getElementById('game-screen');
+    const slotsContainer = document.getElementById('slots-container');
+    const selectedCountEl = document.getElementById('selected-count');
+    const confirmPartyBtn = document.getElementById('confirm-party-btn');
+    
+    // ========================================================================
+    // EXTRACT CHARACTER DATA FROM IR.initial_state
+    // ========================================================================
+    // Character data - hero definitions for the party selection screen.
+    // This function extracts hero definitions from IR.initial_state.entities
+    //
+    // SOURCE: game/bdl/heroes.bdl → compiled into IR.initial_state
+    // Heroes are entities with HeroInfo component and Team.isPlayer = true
+    // ========================================================================
+    function extractCharactersFromIR() {
+      if (!classicRpgIR || !classicRpgIR.initial_state || !classicRpgIR.initial_state.entities) {
+        console.error('No initial_state.entities in IR');
+        return [];
+      }
+      
+      // Filter entities that are heroes (have HeroInfo component and Team.isPlayer = true)
+      const heroes = classicRpgIR.initial_state.entities.filter(entity => {
+        return entity.components.HeroInfo && 
+               entity.components.Team && 
+               entity.components.Team.isPlayer === true;
+      });
+      
+      // Convert IR entities to the format expected by the UI
+      availableCharacters = heroes.map(entity => {
+        return {
+          id: entity.id,
+          name: entity.components.Character?.name || 'Unknown Hero',
+          class: entity.components.Character?.class || 'Adventurer',
+          level: entity.components.Character?.level || 1,
+          // Base stats for display in hero selection
+          baseHealth: entity.components.Health?.max || 100,
+          baseMana: entity.components.Mana?.max || 0,
+          baseDamage: entity.components.Combat?.damage || 10,
+          baseDefense: entity.components.Combat?.defense || 5,
+          // Hero info for UI
+          description: entity.components.HeroInfo?.description || '',
+          role: entity.components.HeroInfo?.role || 'Unknown',
+          difficulty: entity.components.HeroInfo?.difficulty || 'Normal',
+          // Full component data for game engine
+          health: {
+            current: entity.components.Health?.current || 100,
+            max: entity.components.Health?.max || 100
+          },
+          mana: {
+            current: entity.components.Mana?.current || 0,
+            max: entity.components.Mana?.max || 0
+          },
+          stats: entity.components.Stats || {
+            strength: 10,
+            dexterity: 10,
+            intelligence: 10,
+            constitution: 10,
+            wisdom: 10
+          },
+          combat: entity.components.Combat || {
+            damage: 10,
+            defense: 5,
+            attackSpeed: 1.0,
+            critChance: 0.1,
+            critMultiplier: 1.5
+          }
+        };
+      });
+      
+      console.info(`Extracted ${availableCharacters.length} heroes from IR.initial_state`);
+      return availableCharacters;
+    }
+    
+    // ========================================================================
+    // RENDER CHARACTER SELECTION - CAROUSEL BASED
+    // ========================================================================
+    function renderCharacterSelection() {
+      slotsContainer.innerHTML = '';
+      
+      // Check if we have any heroes to display
+      if (!availableCharacters || availableCharacters.length === 0) {
+        slotsContainer.innerHTML = `
+          <div style="grid-column: 1 / -1; text-align: center; padding: 40px; background: rgba(168, 94, 82, 0.1); border: 2px solid rgba(168, 94, 82, 0.3); border-radius: 15px;">
+            <h3 style="color: #a85e52; margin-bottom: 15px;">❌ No Heroes Available</h3>
+            <p style="color: #aaa; font-size: 0.9rem; margin-bottom: 10px;">
+              Failed to load hero data from the game rules. This could mean:
+            </p>
+            <ul style="color: #888; font-size: 0.85rem; text-align: left; max-width: 500px; margin: 0 auto; list-style-position: inside;">
+              <li>The IR file is missing hero definitions (HeroInfo component)</li>
+              <li>The BDL heroes data was not compiled into the IR</li>
+              <li>The IR file failed to load completely</li>
+            </ul>
+            <p style="color: #888; font-size: 0.85rem; margin-top: 15px;">
+              Please check the browser console for more details or refresh the page.
+            </p>
+          </div>
+        `;
+        console.error('Cannot render character selection: No heroes available in availableCharacters array');
+        return;
+      }
+      
+      // Create 4 hero slots
+      for (let slotIndex = 0; slotIndex < MAX_PARTY_SIZE; slotIndex++) {
+        const slot = document.createElement('div');
+        slot.className = 'hero-slot';
+        slot.id = `hero-slot-${slotIndex}`;
+        
+        // Slot header
+        const slotHeader = document.createElement('div');
+        slotHeader.className = 'slot-header';
+        slotHeader.innerHTML = `<h3 class="slot-title">Hero Slot ${slotIndex + 1}</h3>`;
+        slot.appendChild(slotHeader);
+        
+        // Carousel container
+        const carouselContainer = document.createElement('div');
+        carouselContainer.className = 'carousel-container';
+        
+        // Carousel controls
+        const carouselControls = document.createElement('div');
+        carouselControls.className = 'carousel-controls';
+        
+        const prevBtn = document.createElement('button');
+        prevBtn.className = 'carousel-btn';
+        prevBtn.innerHTML = '◀';
+        prevBtn.onclick = () => navigateCarousel(slotIndex, -1);
+        
+        const indicator = document.createElement('div');
+        indicator.className = 'carousel-indicator';
+        indicator.id = `carousel-indicator-${slotIndex}`;
+        
+        const nextBtn = document.createElement('button');
+        nextBtn.className = 'carousel-btn';
+        nextBtn.innerHTML = '▶';
+        nextBtn.onclick = () => navigateCarousel(slotIndex, 1);
+        
+        carouselControls.appendChild(prevBtn);
+        carouselControls.appendChild(indicator);
+        carouselControls.appendChild(nextBtn);
+        carouselContainer.appendChild(carouselControls);
+        
+        // Hero card display
+        const heroCardDiv = document.createElement('div');
+        heroCardDiv.id = `hero-card-${slotIndex}`;
+        carouselContainer.appendChild(heroCardDiv);
+        
+        slot.appendChild(carouselContainer);
+        slotsContainer.appendChild(slot);
+        
+        // Render the current hero for this slot
+        renderHeroInSlot(slotIndex);
+      }
+      
+      updatePartyCounter();
+    }
+    
+    // ========================================================================
+    // RENDER HERO IN SPECIFIC SLOT
+    // ========================================================================
+    function renderHeroInSlot(slotIndex) {
+      const heroIndex = currentHeroIndex[slotIndex];
+      const hero = availableCharacters[heroIndex];
+      const heroCardDiv = document.getElementById(`hero-card-${slotIndex}`);
+      const indicator = document.getElementById(`carousel-indicator-${slotIndex}`);
+      
+      if (!heroCardDiv || !indicator) {
+        console.error(`Missing DOM elements for slot ${slotIndex}`);
+        return;
+      }
+      
+      if (!hero) {
+        console.error(`No hero found at index ${heroIndex} for slot ${slotIndex}`);
+        heroCardDiv.innerHTML = `
+          <div style="text-align: center; padding: 20px; color: #a85e52;">
+            <p>❌ Hero data not available</p>
+          </div>
+        `;
+        return;
+      }
+      
+      // Check if this hero is already selected in another slot
+      const isAlreadySelected = partySlots.some((selectedHero, idx) => 
+        idx !== slotIndex && selectedHero && selectedHero.id === hero.id
+      );
+      
+      // Update indicator
+      indicator.textContent = `${heroIndex + 1} / ${availableCharacters.length}`;
+      
+      // Difficulty color mapping
+      const difficultyColor = {
+        'Easy': '#9ca873',
+        'Medium': '#c9956b',
+        'Hard': '#a85e52'
+      }[hero.difficulty] || '#8a7a68';
+      
+      // Create hero card HTML
+      heroCardDiv.className = 'hero-card';
+      if (isAlreadySelected) {
+        heroCardDiv.classList.add('unavailable');
+      }
+      
+      heroCardDiv.innerHTML = `
+        <div class="character-header">
+          <div class="character-title">
+            <h3>${hero.name}</h3>
+            <div class="character-class">${hero.class}</div>
+          </div>
+        </div>
+        
+        <div class="character-description">${hero.description}</div>
+        
+        <div style="margin-bottom: 8px;">
+          <span class="character-role">${hero.role}</span>
+          <span class="character-role" style="background: rgba(${difficultyColor === '#9ca873' ? '156, 168, 115' : difficultyColor === '#c9956b' ? '201, 149, 107' : '168, 94, 82'}, 0.2); color: ${difficultyColor};">${hero.difficulty}</span>
+        </div>
+        
+        <div class="character-stats-preview">
+          <div class="stat-preview">
+            <span>❤️ Health:</span>
+            <span class="stat-preview-value">${hero.baseHealth}</span>
+          </div>
+          <div class="stat-preview">
+            <span>⚔️ Damage:</span>
+            <span class="stat-preview-value">${hero.baseDamage}</span>
+          </div>
+          <div class="stat-preview">
+            <span>💧 Mana:</span>
+            <span class="stat-preview-value">${hero.baseMana}</span>
+          </div>
+          <div class="stat-preview">
+            <span>🛡️ Defense:</span>
+            <span class="stat-preview-value">${hero.baseDefense}</span>
+          </div>
+        </div>
+        
+        <button class="hero-customize-btn ${hasHeroCustomizations(hero.id) ? 'has-customizations' : ''}" 
+                data-hero-id="${escapeHtml(hero.id)}"
+                data-hero-name="${escapeHtml(hero.name)}"
+                data-hero-class="${escapeHtml(hero.class)}"
+                aria-label="${hasHeroCustomizations(hero.id) ? 'Edit Strategy for ' + escapeHtml(hero.name) : 'Customize Strategy for ' + escapeHtml(hero.name)}">
+          ${hasHeroCustomizations(hero.id) ? '✏️ Edit Strategy' : '🎯 Customize Strategy'}
+        </button>
+      `;
+      
+      // Add event listener for customize button
+      const customizeBtn = heroCardDiv.querySelector('.hero-customize-btn');
+      if (customizeBtn) {
+        customizeBtn.addEventListener('click', (e) => {
+          const btn = e.currentTarget;
+          openBclModal(btn.dataset.heroId, btn.dataset.heroName, btn.dataset.heroClass);
+        });
+      }
+      
+      // Update the selection state for this slot
+      // Only set as selected if not already selected elsewhere
+      if (!isAlreadySelected) {
+        partySlots[slotIndex] = hero;
+      } else {
+        // If the currently displayed hero is already selected elsewhere, clear this slot
+        if (partySlots[slotIndex] && partySlots[slotIndex].id === hero.id) {
+          partySlots[slotIndex] = null;
+        }
+      }
+    }
+    
+    // ========================================================================
+    // NAVIGATE CAROUSEL
+    // ========================================================================
+    function navigateCarousel(slotIndex, direction) {
+      // Update the current index
+      currentHeroIndex[slotIndex] = (currentHeroIndex[slotIndex] + direction + availableCharacters.length) % availableCharacters.length;
+      
+      // Re-render this slot
+      renderHeroInSlot(slotIndex);
+      
+      updatePartyCounter();
+    }
+    
+    // ========================================================================
+    // UPDATE PARTY COUNTER
+    // ========================================================================
+    function updatePartyCounter() {
+      const selectedCount = partySlots.filter(hero => hero !== null).length;
+      selectedCountEl.textContent = selectedCount;
+      confirmPartyBtn.disabled = selectedCount !== MAX_PARTY_SIZE;
+    }
+    
+    // ========================================================================
+    // ========================================================================
+    // BCL CUSTOMIZATION SYSTEM
+    // ========================================================================
+    // BCL (Blink Choice Language) allows players to customize AI strategy.
+    //
+    // CURRENT STATE:
+    //   - Choice points metadata should come from IR.choice_points
+    //   - Player customizations stored in localStorage as text
+    //   - Can download customizations as .bcl delta file
+    //   - Customizations are NOT compiled/executed (cosmetic only)
+    //
+    // FUTURE STATE (with browser-based BCL compiler):
+    //   1. Choice points loaded from IR.choice_points (with signatures, docstrings)
+    //   2. Player edits BCL code in browser editor
+    //   3. Browser-based WASM compiler compiles BCL to choice_functions
+    //   4. Delta IR merged with base IR for runtime execution
+    //   5. Custom strategy actually affects gameplay
+    //
+    // For browser-based BRL/BDL editing (future release):
+    //   - Same WASM compiler can handle BRL/BDL edits
+    //   - Delta compilation: merge changes with base IR
+    //   - Hot reload without page refresh
+    // ========================================================================
+    const BCL_STORAGE_KEY = 'blink_bcl_customizations';
+    let currentBclHeroId = null;
+    let currentBclChoice = null;
+    let choicePointsData = [];
+    
+    // ========================================================================
+    // LOAD CHOICE POINTS (From IR.choice_points)
+    // ========================================================================
+    // Choice points are metadata about customizable player decisions.
+    // They define the signature and behavior of BCL choice functions.
+    //
+    // SOURCE: BCL files (*.bcl) → IR.choice_points (when compiler supports it)
+    //
+    // FUTURE: Compiler will extract choice point metadata from BCL:
+    //   - id: Unique identifier
+    //   - name: Human-readable name
+    //   - signature: Function signature for editor
+    //   - docstring: Documentation for player
+    //   - category: Grouping (targeting, combat, strategy, etc.)
+    //   - applicableClasses: Which hero classes can use this choice
+    //   - defaultBehavior: Description of default behavior
+    // ========================================================================
+    async function loadChoicePoints() {
+      if (classicRpgIR && classicRpgIR.choice_points) {
+        choicePointsData = classicRpgIR.choice_points;
+        console.info(`Loaded ${choicePointsData.length} choice points from IR`);
+      } else {
+        choicePointsData = [];
+        console.info('Loaded 0 choice points from IR');
+      }
+    }
+    
+    // HTML escape helper to prevent XSS
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+    
+    // Get customizations from localStorage
+    function getBclCustomizations() {
+      try {
+        const stored = localStorage.getItem(BCL_STORAGE_KEY);
+        return stored ? JSON.parse(stored) : {};
+      } catch (e) {
+        console.error('Failed to load BCL customizations:', e);
+        return {};
+      }
+    }
+    
+    // Save customizations to localStorage
+    function saveBclCustomizations(customizations) {
+      try {
+        localStorage.setItem(BCL_STORAGE_KEY, JSON.stringify(customizations));
+      } catch (e) {
+        console.error('Failed to save BCL customizations:', e);
+      }
+    }
+    
+    // Check if a hero has any customizations
+    function hasHeroCustomizations(heroId) {
+      const customizations = getBclCustomizations();
+      return customizations[heroId] && Object.keys(customizations[heroId]).length > 0;
+    }
+    
+    // Get customization count for a hero
+    function getHeroCustomizationCount(heroId) {
+      const customizations = getBclCustomizations();
+      return customizations[heroId] ? Object.keys(customizations[heroId]).length : 0;
+    }
+    
+    // Open the BCL customization modal
+    function openBclModal(heroId, heroName, heroClass) {
+      currentBclHeroId = heroId;
+      currentBclChoice = null;
+      
+      // Update modal title
+      document.getElementById('bcl-modal-hero-name').textContent = heroName;
+      
+      // Populate choices list
+      const choicesContainer = document.getElementById('bcl-choices-container');
+      const customizations = getBclCustomizations();
+      const heroCustomizations = customizations[heroId] || {};
+      
+      // Filter choice points that apply to this hero's class
+      const applicableChoices = choicePointsData.filter(cp => {
+        if (!cp.applicableClasses) return true;
+        return cp.applicableClasses.includes(heroClass);
+      });
+      
+      choicesContainer.innerHTML = applicableChoices.map(cp => {
+        const isCustomized = heroCustomizations[cp.id] !== undefined;
+        return `
+          <div class="choice-item ${isCustomized ? 'customized' : ''}" 
+               data-choice-id="${escapeHtml(cp.id)}"
+               role="button"
+               tabindex="0"
+               aria-label="${escapeHtml(cp.name)}: ${escapeHtml(cp.docstring)}">
+            <div class="choice-item-name">${escapeHtml(cp.name)}</div>
+            <span class="choice-item-category">${escapeHtml(cp.category)}</span>
+            <div class="choice-item-description">${escapeHtml(cp.docstring)}</div>
+          </div>
+        `;
+      }).join('');
+      
+      // Add event listeners for choice items (event delegation)
+      choicesContainer.querySelectorAll('.choice-item').forEach(item => {
+        item.addEventListener('click', () => selectBclChoice(item.dataset.choiceId));
+        item.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            selectBclChoice(item.dataset.choiceId);
+          }
+        });
+      });
+      
+      // Update customization count
+      updateBclCustomizationCount();
+      
+      // Reset editor
+      resetBclEditor();
+      
+      // Show modal
+      document.getElementById('bcl-modal-overlay').classList.add('active');
+    }
+    
+    // Close the BCL customization modal
+    function closeBclModal() {
+      document.getElementById('bcl-modal-overlay').classList.remove('active');
+      currentBclHeroId = null;
+      currentBclChoice = null;
+      
+      // Re-render all hero slots to update customize buttons
+      for (let i = 0; i < MAX_PARTY_SIZE; i++) {
+        renderHeroInSlot(i);
+      }
+    }
+    
+    // Select a choice point for editing
+    function selectBclChoice(choiceId) {
+      currentBclChoice = choiceId;
+      
+      // Update selection UI
+      document.querySelectorAll('.choice-item').forEach(item => {
+        item.classList.remove('selected');
+        if (item.dataset.choiceId === choiceId) {
+          item.classList.add('selected');
+        }
+      });
+      
+      // Get choice point data
+      const choicePoint = choicePointsData.find(cp => cp.id === choiceId);
+      if (!choicePoint) return;
+      
+      // Update editor header
+      document.getElementById('bcl-editor-title').textContent = `Edit: ${choicePoint.name}`;
+      
+      const signatureEl = document.getElementById('bcl-editor-signature');
+      signatureEl.textContent = choicePoint.signature;
+      signatureEl.style.display = 'block';
+      
+      const docstringEl = document.getElementById('bcl-editor-docstring');
+      docstringEl.textContent = choicePoint.docstring;
+      docstringEl.style.display = 'block';
+      
+      // Show default behavior
+      const defaultEl = document.getElementById('bcl-editor-default');
+      const defaultTextEl = document.getElementById('bcl-editor-default-text');
+      defaultTextEl.textContent = choicePoint.defaultBehavior || 'No default description available';
+      defaultEl.style.display = 'block';
+      
+      // Load current customization or default BCL implementation
+      const customizations = getBclCustomizations();
+      const heroCustomizations = customizations[currentBclHeroId] || {};
+      
+      let editorContent = '';
+      
+      if (heroCustomizations[choiceId]) {
+        // Load existing customization
+        editorContent = heroCustomizations[choiceId];
+      } else {
+        // Load default BCL implementation from loaded files
+        const defaultImpl = getDefaultBclImplementation(choiceId);
+        editorContent = defaultImpl || `// No default implementation found for ${choiceId}\n// Write your custom implementation here\n\n${choicePoint.signature} {\n    // Your code here\n}`;
+      }
+      
+      // Set editor content
+      document.getElementById('bcl-editor-textarea').value = editorContent;
+    }
+    
+    // Get default BCL implementation for a choice function
+    function getDefaultBclImplementation(choiceId) {
+      // First, try to get bound function from IR entities
+      if (classicRpgIR && classicRpgIR.initial_state && classicRpgIR.initial_state.entities) {
+        for (const entity of classicRpgIR.initial_state.entities) {
+          if (entity.bound_functions && entity.bound_functions[choiceId]) {
+            const boundFunc = entity.bound_functions[choiceId];
+            // If the bound function has a source field, use it
+            if (boundFunc.source) {
+              return `// From entity: ${entity.name}\n// Bound function from IR\n\n${boundFunc.source}`;
+            }
+            // Otherwise, reconstruct from IR structure
+            const params = boundFunc.params.map(p => {
+              let typeStr = p.type.type;
+              if (p.type.type === 'list') {
+                typeStr = 'list';
+              } else if (p.type.type === 'composite') {
+                typeStr = p.type.components.join(' & ');
+              }
+              return `${p.name}: ${typeStr}`;
+            }).join(', ');
+            const returnType = boundFunc.return_type.type;
+            return `// From entity: ${entity.name}\n// Bound function from IR (reconstructed)\n\nchoice fn ${choiceId}(${params}): ${returnType} {\n    // Function body defined in BDL\n    // See IR for full implementation\n}`;
+          }
+        }
+      }
+      
+      // Fallback: Search through loaded BCL files for the function implementation
+      for (const bclFile of loadedBCLFiles) {
+        // Look for the choice function definition (without global flag to avoid state issues)
+        const regex = new RegExp(`choice\\s+fn\\s+${choiceId}\\s*\\([^)]*\\)\\s*:\\s*\\w+\\s*\\{`);
+        const match = bclFile.content.match(regex);
+        
+        if (match) {
+          const startIndex = match.index;
+          
+          // Extract the full function including body
+          // Find matching closing brace
+          let braceCount = 0;
+          let endIndex = startIndex;
+          let foundOpenBrace = false;
+          
+          for (let i = startIndex; i < bclFile.content.length; i++) {
+            const char = bclFile.content[i];
+            if (char === '{') {
+              braceCount++;
+              foundOpenBrace = true;
+            } else if (char === '}') {
+              braceCount--;
+              if (foundOpenBrace && braceCount === 0) {
+                endIndex = i + 1;
+                break;
+              }
+            }
+          }
+          
+          // Extract function with some context (comments before it)
+          const beforeFunction = bclFile.content.substring(Math.max(0, startIndex - BCL_COMMENT_CONTEXT_LENGTH), startIndex);
+          const commentLines = [];
+          const lines = beforeFunction.split('\n');
+          
+          // Get trailing comments
+          for (let i = lines.length - 1; i >= 0; i--) {
+            const line = lines[i].trim();
+            if (line.startsWith('//')) {
+              commentLines.unshift(lines[i]);
+            } else if (line === '') {
+              // Empty line, continue
+              continue;
+            } else {
+              // Non-comment line, stop
+              break;
+            }
+          }
+          
+          const comments = commentLines.join('\n');
+          const functionCode = bclFile.content.substring(startIndex, endIndex);
+          
+          return comments ? `${comments}\n${functionCode}` : functionCode;
+        }
+      }
+      
+      return null;
+    }
+    
+    // Generate a BCL template for a choice point
+    function generateBclTemplate(choicePoint) {
+      const templates = {
+        'select_attack_target': `// Customize target selection
+// Return the id of the enemy to attack
+
+choice fn select_attack_target(character: Character, enemies: list): id {
+    // Example: Target enemy with lowest health
+    let target = enemies[0]
+    for enemy in enemies {
+        if enemy.Health.current < target.Health.current {
+            target = enemy
+        }
+    }
+    return target.id
+}`,
+        'select_combat_skill': `// Customize skill selection in combat
+// Return the name of the skill to use
+
+choice fn select_combat_skill(character: Character & Skills & Health & Mana, allies: list, enemies: list): string {
+    let hp_pct = character.Health.current / character.Health.max
+    let mana_pct = character.Mana.current / character.Mana.max
+    
+    // Example: Use defensive skill if low health
+    if hp_pct < 0.3 {
+        return "defensive_stance"
+    }
+    
+    // Default to basic attack
+    return "basic_attack"
+}`,
+        'select_heal_target': `// Customize heal target selection
+// Return the id of the ally to heal, or null if no one needs healing
+
+choice fn select_heal_target(character: Character, allies: list): id? {
+    let critical_threshold = 0.3
+    
+    // Find critically wounded ally
+    for ally in allies {
+        let hp_pct = ally.Health.current / ally.Health.max
+        if hp_pct < critical_threshold {
+            return ally.id
+        }
+    }
+    
+    return null
+}`,
+        'should_flee_from_battle': `// Customize flee decision
+// Return true to flee, false to continue fighting
+
+choice fn should_flee_from_battle(party: list, enemies: list, runStats: RunStats): boolean {
+    // Calculate average party health
+    let total_health = 0.0
+    let total_max_health = 0.0
+    
+    for hero in party {
+        total_health += hero.Health.current
+        total_max_health += hero.Health.max
+    }
+    
+    let avg_health = total_health / total_max_health
+    
+    // Flee if party health is below 30%
+    if avg_health < 0.3 {
+        return true
+    }
+    
+    return false
+}`
+      };
+      
+      return templates[choicePoint.id] || `// Customize ${choicePoint.name}\n\n${choicePoint.signature} {\n    // Your code here\n}`;
+    }
+    
+    // Reset the BCL editor to default state
+    function resetBclEditor() {
+      document.getElementById('bcl-editor-title').textContent = 'Select a choice to customize';
+      document.getElementById('bcl-editor-signature').style.display = 'none';
+      document.getElementById('bcl-editor-docstring').style.display = 'none';
+      document.getElementById('bcl-editor-default').style.display = 'none';
+      document.getElementById('bcl-editor-textarea').value = '';
+      
+      document.querySelectorAll('.choice-item').forEach(item => {
+        item.classList.remove('selected');
+      });
+    }
+    
+    // Save the current choice customization
+    function saveBclChoice() {
+      if (!currentBclHeroId || !currentBclChoice) {
+        alert('Please select a choice to save.');
+        return;
+      }
+      
+      const code = document.getElementById('bcl-editor-textarea').value.trim();
+      if (!code) {
+        alert('Please enter some code before saving.');
+        return;
+      }
+      
+      const customizations = getBclCustomizations();
+      if (!customizations[currentBclHeroId]) {
+        customizations[currentBclHeroId] = {};
+      }
+      customizations[currentBclHeroId][currentBclChoice] = code;
+      
+      saveBclCustomizations(customizations);
+      
+      // Update UI
+      updateBclCustomizationCount();
+      updateChoiceItemCustomized(currentBclChoice, true);
+      
+      alert('Choice saved successfully!');
+    }
+    
+    // Reset a choice to default (remove customization)
+    function resetBclChoice() {
+      if (!currentBclHeroId || !currentBclChoice) {
+        alert('Please select a choice to reset.');
+        return;
+      }
+      
+      if (!confirm('Reset this choice to default? Your customization will be removed.')) {
+        return;
+      }
+      
+      const customizations = getBclCustomizations();
+      if (customizations[currentBclHeroId]) {
+        delete customizations[currentBclHeroId][currentBclChoice];
+        
+        // Clean up empty hero entry
+        if (Object.keys(customizations[currentBclHeroId]).length === 0) {
+          delete customizations[currentBclHeroId];
+        }
+        
+        saveBclCustomizations(customizations);
+      }
+      
+      // Update UI
+      updateBclCustomizationCount();
+      updateChoiceItemCustomized(currentBclChoice, false);
+      
+      // Reset editor to template
+      const choicePoint = choicePointsData.find(cp => cp.id === currentBclChoice);
+      if (choicePoint) {
+        document.getElementById('bcl-editor-textarea').value = generateBclTemplate(choicePoint);
+      }
+    }
+    
+    // Update the customization count display
+    function updateBclCustomizationCount() {
+      const count = getHeroCustomizationCount(currentBclHeroId);
+      document.getElementById('bcl-customization-count').textContent = count;
+    }
+    
+    // Update a choice item's customized state
+    function updateChoiceItemCustomized(choiceId, isCustomized) {
+      const item = document.querySelector(`.choice-item[data-choice-id="${choiceId}"]`);
+      if (item) {
+        if (isCustomized) {
+          item.classList.add('customized');
+        } else {
+          item.classList.remove('customized');
+        }
+      }
+    }
+    
+    // Download BCL delta file for the current hero
+    function downloadBclDelta() {
+      if (!currentBclHeroId) {
+        alert('No hero selected.');
+        return;
+      }
+      
+      const customizations = getBclCustomizations();
+      const heroCustomizations = customizations[currentBclHeroId];
+      
+      if (!heroCustomizations || Object.keys(heroCustomizations).length === 0) {
+        alert('No customizations to download for this hero.');
+        return;
+      }
+      
+      // Build BCL delta content
+      let bclContent = `// BCL Delta for ${currentBclHeroId}\n`;
+      bclContent += `// Generated: ${new Date().toISOString()}\n`;
+      bclContent += `// Contains ${Object.keys(heroCustomizations).length} customized choice(s)\n\n`;
+      bclContent += `module ${currentBclHeroId}_customizations\n\n`;
+      
+      for (const [choiceId, code] of Object.entries(heroCustomizations)) {
+        const choicePoint = choicePointsData.find(cp => cp.id === choiceId);
+        bclContent += `// === ${choicePoint?.name || choiceId} ===\n`;
+        bclContent += code + '\n\n';
+      }
+      
+      // Create and download file
+      const blob = new Blob([bclContent], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${currentBclHeroId}-strategy.bcl`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+    
+    // Initialize BCL system when page loads
+    // ========================================================================
+    // LOAD BCL FILES FROM GAME/BCL DIRECTORY
+    // ========================================================================
+    // Loads all BCL strategy files for use in the BCL customization UI.
+    // These files define the default AI behavior for different classes.
+    //
+    // BCL files loaded:
+    //   - warrior-skills.bcl: Warrior combat and skill strategies
+    //   - mage-skills.bcl: Mage spell and targeting strategies
+    //   - rogue-skills.bcl: Rogue stealth and assassination strategies
+    //   - cleric-skills.bcl: Cleric healing and support strategies
+    //   - party-config.bcl: Party-level strategies
+    //   - flee-aggressive.bcl: Aggressive flee strategy
+    //   - flee-conservative.bcl: Conservative flee strategy
+    //
+    // Each BCL file is loaded as text and stored in loadedBCLFiles array.
+    // Players can view and customize these strategies via the BCL editor UI.
+    // ========================================================================
+    
+    // Configuration constants for BCL loading
+    const BCL_GITHUB_PAGES_PATH = '/game-files/';  // Path on GitHub Pages deployment (absolute to site root)
+    const BCL_LOCAL_DEV_PATH = '/game/bcl/';      // Path for local development (absolute to site root)
+    const BCL_DOCSTRING_SEARCH_LENGTH = 500;       // Characters to search before function for docstring
+    const BCL_COMMENT_CONTEXT_LENGTH = 300;        // Characters to search for comments
+    
+    async function loadBclFiles() {
+      const bclFiles = [
+        'warrior-skills.bcl',
+        'mage-skills.bcl',
+        'rogue-skills.bcl',
+        'cleric-skills.bcl',
+        'party-config.bcl',
+        'flee-aggressive.bcl',
+        'flee-conservative.bcl'
+      ];
+      
+      loadedBCLFiles = [];
+      const basePaths = [BCL_GITHUB_PAGES_PATH, BCL_LOCAL_DEV_PATH];
+      
+      // Add GitHub Pages paths with base path only if base path is detected
+      if (BASE_PATH) {
+        basePaths.push(
+          `${BASE_PATH}${BCL_GITHUB_PAGES_PATH}`,
+          `${BASE_PATH}${BCL_LOCAL_DEV_PATH}`
+        );
+      }
+      
+      for (const filename of bclFiles) {
+        let loaded = false;
+        for (const basePath of basePaths) {
+          try {
+            const response = await fetch(basePath + filename);
+            if (!response.ok) continue;
+            
+            const content = await response.text();
+            loadedBCLFiles.push({ name: filename, content });
+            console.info(`Loaded BCL file: ${filename} from ${basePath}`);
+            loaded = true;
+            break;
+          } catch (error) {
+            // Try next path
+            continue;
+          }
+        }
+        
+        if (!loaded) {
+          console.warn(`Failed to load BCL file: ${filename} from all paths`);
+        }
+      }
+      
+      console.info(`Loaded ${loadedBCLFiles.length} BCL files successfully`);
+      return loadedBCLFiles;
+    }
+    
+    // ========================================================================
+    // EXTRACT CHOICE FUNCTIONS FROM BCL FILES
+    // ========================================================================
+    // Parse loaded BCL files to extract choice function definitions.
+    // Creates choice point metadata for use in the BCL editor UI.
+    //
+    // Each choice function in BCL follows this pattern:
+    //   choice fn function_name(params...): return_type { ... }
+    //
+    // We extract:
+    //   - Function name (id)
+    //   - Signature (full function declaration)
+    //   - Source file name
+    //   - Function body
+    //
+    // This allows players to view and customize the default BCL implementations.
+    // ========================================================================
+    function extractChoiceFunctionsFromBCL() {
+      const choiceFunctions = [];
+      
+      // Regex to match BCL choice functions
+      // Matches: choice fn function_name(params): return_type { ... }
+      const choiceFnRegex = /choice\s+fn\s+(\w+)\s*\([^)]*\)\s*:\s*\w+\s*\{/g;
+      const fullFnRegex = /(choice\s+fn\s+\w+\s*\([^)]*\)\s*:\s*\w+)\s*\{/;
+      
+      for (const bclFile of loadedBCLFiles) {
+        const matches = [...bclFile.content.matchAll(choiceFnRegex)];
+        
+        for (const match of matches) {
+          const functionName = match[1];
+          const startIndex = match.index;
+          
+          // Extract full signature
+          const sigMatch = bclFile.content.substring(startIndex).match(fullFnRegex);
+          const signature = sigMatch ? sigMatch[1] : `choice fn ${functionName}(...)`;
+          
+          // Try to extract docstring (comment before function)
+          const beforeFunction = bclFile.content.substring(Math.max(0, startIndex - BCL_DOCSTRING_SEARCH_LENGTH), startIndex);
+          const commentMatch = beforeFunction.match(/\/\/\s*(.+?)(?:\n\/\/\s*(.+?))*\s*$/);
+          const docstring = commentMatch ? commentMatch[0].replace(/^\/\/\s*/gm, '').trim() : 
+                            `${functionName} choice function`;
+          
+          // Determine category from file name
+          let category = 'strategy';
+          if (bclFile.name.includes('skill')) category = 'combat';
+          if (bclFile.name.includes('flee')) category = 'retreat';
+          if (bclFile.name.includes('target')) category = 'targeting';
+          
+          // Determine applicable classes from file name
+          let applicableClasses = null;
+          if (bclFile.name.includes('warrior')) applicableClasses = ['Warrior'];
+          if (bclFile.name.includes('mage')) applicableClasses = ['Mage'];
+          if (bclFile.name.includes('rogue')) applicableClasses = ['Rogue'];
+          if (bclFile.name.includes('cleric')) applicableClasses = ['Cleric'];
+          
+          choiceFunctions.push({
+            id: functionName,
+            name: functionName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+            signature: signature,
+            docstring: docstring,
+            category: category,
+            applicableClasses: applicableClasses,
+            sourceFile: bclFile.name,
+            defaultBehavior: docstring
+          });
+        }
+      }
+      
+      console.info(`Extracted ${choiceFunctions.length} choice functions from BCL files`);
+      return choiceFunctions;
+    }
+    
+    async function initBclSystem() {
+      await loadChoicePoints();
+      await loadBclFiles();
+      
+      // Count bound functions in IR
+      let irBoundFunctionCount = 0;
+      if (classicRpgIR && classicRpgIR.initial_state && classicRpgIR.initial_state.entities) {
+        const entitiesWithBoundFunctions = classicRpgIR.initial_state.entities.filter(e => e.bound_functions);
+        irBoundFunctionCount = entitiesWithBoundFunctions.reduce((sum, e) => sum + Object.keys(e.bound_functions).length, 0);
+      }
+      
+      // If IR doesn't have choice_points, extract them from BCL files
+      if (!choicePointsData || choicePointsData.length === 0) {
+        choicePointsData = extractChoiceFunctionsFromBCL();
+        console.info(`Using ${choicePointsData.length} choice functions extracted from BCL files`);
+      }
+      
+      // Display loaded BCL info
+      if (irBoundFunctionCount > 0 || loadedBCLFiles.length > 0) {
+        const statusParts = [];
+        if (irBoundFunctionCount > 0) {
+          statusParts.push(`${irBoundFunctionCount} bound functions from IR`);
+        }
+        if (loadedBCLFiles.length > 0) {
+          statusParts.push(`${loadedBCLFiles.length} BCL files for customization`);
+        }
+        bclStatus.textContent = `Loaded: ${statusParts.join(', ')}`;
+        bclStatus.className = 'file-status loaded';
+        bclInfo.style.display = 'block';
+        bclFileList.innerHTML = '';
+        
+        // Show IR bound functions
+        if (irBoundFunctionCount > 0) {
+          const irItem = document.createElement('span');
+          irItem.className = 'bcl-file-item';
+          irItem.textContent = `IR (${irBoundFunctionCount} bound functions)`;
+          irItem.style.fontWeight = 'bold';
+          irItem.title = 'Bound choice functions defined in heroes.bdl, compiled into IR';
+          bclFileList.appendChild(irItem);
+        }
+        
+        // Show BCL files
+        loadedBCLFiles.forEach(file => {
+          const fileItem = document.createElement('span');
+          fileItem.className = 'bcl-file-item';
+          fileItem.textContent = file.name;
+          bclFileList.appendChild(fileItem);
+        });
+      }
+    }
+    
+    // ========================================================================
+    // SCENARIO SELECTION FUNCTIONS
+    // ========================================================================
+    
+    // Cache for fetched source files to avoid re-fetching
+    const sourceFileCache = {};
+    
+    // Detect base path for GitHub Pages deployment (e.g., /blink-idle-rpg/)
+    // Cache this value to avoid redundant pathname parsing
+    const BASE_PATH = (function() {
+      const pathParts = window.location.pathname.split('/').filter(p => p);
+      // If we're in a GitHub Pages deployment with repo name in path
+      // e.g., /blink-idle-rpg/index.html or /blink-idle-rpg/rpg-demo.html
+      // The first path segment should be the repo name (not 'game', 'demos', or a file)
+      if (pathParts.length > 0) {
+        const firstSegment = pathParts[0];
+        // Heuristic: if first segment doesn't look like a directory in the project structure,
+        // it's likely the repo name in a GitHub Pages URL
+        if (firstSegment !== 'game' && 
+            firstSegment !== 'demos' && 
+            !firstSegment.endsWith('.html')) {
+          return '/' + firstSegment;
+        }
+      }
+      return '';
+    })();
+    
+    // Log the detected base path for debugging
+    console.info(`BASE_PATH detected: "${BASE_PATH}" (window.location.pathname: ${window.location.pathname})`);
+    
+    // Fetch a source file with caching
+    async function fetchSourceFile(path) {
+      if (sourceFileCache[path]) {
+        return sourceFileCache[path];
+      }
+      
+      const paths = [
+        path,
+        `../brl/${path}`,
+        `../bdl/${path}`,
+        `data/${path}`,
+        `/game/${path}`,
+        `/game/brl/${path}`,
+        `/game/bdl/${path}`,
+        `/game-files/${path}`
+      ];
+      
+      // Add GitHub Pages paths with base path only if base path is detected
+      if (BASE_PATH) {
+        paths.push(
+          `${BASE_PATH}/game/${path}`,
+          `${BASE_PATH}/game/brl/${path}`,
+          `${BASE_PATH}/game/bdl/${path}`,
+          `${BASE_PATH}/game-files/${path}`
+        );
+      }
+      
+      for (const tryPath of paths) {
+        try {
+          const response = await fetch(tryPath);
+          if (!response.ok) continue;
+          const content = await response.text();
+          sourceFileCache[path] = content;
+          console.info(`✓ Loaded source file: ${path} from ${tryPath}`);
+          return content;
+        } catch (error) {
+          // Try next path
+        }
+      }
+      
+      console.error(`✗ Failed to load source file: ${path} (tried ${paths.length} paths)`);
+      throw new Error(`Failed to load source file: ${path}`);
+    }
+    
+    // Compile BRL and BDL source files to IR using the TypeScript compiler
+    async function compileScenario(scenarioId) {
+      const scenario = SCENARIOS.find(s => s.id === scenarioId);
+      if (!scenario) {
+        throw new Error(`Unknown scenario: ${scenarioId}`);
+      }
+      
+      console.info(`Compiling ${scenario.name} scenario from source files...`);
+      
+      // Load source files
+      const sources = [];
+      
+      // 1. Load the main BRL file (classic-rpg.brl)
+      const brlContent = await fetchSourceFile('classic-rpg.brl');
+      sources.push({
+        path: 'classic-rpg.brl',
+        content: brlContent,
+        language: 'brl'
+      });
+      
+      // 2. Load heroes.bdl
+      const heroesContent = await fetchSourceFile('heroes.bdl');
+      sources.push({
+        path: 'heroes.bdl',
+        content: heroesContent,
+        language: 'bdl'
+      });
+      
+      // 3. Load enemies.bdl
+      const enemiesContent = await fetchSourceFile('enemies.bdl');
+      sources.push({
+        path: 'enemies.bdl',
+        content: enemiesContent,
+        language: 'bdl'
+      });
+      
+      // 4. Load scenario-specific BDL file
+      const scenarioContent = await fetchSourceFile(scenario.bdlFile);
+      sources.push({
+        path: scenario.bdlFile,
+        content: scenarioContent,
+        language: 'bdl'
+      });
+      
+      // Compile using the TypeScript compiler
+      const compileResult = BlinkCompiler.compile(sources, {
+        moduleName: `classic-rpg-${scenarioId}`,
+        includeSourceMap: true
+      });
+      
+      if (compileResult.errors.length > 0) {
+        console.error('Compilation errors:', compileResult.errors);
+        throw new Error(`Compilation failed: ${compileResult.errors.map(e => e.message).join(', ')}`);
+      }
+      
+      console.info(`Successfully compiled ${scenario.name} scenario:`);
+      console.info(`  - Components: ${compileResult.ir.components.length}`);
+      console.info(`  - Rules: ${compileResult.ir.rules.length}`);
+      console.info(`  - Functions: ${compileResult.ir.functions.length}`);
+      console.info(`  - Entities: ${compileResult.ir.initial_state?.entities?.length || 0}`);
+      console.info(`  - Choice points: ${compileResult.ir.choice_points?.length || 0}`);
+      
+      return compileResult.ir;
+    }
+    
+    async function loadScenarioIR(scenarioId) {
+      const scenario = SCENARIOS.find(s => s.id === scenarioId);
+      if (!scenario) {
+        throw new Error(`Unknown scenario: ${scenarioId}`);
+      }
+      
+      // Compile from source files - fail fast if compilation fails
+      if (typeof BlinkCompiler === 'undefined' || !BlinkCompiler.compile) {
+        throw new Error('BlinkCompiler is not available. Cannot compile scenario from source.');
+      }
+      
+      return await compileScenario(scenarioId);
+    }
+    
+    function renderScenarios() {
+      const scenariosContainer = document.getElementById('scenarios-container');
+      
+      scenariosContainer.innerHTML = SCENARIOS.map(scenario => `
+        <div class="scenario-card ${scenario.cssClass}" onclick="selectScenario('${scenario.id}')">
+          <div class="scenario-name">${scenario.name}</div>
+          <div class="scenario-difficulty ${scenario.cssClass}">${scenario.difficulty}</div>
+          <div class="scenario-description" id="scenario-desc-${scenario.id}">Loading scenario data...</div>
+          <div class="scenario-stats" id="scenario-stats-${scenario.id}">
+            <div class="scenario-stat">
+              <span class="scenario-stat-label">Loading...</span>
+            </div>
+          </div>
+        </div>
+      `).join('');
+      
+      // Load each scenario's metadata
+      SCENARIOS.forEach(async (scenario) => {
+        try {
+          const ir = await loadScenarioIR(scenario.id);
+          
+          // Extract ScenarioInfo from IR
+          if (ir && ir.initial_state && ir.initial_state.entities) {
+            const scenarioEntity = ir.initial_state.entities.find(e => e.components.ScenarioInfo);
+            if (scenarioEntity && scenarioEntity.components.ScenarioInfo) {
+              const info = scenarioEntity.components.ScenarioInfo;
+              
+              // Update description
+              document.getElementById(`scenario-desc-${scenario.id}`).textContent = info.description;
+              
+              // Update stats
+              document.getElementById(`scenario-stats-${scenario.id}`).innerHTML = `
+                <div class="scenario-stat">
+                  <span class="scenario-stat-label">Respawn Time:</span>
+                  <span class="scenario-stat-value">${info.respawnTime}</span>
+                </div>
+                <div class="scenario-stat">
+                  <span class="scenario-stat-label">Death Penalty:</span>
+                  <span class="scenario-stat-value">${info.deathPenalty}</span>
+                </div>
+                <div class="scenario-stat">
+                  <span class="scenario-stat-label">Enemies/Wave:</span>
+                  <span class="scenario-stat-value">${info.enemiesPerWave}</span>
+                </div>
+                <div class="scenario-stat">
+                  <span class="scenario-stat-label">Boss Frequency:</span>
+                  <span class="scenario-stat-value">${info.bossFrequency}</span>
+                </div>
+              `;
+            }
+          }
+        } catch (error) {
+          console.error(`Failed to load scenario ${scenario.id}:`, error);
+          document.getElementById(`scenario-desc-${scenario.id}`).textContent = 
+            'Failed to load scenario. Please refresh the page.';
+        }
+      });
+    }
+    
+    async function selectScenario(scenarioId) {
+      const scenario = SCENARIOS.find(s => s.id === scenarioId);
+      if (!scenario) return;
+      
+      selectedScenario = scenario;
+      console.info(`Selected scenario: ${scenario.name}`);
+      
+      try {
+        // Load the scenario's IR
+        loadedIRData = await loadScenarioIR(scenarioId);
+        classicRpgIR = loadedIRData; // Set global IR variable
+        
+        // Hide scenario selection, show party selection
+        document.getElementById('scenario-selection-screen').style.display = 'none';
+        document.getElementById('party-selection-screen').style.display = 'block';
+        
+        // Extract characters and enemies from the loaded IR
+        extractCharactersFromIR();
+        extractEnemiesFromIR();
+        
+        // Load source files from IR for dev mode (if IR has source_map)
+        loadSourceFilesFromIR();
+        
+        // Render the party selection UI
+        renderCharacterSelection();
+        
+      } catch (error) {
+        console.error(`Failed to load scenario ${scenarioId}:`, error);
+        alert(`Failed to load ${scenario.name}. Please try again or select a different scenario.`);
+      }
+    }
+    
+    // ========================================================================
+    // START GAME WITH SELECTED PARTY
+    // ========================================================================
+    confirmPartyBtn.addEventListener('click', () => {
+      const selectedCharacters = partySlots.filter(hero => hero !== null);
+      if (selectedCharacters.length === MAX_PARTY_SIZE) {
+        partySelectionScreen.style.display = 'none';
+        gameScreen.classList.add('active');
+        initGameWithParty();
+      }
+    });
+    
+    // ========================================================================
+    // GAME STATE
+    // ========================================================================
+    let game = null;
+    let currentIR = null;
+    let loadedBCLFiles = [];
+    let playerCharacters = {};
+    let enemyCharacters = {};
+    let gameState = { wave: 1, enemiesDefeated: 0, playerDeaths: 0, victory: false, gameOver: false };
+    let nextEnemyId = 100; // Start enemy IDs from 100 to avoid conflicts
+    let lastLoggedKills = 0; // Track kills for summary logging
+    let updateCounter = 0; // Counter for batched UI updates
+    
+    // ========================================================================
+    // RUN TRACKING STATE
+    // ========================================================================
+    const RETREAT_TIME_PENALTY = 10; // X seconds penalty for fleeing
+    const DEATH_TIME_MULTIPLIER = 5; // N times X for death penalty (50 seconds)
+    const FLEE_COOLDOWN = 5; // Seconds cooldown between flee attempts
+    
+    let runState = {
+      runId: null,
+      startTime: null,
+      simulationTime: 0,
+      totalTime: 0, // Simulation time + penalties
+      retreatCount: 0,
+      retreatPenalty: 0,
+      deathPenalty: 0,
+      lastFleeTime: -999, // Last time flee was used
+      canFlee: true
+    };
+    
+    // DOM elements for run tracking
+    const totalTimeEl = document.getElementById('total-time');
+    const retreatCountEl = document.getElementById('retreat-count');
+    const retreatPenaltyEl = document.getElementById('retreat-penalty');
+    const deathPenaltyEl = document.getElementById('death-penalty');
+    const totalPenaltiesEl = document.getElementById('total-penalties');
+    const fleeBtn = document.getElementById('flee-btn');
+    
+    // DOM elements
+    const irFileInput = document.getElementById('ir-file');
+    const bclFileInput = document.getElementById('bcl-file');
+    const irStatus = document.getElementById('ir-status');
+    const bclStatus = document.getElementById('bcl-status');
+    const bclInfo = document.getElementById('bcl-info');
+    const bclFileList = document.getElementById('bcl-file-list');
+    const startBtn = document.getElementById('start-btn');
+    const pauseBtn = document.getElementById('pause-btn');
+    const resetBtn = document.getElementById('reset-btn');
+    const logContainer = document.getElementById('log-container');
+    const speedSlider = document.getElementById('speed-slider');
+    const speedValue = document.getElementById('speed-value');
+    const gameTimeEl = document.getElementById('game-time');
+    const currentWaveEl = document.getElementById('current-wave');
+    const enemiesDefeatedEl = document.getElementById('enemies-defeated');
+    const playerDeathsEl = document.getElementById('player-deaths');
+    const gameStatusEl = document.getElementById('game-status');
+    const gameBanner = document.getElementById('game-banner');
+    const bannerText = document.getElementById('banner-text');
+    const playerPartyEl = document.getElementById('player-party');
+    const enemyPartyEl = document.getElementById('enemy-party');
+    
+    // Classic RPG IR - will be loaded from file
+    let classicRpgIR = null;
+    
+    // Enemy templates - loaded from IR.initial_state
+    let enemyTemplates = [];
+    
+    // ========================================================================
+    // EXTRACT ENEMY DATA FROM IR
+    // ========================================================================
+    // Enemy templates - creature definitions used for spawning enemies.
+    // This function extracts enemy templates from IR.initial_state.
+    //
+    // SOURCE: game/bdl/enemies.bdl → compiled into IR.initial_state
+    // Enemies are entities with Enemy component and Team.isPlayer = false
+    // ========================================================================
+    // ========================================================================
+    // ========================================================================
+    // EXTRACT ENEMY DATA FROM IR.initial_state
+    // ========================================================================
+    // Enemy templates - creature definitions used for spawning enemies.
+    // This function extracts enemy templates from IR.initial_state.entities
+    //
+    // SOURCE: game/bdl/enemies.bdl → compiled into IR.initial_state
+    // Enemies are entities with Enemy component and Team.isPlayer = false
+    // ========================================================================
+    function extractEnemiesFromIR() {
+      if (!classicRpgIR || !classicRpgIR.initial_state || !classicRpgIR.initial_state.entities) {
+        console.error('No initial_state.entities in IR');
+        return [];
+      }
+      
+      // Filter entities that are enemies (have Enemy component and Team.isPlayer = false)
+      const enemies = classicRpgIR.initial_state.entities.filter(entity => {
+        return entity.components.Enemy && 
+               entity.components.Team && 
+               entity.components.Team.isPlayer === false;
+      });
+      
+      // Convert IR entities to the format expected by the game
+      enemyTemplates = enemies.map(entity => {
+        return {
+          id: entity.id,
+          variable: entity.variable, // Used for spawning specific enemy types
+          name: entity.components.Character?.name || 'Unknown Enemy',
+          class: entity.components.Character?.class || 'Monster',
+          level: entity.components.Character?.level || 1,
+          health: {
+            current: entity.components.Health?.current || 50,
+            max: entity.components.Health?.max || 50
+          },
+          mana: {
+            current: entity.components.Mana?.current || 0,
+            max: entity.components.Mana?.max || 0
+          },
+          stats: entity.components.Stats || {
+            strength: 8,
+            dexterity: 8,
+            intelligence: 8,
+            constitution: 8,
+            wisdom: 8
+          },
+          combat: entity.components.Combat || {
+            damage: 8,
+            defense: 3,
+            attackSpeed: 1.0,
+            critChance: 0.05,
+            critMultiplier: 1.5
+          },
+          enemy: entity.components.Enemy || {
+            tier: 1,
+            isBoss: false,
+            expReward: 10
+          }
+        };
+      });
+      
+      console.info(`Extracted ${enemyTemplates.length} enemy templates from IR.initial_state`);
+      return enemyTemplates;
+    }
+    
+    // Embedded classic-rpg.ir.json data
+    
+    
+    // Load IR from file (fail-fast; no embedded fallback)
+    async function loadDefaultIR() {
+      // Try GitHub Pages path first, then local dev path
+      const paths = [
+        'classic-rpg.ir.json', 
+        'data/classic-rpg.ir.json', 
+        '../ir/classic-rpg.ir.json'
+      ];
+      
+      // Add GitHub Pages paths with base path only if base path is detected
+      if (BASE_PATH) {
+        paths.push(
+          `${BASE_PATH}/data/classic-rpg.ir.json`,
+          `${BASE_PATH}/game/ir/classic-rpg.ir.json`
+        );
+      }
+      
+      for (const path of paths) {
+        try {
+          console.debug(`Attempting to load IR from: ${path}`);
+          const response = await fetch(path);
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          classicRpgIR = await response.json();
+          console.info(`Successfully loaded IR from ${path}`);
+          irStatus.textContent = `Loaded from ${path}`;
+          irStatus.className = 'file-status loaded';
+          return; // Success, exit function
+        } catch (error) {
+          console.warn(`Failed to load from ${path}:`, error.message);
+          // Try next path
+        }
+      }
+      
+      // If we get here, all paths failed
+      const errorMsg = 'Failed to load classic-rpg.ir.json. Please check that the file is deployed correctly.';
+      console.error('ERROR: Failed to load IR from all paths:', paths);
+      irStatus.textContent = errorMsg;
+      irStatus.className = 'file-status error';
+      throw new Error(errorMsg);
+    }
+
+    
+    // File upload handlers
+    irFileInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      try {
+        const text = await file.text();
+        currentIR = JSON.parse(text);
+        irStatus.textContent = `Loaded: ${file.name}`;
+        irStatus.className = 'file-status loaded';
+        addLogEntry('system', `Loaded game rules from ${file.name}`);
+        resetGame();
+      } catch (err) {
+        irStatus.textContent = `Error: ${err.message}`;
+        irStatus.className = 'file-status error';
+      }
+    });
+    
+    bclFileInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      try {
+        const zip = await JSZip.loadAsync(file);
+        loadedBCLFiles = [];
+        bclFileList.innerHTML = '';
+        
+        for (const [filename, zipEntry] of Object.entries(zip.files)) {
+          if (filename.endsWith('.bcl') && !zipEntry.dir) {
+            const content = await zipEntry.async('string');
+            loadedBCLFiles.push({ name: filename, content });
+            
+            const fileItem = document.createElement('span');
+            fileItem.className = 'bcl-file-item';
+            fileItem.textContent = filename;
+            bclFileList.appendChild(fileItem);
+          }
+        }
+        
+        if (loadedBCLFiles.length > 0) {
+          bclStatus.textContent = `Loaded ${loadedBCLFiles.length} BCL files`;
+          bclStatus.className = 'file-status loaded';
+          bclInfo.style.display = 'block';
+          addLogEntry('system', `Loaded ${loadedBCLFiles.length} BCL strategy files`);
+        } else {
+          bclStatus.textContent = 'No BCL files found in ZIP';
+          bclStatus.className = 'file-status error';
+          bclInfo.style.display = 'none';
+        }
+      } catch (err) {
+        bclStatus.textContent = `Error: ${err.message}`;
+        bclStatus.className = 'file-status error';
+      }
+    });
+    
+    // Enemy templates - loaded from enemies.json file (no longer hardcoded)
+    
+    // ========================================================================
+    // ENEMY SPAWNING - NOW HANDLED BY BRL RULES
+    // ========================================================================
+    // Enemy spawning is now handled entirely by BRL rules using the 'clone' keyword.
+    // The spawn_enemy_from_template rule clones enemy templates from initial_state.
+    // The spawn_replacement_enemy rule spawns new enemies when one is defeated.
+    // These functions are no longer needed and kept only for reference.
+    
+    /*
+    // Spawn a new enemy
+    function spawnEnemy() {
+      // Select enemy based on how many have been defeated
+      const kills = gameState.enemiesDefeated;
+      let template;
+      
+      // Every 100 kills, spawn a boss
+      if (kills > 0 && kills % 100 === 0) {
+        template = enemyTemplates[7]; // Dragon boss
+      } else {
+        // Select based on progression
+        const tier = Math.min(6, Math.floor(kills / 50) + 1);
+        const candidates = enemyTemplates.filter(t => !t.enemy.isBoss && t.enemy.tier <= tier);
+        template = candidates[Math.floor(Math.random() * candidates.length)];
+      }
+      
+      const enemyId = nextEnemyId++;
+      game.createEntity(enemyId);
+      
+      // Randomly target one of the 4 heroes
+      const targetHero = Math.floor(Math.random() * 4);
+      
+      game.addComponent(enemyId, 'Character', {
+        name: template.name + (template.enemy.isBoss ? '' : ' #' + (kills + 1)),
+        class: template.enemy.isBoss ? 'Boss' : 'Monster',
+        level: Math.max(1, Math.floor(kills / 20) + 1),
+      });
+      
+      game.addComponent(enemyId, 'Health', {
+        current: template.health.max * (1 + kills / 200), // Scale with progression
+        max: template.health.max * (1 + kills / 200),
+      });
+      
+      game.addComponent(enemyId, 'Mana', {
+        current: 0,
+        max: 0,
+      });
+      
+      game.addComponent(enemyId, 'Combat', {
+        damage: template.combat.damage * (1 + kills / 300),
+        defense: 2 + Math.floor(kills / 50),
+        attackSpeed: template.combat.attackSpeed,
+      });
+      
+      game.addComponent(enemyId, 'Target', {
+        entity: targetHero,
+      });
+      
+      game.addComponent(enemyId, 'Team', {
+        id: 'enemy',
+        isPlayer: false,
+      });
+      
+      game.addComponent(enemyId, 'Enemy', {
+        tier: template.enemy.tier,
+        isBoss: template.enemy.isBoss || false,
+        expReward: template.enemy.expReward,
+      });
+      
+      game.addComponent(enemyId, 'Buffs', {
+        damageBonus: 0,
+      });
+      
+      // Schedule first attack
+      game.scheduleEvent('DoAttack', 0.1, { source: enemyId });
+      
+      return enemyId;
+    }
+    
+    // Spawn multiple enemies at start
+    function spawnInitialEnemies(count) {
+      const spawnedIds = [];
+      for (let i = 0; i < count; i++) {
+        spawnedIds.push(spawnEnemy());
+      }
+      
+      // After spawning enemies, assign hero targets
+      // Each hero targets a random enemy
+      for (let heroId = 0; heroId <= 3; heroId++) {
+        const randomEnemy = spawnedIds[Math.floor(Math.random() * spawnedIds.length)];
+        game.setComponentField(heroId, 'Target', 'entity', randomEnemy);
+      }
+    }
+    */
+    
+    // Initialize game
+    // ========================================================================
+    // INIT GAME WITH SELECTED PARTY
+    // ========================================================================
+    async function initGameWithParty() {
+      // Get selected characters from party slots
+      const selectedCharacters = partySlots.filter(hero => hero !== null);
+      
+      // Load default IR if not already loaded
+      if (!classicRpgIR && !currentIR) {
+        await loadDefaultIR();
+      }
+      
+      const ir = currentIR || classicRpgIR;
+      
+      if (!ir) {
+        console.error('Failed to load IR');
+        addLogEntry('system', '❌ ERROR: Failed to load game rules. Please refresh the page.');
+        gameStatusEl.textContent = 'Error';
+        gameStatusEl.style.color = '#a85e52';
+        return;
+      }
+      
+      if (enemyTemplates.length === 0) {
+        console.error('Failed to load enemy templates');
+        addLogEntry('system', '❌ ERROR: Failed to load enemy data. Please refresh the page.');
+        gameStatusEl.textContent = 'Error';
+        gameStatusEl.style.color = '#a85e52';
+        return;
+      }
+      
+      
+      game = await BlinkEngine.BlinkGame.create({
+        debug: true,  // Enable debug logging to diagnose event processing
+        msPerFrame: 100, // 100ms of simulation time per frame (async engine will yield during processing)
+        maxEventsPerFrame: 1000
+      });
+      
+      // Filter out hero templates from initial_state before loading
+      // Hero templates (entities with HeroTemplate component) are only for UI selection
+      // Actual hero entities (0-3) will be created below based on player selection
+      const filteredIR = {
+        ...ir,
+        initial_state: {
+          entities: ir.initial_state.entities.filter(entity => {
+            // Keep all entities EXCEPT hero templates
+            return !entity.components.HeroTemplate;
+          })
+        }
+      };
+      
+      game.loadRulesFromObject(filteredIR);
+      
+      // Load config and enemy template entities from the filtered IR
+      // These entities are needed for the BRL rules to work properly
+      console.info(`Loading ${filteredIR.initial_state.entities.length} entities from IR`);
+      filteredIR.initial_state.entities.forEach((entity) => {
+        game.createEntity(entity.id);
+        Object.entries(entity.components).forEach(([componentName, componentData]) => {
+          game.addComponent(entity.id, componentName, componentData);
+        });
+        // Log config entities
+        if (entity.components.GameState || entity.components.SpawnConfig) {
+          console.info(`Loaded config entity ${entity.id}:`, Object.keys(entity.components));
+        }
+      });
+      
+      // Create hero entities dynamically from selected characters
+      // Use entity IDs starting from 100 to avoid conflicts with enemy templates (0-8) and config entities (9-13)
+      selectedCharacters.forEach((char, index) => {
+        const entityId = 100 + index;
+        game.createEntity(entityId);
+        
+        game.addComponent(entityId, 'Character', {
+          name: char.name,
+          class: char.class,
+          level: 1,
+          experience: 0,
+          experienceToLevel: 100
+        });
+        
+        game.addComponent(entityId, 'Health', {
+          current: char.baseHealth,
+          max: char.baseHealth
+        });
+        
+        game.addComponent(entityId, 'Mana', {
+          current: char.baseMana,
+          max: char.baseMana
+        });
+        
+        game.addComponent(entityId, 'Stats', char.stats);
+        
+        game.addComponent(entityId, 'Combat', {
+          damage: char.baseDamage,
+          defense: char.baseDefense,
+          attackSpeed: char.attackSpeed,
+          critChance: 0.05,
+          critMultiplier: 1.5
+        });
+        
+        game.addComponent(entityId, 'Target', {
+          entity: null // Will be set by retargeting system when enemies spawn
+        });
+        
+        game.addComponent(entityId, 'Team', {
+          id: 'player',
+          isPlayer: true
+        });
+        
+        game.addComponent(entityId, 'Skills', {
+          skill1: char.skills && char.skills.length > 0 ? char.skills[0] : '',
+          skill2: '',
+          skill3: '',
+          skill4: '',
+          skillPoints: 0
+        });
+        
+        game.addComponent(entityId, 'Buffs', {
+          damageBonus: 0,
+          defenseBonus: 0,
+          hasteBonus: 0,
+          shieldAmount: 0,
+          regenAmount: 0
+        });
+        
+        game.addComponent(entityId, 'SkillCooldown', {
+          skill1Cooldown: 0,
+          skill2Cooldown: 0,
+          skill3Cooldown: 0,
+          skill4Cooldown: 0
+        });
+        
+        game.addComponent(entityId, 'ChoiceContext', {
+          pendingChoice: '',
+          options: '',
+          chosen: ''
+        });
+      });
+      
+      // Initialize character data
+      updateCharacterData();
+      
+      // Initialize run tracking
+      initializeRun();
+      
+      // Tracker subsystem removed: state updates via simulation events
+      
+      // Subscribe to simulation events
+      game.onSimulation((event) => {
+        handleSimulationEvent(event);
+      });
+      
+      // Enemy spawning now handled by BRL rules
+      // Initial enemies will be spawned via spawn_initial_enemies rule triggered by GameStart
+      // spawnInitialEnemies(5); // REMOVED - now in BRL
+      
+      // NEW: Schedule GameStart event to trigger BRL initialization
+      // Schedule a single global GameStart event - the engine will dispatch it to all entities
+      // Rules filter by component checks (e.g., if entity.SpawnConfig)
+      console.info('Scheduling global GameStart event');
+      // Note: The Blink engine dispatches global events to all entities automatically
+      // The spawn_initial_enemies rule will only run on entities with SpawnConfig component
+      game.scheduleEvent('GameStart', 0);
+      
+      // EnemySpawned event now triggered by BRL after spawning completes
+      // game.scheduleEvent('EnemySpawned', 0.1, { wave: 1 }); // REMOVED - now in BRL
+      
+      renderParties();
+      refreshLeaderboard();
+      
+      // Set initial game status
+      gameStatusEl.textContent = 'Ready';
+      gameStatusEl.style.color = '#4ade80';
+      
+      addLogEntry('system', `⚔️ ${selectedCharacters.map(c => c.name).join(', ')} are ready for battle!`);
+      addLogEntry('system', 'Click "Go!" to run simulation time.');
+    }
+    
+    async function initGame() {
+      // Load default IR if not already loaded
+      if (!classicRpgIR && !currentIR) {
+        await loadDefaultIR();
+      }
+      
+      const ir = currentIR || classicRpgIR;
+      
+      if (!ir) {
+        console.error('Failed to load IR');
+        addLogEntry('system', '❌ ERROR: Failed to load game rules. Please refresh the page.');
+        gameStatusEl.textContent = 'Error';
+        gameStatusEl.style.color = '#f87171';
+        return;
+      }
+      
+      if (enemyTemplates.length === 0) {
+        console.error('Failed to load enemy templates');
+        addLogEntry('system', '❌ ERROR: Failed to load enemy data. Please refresh the page.');
+        gameStatusEl.textContent = 'Error';
+        gameStatusEl.style.color = '#f87171';
+        return;
+      }
+      
+      game = await BlinkEngine.BlinkGame.create({
+        debug: false,
+        msPerFrame: 100, // 100ms of simulation time per frame for async engine
+        maxEventsPerFrame: 1000 // Process more events per frame for speed
+      });
+      
+      // Filter out hero templates from initial_state before loading
+      // Hero templates (entities with HeroTemplate component) are only for UI selection
+      // This loadRulesFromObject is for the old demo flow (not hero selection)
+      const filteredIR = {
+        ...ir,
+        initial_state: {
+          entities: ir.initial_state.entities.filter(entity => {
+            // Keep all entities EXCEPT hero templates
+            return !entity.components.HeroTemplate;
+          })
+        }
+      };
+      
+      game.loadRulesFromObject(filteredIR);
+      
+      // Initialize character data
+      updateCharacterData();
+      
+      // Tracker subsystem removed: state updates via simulation events
+      
+      // Subscribe to simulation events
+      game.onSimulation((event) => {
+        handleSimulationEvent(event);
+      });
+      
+      // Subscribe to debug events for dev mode
+      game.onDebug((event) => {
+        if (devModeEnabled) {
+          handleDebugEvent(event);
+        }
+      });
+      
+      // Set dev mode if already enabled
+      if (devModeEnabled) {
+        game.setDevMode(true);
+      }
+      
+      // Enemy spawning now handled by BRL rules
+      // Initial enemies will be spawned via spawn_initial_enemies rule triggered by GameStart
+      // spawnInitialEnemies(5); // REMOVED - now in BRL
+      
+      // NEW: Schedule GameStart event to trigger BRL initialization
+      // Schedule a single global GameStart event - the engine will dispatch it to all entities
+      console.info('Scheduling global GameStart event');
+      game.scheduleEvent('GameStart', 0);
+      
+      // EnemySpawned event now triggered by BRL after spawning completes
+      // game.scheduleEvent('EnemySpawned', 0.1, { wave: 1 }); // REMOVED - now in BRL
+      
+      renderParties();
+      addLogEntry('system', 'Battle initialized! Ready for 1000 fights. Press Start to begin.');
+    }
+    
+    function updateCharacterData() {
+      playerCharacters = {};
+      enemyCharacters = {};
+      
+      // Query all entities with Team component to find heroes and enemies
+      const teamEntities = game.query('Team', 'Character', 'Health');
+      
+      for (const entityId of teamEntities) {
+        const team = game.getComponent(entityId, 'Team');
+        const char = game.getComponent(entityId, 'Character');
+        const health = game.getComponent(entityId, 'Health');
+        
+        if (!char || !health || !team) continue;
+        
+        // Skip enemy templates (they're for cloning only, not for display)
+        const enemyTemplate = game.getComponent(entityId, 'EnemyTemplate');
+        if (enemyTemplate && enemyTemplate.isTemplate) {
+          continue;
+        }
+        
+        if (team.isPlayer) {
+          // It's a player character
+          const mana = game.getComponent(entityId, 'Mana');
+          const combat = game.getComponent(entityId, 'Combat');
+          const skills = game.getComponent(entityId, 'Skills');
+          
+          playerCharacters[entityId] = {
+            id: entityId,
+            name: char.name,
+            class: char.class,
+            level: char.level,
+            experience: char.experience,
+            experienceToLevel: char.experienceToLevel,
+            health: health.current,
+            maxHealth: health.max,
+            mana: mana?.current || 0,
+            maxMana: mana?.max || 0,
+            damage: combat?.damage || 0,
+            defense: combat?.defense || 0,
+            attackSpeed: combat?.attackSpeed || 1,
+            skills: skills ? [skills.skill1, skills.skill2].filter(s => s) : [],
+            skillPoints: skills?.skillPoints || 0
+          };
+        } else {
+          // It's an enemy
+          const combat = game.getComponent(entityId, 'Combat');
+          const enemy = game.getComponent(entityId, 'Enemy');
+          
+          enemyCharacters[entityId] = {
+            id: entityId,
+            name: char.name,
+            class: char.class,
+            level: char.level,
+            health: health.current,
+            maxHealth: health.max,
+            damage: combat?.damage || 0,
+            defense: combat?.defense || 0,
+            attackSpeed: combat?.attackSpeed || 1,
+            tier: enemy?.tier || 1,
+            isBoss: enemy?.isBoss || false
+          };
+        }
+      }
+      
+      // Update game state
+      const gs = game.getComponent(99, 'GameState');
+      if (gs) {
+        gameState.wave = gs.currentWave;
+        gameState.enemiesDefeated = gs.enemiesDefeated;
+        gameState.playerDeaths = gs.playerDeaths || 0;
+        gameState.victory = gs.victory;
+        gameState.gameOver = gs.gameOver;
+      }
+    }
+    
+    function renderCharacterCard(char, isPlayer) {
+      const isDead = char.health <= 0;
+      const healthPct = Math.max(0, (char.health / char.maxHealth) * 100);
+      const manaPct = char.maxMana > 0 ? Math.max(0, (char.mana / char.maxMana) * 100) : 0;
+      const expPct = isPlayer ? Math.max(0, (char.experience / char.experienceToLevel) * 100) : 0;
+      
+      let skillsHtml = '';
+      if (isPlayer && char.skills && char.skills.length > 0) {
+        skillsHtml = '<div class="skills-row">' + 
+          char.skills.map(s => `<span class="skill-badge">${s}</span>`).join('') +
+          '</div>';
+      }
+      
+      const classEmoji = {
+        'Warrior': '⚔️', 'Mage': '🔮', 'Rogue': '🗡️', 'Cleric': '✨',
+        'Monster': '👹', 'Boss': '🐉'
+      };
+      
+      return `
+        <div class="character-card ${isDead ? 'dead' : ''}" id="char-${char.id}">
+          <div class="char-header" onclick="toggleAccordion('char-details-${char.id}')">
+            <div>
+              <span class="char-name">${classEmoji[char.class] || '👤'} ${char.name}</span>
+              <div class="char-class">${char.class}${char.isBoss ? ' (BOSS)' : ''}</div>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <span class="char-level">Lv ${char.level}</span>
+              <span class="accordion-toggle" id="char-details-${char.id}-toggle">▼</span>
+            </div>
+          </div>
+          
+          <div class="char-summary">
+            <div class="stat-bar">
+              <div class="stat-bar-header">
+                <span>❤️ HP</span>
+                <span>${Math.max(0, Math.round(char.health))} / ${char.maxHealth}</span>
+              </div>
+              <div class="bar-container">
+                <div class="bar-fill health-bar" style="width: ${healthPct}%"></div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="char-details" id="char-details-${char.id}">
+            ${char.maxMana > 0 ? `
+            <div class="stat-bar">
+              <div class="stat-bar-header">
+                <span>💧 Mana</span>
+                <span>${Math.max(0, Math.round(char.mana))} / ${char.maxMana}</span>
+              </div>
+              <div class="bar-container">
+                <div class="bar-fill mana-bar" style="width: ${manaPct}%"></div>
+              </div>
+            </div>
+            ` : ''}
+            
+            ${isPlayer ? `
+            <div class="stat-bar">
+              <div class="stat-bar-header">
+                <span>⭐ XP</span>
+                <span>${Math.round(char.experience)} / ${Math.round(char.experienceToLevel)}</span>
+              </div>
+              <div class="bar-container">
+                <div class="bar-fill exp-bar" style="width: ${expPct}%"></div>
+              </div>
+            </div>
+            ` : ''}
+            
+            <div class="char-stats">
+              <span>⚔️ ${char.damage}</span>
+              <span>🛡️ ${char.defense}</span>
+              <span>⚡ ${char.attackSpeed}/s</span>
+              ${isPlayer && char.skillPoints > 0 ? `<span>📖 ${char.skillPoints} pts</span>` : ''}
+            </div>
+            
+            ${skillsHtml}
+          </div>
+        </div>
+      `;
+    }
+    
+    function renderParties() {
+      playerPartyEl.innerHTML = Object.values(playerCharacters)
+        .map(char => renderCharacterCard(char, true))
+        .join('');
+      
+      enemyPartyEl.innerHTML = Object.values(enemyCharacters)
+        .map(char => renderCharacterCard(char, false))
+        .join('');
+      
+      // Update summaries
+      const aliveHeroes = Object.values(playerCharacters).filter(c => c.health > 0).length;
+      const totalHeroes = Object.values(playerCharacters).length;
+      document.getElementById('player-summary').textContent = `${aliveHeroes}/${totalHeroes} Alive`;
+      
+      const aliveEnemies = Object.values(enemyCharacters).filter(c => c.health > 0).length;
+      const totalEnemies = Object.values(enemyCharacters).length;
+      document.getElementById('enemy-summary').textContent = `${aliveEnemies}/${totalEnemies} Alive`;
+    }
+    
+    // Note: handleTrackerOutput was removed as trackers are no longer supported.
+    // State updates now happen via polling game state in handleSimulationEvent on 'step' events.
+    
+    function handleSimulationEvent(event) {
+      const processingIndicator = document.getElementById('processing-indicator');
+      
+      // In step-based mode, we don't use these events, but keep the handler for compatibility
+      switch (event.type) {
+        case 'started':
+        case 'resumed':
+          gameStatusEl.textContent = 'Ready';
+          gameStatusEl.style.color = '#4ade80';
+          break;
+        case 'paused':
+        case 'stopped':
+          gameStatusEl.textContent = 'Ready';
+          gameStatusEl.style.color = '#4ade80';
+          break;
+        case 'completed':
+          gameStatusEl.textContent = 'Ready';
+          gameStatusEl.style.color = '#4ade80';
+          break;
+      }
+      
+      updateButtons();
+    }
+    
+    function showGameBanner(victory) {
+      gameBanner.className = `game-banner ${victory ? 'victory' : 'defeat'}`;
+      bannerText.textContent = victory ? '🎉 Victory! Dragon Lord Vexar Defeated! 🎉' : '💀 Defeat! Your party has fallen... 💀';
+      gameBanner.style.display = 'block';
+      addLogEntry('system', victory ? '🏆 VICTORY! All enemies defeated!' : '☠️ GAME OVER! Your party was wiped out.');
+      
+      // Save run to leaderboard
+      updateRunStatsUI(); // Final update
+      saveRunToLeaderboard();
+    }
+    
+    function updateUI() {
+      currentWaveEl.textContent = gameState.wave;
+      enemiesDefeatedEl.textContent = gameState.enemiesDefeated;
+      playerDeathsEl.textContent = gameState.playerDeaths;
+      if (game) {
+        gameTimeEl.textContent = game.getTime().toFixed(2) + 's';
+      }
+      updateRunStatsUI();
+    }
+    
+    function updateButtons() {
+      if (!game) return;
+      
+      const hasEvents = game.hasEvents();
+      
+      // Go button is disabled when game is over or no events remain
+      startBtn.disabled = gameState.gameOver || !hasEvents;
+      
+      // Pause button is no longer used in step-based mode
+      pauseBtn.disabled = true;
+      pauseBtn.style.display = 'none'; // Hide pause button
+      
+      // Update flee button state
+      const runStatsEntities = game.query('RunStats');
+      if (runStatsEntities.length > 0) {
+        const runStats = game.getComponent(runStatsEntities[0], 'RunStats');
+        fleeBtn.disabled = gameState.gameOver || !runStats?.canFlee;
+      } else {
+        fleeBtn.disabled = gameState.gameOver;
+      }
+    }
+    
+    function addLogEntry(type, message) {
+      const time = game ? game.getTime().toFixed(2) : '0.00';
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.innerHTML = `<span class="log-time">[${time}s]</span><span>${message}</span>`;
+      logContainer.appendChild(entry);
+      logContainer.scrollTop = logContainer.scrollHeight;
+      
+      // Limit log entries
+      while (logContainer.children.length > 100) {
+        logContainer.removeChild(logContainer.firstChild);
+      }
+    }
+    
+    async function resetGame() {
+      if (game) {
+        game.destroy();
+        game = null;
+      }
+      
+      // Reset UI
+      gameState = { wave: 1, enemiesDefeated: 0, playerDeaths: 0, victory: false, gameOver: false };
+      gameBanner.style.display = 'none';
+      logContainer.innerHTML = '';
+      
+      // Reset party selection
+      partySlots = [null, null, null, null];
+      
+      // Show party selection screen and hide game screen
+      gameScreen.classList.remove('active');
+      partySelectionScreen.style.display = 'block';
+      
+      // Re-render character selection to reset carousels
+      renderCharacterSelection();
+      
+      // Reset buttons
+      startBtn.disabled = false;
+      pauseBtn.disabled = true;
+      fleeBtn.disabled = true;
+    }
+    
+    // Event listeners
+    startBtn.addEventListener('click', async () => {
+      if (game && !gameState.gameOver) {
+        const targetSimTime = parseFloat(speedSlider.value);
+        const currentTime = game.getTime();
+        const targetTime = currentTime + targetSimTime;
+        
+        addLogEntry('system', `⚡ Running simulation for ${targetSimTime} seconds (until ${targetTime.toFixed(2)}s)...`);
+        
+        // Disable button during processing
+        startBtn.disabled = true;
+        
+        try {
+          // Run until we reach target simulation time
+          let stepsProcessed = 0;
+          const uiUpdateInterval = 5; // Update UI every 5 steps
+          
+          while (game.getTime() < targetTime) {
+            if (!game.hasEvents()) {
+              addLogEntry('system', '⏹️ No more events to process');
+              break;
+            }
+            
+            // Process one step
+            game.step();
+            stepsProcessed++;
+            
+            // Update UI periodically, not after every step
+            if (stepsProcessed % uiUpdateInterval === 0) {
+              updateCharacterData();
+              updateUI();
+              renderParties();
+              
+              // Yield control to browser to allow UI rendering and event processing
+              await new Promise(resolve => setTimeout(resolve, 20)); // Give browser time to render
+            }
+          }
+          
+          // Final UI update to ensure everything is in sync
+          updateCharacterData();
+          updateUI();
+          renderParties();
+          
+          addLogEntry('system', `✅ Completed ${stepsProcessed} steps, reached sim time ${game.getTime().toFixed(2)}s`);
+        } catch (error) {
+          addLogEntry('system', `❌ Error: ${error.message}`);
+        } finally {
+          // Re-enable button and update button states
+          startBtn.disabled = false;
+          updateButtons();
+        }
+      }
+    });
+    
+    pauseBtn.addEventListener('click', () => {
+      // Pause functionality removed - simulation now runs step-by-step
+      // Keep handler for compatibility
+    });
+    
+    resetBtn.addEventListener('click', resetGame);
+    
+    fleeBtn.addEventListener('click', handleFlee);
+    
+    speedSlider.addEventListener('input', (e) => {
+      const seconds = parseInt(e.target.value);
+      speedValue.textContent = `${seconds}s`;
+    });
+    
+    // ========================================================================
+    // INITIALIZATION - DATA LOADING ORDER
+    // ========================================================================
+    // The data loading architecture:
+    //   1. Load IR (contains rules, components, trackers, initial_state)
+    //   2. Extract characters from IR.initial_state (compiled from heroes.bdl)
+    //   3. Extract enemies from IR.initial_state (compiled from enemies.bdl)
+    //   4. loadSourceFilesFromIR() loads BRL/BCL/BDL source for dev tools (from IR.source_map)
+    //   5. initBclSystem() loads choice points for BCL editor (from IR.choice_points)
+    //
+    // All data comes from IR - no separate JSON files needed.
+    //
+    // When player customizes BCL:
+    //   - Current: Stored in localStorage as text, downloadable as .bcl delta
+    //   - Future: Browser-based BCL compiler creates updated IR for execution
+    // ========================================================================
+    
+    // Initialize on load
+    window.addEventListener('load', async () => {
+      console.info('🎮 Initializing Blink Idle RPG...');
+      
+      // NEW: Render scenario selection screen instead of loading default IR
+      renderScenarios();
+      
+      // Initialize BCL system (this will be finalized when scenario is selected)
+      await initBclSystem();
+      
+      // Initialize leaderboard
+      refreshLeaderboard();
+      
+      console.info('✅ Page initialization complete - awaiting scenario selection');
+    });
+    
+    // Accordion toggle function
+    function toggleAccordion(id) {
+      const element = document.getElementById(id);
+      const toggle = document.getElementById(id + '-toggle');
+      if (element && toggle) {
+        element.classList.toggle('expanded');
+        toggle.classList.toggle('expanded');
+      }
+    }
+    
+    // ========================================================================
+    // DEV MODE / INTEGRATED IDE FUNCTIONALITY
+    // ========================================================================
+    
+    let devModeEnabled = false;
+    let currentSourceFile = 'brl';
+    let highlightedLine = -1;
+    let lastDebugEvent = null;
+    
+    // Source files - will be populated from IR source_map when IR is loaded
+    // Source files - will be populated from IR.source_map when IR is loaded
+    // No hardcoded fallback; `loadSourceFilesFromIR()` will set actual values when available
+    let sourceFiles = {
+      brl: '',
+      bcl: '',
+      bdl: ''
+    };
+    
+    // ========================================================================
+    // LOAD SOURCE FILES FROM IR (For Dev Mode / Integrated IDE)
+    // ========================================================================
+    // Source files are the original BRL/BCL/BDL source code.
+    // Used by the integrated IDE for debugging and step-through execution.
+    //
+    // SOURCE: IR.source_map.files[] (when compiled with --source-map flag)
+    //
+    // Each file in source_map has:
+    //   - path: Original file path (e.g., "classic-rpg.brl")
+    //   - language: "brl", "bcl", or "bdl"
+    //   - content: Original source code text
+    //
+    // CURRENT STATE:
+    //   - Uses placeholder source code (hardcoded above)
+    //   - Shows example BRL/BCL/BDL structure
+    //
+    // FUTURE STATE:
+    //   - Compiler includes source with: blink-compiler compile --source-map
+    //   - Actual source loaded from IR.source_map
+    //   - Line highlighting tied to rule execution via source_location
+    // ========================================================================
+    function loadSourceFilesFromIR() {
+      if (classicRpgIR && classicRpgIR.source_map && classicRpgIR.source_map.files) {
+        // Parse source files from the new source_map format
+        // source_map.files is an array of {path, content, language}
+        const newSourceFiles = {
+          brl: '// BRL source not included in IR',
+          bcl: '// BCL source not included in IR',
+          bdl: '// BDL source not included in IR'
+        };
+        
+        for (const file of classicRpgIR.source_map.files) {
+          // Use the language field to determine the category
+          const lang = file.language || 'brl';
+          if (lang === 'brl' || lang === 'bcl' || lang === 'bdl') {
+            // If there are multiple files of the same language, concatenate them
+            if (newSourceFiles[lang] === `// ${lang.toUpperCase()} source not included in IR`) {
+              newSourceFiles[lang] = `// Source file: ${file.path}\n\n${file.content}`;
+            } else {
+              newSourceFiles[lang] += `\n\n// ============================================================================\n// Source file: ${file.path}\n// ============================================================================\n\n${file.content}`;
+            }
+          }
+        }
+        
+        sourceFiles = newSourceFiles;
+        console.info('Loaded source files from IR source_map:', classicRpgIR.source_map.files.map(f => f.path));
+      } else {
+        console.warn('IR does not contain source_map, using placeholder source');
+        // Keep placeholder source for demonstration
+      }
+    }
+    
+    // Dev mode DOM elements
+    const devModeBtn = document.getElementById('dev-mode-btn');
+    const devModePanel = document.getElementById('dev-mode-panel');
+    const stepBtn = document.getElementById('step-btn');
+    const step10Btn = document.getElementById('step-10-btn');
+    const step100Btn = document.getElementById('step-100-btn');
+    const debugRuleEl = document.getElementById('debug-rule');
+    const debugEventEl = document.getElementById('debug-event');
+    const debugLocationEl = document.getElementById('debug-location');
+    const sourceViewerEl = document.getElementById('source-viewer');
+    const sourceCodeEl = document.getElementById('source-code');
+    const sourceFileTabs = document.getElementById('source-file-tabs');
+    
+    // Toggle dev mode
+    devModeBtn.addEventListener('click', () => {
+      devModeEnabled = !devModeEnabled;
+      devModeBtn.classList.toggle('active', devModeEnabled);
+      devModePanel.classList.toggle('active', devModeEnabled);
+      
+      if (game) {
+        game.setDevMode(devModeEnabled);
+      }
+      
+      if (devModeEnabled) {
+        devModeBtn.textContent = '🛠️ Dev Mode ON';
+        updateSourceDisplay();
+        addLogEntry('system', '🛠️ Dev Mode enabled - step through execution to see source highlighting');
+      } else {
+        devModeBtn.textContent = '🛠️ Dev Mode';
+        addLogEntry('system', '🛠️ Dev Mode disabled');
+      }
+    });
+    
+    // Step buttons
+    stepBtn.addEventListener('click', () => {
+      if (game && game.hasEvents()) {
+        game.step();
+      }
+    });
+    
+    step10Btn.addEventListener('click', () => {
+      if (game) {
+        for (let i = 0; i < 10 && game.hasEvents(); i++) {
+          game.step();
+        }
+      }
+    });
+    
+    step100Btn.addEventListener('click', () => {
+      if (game) {
+        for (let i = 0; i < 100 && game.hasEvents(); i++) {
+          game.step();
+        }
+      }
+    });
+    
+    // Source file tab switching
+    sourceFileTabs.addEventListener('click', (e) => {
+      if (e.target.classList.contains('source-file-tab')) {
+        const file = e.target.dataset.file;
+        if (file) {
+          currentSourceFile = file;
+          // Update active tab
+          document.querySelectorAll('.source-file-tab').forEach(tab => {
+            tab.classList.toggle('active', tab.dataset.file === file);
+          });
+          updateSourceDisplay();
+        }
+      }
+    });
+    
+    // Update source display
+    function updateSourceDisplay() {
+      const source = sourceFiles[currentSourceFile] || '// No source available';
+      const lines = source.split('\n');
+      
+      let html = '';
+      lines.forEach((line, index) => {
+        const lineNum = index + 1;
+        const isHighlighted = lineNum === highlightedLine;
+        const highlightClass = isHighlighted ? 'highlighted' : '';
+        
+        // Apply syntax highlighting
+        const highlightedContent = applySyntaxHighlighting(line);
+        
+        html += `<div class="source-line ${highlightClass}" data-line="${lineNum}">
+          <span class="line-number">${lineNum}</span>
+          <span class="line-content">${highlightedContent}</span>
+        </div>`;
+      });
+      
+      sourceCodeEl.innerHTML = html;
+      
+      // Scroll to highlighted line if needed
+      if (highlightedLine > 0) {
+        const highlightedEl = sourceCodeEl.querySelector(`.source-line[data-line="${highlightedLine}"]`);
+        if (highlightedEl) {
+          highlightedEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
+    }
+    
+    // Pre-compiled regex patterns for syntax highlighting (performance optimization)
+    const KEYWORD_REGEX = /\b(component|rule|tracker|choice|fn|if|else|return|on|entity|schedule|emit|query|filter|sort|first|count|where)\b/g;
+    const COMMENT_REGEX = /(\/\/.*)$/gm;
+    const STRING_REGEX = /("([^"\\]|\\.)*")/g;
+    const NUMBER_REGEX = /\b(\d+\.?\d*)\b/g;
+    const ENTITY_REGEX = /@(\w+)/g;
+    
+    // Simple syntax highlighting
+    function applySyntaxHighlighting(line) {
+      // Escape HTML first
+      let escaped = line
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+      
+      // Comments
+      escaped = escaped.replace(COMMENT_REGEX, '<span class="comment">$1</span>');
+      
+      // Keywords - using pre-compiled regex
+      escaped = escaped.replace(KEYWORD_REGEX, '<span class="keyword">$1</span>');
+      
+      // Strings
+      escaped = escaped.replace(STRING_REGEX, '<span class="string">$1</span>');
+      
+      // Numbers
+      escaped = escaped.replace(NUMBER_REGEX, '<span class="number">$1</span>');
+      
+      // Entity references
+      escaped = escaped.replace(ENTITY_REGEX, '<span class="entity">@$1</span>');
+      
+      return escaped;
+    }
+    
+    // Handle debug events from engine
+    function handleDebugEvent(event) {
+      lastDebugEvent = event;
+      
+      if (event.type === 'rule_start' && event.rule) {
+        debugRuleEl.textContent = event.rule.name || 'anonymous';
+        
+        // Try to find source location
+        if (event.sourceLocation) {
+          debugLocationEl.textContent = `${event.sourceLocation.file}:${event.sourceLocation.line}`;
+          highlightedLine = event.sourceLocation.line;
+        } else {
+          // Simulate finding the rule in source (demo purposes)
+          // Use indexOf for better performance instead of dynamic regex
+          const eventName = event.rule.trigger?.event || event.rule.name;
+          if (eventName && currentSourceFile === 'brl') {
+            const searchPattern = `rule on ${eventName}`;
+            const matchIndex = sourceFiles.brl.indexOf(searchPattern);
+            if (matchIndex !== -1) {
+              const linesBefore = sourceFiles.brl.substring(0, matchIndex).split('\n');
+              highlightedLine = linesBefore.length;
+              debugLocationEl.textContent = `classic-rpg.brl:${highlightedLine}`;
+            }
+          }
+        }
+        
+        if (event.rule.trigger?.event) {
+          debugEventEl.textContent = event.rule.trigger.event;
+        }
+        
+        updateSourceDisplay();
+      }
+    }
+    
+    // ========================================================================
+    // RUN TRACKING FUNCTIONS
+    // ========================================================================
+    
+    function initializeRun() {
+      runState = {
+        runId: `run_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        startTime: Date.now(),
+        simulationTime: 0,
+        totalTime: 0,
+        retreatCount: 0,
+        retreatPenalty: 0,
+        deathPenalty: 0,
+        lastFleeTime: -999,
+        canFlee: true
+      };
+      updateRunStatsUI();
+    }
+    
+    function updateRunStatsUI() {
+      // Read run stats from BRL components
+      const runStatsEntities = game ? game.query('RunStats') : [];
+      if (runStatsEntities.length === 0) return;
+      
+      const runStatsEntity = runStatsEntities[0];
+      const runStats = game.getComponent(runStatsEntity, 'RunStats');
+      if (!runStats) return;
+      
+      runState.simulationTime = game.getTime();
+      runState.totalTime = runStats.totalTime;
+      runState.retreatCount = runStats.retreatCount;
+      runState.retreatPenalty = runStats.retreatPenalty;
+      runState.deathPenalty = runStats.deathPenalty;
+      runState.canFlee = runStats.canFlee;
+      
+      totalTimeEl.textContent = runStats.totalTime.toFixed(2) + 's';
+      retreatCountEl.textContent = runStats.retreatCount;
+      retreatPenaltyEl.textContent = runStats.retreatPenalty.toFixed(0) + 's';
+      deathPenaltyEl.textContent = runStats.deathPenalty.toFixed(0) + 's';
+      totalPenaltiesEl.textContent = (runStats.retreatPenalty + runStats.deathPenalty).toFixed(0) + 's';
+      
+      // Update flee button state
+      if (game && game.getIsRunning()) {
+        fleeBtn.disabled = !runStats.canFlee || gameState.gameOver;
+        
+        if (!runStats.canFlee && !gameState.gameOver) {
+          const timeSinceFlee = runState.simulationTime - runStats.lastFleeTime;
+          const fleeCooldown = 5; // Should match BRL FleeConfig
+          const remaining = Math.ceil(fleeCooldown - timeSinceFlee);
+          fleeBtn.innerHTML = `🏃 Flee Battle <span class="flee-cooldown">(${remaining}s)</span>`;
+        } else {
+          fleeBtn.innerHTML = '🏃 Flee Battle';
+        }
+      }
+    }
+    
+    function handleFlee() {
+      if (!game || gameState.gameOver) return;
+      
+      // Check if can flee from BRL RunStats
+      const runStatsEntity = game.query('RunStats')[0];
+      if (!runStatsEntity) return;
+      
+      const runStats = game.getComponent(runStatsEntity, 'RunStats');
+      if (!runStats || !runStats.canFlee) {
+        addLogEntry('system', '⏳ Flee on cooldown...');
+        return;
+      }
+      
+      // Trigger BRL flee event - game logic handled in BRL
+      game.scheduleEvent('FleeFromBattle', 0, { source: runStatsEntity });
+      
+      addLogEntry('system', `🏃 Initiating tactical retreat...`);
+    }
+    
+    // ========================================================================
+    // LEADERBOARD FUNCTIONS
+    // ========================================================================
+    
+    const STORAGE_KEY = 'blink_rpg_runs';
+    const MAX_STORED_RUNS = 100;
+    
+    function saveRunToLeaderboard() {
+      if (!runState.runId) return;
+      
+      const selectedCharacters = partySlots.filter(hero => hero !== null);
+      
+      const runData = {
+        runId: runState.runId,
+        timestamp: runState.startTime,
+        completionTime: runState.totalTime,
+        simulationTime: runState.simulationTime,
+        partyComposition: {
+          characters: selectedCharacters.map(c => c.name),
+          characterIds: selectedCharacters.map(c => c.id),
+          bclFiles: loadedBCLFiles.map(f => f.name)
+        },
+        statistics: {
+          enemiesDefeated: gameState.enemiesDefeated,
+          playerDeaths: gameState.playerDeaths,
+          retreats: runState.retreatCount,
+          retreatPenalty: runState.retreatPenalty,
+          deathPenalty: runState.deathPenalty,
+          totalPenalties: runState.retreatPenalty + runState.deathPenalty
+        },
+        victory: gameState.victory
+      };
+      
+      // Load existing runs
+      let runs = [];
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          runs = JSON.parse(stored);
+        }
+      } catch (e) {
+        console.error('Failed to load runs from storage:', e);
+      }
+      
+      // Add new run
+      runs.push(runData);
+      
+      // Sort by completion time (fastest first)
+      runs.sort((a, b) => a.completionTime - b.completionTime);
+      
+      // Keep only top MAX_STORED_RUNS
+      if (runs.length > MAX_STORED_RUNS) {
+        runs = runs.slice(0, MAX_STORED_RUNS);
+      }
+      
+      // Save back to storage
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(runs));
+        addLogEntry('system', `🏆 Run saved to leaderboard! Rank: #${runs.findIndex(r => r.runId === runState.runId) + 1}`);
+      } catch (e) {
+        console.error('Failed to save run to storage:', e);
+        addLogEntry('system', '⚠️ Failed to save run to leaderboard (storage error)');
+      }
+      
+      refreshLeaderboard();
+    }
+    
+    function refreshLeaderboard() {
+      const container = document.getElementById('leaderboard-table-container');
+      
+      let runs = [];
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          runs = JSON.parse(stored);
+        }
+      } catch (e) {
+        console.error('Failed to load runs:', e);
+      }
+      
+      if (runs.length === 0) {
+        container.innerHTML = '<div class="leaderboard-empty">No runs recorded yet. Complete a game to see your build on the leaderboard!</div>';
+        return;
+      }
+      
+      // Build table HTML
+      let html = '<table class="leaderboard-table">';
+      html += '<thead><tr>';
+      html += '<th>Rank</th>';
+      html += '<th>Time</th>';
+      html += '<th>Party</th>';
+      html += '<th>Kills</th>';
+      html += '<th>Deaths</th>';
+      html += '<th>Retreats</th>';
+      html += '<th>Penalties</th>';
+      html += '<th>Date</th>';
+      html += '</tr></thead><tbody>';
+      
+      runs.forEach((run, index) => {
+        const rank = index + 1;
+        const rankClass = rank === 1 ? 'gold' : rank === 2 ? 'silver' : rank === 3 ? 'bronze' : '';
+        const date = new Date(run.timestamp).toLocaleDateString();
+        const time = new Date(run.timestamp).toLocaleTimeString();
+        
+        html += '<tr>';
+        html += `<td><span class="leaderboard-rank ${rankClass}">#${rank}</span></td>`;
+        html += `<td><strong>${run.completionTime.toFixed(2)}s</strong></td>`;
+        html += `<td>${run.partyComposition.characters.join(', ')}</td>`;
+        html += `<td>${run.statistics.enemiesDefeated}</td>`;
+        html += `<td>${run.statistics.playerDeaths}</td>`;
+        html += `<td>${run.statistics.retreats}</td>`;
+        html += `<td>+${run.statistics.totalPenalties.toFixed(0)}s</td>`;
+        html += `<td>${date} ${time}</td>`;
+        html += '</tr>';
+      });
+      
+      html += '</tbody></table>';
+      container.innerHTML = html;
+    }
+    
+    function clearLeaderboard() {
+      if (!confirm('Are you sure you want to clear all leaderboard data? This cannot be undone.')) {
+        return;
+      }
+      
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+        refreshLeaderboard();
+        addLogEntry('system', '🗑️ Leaderboard cleared');
+      } catch (e) {
+        console.error('Failed to clear leaderboard:', e);
+      }
+    }
+    
+    function exportLeaderboard() {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (!stored) {
+          alert('No leaderboard data to export');
+          return;
+        }
+        
+        const blob = new Blob([stored], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `blink_rpg_leaderboard_${Date.now()}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        addLogEntry('system', '💾 Leaderboard exported');
+      } catch (e) {
+        console.error('Failed to export leaderboard:', e);
+        alert('Failed to export leaderboard');
+      }
+    }
+  </script>
+</body>
+</html>
