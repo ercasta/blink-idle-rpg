@@ -1,0 +1,42 @@
+FROM node:20 AS builder
+
+# Install build tools
+RUN apt-get update && apt-get install -y build-essential git ca-certificates && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+
+# Copy package sources into the image for building (only packages we need)
+COPY packages/blink-compiler-ts ./packages/blink-compiler-ts
+COPY packages/blink-engine ./packages/blink-engine
+COPY packages/blink-test ./packages/blink-test
+COPY game ./game
+
+# Install Linux-native dependencies and build bundles
+RUN cd packages/blink-compiler-ts && npm ci --no-audit --no-fund && npm run build && npm run build:bundle
+RUN cd packages/blink-engine && npm ci --no-audit --no-fund && npm run build && npm run build:bundle || true
+RUN cd packages/blink-test && npm ci --no-audit --no-fund || true
+
+# Prepare artifacts and node_modules for runtime copy
+RUN mkdir -p /opt/build_artifacts /opt/node_modules
+RUN cp -a game/demos /opt/build_artifacts/
+RUN cp -a packages/blink-compiler-ts/node_modules /opt/node_modules/blink-compiler-ts || true
+RUN cp -a packages/blink-engine/node_modules /opt/node_modules/blink-engine || true
+RUN cp -a packages/blink-test/node_modules /opt/node_modules/blink-test || true
+
+FROM node:20-slim
+
+RUN apt-get update && apt-get install -y make ca-certificates && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /workspace
+
+# Copy prepared artifacts and node_modules from builder image
+COPY --from=builder /opt/build_artifacts /opt/build_artifacts
+COPY --from=builder /opt/node_modules /opt/node_modules
+
+# Entrypoint will copy image-provided node_modules and build artifacts into the mounted workspace,
+# then run 'make test' inside the container (on the mounted workspace).
+COPY docker-test-entrypoint.sh /usr/local/bin/docker-test-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-test-entrypoint.sh
+
+ENTRYPOINT ["/usr/local/bin/docker-test-entrypoint.sh"]
+

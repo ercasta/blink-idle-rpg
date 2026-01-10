@@ -52,6 +52,7 @@ export interface IRField {
 
 export type IRType =
   | { type: 'number' }
+  | { type: 'integer' }
   | { type: 'string' }
   | { type: 'boolean' }
   | { type: 'entity' }

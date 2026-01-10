@@ -27,7 +27,7 @@ describe('CodeGenerator', () => {
       expect(ir.components[0].name).toBe('Health');
       expect(ir.components[0].fields).toHaveLength(2);
       expect(ir.components[0].fields[0].name).toBe('current');
-      expect(ir.components[0].fields[0].type.type).toBe('number');
+      expect(ir.components[0].fields[0].type.type).toBe('integer');
     });
 
     it('should generate IR for component with list type', () => {

@@ -133,6 +133,7 @@ export class CodeGenerator {
       case 'boolean':
         return { type: 'boolean' };
       case 'integer':
+        return { type: 'integer' };
       case 'float':
       case 'decimal':
       case 'number':
@@ -665,6 +666,7 @@ export class CodeGenerator {
       case 'string': return 'string';
       case 'boolean': return 'boolean';
       case 'number': return 'number';
+      case 'integer': return 'integer';
       case 'entity': return 'id';
       case 'list': return `list<${this.typeToString(type.element)}>`;
       case 'map': return `map<${this.typeToString(type.key)}, ${this.typeToString(type.value)}>`;

@@ -150,6 +150,7 @@ Modules can import definitions from other compiled IR:
 
 | Type | JSON Representation | Description |
 |------|---------------------|-------------|
+| `integer` | `{ "type": "integer" }` | Integer (integral whole number) |
 | `number` | `{ "type": "number" }` | 64-bit float |
 | `string` | `{ "type": "string" }` | UTF-8 string |
 | `boolean` | `{ "type": "boolean" }` | true/false |
