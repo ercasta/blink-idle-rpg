@@ -19,6 +19,9 @@ export class CodeGenerator {
   
   private options: GeneratorOptions;
   private sourceFiles: IR.SourceFile[] = [];
+  
+  // Track the current event alias during rule generation
+  private currentEventAlias: string | null = null;
 
   constructor(options: GeneratorOptions = {}) {
     this.options = options;
@@ -153,7 +156,13 @@ export class CodeGenerator {
   }
 
   private generateRule(rule: AST.RuleDef): IR.IRRule {
+    // Set current event alias for field access generation
+    this.currentEventAlias = rule.eventAlias;
+    
     const actions = this.generateBlockActions(rule.body);
+    
+    // Clear event alias after generating rule
+    this.currentEventAlias = null;
     
     return {
       id: this.ruleId++,
@@ -566,8 +575,14 @@ export class CodeGenerator {
       }
     }
     
-    // Handle event.field pattern - access event fields
+    // Handle event.field pattern - access event fields (legacy 'event' keyword)
     if (expr.base.type === 'identifier' && expr.base.name === 'event') {
+      // Generate an event field access - this becomes a param lookup at runtime
+      return { type: 'param', name: expr.field };
+    }
+    
+    // Handle event alias pattern - access event fields via alias (e.g., gs.field)
+    if (expr.base.type === 'identifier' && this.currentEventAlias && expr.base.name === this.currentEventAlias) {
       // Generate an event field access - this becomes a param lookup at runtime
       return { type: 'param', name: expr.field };
     }

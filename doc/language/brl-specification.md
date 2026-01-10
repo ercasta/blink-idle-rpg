@@ -48,8 +48,9 @@ component Health {
     maximum: integer
 }
 
-rule on DamageTaken {
-    entity.Health.current -= event.amount
+rule on DamageTaken dmg {
+    let target = dmg.target
+    target.Health.current -= dmg.amount
 }
 ```
 
@@ -262,37 +263,59 @@ delete entity
 
 ### 6.1 Rule Definition
 
-Rules define reactions to events:
+Rules define reactions to events. Each rule binds the triggering event to a named variable (event alias):
 
 ```brl
-rule RuleName on EventType {
-    // rule body
+rule RuleName on EventType eventAlias {
+    // rule body - use eventAlias to reference the event
 }
 ```
 
+The event alias is mandatory and provides access to the event's properties (components and fields).
+
 ### 6.2 Event Context
 
-Within a rule, special variables are available:
-
-- `event` - The triggering event entity
-- `entity` - The affected entity (if applicable)
+Within a rule, the event alias is the only implicit variable:
 
 ```brl
-rule ApplyDamage on DamageTaken {
-    let damage = event.DamageEvent.amount
-    entity.Health.current -= damage
+rule ApplyDamage on DamageTaken dmg {
+    // Access event components/fields via the alias
+    let damage = dmg.amount
+    let target = dmg.target
     
-    if entity.Health.current <= 0 {
-        schedule Death { target: entity.id }
+    // Modify the target entity
+    target.Health.current -= damage
+    
+    if target.Health.current <= 0 {
+        schedule Death { target: target }
+    }
+}
+```
+
+To process multiple entities, explicitly query them using `entities having`:
+
+```brl
+rule InitializeHeroes on GameStart gs {
+    let heroes = entities having Team
+    for hero in heroes {
+        if hero.Team.isPlayer && hero.Health.current > 0 {
+            schedule [delay: 0.1] DoAttack {
+                source: hero
+            }
+        }
     }
 }
 ```
 
 ### 6.3 Conditional Rules
 
+Conditions can reference the event alias:
+
 ```brl
-rule CriticalHit on AttackLanded when event.AttackEvent.is_critical {
+rule CriticalHit on AttackLanded atk when atk.is_critical {
     // Only triggers for critical hits
+    let target = atk.target
+    target.Health.current -= atk.damage * 2
 }
 ```
 
@@ -301,11 +324,11 @@ rule CriticalHit on AttackLanded when event.AttackEvent.is_critical {
 Rules can have priority for ordering:
 
 ```brl
-rule HighPriority on Event [priority: 100] {
+rule HighPriority on Event evt [priority: 100] {
     // Executes first
 }
 
-rule LowPriority on Event [priority: -100] {
+rule LowPriority on Event evt [priority: -100] {
     // Executes last
 }
 ```
@@ -521,7 +544,7 @@ module combat {
     
     fn calculate_damage(...) { ... }
     
-    rule on DamageEvent { ... }
+    rule on DamageEvent dmg { ... }
 }
 ```
 
@@ -644,14 +667,19 @@ Choice functions can be bound to specific entities as first-class properties, al
 When BRL needs to call a choice function, it calls it **on the entity**:
 
 ```brl
-rule on TurnStart {
-    // Call the bound choice function on the entity
-    let target = entity.select_attack_target(enemies)
-    
-    // Use the returned value
-    schedule Attack {
-        source: entity.id
-        target: target
+rule on TurnStart turn {
+    // Query entities that need to take their turn
+    let actors = entities having TurnComponent
+    for actor in actors {
+        // Call the bound choice function on the entity
+        let enemies = entities having Enemy
+        let target = actor.select_attack_target(enemies)
+        
+        // Use the returned value
+        schedule Attack {
+            source: actor
+            target: target
+        }
     }
 }
 ```
@@ -691,18 +719,25 @@ Developers should ensure all entities have the required functions bound in their
 #### Example with Multiple Entities
 
 ```brl
-rule on CombatTurn for attacker: Character {
-    // Each attacker uses their own bound targeting strategy
-    // If select_attack_target is not bound to attacker, an error is raised
-    let target = attacker.select_attack_target(visible_enemies)
-    
-    // Each attacker uses their own skill selection
-    let skill = attacker.select_combat_skill(allies, enemies)
-    
-    schedule UseSkill {
-        source: attacker.id
-        target: target
-        skill: skill
+rule on CombatTurn turn {
+    // Query characters that can take combat actions
+    let combatants = entities having Character
+    for attacker in combatants {
+        let allies = entities having Team
+        let enemies = entities having Enemy
+        
+        // Each attacker uses their own bound targeting strategy
+        // If select_attack_target is not bound to attacker, an error is raised
+        let target = attacker.select_attack_target(enemies)
+        
+        // Each attacker uses their own skill selection
+        let skill = attacker.select_combat_skill(allies, enemies)
+        
+        schedule UseSkill {
+            source: attacker
+            target: target
+            skill: skill
+        }
     }
 }
 ```
