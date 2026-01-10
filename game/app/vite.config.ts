@@ -10,4 +10,11 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  // Serve bundle files from demos directory during development
+  server: {
+    fs: {
+      allow: ['..', '../demos'],
+    },
+  },
+  publicDir: 'public',
 })

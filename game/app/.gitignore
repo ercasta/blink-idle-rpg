@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Generated bundle files (copied from builds, should not be committed)
+public/blink-engine.bundle.js
+public/blink-compiler.bundle.js
