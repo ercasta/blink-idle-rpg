@@ -63,6 +63,45 @@ export class RuleExecutor {
   }
 
   /**
+   * Append rules to the existing rule set. Optionally reassign IDs to avoid collisions.
+   */
+  addRules(rules: IRRule[], options: { reassignIds?: boolean } = {}): void {
+    const reassign = options.reassignIds ?? true;
+    if (!reassign) {
+      this.rules.push(...rules);
+      return;
+    }
+
+    const nextId = this.nextAvailableRuleId();
+    for (let i = 0; i < rules.length; i++) {
+      const r = { ...rules[i] } as IRRule;
+      // Assign a new id if not present or to avoid collision
+      (r as any).id = (r as any).id ? (r as any).id + nextId : nextId + i;
+      this.rules.push(r);
+    }
+  }
+
+  /**
+   * Append functions to the existing function map. If override is true, incoming functions
+   * replace existing ones with the same name; otherwise existing functions are kept.
+   */
+  addFunctions(functions: IRFunction[], override: boolean = true): void {
+    for (const fn of functions) {
+      if (!override && this.functions.has(fn.name)) continue;
+      this.functions.set(fn.name, fn);
+    }
+  }
+
+  /**
+   * Compute next available rule id (one greater than current max id)
+   */
+  nextAvailableRuleId(): number {
+    if (this.rules.length === 0) return 1;
+    const max = Math.max(...this.rules.map(r => (r as any).id || 0));
+    return max + 1;
+  }
+
+  /**
    * Get rules that match an event
    */
   getMatchingRules(eventType: string): IRRule[] {

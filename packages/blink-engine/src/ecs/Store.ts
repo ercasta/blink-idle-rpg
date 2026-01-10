@@ -291,4 +291,40 @@ export class Store {
     this.entities.clear();
     this.nextId = 0;
   }
+
+  /**
+   * Check whether defaults for a component are registered
+   */
+  hasComponentDefault(componentName: string): boolean {
+    return this.componentDefaults.has(componentName);
+  }
+
+  /**
+   * Merge provided defaults into existing component defaults
+   */
+  mergeComponentDefaults(componentName: string, defaults: ComponentData): void {
+    const existing = this.componentDefaults.get(componentName) || {};
+    const merged: ComponentData = { ...existing, ...defaults };
+    this.componentDefaults.set(componentName, merged);
+  }
+
+  /**
+   * Merge field type metadata for a component
+   */
+  mergeComponentFieldTypes(componentName: string, types: Record<string, string>): void {
+    let map = this.componentFieldTypes.get(componentName);
+    if (!map) {
+      map = new Map<string, string>();
+    }
+    for (const [k, v] of Object.entries(types)) {
+      // If a type already exists and differs, throw — caller may decide override policy
+      const existing = map.get(k);
+      if (existing && existing !== v) {
+        // Conflict: different declared types for same field
+        throw new Error(`Field type conflict for component ${componentName}.${k}: existing=${existing}, incoming=${v}`);
+      }
+      map.set(k, v);
+    }
+    this.componentFieldTypes.set(componentName, map);
+  }
 }

@@ -788,6 +788,144 @@ export class BlinkGame {
     return this.ir;
   }
 
+  /**
+   * Merge compiled game rules (IR module) into the running engine.
+   * Engine MUST be paused before calling this method.
+   * Options:
+   *  - mergeEntities: whether to merge initial_state entities (default: false)
+   *  - overrideOnConflict: whether functions/components override existing definitions (default: true)
+   *  - reassignRuleIds: whether to reassign incoming rule ids to avoid collisions (default: true)
+   */
+  mergeRulesFromIR(ir: IRModule, options: { mergeEntities?: boolean; overrideOnConflict?: boolean; reassignRuleIds?: boolean } = {}): void {
+    if (!this.isPaused) {
+      throw new Error('Engine must be paused to merge IR');
+    }
+
+    const mergeEntities = options.mergeEntities ?? false;
+    const overrideOnConflict = options.overrideOnConflict ?? true;
+    const reassignRuleIds = options.reassignRuleIds ?? true;
+
+    // Try to use compiler's mergeIRModules if available
+    let mergedIR: IRModule = ir;
+    try {
+      // Try require so TypeScript build won't fail if package not installed as a TS import
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const compiler = require('blink-compiler-ts');
+      if (compiler && typeof compiler.mergeIRModules === 'function' && this.ir) {
+        mergedIR = compiler.mergeIRModules([this.ir, ir]);
+      } else if (this.ir) {
+        // Fallback: shallow merge arrays
+        mergedIR = {
+          ...this.ir,
+          components: [...(this.ir.components || []), ...(ir.components || [])],
+          functions: [...(this.ir.functions || []), ...(ir.functions || [])],
+          rules: [...(this.ir.rules || []), ...(ir.rules || [])],
+          initial_state: {
+            entities: [...((this.ir.initial_state && this.ir.initial_state.entities) || []), ...(ir.initial_state ? ir.initial_state.entities : [])]
+          }
+        } as IRModule;
+      }
+    } catch (e) {
+      // If require fails, fallback to shallow merge
+      if (this.ir) {
+        mergedIR = {
+          ...this.ir,
+          components: [...(this.ir.components || []), ...(ir.components || [])],
+          functions: [...(this.ir.functions || []), ...(ir.functions || [])],
+          rules: [...(this.ir.rules || []), ...(ir.rules || [])],
+          initial_state: {
+            entities: [...((this.ir.initial_state && this.ir.initial_state.entities) || []), ...(ir.initial_state ? ir.initial_state.entities : [])]
+          }
+        } as IRModule;
+      }
+    }
+
+    // Apply components: merge defaults and field types
+    for (const component of mergedIR.components || []) {
+      const defaults: ComponentData = {};
+      const fieldTypes: Record<string, string> = {};
+      for (const field of component.fields) {
+        if (typeof field.type === 'string') {
+          fieldTypes[field.name] = field.type;
+        } else if (field.type && (field.type as any).type) {
+          fieldTypes[field.name] = (field.type as any).type;
+        }
+        if (field.default !== undefined) {
+          if (fieldTypes[field.name] === 'integer' && typeof field.default === 'number') {
+            defaults[field.name] = Math.trunc(field.default as number);
+          } else {
+            defaults[field.name] = field.default as ComponentData[string];
+          }
+        }
+      }
+
+      try {
+        if (this.store.hasComponentDefault(component.name)) {
+          if (overrideOnConflict) {
+            this.store.mergeComponentDefaults(component.name, defaults);
+            this.store.mergeComponentFieldTypes(component.name, fieldTypes);
+          } else {
+            // If not overriding, only add fields that do not exist
+            // Create a merged object manually
+            // existing defaults will stay as-is; new keys are added
+            this.store.mergeComponentDefaults(component.name, defaults);
+            this.store.mergeComponentFieldTypes(component.name, fieldTypes);
+          }
+        } else {
+          this.store.setComponentDefaults(component.name, defaults);
+          this.store.setComponentFieldTypes(component.name, fieldTypes);
+        }
+      } catch (err) {
+        // If merging field types has conflicts, rethrow with context
+        throw new Error(`Failed to merge component ${component.name}: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
+
+    // Add/merge functions
+    if (mergedIR.functions && mergedIR.functions.length > 0) {
+      this.executor.addFunctions(mergedIR.functions, overrideOnConflict);
+    }
+
+    // Add rules incrementally
+    if (mergedIR.rules && mergedIR.rules.length > 0) {
+      this.executor.addRules(mergedIR.rules, { reassignIds: reassignRuleIds });
+    }
+
+    // Optionally merge initial_state entities
+    if (mergeEntities && mergedIR.initial_state && mergedIR.initial_state.entities) {
+      for (const entityDef of mergedIR.initial_state.entities) {
+        const existing = entityDef.id !== undefined && this.store.hasEntity(Number(entityDef.id));
+        const newId = existing ? this.store.createEntity() : this.store.createEntity(typeof entityDef.id === 'number' ? entityDef.id : undefined);
+        for (const [compName, compData] of Object.entries(entityDef.components || {})) {
+          this.store.addComponent(newId, compName, compData as ComponentData);
+        }
+      }
+    }
+
+    // Update ir reference to merged view
+    this.ir = mergedIR;
+
+    if (this.options.debug) {
+      console.log(`[BlinkGame] Merged IR module. Components: ${mergedIR.components?.length ?? 0}, Rules: ${mergedIR.rules?.length ?? 0}`);
+    }
+  }
+
+  /**
+   * Merge compiled rules from a JSON string (requires paused engine)
+   */
+  mergeRulesFromString(json: string, options?: { mergeEntities?: boolean; overrideOnConflict?: boolean; reassignRuleIds?: boolean }): void {
+    const ir = loadIRFromString(json);
+    this.mergeRulesFromIR(ir, options);
+  }
+
+  /**
+   * Merge compiled rules from an object (requires paused engine)
+   */
+  mergeRulesFromObject(obj: unknown, options?: { mergeEntities?: boolean; overrideOnConflict?: boolean; reassignRuleIds?: boolean }): void {
+    const ir = loadIRFromObject(obj);
+    this.mergeRulesFromIR(ir, options);
+  }
+
   // ===== BRL Compilation (stub for future implementation) =====
 
   /**

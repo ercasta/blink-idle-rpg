@@ -84,6 +84,8 @@ declare global {
 interface BlinkGameInstance {
   loadRulesFromObject: (ir: IRModule) => void;
   loadRulesFromString: (json: string) => void;
+  mergeRulesFromObject?: (irObject: unknown, options?: { mergeEntities?: boolean; overrideOnConflict?: boolean; reassignRuleIds?: boolean }) => void;
+  mergeRulesFromString?: (json: string, options?: { mergeEntities?: boolean; overrideOnConflict?: boolean; reassignRuleIds?: boolean }) => void;
   step: () => { time: number; event: { eventType: string } } | null;
   getTime: () => number;
   hasEvents: () => boolean;
@@ -93,6 +95,7 @@ interface BlinkGameInstance {
   getEntityData: (entityId: number | string) => EntityData | null;
   getRules: () => Array<{ id?: number; name: string; trigger: { event: string } }>;
   getIR: () => IRModule | null;
+  getIsPaused?: () => boolean;
   scheduleEvent: (eventType: string, delay?: number, options?: { source?: number; target?: number; fields?: Record<string, unknown> }) => number;
   reset: () => void;
   destroy: () => void;
@@ -338,8 +341,27 @@ export function IDE({ className }: IDEProps) {
         return;
       }
 
-      log('success', 'Snippet compiled with project sources. Note: Rule injection requires engine restart.');
-      log('info', 'Use "Schedule Event" below to inject events into the running simulation.');
+      log('success', 'Snippet compiled with project sources.');
+
+      // If engine supports runtime merge and is paused, merge the compiled IR into the running engine
+      if (engine && typeof engine.mergeRulesFromObject === 'function') {
+        const isPaused = typeof engine.getIsPaused === 'function' ? engine.getIsPaused() : isPaused;
+        if (!isPaused) {
+          log('error', 'Engine must be paused to inject rules at runtime. Pause the engine and try again.');
+          return;
+        }
+
+        try {
+          (engine.mergeRulesFromObject as any)(result.ir, { mergeEntities: false, overrideOnConflict: true, reassignRuleIds: true });
+          log('success', 'Snippet merged into running engine.');
+          // Refresh compiled IR view
+          setCompiledIR(result.ir);
+        } catch (err) {
+          log('error', `Runtime merge failed: ${err instanceof Error ? err.message : String(err)}`);
+        }
+      } else {
+        log('info', 'Rule injection not supported by this engine build. Use "Load into Engine" to replace IR.');
+      }
     } catch (err) {
       log('error', `Snippet compilation error: ${err instanceof Error ? err.message : String(err)}`);
     }
