@@ -56,8 +56,9 @@ describe('CodeGenerator', () => {
   describe('Rule generation', () => {
     it('should generate IR for simple rule', () => {
       const ir = compileToIR(`
-        rule attack on DoAttack {
-          entity.Health.current -= 10
+        rule attack on DoAttack atk {
+          let target = atk.target
+          target.Health.current -= 10
         }
       `);
       expect(ir.rules).toHaveLength(1);
@@ -79,11 +80,12 @@ describe('CodeGenerator', () => {
 
     it('should generate IR for modify action', () => {
       const ir = compileToIR(`
-        rule attack on DoAttack {
-          entity.Health.current -= 10
+        rule attack on DoAttack atk {
+          let target = atk.target
+          target.Health.current -= 10
         }
       `);
-      const action = ir.rules[0].actions[0] as IR.IRModifyAction;
+      const action = ir.rules[0].actions[1] as IR.IRModifyAction;  // Index 1 because first is the let
       expect(action.type).toBe('modify');
       expect(action.component).toBe('Health');
       expect(action.field).toBe('current');
@@ -92,7 +94,7 @@ describe('CodeGenerator', () => {
 
     it('should generate IR for let action', () => {
       const ir = compileToIR(`
-        rule test on Test {
+        rule test on Test t {
           let x = 10
         }
       `);
@@ -103,7 +105,7 @@ describe('CodeGenerator', () => {
 
     it('should generate IR for conditional action', () => {
       const ir = compileToIR(`
-        rule test on Test {
+        rule test on Test t {
           if x > 0 {
             y = 1
           } else {
@@ -119,7 +121,7 @@ describe('CodeGenerator', () => {
 
     it('should generate IR for loop action', () => {
       const ir = compileToIR(`
-        rule test on Test {
+        rule test on Test t {
           for item in items {
             item.value = 0
           }
@@ -132,7 +134,7 @@ describe('CodeGenerator', () => {
 
     it('should generate IR for schedule action', () => {
       const ir = compileToIR(`
-        rule test on Test {
+        rule test on Test t {
           schedule [delay: 2.0] DoAttack { source: entity }
         }
       `);
@@ -205,7 +207,7 @@ describe('CodeGenerator', () => {
   describe('Expression generation', () => {
     it('should generate IR for literal expressions', () => {
       const ir = compileToIR(`
-        rule test on Test {
+        rule test on Test t {
           let a = 42
           let b = 3.14
           let c = "hello"
@@ -218,7 +220,7 @@ describe('CodeGenerator', () => {
 
     it('should generate IR for binary expressions', () => {
       const ir = compileToIR(`
-        rule test on Test {
+        rule test on Test t {
           let x = a + b * c
         }
       `);
@@ -228,7 +230,7 @@ describe('CodeGenerator', () => {
 
     it('should generate IR for field access', () => {
       const ir = compileToIR(`
-        rule test on Test {
+        rule test on Test t {
           let hp = entity.Health.current
         }
       `);
@@ -238,7 +240,7 @@ describe('CodeGenerator', () => {
 
     it('should generate IR for function calls', () => {
       const ir = compileToIR(`
-        rule test on Test {
+        rule test on Test t {
           let result = calculate(a, b)
         }
       `);
@@ -250,7 +252,7 @@ describe('CodeGenerator', () => {
 
     it('should generate IR for list literal', () => {
       const ir = compileToIR(`
-        rule test on Test {
+        rule test on Test t {
           let nums = [1, 2, 3]
         }
       `);
@@ -263,7 +265,7 @@ describe('CodeGenerator', () => {
 
     it('should generate IR for entities having', () => {
       const ir = compileToIR(`
-        rule test on Test {
+        rule test on Test t {
           let enemies = entities having Enemy
         }
       `);
@@ -275,7 +277,7 @@ describe('CodeGenerator', () => {
 
     it('should generate IR for has component', () => {
       const ir = compileToIR(`
-        rule test on Test {
+        rule test on Test t {
           if entity has Health {
             x = 1
           }
@@ -289,7 +291,7 @@ describe('CodeGenerator', () => {
 
     it('should generate IR for clone expression', () => {
       const ir = compileToIR(`
-        rule test on Test {
+        rule test on Test t {
           let newEnemy = clone template {
             Health { current: 200 }
           }
@@ -355,7 +357,7 @@ describe('CodeGenerator', () => {
   describe('Assignment operators', () => {
     it('should convert assign to set', () => {
       const ir = compileToIR(`
-        rule test on Test {
+        rule test on Test t {
           entity.Health.current = 100
         }
       `);
@@ -365,7 +367,7 @@ describe('CodeGenerator', () => {
 
     it('should convert add_assign to add', () => {
       const ir = compileToIR(`
-        rule test on Test {
+        rule test on Test t {
           entity.Health.current += 10
         }
       `);
@@ -375,7 +377,7 @@ describe('CodeGenerator', () => {
 
     it('should convert sub_assign to subtract', () => {
       const ir = compileToIR(`
-        rule test on Test {
+        rule test on Test t {
           entity.Health.current -= 10
         }
       `);
@@ -385,7 +387,7 @@ describe('CodeGenerator', () => {
 
     it('should convert mul_assign to multiply', () => {
       const ir = compileToIR(`
-        rule test on Test {
+        rule test on Test t {
           entity.Health.current *= 2
         }
       `);
@@ -395,7 +397,7 @@ describe('CodeGenerator', () => {
 
     it('should convert div_assign to divide', () => {
       const ir = compileToIR(`
-        rule test on Test {
+        rule test on Test t {
           entity.Health.current /= 2
         }
       `);
