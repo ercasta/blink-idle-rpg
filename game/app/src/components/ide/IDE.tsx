@@ -215,6 +215,7 @@ export function IDE({ className }: IDEProps) {
       { path: files.brl.name, content: files.brl.content, language: 'brl' },
       { path: files.bcl.name, content: files.bcl.content, language: 'bcl' },
       { path: files.bdl.name, content: files.bdl.content, language: 'bdl' },
+      { path: files.snippet.name || 'snippet.brl', content: files.snippet.content, language: files.snippet.language || 'brl' },
     ];
     
     try {
@@ -235,12 +236,12 @@ export function IDE({ className }: IDEProps) {
         setCompiledIR(result.ir);
         log('success', `Compilation successful! Components: ${result.ir.components.length}, Rules: ${result.ir.rules.length}`);
         
-        // Mark files as clean
+        // Mark files as clean (include snippet)
         setFiles(prev => ({
           brl: { ...prev.brl, isDirty: false },
           bcl: { ...prev.bcl, isDirty: false },
           bdl: { ...prev.bdl, isDirty: false },
-          snippet: prev.snippet,
+          snippet: { ...prev.snippet, isDirty: false },
         }));
       }
     } catch (err) {
@@ -317,19 +318,27 @@ export function IDE({ className }: IDEProps) {
     }
     
     try {
-      log('info', 'Compiling snippet...');
-      const result = window.BlinkCompiler.compileString(snippetContent, 'brl', { moduleName: 'snippet' });
-      
+      log('info', 'Compiling snippet together with current sources...');
+
+      // Compile the snippet together with the current project files so
+      // component definitions (e.g. Health) are available to the snippet.
+      const sources = [
+        { path: files.brl.name, content: files.brl.content, language: 'brl' },
+        { path: files.bcl.name, content: files.bcl.content, language: 'bcl' },
+        { path: files.bdl.name, content: files.bdl.content, language: 'bdl' },
+        { path: files.snippet.name || 'snippet.brl', content: snippetContent, language: files.snippet.language || 'brl' },
+      ];
+
+      const result = window.BlinkCompiler.compile(sources, { moduleName: 'snippet-module', includeSourceMap: false });
+
       if (result.errors.length > 0) {
         result.errors.forEach(err => {
           log('error', `Snippet error: ${err.message}`);
         });
         return;
       }
-      
-      // For now, we can schedule events from the snippet
-      // Full rule injection would require engine modification
-      log('success', 'Snippet compiled. Note: Rule injection requires engine restart.');
+
+      log('success', 'Snippet compiled with project sources. Note: Rule injection requires engine restart.');
       log('info', 'Use "Schedule Event" below to inject events into the running simulation.');
     } catch (err) {
       log('error', `Snippet compilation error: ${err instanceof Error ? err.message : String(err)}`);
