@@ -23,12 +23,32 @@ export class Store {
   private entities: Map<EntityId, EntityData> = new Map();
   private nextId: number = 0;
   private componentDefaults: Map<string, ComponentData> = new Map();
+  private componentFieldTypes: Map<string, Map<string, string>> = new Map();
 
   /**
    * Set default values for a component type
    */
   setComponentDefaults(componentName: string, defaults: ComponentData): void {
     this.componentDefaults.set(componentName, { ...defaults });
+  }
+
+  /**
+   * Store field type metadata for a component (e.g. { level: 'integer' })
+   */
+  setComponentFieldTypes(componentName: string, types: Record<string, string>): void {
+    const map = new Map<string, string>();
+    for (const [k, v] of Object.entries(types)) {
+      map.set(k, v);
+    }
+    this.componentFieldTypes.set(componentName, map);
+  }
+
+  /**
+   * Get the declared field type for a component field, if any
+   */
+  getFieldType(componentName: string, fieldName: string): string | undefined {
+    const map = this.componentFieldTypes.get(componentName);
+    return map ? map.get(fieldName) : undefined;
   }
 
   /**
@@ -131,7 +151,20 @@ export class Store {
     
     // Merge with defaults
     const defaults = this.componentDefaults.get(componentName) || {};
-    entity.components.set(componentName, { ...defaults, ...data });
+    const merged: ComponentData = { ...defaults, ...data };
+
+    // Coerce integer fields based on declared types
+    const fieldTypes = this.componentFieldTypes.get(componentName);
+    if (fieldTypes) {
+      for (const [fieldName, value] of Object.entries(merged)) {
+        const ftype = fieldTypes.get(fieldName);
+        if (ftype === 'integer' && typeof value === 'number') {
+          merged[fieldName] = Math.trunc(value as number);
+        }
+      }
+    }
+
+    entity.components.set(componentName, merged);
   }
 
   /**
@@ -195,7 +228,13 @@ export class Store {
       entity.components.set(componentName, component);
     }
     
-    component[fieldName] = value;
+    // Coerce integers to integer representation (truncate fractional part)
+    const fieldType = this.getFieldType(componentName, fieldName);
+    if (fieldType === 'integer' && typeof value === 'number') {
+      component[fieldName] = Math.trunc(value as number);
+    } else {
+      component[fieldName] = value;
+    }
   }
 
   /**

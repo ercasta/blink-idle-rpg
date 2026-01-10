@@ -171,12 +171,27 @@ export class BlinkGame {
     // Register component defaults
     for (const component of ir.components) {
       const defaults: ComponentData = {};
+      const fieldTypes: Record<string, string> = {};
       for (const field of component.fields) {
+        // Record field type
+        if (typeof field.type === 'string') {
+          fieldTypes[field.name] = field.type;
+        } else if (field.type && (field.type as any).type) {
+          // For composite types like list/map, store base type string
+          fieldTypes[field.name] = (field.type as any).type;
+        }
+
         if (field.default !== undefined) {
-          defaults[field.name] = field.default;
+          // If field declared as integer, truncate any numeric default
+          if (fieldTypes[field.name] === 'integer' && typeof field.default === 'number') {
+            defaults[field.name] = Math.trunc(field.default as number);
+          } else {
+            defaults[field.name] = field.default as ComponentData[string];
+          }
         }
       }
       this.store.setComponentDefaults(component.name, defaults);
+      this.store.setComponentFieldTypes(component.name, fieldTypes);
     }
     
     // Load rules

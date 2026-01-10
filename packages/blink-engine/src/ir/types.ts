@@ -67,7 +67,7 @@ export interface IRField {
   default?: IRFieldValue;
 }
 
-export type IRFieldType = 'number' | 'string' | 'boolean' | 'entity' | IRListType | IRMapType;
+export type IRFieldType = 'integer' | 'number' | 'string' | 'boolean' | 'entity' | IRListType | IRMapType;
 
 export interface IRListType {
   type: 'list';

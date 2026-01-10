@@ -2,26 +2,37 @@
 set -euo pipefail
 
 WORKSPACE=/workspace
+PACKAGES=(packages/blink-compiler-ts packages/blink-engine packages/blink-test)
 
-echo "Preparing workspace: removing host node_modules and copying prebuilt node_modules..."
+echo "Workspace mounted at $WORKSPACE"
 
-# Remove host node_modules for packages we manage
-for pkg in blink-compiler-ts blink-engine blink-test; do
-  if [ -d "$WORKSPACE/packages/$pkg/node_modules" ]; then
-    rm -rf "$WORKSPACE/packages/$pkg/node_modules"
-  fi
-  if [ -d "/opt/node_modules/$pkg" ]; then
-    mkdir -p "$WORKSPACE/packages/$pkg"
-    cp -a "/opt/node_modules/$pkg" "$WORKSPACE/packages/$pkg/node_modules"
+cd "$WORKSPACE"
+
+# Use container-local npm cache (mounted via volume) to speed repeated installs
+echo "Installing package dependencies (will skip if already up-to-date)..."
+for pkg in "${PACKAGES[@]}"; do
+  if [ -d "$WORKSPACE/$pkg" ]; then
+    echo "-- processing $pkg"
+    pushd "$WORKSPACE/$pkg" > /dev/null
+    if [ -f package-lock.json ]; then
+      npm ci --no-audit --no-fund --prefer-offline
+    else
+      npm install --no-audit --no-fund --prefer-offline
+    fi
+    popd > /dev/null
+  else
+    echo "-- package $pkg not found in workspace, skipping"
   fi
 done
 
-echo "Copying prebuilt bundles into workspace/game/demos (overwriting)..."
-mkdir -p "$WORKSPACE/game/demos"
-cp -a /opt/build_artifacts/demos/* "$WORKSPACE/game/demos/" 2>/dev/null || true
-
 echo "Running tests via Makefile in workspace..."
-cd "$WORKSPACE"
 make test
 
 echo "Container run complete."
+
+# Run additional verification script if present
+if [ -f "$WORKSPACE/tools/verify-integer.js" ]; then
+  echo "Running integer verification script..."
+  node "$WORKSPACE/tools/verify-integer.js"
+  echo "Integer verification complete."
+fi
