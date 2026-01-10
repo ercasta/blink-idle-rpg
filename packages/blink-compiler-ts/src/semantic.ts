@@ -21,6 +21,7 @@ interface ComponentInfo {
 
 interface Scope {
   variables: Set<string>;
+  eventAliases?: Set<string>;  // Track event aliases for field access validation
   parent?: Scope;
 }
 
@@ -41,7 +42,7 @@ export class SemanticAnalyzer {
   
   // Built-in variables available in rules
   private builtinVariables = new Set([
-    'entity', // The current entity being processed
+    'entity', // The current entity being processed (legacy, being phased out)
   ]);
 
   /**
@@ -134,9 +135,17 @@ export class SemanticAnalyzer {
       scope.variables.add(v);
     }
     
-    // Add 'event' as a special variable for accessing event fields
+    // Add 'event' as a special variable for accessing event fields (legacy)
     // Note: We don't know what fields the event has, so we allow any access
     scope.variables.add('event');
+    
+    // Add the event alias to scope and mark it as an event alias
+    scope.variables.add(rule.eventAlias);
+    if (!scope.eventAliases) {
+      scope.eventAliases = new Set();
+    }
+    scope.eventAliases.add(rule.eventAlias);
+    scope.eventAliases.add('event'); // Also mark 'event' as an alias for legacy support
     
     // Validate condition if present
     if (rule.condition) {
@@ -432,9 +441,9 @@ export class SemanticAnalyzer {
     if (expr.base.type === 'identifier') {
       const baseName = expr.base.name;
       
-      // Special case: event.field - we allow any field access on event
-      // since event fields are dynamic and defined by schedule/emit statements
-      if (baseName === 'event') {
+      // Check if base is an event alias (including 'event' itself)
+      // Event aliases allow any field access since event fields are dynamic
+      if (scope.eventAliases && scope.eventAliases.has(baseName)) {
         // Event field access is allowed (dynamic)
         return;
       }
@@ -448,7 +457,7 @@ export class SemanticAnalyzer {
         return;
       }
       
-      // If it's not event.field, it should be entity.Component pattern
+      // If it's not an event alias, it should be entity.Component pattern
       // Check if the accessed field is a component name
       if (!this.components.has(expr.field)) {
         // It's not a component, so this could be an invalid field access like entity.id
@@ -484,7 +493,11 @@ export class SemanticAnalyzer {
   }
 
   private createChildScope(parent: Scope): Scope {
-    return { variables: new Set(), parent };
+    return {
+      variables: new Set(),
+      eventAliases: parent.eventAliases, // Propagate event aliases to child scope
+      parent
+    };
   }
 
   private isVariableInScope(name: string, scope: Scope): boolean {

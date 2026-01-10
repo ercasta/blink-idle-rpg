@@ -68,8 +68,9 @@ describe('CodeGenerator', () => {
 
     it('should generate IR for rule with condition', () => {
       const ir = compileToIR(`
-        rule attack on DoAttack when entity.Health.current > 0 {
-          entity.Health.current -= 10
+        rule attack on DoAttack atk when atk.source.Health.current > 0 {
+          let source = atk.source
+          source.Health.current -= 10
         }
       `);
       expect(ir.rules[0].condition).toBeDefined();
@@ -313,11 +314,14 @@ describe('CodeGenerator', () => {
           damage: integer
         }
 
-        rule attack on DoAttack when entity.Health.current > 0 {
-          let damage = entity.Combat.damage
-          let target = entity.Target.entity
-          target.Health.current -= damage
-          schedule [delay: 1.0] DoAttack { source: entity }
+        rule attack on DoAttack atk {
+          let source = atk.source
+          if source.Health.current > 0 {
+            let damage = source.Combat.damage
+            let target = source.Target.entity
+            target.Health.current -= damage
+            schedule [delay: 1.0] DoAttack { source: source }
+          }
         }
 
         fn calculate_damage(base: number, bonus: number): number {
