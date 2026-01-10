@@ -201,21 +201,24 @@ fn calculate_exp_for_level(level: float): float {
 // ============================================================================
 
 // Rule 1: Start hero attacks when game begins
-rule initialize_hero_attacks on GameStart {
-    if entity.Team.isPlayer && entity.Health.current > 0 {
-        // Stagger attacks by 0.1s per hero to avoid perfect synchronization
-        let stagger = 0.1 * entity
-        schedule [delay: stagger] DoAttack {
-            source: entity
+rule initialize_hero_attacks on GameStart gs {
+    let heroes = entities having Team
+    for hero in heroes {
+        if hero.Team.isPlayer && hero.Health.current > 0 {
+            // Stagger attacks by 0.1s per hero to avoid perfect synchronization
+            schedule [delay: 0.1] DoAttack {
+                source: hero
+            }
         }
     }
 }
 
 // Rule 2: Start retargeting system when game begins
-rule start_retargeting_system on GameStart {
-    if entity has GameState {
-        if entity.GameState.retargetingActive == false {
-            entity.GameState.retargetingActive = true
+rule start_retargeting_system on GameStart gs {
+    let gameStates = entities having GameState
+    for state in gameStates {
+        if state.GameState.retargetingActive == false {
+            state.GameState.retargetingActive = true
             // Schedule first retargeting check in 2 seconds
             schedule [delay: 2.0] CheckAllTargets {
             }
@@ -224,20 +227,17 @@ rule start_retargeting_system on GameStart {
 }
 
 // Rule 3: Spawn initial enemies when game begins
-// This rule fires for ALL entities when GameStart occurs
-// We only want to execute on the entity with SpawnConfig
-// Use "entity has SpawnConfig" to check for component existence
-rule spawn_initial_enemies on GameStart {
-    if entity has SpawnConfig {
-        let count = entity.SpawnConfig.initialEnemyCount
+rule spawn_initial_enemies on GameStart gs {
+    let spawners = entities having SpawnConfig
+    for spawner in spawners {
+        let count = spawner.SpawnConfig.initialEnemyCount
         // Initialize tiered wave tracking
-        entity.GameState.currentTier = 1
-        entity.GameState.waveInTier = 1
-        entity.GameState.currentWave = 1
-        entity.GameState.bossSpawned = false
+        spawner.GameState.currentTier = 1
+        spawner.GameState.waveInTier = 1
+        spawner.GameState.currentWave = 1
+        spawner.GameState.bossSpawned = false
 
         // Spawn initial wave enemies (spread by small delays)
-        // Note: Array size should match entity.SpawnConfig.initialEnemyCount
         let indices = [0, 1, 2, 3, 4]
         for i in indices {
             schedule [delay: 0.5 * (i + 1)] SpawnEnemy {
@@ -253,46 +253,43 @@ rule spawn_initial_enemies on GameStart {
 }
 
 // Handle a wave starting: spawn its enemies and schedule the next wave
-rule handle_enemy_spawned on EnemySpawned {
-    if entity has GameState {
-        if entity has SpawnConfig {
-            // Determine current tier and wave index
-            let tier = entity.GameState.currentTier
-            let waveIndex = entity.GameState.waveInTier
-            let count = entity.SpawnConfig.initialEnemyCount
+rule handle_enemy_spawned on EnemySpawned es {
+    let spawners = entities having GameState
+    for spawner in spawners {
+        // Determine current tier and wave index
+        let tier = spawner.GameState.currentTier
+        let waveIndex = spawner.GameState.waveInTier
+        let count = spawner.SpawnConfig.initialEnemyCount
 
-            // Spawn enemies for this wave
-            // Note: Array size should match entity.SpawnConfig.initialEnemyCount
-            let indices = [0, 1, 2, 3, 4]
-            for i in indices {
-                schedule [delay: 0.5 * (i + 1)] SpawnEnemy {
-                    tier: tier
-                }
+        // Spawn enemies for this wave
+        let indices = [0, 1, 2, 3, 4]
+        for i in indices {
+            schedule [delay: 0.5 * (i + 1)] SpawnEnemy {
+                tier: tier
             }
+        }
 
-            // If this is the final tier, spawn the named final boss once
-            if tier == entity.SpawnConfig.maxTier {
-                if entity.GameState.bossSpawned == false {
-                    schedule [delay: 1.0] SpawnLordVexar {
-                    }
-                    entity.GameState.bossSpawned = true
+        // If this is the final tier, spawn the named final boss once
+        if tier == spawner.SpawnConfig.maxTier {
+            if spawner.GameState.bossSpawned == false {
+                schedule [delay: 1.0] SpawnLordVexar {
                 }
-                // Do not schedule further waves after boss spawn
+                spawner.GameState.bossSpawned = true
+            }
+        } else {
+            // Not final tier - schedule the next wave
+            let nextWaveIndex = waveIndex + 1
+            if nextWaveIndex > spawner.SpawnConfig.wavesPerTier {
+                spawner.GameState.currentTier = tier + 1
+                spawner.GameState.waveInTier = 1
             } else {
-                // Not final tier - schedule the next wave
-                let nextWaveIndex = waveIndex + 1
-                if nextWaveIndex > entity.SpawnConfig.wavesPerTier {
-                    entity.GameState.currentTier = tier + 1
-                    entity.GameState.waveInTier = 1
-                } else {
-                    entity.GameState.waveInTier = nextWaveIndex
-                }
-                entity.GameState.currentWave += 1
+                spawner.GameState.waveInTier = nextWaveIndex
+            }
+            spawner.GameState.currentWave += 1
 
-                // Schedule next EnemySpawned event for the next wave
-                schedule [delay: 2.0] EnemySpawned {
-                    wave: entity.GameState.currentWave
-                }
+            // Schedule next EnemySpawned event for the next wave
+            schedule [delay: 2.0] EnemySpawned {
+                wave: spawner.GameState.currentWave
             }
         }
     }
@@ -303,10 +300,9 @@ rule handle_enemy_spawned on EnemySpawned {
 // ============================================================================
 
 // Spawn a single enemy by cloning a template
-// This rule should only execute ONCE per SpawnEnemy event
-// We use the GameState entity as the anchor to ensure single execution
-rule spawn_enemy_from_template on SpawnEnemy {
-    if entity has SpawnConfig {
+rule spawn_enemy_from_template on SpawnEnemy se {
+    let spawners = entities having SpawnConfig
+    if len(spawners) > 0 {
         // Find enemy templates matching the requested tier
         let templates = entities having EnemyTemplate
 
@@ -314,7 +310,7 @@ rule spawn_enemy_from_template on SpawnEnemy {
         let templateId = templates[0]
         for t in templates {
             if t.EnemyTemplate.isTemplate {
-                if t.Enemy.tier == event.tier {
+                if t.Enemy.tier == se.tier {
                     templateId = t
                 }
             }
@@ -328,7 +324,6 @@ rule spawn_enemy_from_template on SpawnEnemy {
         }
         
         // Target will be assigned by the retargeting system
-        // Set to null initially so retargeting finds a valid player
         newEnemy.Target.entity = null
         
         // Schedule the enemy's first attack
@@ -339,8 +334,9 @@ rule spawn_enemy_from_template on SpawnEnemy {
 }
 
 // Spawn the final boss (Dragon Lord Vexar) once
-rule spawn_lord_vexar on SpawnLordVexar {
-    if entity has SpawnConfig {
+rule spawn_lord_vexar on SpawnLordVexar slv {
+    let spawners = entities having SpawnConfig
+    if len(spawners) > 0 {
         // Find the final boss template using FinalBoss component
         let templates = entities having FinalBoss
         let bossTemplate = templates[0]
@@ -365,68 +361,74 @@ rule spawn_lord_vexar on SpawnLordVexar {
 // ============================================================================
 
 // Main attack rule: apply damage and schedule next attack
-rule attack_rule on DoAttack {
-    if entity.Target.entity != null && entity.Health.current > 0 {
-        let target = entity.Target.entity
-        let damage = entity.Combat.damage + entity.Buffs.damageBonus
+rule attack_rule on DoAttack da {
+    let attacker = da.source
+    if attacker.Target.entity != null && attacker.Health.current > 0 {
+        let target = attacker.Target.entity
+        let damage = attacker.Combat.damage + attacker.Buffs.damageBonus
         
         // Apply damage to target
         target.Health.current -= damage
         
         // Emit after attack event
         schedule AfterAttack {
-            attacker: entity
+            attacker: attacker
             target: target
         }
         
         // Schedule next attack
-        // Ensure attackSpeed + hasteBonus is positive to avoid division by zero or negative delays
-        let attackSpeedTotal = entity.Combat.attackSpeed + entity.Buffs.hasteBonus
+        let attackSpeedTotal = attacker.Combat.attackSpeed + attacker.Buffs.hasteBonus
         if attackSpeedTotal <= 0 {
-            // Use minimum attack speed of 0.1 (attacks per second) to prevent infinite loops
-            // This results in a maximum delay of 10 seconds between attacks
             attackSpeedTotal = 0.1
         }
         let delay = 1 / attackSpeedTotal
         schedule [delay: delay] DoAttack {
-            source: entity
+            source: attacker
         }
     }
 }
 
 // Death check: emit Death event when health drops to zero
-rule death_check on AfterAttack {
-    if entity.Health.current <= 0 {
+rule death_check on AfterAttack aa {
+    let target = aa.target
+    if target.Health.current <= 0 {
         schedule Death {
-            target: entity
+            target: target
         }
     }
 }
 
 // Enemy death handler
-rule enemy_death_handler on Death {
-    if entity.Enemy.tier > 0 && entity.Health.current <= 0 {
-        schedule EnemyDefeated {
-            enemy: entity
-            expReward: entity.Enemy.expReward
-            isBoss: entity.Enemy.isBoss
+rule enemy_death_handler on Death d {
+    let target = d.target
+    let enemies = entities having Enemy
+    for enemy in enemies {
+        if enemy == target && enemy.Health.current <= 0 {
+            schedule EnemyDefeated {
+                enemy: enemy
+                expReward: enemy.Enemy.expReward
+                isBoss: enemy.Enemy.isBoss
+            }
         }
     }
 }
 
 // Player death handler
-rule player_death_handler on Death {
-    if entity.Team.isPlayer && entity.Health.current <= 0 {
-        schedule PlayerDefeated {
-            player: entity
+rule player_death_handler on Death d {
+    let target = d.target
+    let players = entities having Team
+    for player in players {
+        if player == target && player.Team.isPlayer && player.Health.current <= 0 {
+            schedule PlayerDefeated {
+                player: player
+            }
         }
     }
 }
 
 // When a player is defeated, schedule a respawn after 120 seconds
-rule respawn_on_player_defeated on PlayerDefeated {
+rule respawn_on_player_defeated on PlayerDefeated pd {
     // Don't respawn players if Lord Vexar has been defeated (game is over)
-    // Find the GameState entity to check if game is over
     let gameStates = entities having GameState
     let shouldRespawn = true
     if len(gameStates) > 0 {
@@ -441,39 +443,31 @@ rule respawn_on_player_defeated on PlayerDefeated {
     // Schedule respawn for the dead player after 120s
     if shouldRespawn {
         schedule [delay: 120.0] RespawnPlayer {
-            player: event.player
+            player: pd.player
         }
     }
 }
 
 // Restore player state when the RespawnPlayer event fires
-rule respawn_player on RespawnPlayer {
-    let p = event.player
+rule respawn_player on RespawnPlayer rp {
+    let p = rp.player
     // Restore health and mana
-    if p.Health {
-        p.Health.current = p.Health.max
-    }
-    if p.Mana {
-        p.Mana.current = p.Mana.max
-    }
+    p.Health.current = p.Health.max
+    p.Mana.current = p.Mana.max
     // Clear temporary buffs that should not persist through death
-    if p.Buffs {
-        p.Buffs.shieldAmount = 0
-        p.Buffs.regenAmount = 0
-        p.Buffs.damageBonus = 0
-        p.Buffs.defenseBonus = 0
-        p.Buffs.hasteBonus = 0.0
-    }
+    p.Buffs.shieldAmount = 0
+    p.Buffs.regenAmount = 0
+    p.Buffs.damageBonus = 0
+    p.Buffs.defenseBonus = 0
+    p.Buffs.hasteBonus = 0.0
     // Allow fleeing again and reset any run-state flags as appropriate
-    if p.RunStats {
-        p.RunStats.canFlee = true
-    }
+    p.RunStats.canFlee = true
 }
 
 // Grant experience to players when enemy defeated
-// This rule fires once for the GameState entity to avoid granting XP multiple times
-rule grant_experience on EnemyDefeated {
-    if entity has GameState {
+rule grant_experience on EnemyDefeated ed {
+    let gameStates = entities having GameState
+    if len(gameStates) > 0 {
         // Find all player entities and grant them XP
         let players = entities having Team
         for player in players {
@@ -488,46 +482,49 @@ rule grant_experience on EnemyDefeated {
 }
 
 // Level up check
-rule level_up_check on CheckLevelUp {
-    if entity.Character.experience >= entity.Character.experienceToLevel {
-        entity.Character.level += 1
-        entity.Character.experience -= entity.Character.experienceToLevel
-        entity.Character.experienceToLevel *= 1.5
-        entity.Skills.skillPoints += 1
+rule level_up_check on CheckLevelUp clu {
+    let character = clu.source
+    if character.Character.experience >= character.Character.experienceToLevel {
+        character.Character.level += 1
+        character.Character.experience -= character.Character.experienceToLevel
+        character.Character.experienceToLevel *= 1.5
+        character.Skills.skillPoints += 1
         
         schedule LevelUp {
-            source: entity
+            source: character
         }
         
         schedule SkillChoice {
-            source: entity
+            source: character
         }
     }
 }
 
 // Level up stat increases
-rule level_up_stats on LevelUp {
-    entity.Health.max += 10
-    entity.Health.current += 10
-    entity.Combat.damage += 2
-    entity.Combat.defense += 1
+rule level_up_stats on LevelUp lu {
+    let character = lu.source
+    character.Health.max += 10
+    character.Health.current += 10
+    character.Combat.damage += 2
+    character.Combat.defense += 1
 }
 
 // Track enemy defeats and check victory
-rule boss_defeated_victory on EnemyDefeated {
-    if entity has GameState {
-        entity.GameState.enemiesDefeated += 1
+rule boss_defeated_victory on EnemyDefeated ed {
+    let gameStates = entities having GameState
+    for gameState in gameStates {
+        gameState.GameState.enemiesDefeated += 1
         // If this was the named final boss, finish the run with victory.
-        if event.isBoss {
-            let defeated = event.enemy
+        if ed.isBoss {
+            let defeated = ed.enemy
             if defeated.Enemy.name == "Lord Vexar" {
-                entity.GameState.bossDefeated = true
-                entity.GameState.victory = true
-                entity.GameState.gameOver = true
+                gameState.GameState.bossDefeated = true
+                gameState.GameState.victory = true
+                gameState.GameState.gameOver = true
                 
                 // Add LordVexarDefeated component to track this specific victory
-                entity.LordVexarDefeated.defeatedAt = entity.RunStats.simulationTime
-                entity.LordVexarDefeated.defeatedByHeroCount = 4
+                gameState.LordVexarDefeated.defeatedAt = gameState.RunStats.simulationTime
+                gameState.LordVexarDefeated.defeatedByHeroCount = 4
                 
                 // Emit dedicated LordVexarDefeated event
                 schedule LordVexarDefeated {
@@ -543,17 +540,17 @@ rule boss_defeated_victory on EnemyDefeated {
 }
 
 // Spawn a replacement enemy when one is defeated
-rule spawn_replacement_enemy on EnemyDefeated {
-    if entity has GameState {
+rule spawn_replacement_enemy on EnemyDefeated ed {
+    let gameStates = entities having GameState
+    for gameState in gameStates {
         // Don't spawn new enemies if Lord Vexar has been defeated
-        if entity has LordVexarDefeated {
-            // Do nothing - game is over
-        } else {
-            if entity.GameState.enemiesDefeated < 1000 {
-                if entity.GameState.gameOver == false {
-                    if entity.GameState.bossSpawned == false {
+        let vexarDefeated = entities having LordVexarDefeated
+        if len(vexarDefeated) == 0 {
+            if gameState.GameState.enemiesDefeated < 1000 {
+                if gameState.GameState.gameOver == false {
+                    if gameState.GameState.bossSpawned == false {
                         // Spawn enemy from current tier to maintain combat
-                        let currentTier = entity.GameState.currentTier
+                        let currentTier = gameState.GameState.currentTier
                         schedule [delay: 0.1] SpawnEnemy {
                             tier: currentTier
                         }
@@ -565,41 +562,46 @@ rule spawn_replacement_enemy on EnemyDefeated {
 }
 
 // Power strike skill
-rule use_skill_power_strike on UseSkill {
-    if entity.Skills.skill1 == "power_strike" {
-        entity.Buffs.damageBonus += 5
+rule use_skill_power_strike on UseSkill us {
+    let character = us.source
+    if character.Skills.skill1 == "power_strike" {
+        character.Buffs.damageBonus += 5
     }
 }
 
 // Fireball skill
-rule use_skill_fireball on UseSkill {
-    if entity.Skills.skill1 == "fireball" && entity.Mana.current >= 20 {
-        entity.Mana.current -= 20
-        entity.Buffs.damageBonus += 15
+rule use_skill_fireball on UseSkill us {
+    let character = us.source
+    if character.Skills.skill1 == "fireball" && character.Mana.current >= 20 {
+        character.Mana.current -= 20
+        character.Buffs.damageBonus += 15
     }
 }
 
 // Heal skill
-rule use_skill_heal on UseSkill {
-    if entity.Skills.skill1 == "heal" && entity.Mana.current >= 15 {
-        entity.Mana.current -= 15
-        entity.Health.current += 30
+rule use_skill_heal on UseSkill us {
+    let character = us.source
+    if character.Skills.skill1 == "heal" && character.Mana.current >= 15 {
+        character.Mana.current -= 15
+        character.Health.current += 30
     }
 }
 
 // Backstab skill
-rule use_skill_backstab on UseSkill {
-    if entity.Skills.skill1 == "backstab" {
-        entity.Combat.critChance += 0.25
+rule use_skill_backstab on UseSkill us {
+    let character = us.source
+    if character.Skills.skill1 == "backstab" {
+        character.Combat.critChance += 0.25
     }
 }
 
 // Mana regeneration
-rule mana_regen on ManaRegen {
-    if entity.Health.current > 0 {
-        entity.Mana.current += 5
+rule mana_regen on ManaRegen mr {
+    let character = mr.source
+    if character.Health.current > 0 {
+        character.Mana.current += 5
         schedule [delay: 2] ManaRegen {
-            source: entity
+            source: character
         }
     }
 }
@@ -608,18 +610,22 @@ rule mana_regen on ManaRegen {
 // Wave spawning is now handled by handle_enemy_spawned rule which uses tiered progression
 
 // Count player deaths
-rule count_player_death on PlayerDefeated {
-    if entity has GameState {
-        entity.GameState.playerDeaths += 1
+rule count_player_death on PlayerDefeated pd {
+    let gameStates = entities having GameState
+    for gameState in gameStates {
+        gameState.GameState.playerDeaths += 1
     }
 }
 
 // Apply death penalty to run stats
-rule apply_death_penalty on PlayerDefeated {
-    if entity has RunStats {
-        if entity has FleeConfig {
-            entity.RunStats.deathPenalty += entity.FleeConfig.retreatTimePenalty * entity.FleeConfig.deathTimePenaltyMultiplier
-            entity.RunStats.totalTime = entity.RunStats.simulationTime + entity.RunStats.retreatPenalty + entity.RunStats.deathPenalty
+rule apply_death_penalty on PlayerDefeated pd {
+    let runStatsEntities = entities having RunStats
+    for runStats in runStatsEntities {
+        let fleeConfigs = entities having FleeConfig
+        if len(fleeConfigs) > 0 {
+            let fleeConfig = fleeConfigs[0]
+            runStats.RunStats.deathPenalty += fleeConfig.FleeConfig.retreatTimePenalty * fleeConfig.FleeConfig.deathTimePenaltyMultiplier
+            runStats.RunStats.totalTime = runStats.RunStats.simulationTime + runStats.RunStats.retreatPenalty + runStats.RunStats.deathPenalty
             schedule UpdateRunStats {
             }
         }
@@ -636,22 +642,23 @@ rule apply_death_penalty on PlayerDefeated {
 // The game continues even if all heroes die - they respawn after 120 seconds
 
 // Acquire skill
-rule acquire_skill on AcquireSkill {
-    if entity.Skills.skillPoints > 0 {
-        entity.Skills.skillPoints -= 1
+rule acquire_skill on AcquireSkill as {
+    let character = as.source
+    if character.Skills.skillPoints > 0 {
+        character.Skills.skillPoints -= 1
         schedule SkillAcquired {
-            character: entity
+            character: character
         }
     }
 }
 
 // Flee from battle - player initiates retreat
-rule flee_battle on FleeFromBattle {
+rule flee_battle on FleeFromBattle fb {
     // Find the entity with RunStats
     let runStatsEntities = entities having RunStats
     let fleeConfigEntities = entities having FleeConfig
     
-    if runStatsEntities[0] && fleeConfigEntities[0] {
+    if len(runStatsEntities) > 0 && len(fleeConfigEntities) > 0 {
         let runStatsEntity = runStatsEntities[0]
         let fleeConfigEntity = fleeConfigEntities[0]
         
@@ -685,65 +692,72 @@ rule flee_battle on FleeFromBattle {
 }
 
 // Despawn all enemies on flee
-rule despawn_enemies on DespawnAllEnemies {
-    if entity.Enemy.tier > 0 {
-        // Remove enemy entity (handled by engine)
-        entity.Health.current = 0
-        schedule RemoveEntity {
-            target: entity
-        }
-    }
-}
-
-// Spawn a new wave after fleeing
-rule spawn_wave_after_flee on SpawnEnemyWave {
-    if entity has GameState {
-        if entity has SpawnConfig {
-            // Trigger EnemySpawned to spawn the next wave
-            // This reuses the existing wave spawning logic
-            schedule [delay: 0.1] EnemySpawned {
-                wave: entity.GameState.currentWave
+rule despawn_enemies on DespawnAllEnemies dae {
+    let enemies = entities having Enemy
+    for enemy in enemies {
+        if enemy.Enemy.tier > 0 {
+            // Remove enemy entity
+            enemy.Health.current = 0
+            schedule RemoveEntity {
+                target: enemy
             }
         }
     }
 }
 
+// Spawn a new wave after fleeing
+rule spawn_wave_after_flee on SpawnEnemyWave sew {
+    let spawner = sew.target
+    // Trigger EnemySpawned to spawn the next wave
+    // This reuses the existing wave spawning logic
+    schedule [delay: 0.1] EnemySpawned {
+        wave: spawner.GameState.currentWave
+    }
+}
+
 // Update flee cooldown timer
-rule update_flee_cooldown on UpdateRunStats {
-    if entity has RunStats {
-        if entity has FleeConfig {
-            let timeSinceFlee = entity.RunStats.simulationTime - entity.RunStats.lastFleeTime
-            if timeSinceFlee >= entity.FleeConfig.fleeCooldown {
-                entity.RunStats.canFlee = true
+rule update_flee_cooldown on UpdateRunStats urs {
+    let runStatsEntities = entities having RunStats
+    for runStats in runStatsEntities {
+        let fleeConfigs = entities having FleeConfig
+        if len(fleeConfigs) > 0 {
+            let fleeConfig = fleeConfigs[0]
+            let timeSinceFlee = runStats.RunStats.simulationTime - runStats.RunStats.lastFleeTime
+            if timeSinceFlee >= fleeConfig.FleeConfig.fleeCooldown {
+                runStats.RunStats.canFlee = true
             }
         }
     }
 }
 
 // Complete run and save to leaderboard
-rule complete_run on GameOver {
-    if entity has RunStats {
-        if entity has GameState {
+rule complete_run on GameOver go {
+    let runStatsEntities = entities having RunStats
+    for runStats in runStatsEntities {
+        let gameStates = entities having GameState
+        if len(gameStates) > 0 {
+            let gameState = gameStates[0]
             schedule SaveRunToLeaderboard {
-                completionTime: entity.RunStats.totalTime
-                enemiesDefeated: entity.GameState.enemiesDefeated
-                playerDeaths: entity.GameState.playerDeaths
-                retreats: entity.RunStats.retreatCount
-                retreatPenalty: entity.RunStats.retreatPenalty
-                deathPenalty: entity.RunStats.deathPenalty
-                victory: entity.GameState.victory
+                completionTime: runStats.RunStats.totalTime
+                enemiesDefeated: gameState.GameState.enemiesDefeated
+                playerDeaths: gameState.GameState.playerDeaths
+                retreats: runStats.RunStats.retreatCount
+                retreatPenalty: runStats.RunStats.retreatPenalty
+                deathPenalty: runStats.RunStats.deathPenalty
+                victory: gameState.GameState.victory
             }
         }
     }
 }
 
 // Start global recurring retargeting when game begins
-rule start_global_retargeting on EnemySpawned {
+rule start_global_retargeting on EnemySpawned es {
     // Only start retargeting once, when first enemy spawns
-    if entity has GameState {
-        if entity.GameState.currentWave == 1 {
-            if entity.GameState.retargetingActive == false {
-                entity.GameState.retargetingActive = true
+    let gameStates = entities having GameState
+    for gameState in gameStates {
+        if gameState.GameState.currentWave == 1 {
+            if gameState.GameState.retargetingActive == false {
+                gameState.GameState.retargetingActive = true
                 // Schedule first retargeting check in 2 seconds
                 schedule [delay: 2.0] CheckAllTargets {
                 }
@@ -753,30 +767,24 @@ rule start_global_retargeting on EnemySpawned {
 }
 
 // Check if entity needs retargeting
-// Only run for entities with Target component that are not templates
-rule check_entity_target on CheckAllTargets {
-    if entity has Target {
-        if entity has Health {
-            if entity.Health.current > 0 {
-                // Skip enemy templates - they don't participate in combat
-                // Use nested else to avoid return (which doesn't work in IR)
-                if entity has EnemyTemplate {
-                    if entity.EnemyTemplate.isTemplate == false {
-                        // Non-template enemy - check for retargeting
-                        let target = entity.Target.entity
-                        if target == null || target.Health.current <= 0 {
-                            schedule FindNewTarget {
-                                seeker: entity
-                            }
-                        }
-                    }
-                } else {
-                    // Entity without EnemyTemplate (player character) - check for retargeting
-                    let target = entity.Target.entity
-                    if target == null || target.Health.current <= 0 {
-                        schedule FindNewTarget {
-                            seeker: entity
-                        }
+rule check_entity_target on CheckAllTargets cat {
+    let entities_with_targets = entities having Target
+    for ent in entities_with_targets {
+        if ent.Health.current > 0 {
+            // Skip enemy templates - they don't participate in combat
+            let isTemplate = false
+            let enemyTemplates = entities having EnemyTemplate
+            for tmpl in enemyTemplates {
+                if tmpl == ent && tmpl.EnemyTemplate.isTemplate {
+                    isTemplate = true
+                }
+            }
+            
+            if isTemplate == false {
+                let target = ent.Target.entity
+                if target == null || target.Health.current <= 0 {
+                    schedule FindNewTarget {
+                        seeker: ent
                     }
                 }
             }
@@ -785,13 +793,12 @@ rule check_entity_target on CheckAllTargets {
 }
 
 // Reschedule the next retargeting check (makes it recurring)
-// REQUIRES: An entity with GameState component must exist in the game
-// This rule only fires for the GameState entity to ensure single reschedule
-rule reschedule_retargeting on CheckAllTargets {
+rule reschedule_retargeting on CheckAllTargets cat {
     // Only fire for entity with GameState component
-    if entity has GameState {
-        if entity.GameState.retargetingActive {
-            if entity.GameState.gameOver == false {
+    let gameStates = entities having GameState
+    for gameState in gameStates {
+        if gameState.GameState.retargetingActive {
+            if gameState.GameState.gameOver == false {
                 // Schedule next check in 2 seconds
                 schedule [delay: 2.0] CheckAllTargets {
                 }
@@ -805,62 +812,65 @@ rule reschedule_retargeting on CheckAllTargets {
 // ============================================================================
 
 // Find and assign a new target for an entity
-// This rule is triggered when an entity needs a new target (their current target died or is null)
-rule find_new_target on FindNewTarget {
-    let seeker = event.seeker
+rule find_new_target on FindNewTarget fnt {
+    let seeker = fnt.seeker
     
     // Determine if seeker is a player or enemy
-    if seeker has Team {
-        if seeker.Team.isPlayer {
-            // Player characters target enemies
-            let enemies = entities having Enemy
-            let foundTarget = false
-            for enemy in enemies {
-                // Skip templates and only process if we haven't found a target yet
-                if foundTarget == false {
-                    if enemy has EnemyTemplate {
-                        if enemy.EnemyTemplate.isTemplate == false {
-                            if enemy.Health.current > 0 {
-                                // Found a valid target - use 'enemy' directly (it's an entity reference)
-                                seeker.Target.entity = enemy
-                                // Schedule attack now that we have a target
-                                schedule DoAttack {
-                                    source: seeker
-                                }
-                                foundTarget = true
-                            }
+    if seeker.Team.isPlayer {
+        // Player characters target enemies
+        let enemies = entities having Enemy
+        let foundTarget = false
+        for enemy in enemies {
+            // Skip templates and only process if we haven't found a target yet
+            if foundTarget == false {
+                let isTemplate = false
+                let templates = entities having EnemyTemplate
+                for tmpl in templates {
+                    if tmpl == enemy && tmpl.EnemyTemplate.isTemplate {
+                        isTemplate = true
+                    }
+                }
+                
+                if isTemplate == false {
+                    if enemy.Health.current > 0 {
+                        // Found a valid target
+                        seeker.Target.entity = enemy
+                        // Schedule attack now that we have a target
+                        schedule DoAttack {
+                            source: seeker
                         }
+                        foundTarget = true
                     }
                 }
             }
-            // No valid enemy target found - clear target
+        }
+        // No valid enemy target found - clear target
+        if foundTarget == false {
+            seeker.Target.entity = null
+        }
+    } else {
+        // Enemy characters target players
+        let players = entities having Team
+        let foundTarget = false
+        for player in players {
+            // Only process if we haven't found a target yet
             if foundTarget == false {
-                seeker.Target.entity = null
-            }
-        } else {
-            // Enemy characters target players
-            let players = entities having Team
-            let foundTarget = false
-            for player in players {
-                // Only process if we haven't found a target yet
-                if foundTarget == false {
-                    if player.Team.isPlayer {
-                        if player.Health.current > 0 {
-                            // Found a valid target - use 'player' directly
-                            seeker.Target.entity = player
-                            // Schedule attack now that we have a target
-                            schedule DoAttack {
-                                source: seeker
-                            }
-                            foundTarget = true
+                if player.Team.isPlayer {
+                    if player.Health.current > 0 {
+                        // Found a valid target
+                        seeker.Target.entity = player
+                        // Schedule attack now that we have a target
+                        schedule DoAttack {
+                            source: seeker
                         }
+                        foundTarget = true
                     }
                 }
             }
-            // No valid player target found - clear target
-            if foundTarget == false {
-                seeker.Target.entity = null
-            }
+        }
+        // No valid player target found - clear target
+        if foundTarget == false {
+            seeker.Target.entity = null
         }
     }
 }
