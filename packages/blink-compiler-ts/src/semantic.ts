@@ -56,7 +56,7 @@ export class SemanticAnalyzer {
     
     // First pass: collect all component and function definitions
     for (const module of modules) {
-      this.collectDefinitions(module);
+      this.collectDefinitionsFromItems(module.items);
     }
     
     // Second pass: validate all references
@@ -68,13 +68,28 @@ export class SemanticAnalyzer {
   }
 
   private collectDefinitions(module: AST.Module): void {
-    for (const item of module.items) {
+    this.collectDefinitionsFromItems(module.items);
+  }
+
+  private collectDefinitionsFromItems(items: AST.Item[]): void {
+    for (const item of items) {
       switch (item.type) {
         case 'component':
           this.collectComponent(item);
           break;
         case 'function':
           this.functions.add(item.name);
+          break;
+        case 'module':
+          // Recurse into nested module items
+          this.collectDefinitionsFromItems(item.items);
+          break;
+        case 'entity':
+          // Entities may contain bound functions; register their names if needed
+          for (const bf of item.boundFunctions) {
+            // Bound functions are not global functions, but ensure name presence if used
+            // We do not add them to global `functions` set to avoid exposing bound scope.
+          }
           break;
       }
     }
@@ -112,7 +127,11 @@ export class SemanticAnalyzer {
   }
 
   private validateModule(module: AST.Module): void {
-    for (const item of module.items) {
+    this.validateItems(module.items);
+  }
+
+  private validateItems(items: AST.Item[]): void {
+    for (const item of items) {
       switch (item.type) {
         case 'rule':
           this.validateRule(item);
@@ -122,6 +141,10 @@ export class SemanticAnalyzer {
           break;
         case 'entity':
           this.validateEntity(item);
+          break;
+        case 'module':
+          // Recurse into nested module for validation
+          this.validateItems(item.items);
           break;
       }
     }
@@ -140,12 +163,12 @@ export class SemanticAnalyzer {
     // Note: We don't know what fields the event has, so we allow any access
     scope.variables.add('event');
     
-    // Add the event alias to scope and mark it as an event alias
-    scope.variables.add(rule.eventAlias);
+    // Add the event parameter to scope and mark it as an event alias
+    scope.variables.add(rule.eventParam.name);
     if (!scope.eventAliases) {
       scope.eventAliases = new Set();
     }
-    scope.eventAliases.add(rule.eventAlias);
+    scope.eventAliases.add(rule.eventParam.name);
     scope.eventAliases.add('event'); // Also mark 'event' as an alias for legacy support
     
     // Validate condition if present

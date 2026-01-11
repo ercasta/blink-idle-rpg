@@ -9,7 +9,7 @@
 // WARRIORS - Melee fighters with high health and defense
 // -----------------------------------------------------------------------------
 
-entity {
+let entity1: id = new entity {
     Character {
         name: "Sir Braveheart"
         class: "Warrior"
@@ -70,8 +70,8 @@ entity {
     
     // Bound choice functions for Warrior behavior
     .select_attack_target = choice(character: Character, enemies: list): id {
-        let target = enemies[0]
-        let highestDamage = 0
+        let target: id = enemies[0]
+let highestDamage: integer = 0
         for enemy in enemies {
             if enemy.Combat.damage > highestDamage {
                 target = enemy
@@ -82,7 +82,7 @@ entity {
     }
     
     .select_combat_skill = choice(character: Character & Skills & Health & Combat, allies: list, enemies: list): string {
-        let hp_pct = character.Health.current / character.Health.max
+        let hp_pct: float = character.Health.current / character.Health.max
         if hp_pct < 0.25 {
             if character.Skills.skill3 == "defensive_stance" {
                 return "defensive_stance"
@@ -93,7 +93,7 @@ entity {
         }
         if character.Skills.skill4 != "" {
             for enemy in enemies {
-                let enemy_hp_pct = enemy.Health.current / enemy.Health.max
+        let enemy_hp_pct: float = enemy.Health.current / enemy.Health.max
                 if enemy_hp_pct < 0.2 {
                     return "execute"
                 }
@@ -129,7 +129,8 @@ entity {
         if currentLevel >= 7 {
             return "execute"
         }
-        return "power_strike"
+        return "
+let entity2: id = new entity {ike"
     }
 }
 
@@ -194,8 +195,8 @@ entity {
     
     // Bound choice functions for Warrior behavior
     .select_attack_target = choice(character: Character, enemies: list): id {
-        let target = enemies[0]
-        let highestDamage = 0
+        let target: id = enemies[0]
+let highestDamage: integer = 0
         for enemy in enemies {
             if enemy.Combat.damage > highestDamage {
                 target = enemy
@@ -206,7 +207,7 @@ entity {
     }
     
     .select_combat_skill = choice(character: Character & Skills & Health & Combat, allies: list, enemies: list): string {
-        let hp_pct = character.Health.current / character.Health.max
+        let hp_pct: float = character.Health.current / character.Health.max
         if hp_pct < 0.25 {
             if character.Skills.skill3 == "defensive_stance" {
                 return "defensive_stance"
@@ -217,7 +218,7 @@ entity {
         }
         if character.Skills.skill4 != "" {
             for enemy in enemies {
-                let enemy_hp_pct = enemy.Health.current / enemy.Health.max
+        let enemy_hp_pct: float = enemy.Health.current / enemy.Health.max
                 if enemy_hp_pct < 0.2 {
                     return "execute"
                 }
@@ -252,8 +253,8 @@ entity {
         }
         if currentLevel >= 7 {
             return "execute"
-        }
-        return "power_strike"
+    
+let entity3: id = new entity {     return "power_strike"
     }
 }
 
@@ -310,8 +311,8 @@ entity {
         description: "A fierce warrior who values speed over raw defense. Delivers rapid strikes with medium armor for balanced offense and defense."
         difficulty: "Medium"
         role: "Melee DPS / Bruiser"
-        playstyle: "Fast-paced melee combat with balanced offense and defense"
-    }
+        playstyle: "Fast-paced melee combat with balanced offense and d
+let entity4: id = new entity {   }
     HeroTemplate {
         isTemplate: true
     }
@@ -370,7 +371,8 @@ entity {
         description: "A colossal warrior wielding a massive two-handed weapon. Trades speed for overwhelming power with each strike."
         difficulty: "Easy"
         role: "Heavy DPS / Tank"
-        playstyle: "Devastating slow attacks that hit extremely hard"
+        playstyle: "Devastating slow att
+let entity5: id = new entity { hit extremely hard"
     }
     HeroTemplate {
         isTemplate: true
@@ -438,7 +440,8 @@ entity {
 }
 
 // -----------------------------------------------------------------------------
-// MAGES - Ranged spell casters with high damage but low health
+// MAGES - Ranged spell casters wit
+let entity6: id = new entity {mage but low health
 // -----------------------------------------------------------------------------
 
 entity {
@@ -502,8 +505,8 @@ entity {
     
     // Bound choice functions for Mage behavior
     .select_attack_target = choice(character: Character, enemies: list): id {
-        let target = enemies[0]
-        let lowestHealth = 999999
+        let target: id = enemies[0]
+let lowestHealth: integer = 999999
         for enemy in enemies {
             if enemy.Health.current < lowestHealth {
                 target = enemy
@@ -514,8 +517,8 @@ entity {
     }
     
     .select_combat_skill = choice(character: Character & Skills & Health & Mana & Combat, allies: list, enemies: list): string {
-        let hp_pct = character.Health.current / character.Health.max
-        let mana_pct = character.Mana.current / character.Mana.max
+        let hp_pct: float = character.Health.current / character.Health.max
+        let mana_pct: float = character.Mana.current / character.Mana.max
         if hp_pct < 0.3 && mana_pct > 0.5 {
             if character.Skills.skill3 == "mana_shield" {
                 return "mana_shield"
@@ -564,7 +567,8 @@ entity {
             return "blizzard"
         }
         if currentLevel == 6 {
-            return "mana_shield"
+            re
+let entity7: id = new entity {a_shield"
         }
         if currentLevel >= 7 {
             return "meteor"
@@ -625,8 +629,8 @@ entity {
         id: "mage2"
         description: "A brilliant arcane scholar who prioritizes raw magical power. Highest damage potential but requires careful mana management."
         difficulty: "Hard"
-        role: "Ranged DPS / Burst"
-        playstyle: "Maximum spell power with lowest survivability - nuclear glass cannon"
+        role: "Ranged DPS / B
+let entity8: id = new entity {     playstyle: "Maximum spell power with lowest survivability - nuclear glass cannon"
     }
     HeroTemplate {
         isTemplate: true
@@ -685,7 +689,8 @@ entity {
         id: "mage3"
         description: "A frost mage who balances damage with survivability. Ice shields provide extra protection while slowing enemies."
         difficulty: "Medium"
-        role: "Ranged DPS / Control"
+  
+let entity9: id = new entity {e: "Ranged DPS / Control"
         playstyle: "Balanced caster with defensive capabilities and crowd control"
     }
     HeroTemplate {
@@ -744,7 +749,8 @@ entity {
     HeroInfo {
         id: "mage4"
         description: "A storm mage specializing in quick-casting lightning spells. Fast casting speed with moderate damage per hit."
-        difficulty: "Medium"
+   
+let entity10: id = new entity {iculty: "Medium"
         role: "Ranged DPS / Sustained"
         playstyle: "Rapid-fire spell casting for consistent damage output"
     }
@@ -811,9 +817,7 @@ entity {
     HeroTemplate {
         isTemplate: true
     }
-}
-
-// -----------------------------------------------------------------------------
+let entity11: id = new entity {---------------------------------------------------------------------------
 // ROGUES - Fast melee attackers with high crit chance
 // -----------------------------------------------------------------------------
 
@@ -878,15 +882,15 @@ entity {
     
     // Bound choice functions for Rogue behavior
     .select_attack_target = choice(character: Character, enemies: list): id {
-        let target = enemies[0]
-        let highestPriority = 0
+        let target: id = enemies[0]
+let highestPriority: integer = 0
         for enemy in enemies {
-            let priority = 0
+let priority: integer = 0
             if enemy.Combat.defense < 5 {
                 priority = priority + 50
             }
             priority = priority + enemy.Combat.damage
-            let hp_pct = enemy.Health.current / enemy.Health.max
+        let hp_pct: float = enemy.Health.current / enemy.Health.max
             if hp_pct < 0.3 {
                 priority = priority + 100
             }
@@ -899,7 +903,7 @@ entity {
     }
     
     .select_combat_skill = choice(character: Character & Skills & Health & Combat, allies: list, enemies: list): string {
-        let hp_pct = character.Health.current / character.Health.max
+        let hp_pct: float = character.Health.current / character.Health.max
         if hp_pct < 0.25 {
             if character.Skills.skill3 == "evasion" {
                 return "evasion"
@@ -910,7 +914,7 @@ entity {
         }
         if character.Skills.skill4 == "assassinate" {
             for enemy in enemies {
-                let enemy_hp_pct = enemy.Health.current / enemy.Health.max
+        let enemy_hp_pct: float = enemy.Health.current / enemy.Health.max
                 if enemy_hp_pct < 0.15 {
                     return "assassinate"
                 }
@@ -951,7 +955,8 @@ entity {
         if currentLevel == 4 {
             return "quick_slash"
         }
-        if currentLevel == 5 {
+       
+let entity12: id = new entity {ntLevel == 5 {
             return "shadowstep"
         }
         if currentLevel == 6 {
@@ -1014,7 +1019,8 @@ entity {
     }
     HeroInfo {
         id: "rogue2"
-        description: "A poison specialist who weakens enemies over time. Applies deadly toxins that continue damaging after initial strikes."
+        description: "A poison specialist who weakens enemies over time
+let entity13: id = new entity { deadly toxins that continue damaging after initial strikes."
         difficulty: "Hard"
         role: "Melee DPS / DoT"
         playstyle: "Apply poison effects and let damage over time do the work"
@@ -1074,7 +1080,8 @@ entity {
     }
     HeroInfo {
         id: "rogue3"
-        description: "A versatile assassin with balanced stats. Reliable critical strikes and good survivability for a rogue."
+        description: "A versatile ass
+let entity14: id = new entity {h balanced stats. Reliable critical strikes and good survivability for a rogue."
         difficulty: "Easy"
         role: "Melee DPS / Balanced"
         playstyle: "Well-rounded assassin with good damage and survivability"
@@ -1134,7 +1141,8 @@ entity {
     }
     HeroInfo {
         id: "rogue4"
-        description: "The ultimate glass cannon rogue. Unmatched attack speed and critical chance but extremely fragile."
+        descri
+let entity15: id = new entity {he ultimate glass cannon rogue. Unmatched attack speed and critical chance but extremely fragile."
         difficulty: "Hard"
         role: "Melee DPS / Hyper Carry"
         playstyle: "Lightning-fast attacks with maximum crit - dies if touched"
@@ -1197,7 +1205,8 @@ entity {
         description: "A disciplined rogue who focuses on precision over speed. Higher damage per hit with controlled, tactical strikes."
         difficulty: "Medium"
         role: "Melee DPS / Precision"
-        playstyle: "Slower but harder-hitting strikes with good positioning"
+      
+let entity16: id = new entity {le: "Slower but harder-hitting strikes with good positioning"
     }
     HeroTemplate {
         isTemplate: true
@@ -1269,10 +1278,10 @@ entity {
     
     // Bound choice functions for Cleric behavior
     .select_attack_target = choice(character: Character, enemies: list): id {
-        let target = enemies[0]
-        let lowestThreat = 999999
+        let target: id = enemies[0]
+let lowestThreat: integer = 999999
         for enemy in enemies {
-            let threat = enemy.Combat.damage * (enemy.Health.current / enemy.Health.max)
+        let threat: float = enemy.Combat.damage * (enemy.Health.current / enemy.Health.max)
             if threat < lowestThreat {
                 target = enemy
                 lowestThreat = threat
@@ -1282,8 +1291,8 @@ entity {
     }
     
     .select_combat_skill = choice(character: Character & Skills & Health & Mana & Combat, allies: list, enemies: list): string {
-        let hp_pct = character.Health.current / character.Health.max
-        let mana_pct = character.Mana.current / character.Mana.max
+        let hp_pct: float = character.Health.current / character.Health.max
+        let mana_pct: float = character.Mana.current / character.Mana.max
         for ally in allies {
             if ally.Health.current <= 0 {
                 if character.Mana.current >= 100 && character.Skills.skill4 == "resurrection" {
@@ -1296,9 +1305,9 @@ entity {
                 return "heal"
             }
         }
-        let injuredCount = 0
+let injuredCount: integer = 0
         for ally in allies {
-            let ally_hp_pct = ally.Health.current / ally.Health.max
+        let ally_hp_pct: float = ally.Health.current / ally.Health.max
             if ally_hp_pct < 0.6 {
                 injuredCount = injuredCount + 1
             }
@@ -1309,7 +1318,7 @@ entity {
             }
         }
         for ally in allies {
-            let ally_hp_pct = ally.Health.current / ally.Health.max
+        let ally_hp_pct: float = ally.Health.current / ally.Health.max
             if ally_hp_pct < 0.3 && character.Mana.current >= 15 {
                 if character.Skills.skill1 == "heal" {
                     return "heal"
@@ -1318,7 +1327,7 @@ entity {
         }
         for ally in allies {
             if ally.Character.class == "Warrior" {
-                let ally_hp_pct = ally.Health.current / ally.Health.max
+        let ally_hp_pct: float = ally.Health.current / ally.Health.max
                 if ally_hp_pct < 0.5 && character.Mana.current >= 25 {
                     if character.Skills.skill3 == "holy_shield" {
                         return "holy_shield"
@@ -1349,8 +1358,8 @@ entity {
         if currentLevel == 2 {
             return "heal"
         }
-        if currentLevel == 3 {
-            return "bless"
+        if currentLevel == 3 
+let entity17: id = new entity {     return "bless"
         }
         if currentLevel == 4 {
             return "smite"
@@ -1414,7 +1423,8 @@ entity {
         defenseBonus: 0
         hasteBonus: 0
         shieldAmount: 0
-        regenAmount: 0
+        r
+let entity18: id = new entity {t: 0
     }
     HeroInfo {
         id: "cleric2"
@@ -1473,8 +1483,8 @@ entity {
         damageBonus: 0
         defenseBonus: 0
         hasteBonus: 0
-        shieldAmount: 0
-        regenAmount: 0
+        shieldAmount: 
+let entity19: id = new entity { regenAmount: 0
     }
     HeroInfo {
         id: "cleric3"
@@ -1532,8 +1542,8 @@ entity {
     Buffs {
         damageBonus: 0
         defenseBonus: 0
-        hasteBonus: 0
-        shieldAmount: 0
+        hasteBonu
+let entity20: id = new entity {    shieldAmount: 0
         regenAmount: 0
     }
     HeroInfo {
@@ -1598,7 +1608,8 @@ entity {
     }
     HeroInfo {
         id: "cleric5"
-        description: "A mystic healer with powerful buffs and enhanced mana pool. Provides utility beyond just healing."
+        description: "A mystic healer with powerful buffs and enhanced mana 
+let entity21: id = new entity {vides utility beyond just healing."
         difficulty: "Hard"
         role: "Support / Buffer"
         playstyle: "Enhance allies with buffs while maintaining healing support"
@@ -1656,7 +1667,8 @@ entity {
     Buffs {
         damageBonus: 0
         defenseBonus: 0
-        hasteBonus: 0
+    
+let entity22: id = new entity {Bonus: 0
         shieldAmount: 0
         regenAmount: 0
     }
@@ -1713,7 +1725,8 @@ entity {
         skill4: ""
         skillPoints: 0
     }
-    Buffs {
+
+let entity23: id = new entity { {
         damageBonus: 0
         defenseBonus: 0
         hasteBonus: 0
@@ -1771,7 +1784,8 @@ entity {
         skill2: ""
         skill3: ""
         skill4: ""
-        skillPoints: 0
+  
+let entity24: id = new entity {llPoints: 0
     }
     Buffs {
         damageBonus: 0
@@ -1830,7 +1844,8 @@ entity {
         skill1: "aimed_shot"
         skill2: ""
         skill3: ""
-        skill4: ""
+     
+let entity25: id = new entity {: ""
         skillPoints: 0
     }
     Buffs {
@@ -1900,8 +1915,8 @@ entity {
         shieldAmount: 0
         regenAmount: 0
     }
-    HeroInfo {
-        id: "ranger5"
+    Her
+let entity26: id = new entity {       id: "ranger5"
         description: "A ranger who commands nature's fury. Balanced stats with good survivability and utility."
         difficulty: "Easy"
         role: "Ranged DPS / Utility"
@@ -1952,7 +1967,8 @@ entity {
     }
     Skills {
         skill1: "divine_strike"
-        skill2: ""
+        
+let entity27: id = new entity {"
         skill3: ""
         skill4: ""
         skillPoints: 0
@@ -2010,8 +2026,8 @@ entity {
         id: "player"
         isPlayer: true
     }
-    Skills {
-        skill1: "divine_strike"
+    Ski
+let entity28: id = new entity {     skill1: "divine_strike"
         skill2: ""
         skill3: ""
         skill4: ""
@@ -2068,8 +2084,8 @@ entity {
     }
     Team {
         id: "player"
-        isPlayer: true
-    }
+        isPlayer: t
+let entity29: id = new entity {
     Skills {
         skill1: "divine_strike"
         skill2: ""
@@ -2128,7 +2144,8 @@ entity {
     }
     Team {
         id: "player"
-        isPlayer: true
+     
+let entity30: id = new entity {er: true
     }
     Skills {
         skill1: "divine_strike"

@@ -81,8 +81,8 @@ choice fn select_combat_skill(
     allies: list,
     enemies: list
 ): string {
-    let hp_pct = health_percentage(character)
-    let mana_pct = mana_percentage(character)
+let hp_pct: float = health_percentage(character)
+let mana_pct: float = mana_percentage(character)
     
     // Emergency: If health is low and we have mana shield, use it
     if hp_pct < 0.3 && mana_pct > 0.5 {
@@ -138,8 +138,8 @@ choice fn select_attack_target(
     character: Character,
     enemies: list
 ): id {
-    let target = enemies[0]
-    let lowestHealth = 999999
+let target: id = enemies[0]
+let lowestHealth: integer = 999999
     
     // Find enemy with lowest current health
     for enemy in enemies {

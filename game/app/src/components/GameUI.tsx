@@ -32,7 +32,7 @@ async function fetchGameFile(path: string): Promise<string> {
   return response.text();
 }
 
-async function compileScenario(scenarioId: string): Promise<IRModule> {
+export async function compileScenario(scenarioId: string): Promise<IRModule> {
   if (!window.BlinkCompiler) {
     throw new Error('BlinkCompiler is not available.');
   }

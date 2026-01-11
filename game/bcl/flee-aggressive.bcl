@@ -5,7 +5,7 @@ module aggressive_flee
 
 // Helper: Count alive heroes
 fn count_alive_heroes(party: list): integer {
-    let count = 0
+    let count: integer = 0
     
     for hero in party {
         if hero.Health.current > 0 {
@@ -30,7 +30,7 @@ choice fn should_flee_from_battle(
         return false
     }
     
-    let alive_count = count_alive_heroes(party)
+    let alive_count: integer = count_alive_heroes(party)
     
     // Only flee if down to 1 hero (about to wipe)
     // Risk multiple deaths (50s each) to avoid retreat penalties (10s)

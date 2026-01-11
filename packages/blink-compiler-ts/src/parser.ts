@@ -84,28 +84,14 @@ export class Parser {
         return this.parseImport();
       case TokenKind.Module:
         return this.parseModuleDef();
-      case TokenKind.Entity:
-      case TokenKind.New:
-        return this.parseEntity();
-      case TokenKind.EntityRef:
-        // Legacy @name syntax
-        return this.parseEntity();
-      case TokenKind.Identifier:
-        // Check for variable assignment: `warrior = new entity { ... }`
-        if (this.peekNext().kind === TokenKind.Eq) {
-          const peekIdx = this.pos + 2;
-          if (this.tokens[peekIdx]?.kind === TokenKind.New) {
-            return this.parseEntityAssignment();
-          }
-        }
-        throw new ParseError(
-          token.span.start,
-          `Unexpected identifier '${token.text}' at top level`
-        );
+      case TokenKind.Let:
+        // Entity definitions must use: let name: id = new entity { ... }
+        return this.parseEntityDeclaration();
       default:
         throw new ParseError(
           token.span.start,
-          `Unexpected token '${token.text}' at position ${token.span.start}`
+          `Unexpected token '${token.text}' at position ${token.span.start}. ` +
+          `Entities must be declared with: let name: id = new entity { ... }`
         );
     }
   }
@@ -232,7 +218,7 @@ export class Parser {
     let name: string | null = null;
     if (this.check(TokenKind.Identifier)) {
       // Need to lookahead to distinguish rule name from event name
-      // Syntax: 'rule [name] on EventType alias { ... }'
+      // Syntax: 'rule [name] on EventType(param: id) { ... }'
       // If we see "identifier on", it's a rule name
       const nextIsOn = this.peekNext().kind === TokenKind.On;
       if (nextIsOn) {
@@ -243,8 +229,20 @@ export class Parser {
     this.consume(TokenKind.On, 'on');
     const triggerEvent = this.consume(TokenKind.Identifier, 'event name').text;
     
-    // Mandatory event alias
-    const eventAlias = this.consume(TokenKind.Identifier, 'event alias').text;
+    // Mandatory typed event parameter: (paramName: type)
+    this.consume(TokenKind.LParen, '(');
+    const paramStart = this.peek().span.start;
+    const paramName = this.consume(TokenKind.Identifier, 'event parameter name').text;
+    this.consume(TokenKind.Colon, ':');
+    const paramType = this.parseType();
+    this.consume(TokenKind.RParen, ')');
+    const paramEnd = this.tokens[this.pos - 1]?.span.end ?? paramStart;
+    
+    const eventParam: AST.ParamDef = {
+      name: paramName,
+      paramType,
+      span: { start: paramStart, end: paramEnd },
+    };
     
     // Optional condition with 'when'
     let condition: AST.Expr | null = null;
@@ -270,7 +268,7 @@ export class Parser {
       type: 'rule',
       name,
       triggerEvent,
-      eventAlias,
+      eventParam,
       condition,
       priority,
       body,
@@ -447,78 +445,48 @@ export class Parser {
 
   // ===== Entity Parsing =====
 
-  private parseEntity(): AST.EntityDef {
-    let start: number;
-    let variable: string | null = null;
+  /**
+   * Parse entity declaration: let name: id = new entity { ... }
+   * This is the only supported syntax for entity creation.
+   */
+  private parseEntityDeclaration(): AST.EntityDef {
+    const start = this.consume(TokenKind.Let, 'let').span.start;
+    const variable = this.consume(TokenKind.Identifier, 'entity name').text;
     
-    if (this.check(TokenKind.EntityRef)) {
-      // Legacy @name syntax
-      const refToken = this.advance();
-      start = refToken.span.start;
-      variable = refToken.text.slice(1); // Remove @
-    } else if (this.check(TokenKind.New)) {
-      // new entity { ... }
-      start = this.consume(TokenKind.New, 'new').span.start;
-      this.consume(TokenKind.Entity, 'entity');
-    } else {
-      // entity keyword
-      start = this.consume(TokenKind.Entity, 'entity').span.start;
-      
-      // Optional @name or identifier
-      if (this.check(TokenKind.EntityRef)) {
-        const refToken = this.advance();
-        variable = refToken.text.slice(1);
-      } else if (this.check(TokenKind.Identifier) && this.peekNext().kind === TokenKind.LBrace) {
-        variable = this.advance().text;
-      }
+    // Enforce type annotation must be 'id'
+    this.consume(TokenKind.Colon, ':');
+    const typeToken = this.peek();
+    if (typeToken.kind !== TokenKind.TypeId) {
+      throw new ParseError(
+        typeToken.span.start,
+        `Entity declarations must have type 'id', got '${typeToken.text}'`
+      );
     }
-    
-    this.consume(TokenKind.LBrace, '{');
-    
-    const components: AST.ComponentInit[] = [];
-    const boundFunctions: AST.BoundFunctionDef[] = [];
-    
-    while (!this.check(TokenKind.RBrace) && !this.isAtEnd()) {
-      if (this.check(TokenKind.Dot)) {
-        boundFunctions.push(this.parseBoundFunction());
-      } else {
-        components.push(this.parseComponentInit());
-      }
-    }
-    
-    const end = this.consume(TokenKind.RBrace, '}').span.end;
-    
-    return {
-      type: 'entity',
-      variable,
-      components,
-      boundFunctions,
-      span: { start, end },
-    };
-  }
-
-  private parseEntityAssignment(): AST.EntityDef {
-    const varToken = this.consume(TokenKind.Identifier, 'variable name');
-    const start = varToken.span.start;
-    const variable = varToken.text;
+    this.advance();
     
     this.consume(TokenKind.Eq, '=');
     this.consume(TokenKind.New, 'new');
     this.consume(TokenKind.Entity, 'entity');
-    this.consume(TokenKind.LBrace, '{');
     
+    // Optional component initialization block
     const components: AST.ComponentInit[] = [];
     const boundFunctions: AST.BoundFunctionDef[] = [];
     
-    while (!this.check(TokenKind.RBrace) && !this.isAtEnd()) {
-      if (this.check(TokenKind.Dot)) {
-        boundFunctions.push(this.parseBoundFunction());
-      } else {
-        components.push(this.parseComponentInit());
+    if (this.check(TokenKind.LBrace)) {
+      this.advance();
+      
+      while (!this.check(TokenKind.RBrace) && !this.isAtEnd()) {
+        if (this.check(TokenKind.Dot)) {
+          boundFunctions.push(this.parseBoundFunction());
+        } else {
+          components.push(this.parseComponentInit());
+        }
       }
+      
+      this.consume(TokenKind.RBrace, '}');
     }
     
-    const end = this.consume(TokenKind.RBrace, '}').span.end;
+    const end = this.tokens[this.pos - 1]?.span.end ?? start;
     
     return {
       type: 'entity',
@@ -630,12 +598,9 @@ export class Parser {
     const start = this.consume(TokenKind.Let, 'let').span.start;
     const name = this.consume(TokenKind.Identifier, 'variable name').text;
     
-    // Optional type annotation
-    let typeAnnotation: AST.TypeExpr | null = null;
-    if (this.check(TokenKind.Colon)) {
-      this.advance();
-      typeAnnotation = this.parseType();
-    }
+    // Mandatory type annotation
+    this.consume(TokenKind.Colon, ': (type annotation required)');
+    const typeAnnotation = this.parseType();
     
     this.consume(TokenKind.Eq, '=');
     const value = this.parseExpression();

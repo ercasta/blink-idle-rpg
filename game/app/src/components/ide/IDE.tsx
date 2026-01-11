@@ -182,10 +182,10 @@ export function IDE({ className }: IDEProps) {
       loadSources: async (sources: { brl?: string; bcl?: string; bdl?: string; snippet?: { content: string; language?: string; name?: string } }) => {
         // update files state with provided content
         setFiles(prev => ({
-          brl: { ...prev.brl, content: sources.brl ?? prev.brl.content, isDirty: true, name: prev.brl.name },
-          bcl: { ...prev.bcl, content: sources.bcl ?? prev.bcl.content, isDirty: true, name: prev.bcl.name },
-          bdl: { ...prev.bdl, content: sources.bdl ?? prev.bdl.content, isDirty: true, name: prev.bdl.name },
-          snippet: sources.snippet ? { ...prev.snippet, content: sources.snippet.content, language: sources.snippet.language ?? prev.snippet.language, name: sources.snippet.name ?? prev.snippet.name, isDirty: true } : prev.snippet,
+            brl: { ...prev.brl, content: sources.brl ?? prev.brl.content, isDirty: true, name: prev.brl.name },
+            bcl: { ...prev.bcl, content: sources.bcl ?? prev.bcl.content, isDirty: true, name: prev.bcl.name },
+            bdl: { ...prev.bdl, content: sources.bdl ?? prev.bdl.content, isDirty: true, name: prev.bdl.name },
+            snippet: sources.snippet ? { ...prev.snippet, content: sources.snippet.content, language: (sources.snippet.language ?? prev.snippet.language) as 'brl' | 'bcl' | 'bdl', name: sources.snippet.name ?? prev.snippet.name, isDirty: true } : prev.snippet,
         }));
 
         // Build compile sources using provided content (or existing ones)

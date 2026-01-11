@@ -157,7 +157,7 @@ export class CodeGenerator {
 
   private generateRule(rule: AST.RuleDef): IR.IRRule {
     // Set current event alias for field access generation
-    this.currentEventAlias = rule.eventAlias;
+    this.currentEventAlias = rule.eventParam.name;
     
     const actions = this.generateBlockActions(rule.body);
     

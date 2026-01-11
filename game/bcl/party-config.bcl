@@ -92,8 +92,8 @@ strategy {
 
 // Helper: Calculate average party health percentage
 fn calculate_avg_party_health(party: list): float {
-    let total_health = 0.0
-    let total_max_health = 0.0
+let total_health: float = 0.0
+let total_max_health: float = 0.0
     
     for hero in party {
         total_health += hero.Health.current
@@ -109,7 +109,7 @@ fn calculate_avg_party_health(party: list): float {
 
 // Helper: Count alive heroes
 fn count_alive_heroes(party: list): integer {
-    let count = 0
+let count: integer = 0
     
     for hero in party {
         if hero.Health.current > 0 {
@@ -132,7 +132,7 @@ fn has_alive_healer(party: list): boolean {
 
 // Helper: Count alive enemies
 fn count_alive_enemies(enemies: list): integer {
-    let count = 0
+let count: integer = 0
     
     for enemy in enemies {
         if enemy.Health.current > 0 {
@@ -155,10 +155,10 @@ choice fn should_flee_from_battle(
         return false
     }
     
-    let avg_health = calculate_avg_party_health(party)
-    let alive_count = count_alive_heroes(party)
-    let enemy_count = count_alive_enemies(enemies)
-    let healer_alive = has_alive_healer(party)
+let avg_health: float = calculate_avg_party_health(party)
+let alive_count: integer = count_alive_heroes(party)
+let enemy_count: integer = count_alive_enemies(enemies)
+let healer_alive: boolean = has_alive_healer(party)
     
     // Flee if average party health below 30% AND multiple enemies
     // Math: Preventing 3+ deaths (150s) worth fleeing (10s)
@@ -204,14 +204,14 @@ choice fn select_party_target(
     allies: list,
     enemies: list
 ): id {
-    let target = enemies[0]
-    let highestPriority = 0
+let target: id = enemies[0]
+let highestPriority: integer = 0
     
     for enemy in enemies {
-        let priority = enemy_priority(enemy)
+let priority: integer = enemy_priority(enemy)
         
         // Add bonus for low health enemies (finish them off)
-        let hp_pct = enemy.Health.current / enemy.Health.max
+let hp_pct: id = enemy.Health.current / enemy.Health.max
         if hp_pct < 0.3 {
             priority = priority + 50
         }

@@ -5,8 +5,8 @@ module conservative_flee
 
 // Helper: Calculate average party health percentage
 fn calculate_avg_party_health(party: list): float {
-    let total_health = 0.0
-    let total_max_health = 0.0
+let total_health: float = 0.0
+let total_max_health: float = 0.0
     
     for hero in party {
         total_health += hero.Health.current
@@ -34,7 +34,7 @@ choice fn should_flee_from_battle(
         return false
     }
     
-    let avg_health = calculate_avg_party_health(party)
+let avg_health: float = calculate_avg_party_health(party)
     
     // Conservative threshold - flee when average health drops below 40%
     // This leaves a safety margin before deaths occur

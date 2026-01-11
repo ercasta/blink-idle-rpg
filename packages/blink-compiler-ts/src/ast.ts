@@ -55,7 +55,7 @@ export interface RuleDef {
   type: 'rule';
   name: string | null;
   triggerEvent: string;
-  eventAlias: string;  // The alias for the event (e.g., 'gs' in 'rule on GameStart gs')
+  eventParam: ParamDef;  // The typed parameter for the event (e.g., 'gs: id' in 'rule on GameStart(gs: id)')
   condition: Expr | null;
   priority: number | null;
   body: Block;

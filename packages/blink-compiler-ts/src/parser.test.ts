@@ -70,8 +70,8 @@ describe('Parser', () => {
   describe('Rule definitions', () => {
     it('should parse simple rule', () => {
       const ast = parseSource(`
-        rule attack on DoAttack atk {
-          let target = atk.target
+        rule attack on DoAttack(atk: id) {
+          let target: id = atk.target
           target.Health.current -= 10
         }
       `);
@@ -80,43 +80,44 @@ describe('Parser', () => {
       expect(rule.type).toBe('rule');
       expect(rule.name).toBe('attack');
       expect(rule.triggerEvent).toBe('DoAttack');
-      expect(rule.eventAlias).toBe('atk');
+      expect(rule.eventParam.name).toBe('atk');
+      expect(rule.eventParam.paramType.type).toBe('id');
     });
 
     it('should parse rule without name', () => {
       const ast = parseSource(`
-        rule on DoAttack atk {
-          let target = atk.target
+        rule on DoAttack(atk: id) {
+          let target: id = atk.target
           target.Health.current -= 10
         }
       `);
       const rule = ast.items[0] as AST.RuleDef;
       expect(rule.name).toBeNull();
-      expect(rule.eventAlias).toBe('atk');
+      expect(rule.eventParam.name).toBe('atk');
     });
 
     it('should parse rule with when condition', () => {
       const ast = parseSource(`
-        rule attack on DoAttack atk when atk.source.Health.current > 0 {
-          let target = atk.target
+        rule attack on DoAttack(atk: id) when atk.source.Health.current > 0 {
+          let target: id = atk.target
           target.Health.current -= 10
         }
       `);
       const rule = ast.items[0] as AST.RuleDef;
       expect(rule.condition).not.toBeNull();
-      expect(rule.eventAlias).toBe('atk');
+      expect(rule.eventParam.name).toBe('atk');
     });
 
     it('should parse rule with priority', () => {
       const ast = parseSource(`
-        rule attack on DoAttack atk [priority: 100] {
-          let target = atk.target
+        rule attack on DoAttack(atk: id) [priority: 100] {
+          let target: id = atk.target
           target.Health.current -= 10
         }
       `);
       const rule = ast.items[0] as AST.RuleDef;
       expect(rule.priority).toBe(100);
-      expect(rule.eventAlias).toBe('atk');
+      expect(rule.eventParam.name).toBe('atk');
     });
   });
 

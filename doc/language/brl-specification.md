@@ -85,8 +85,8 @@ component  rule       on         trigger    event
 entity     if         else       for        while
 fn         return     true       false      null
 schedule   cancel     recurring  module     import
-when       create     delete     has
-choice
+when       create     delete     has        new
+choice     let
 ```
 
 ### 2.4 Literals
@@ -123,6 +123,8 @@ false
 | `float` | Floating-point | `3.14` |
 | `decimal` | Fixed precision | `10.50d` |
 | `id` | Entity reference | `@player1` |
+| `list` | List of entities (shorthand for `list<id>`) | `[entity1, entity2]` |
+| `list<T>` | List of type T (T can be: id, integer, string, etc.) | `[1, 2, 3]` |
 
 ### 3.2 Component Types
 
@@ -135,14 +137,23 @@ component Position {
 }
 ```
 
-### 3.3 Type Inference
+### 3.3 Type Annotations (Mandatory)
 
-BRL supports type inference in many contexts:
+BRL requires explicit type annotations on all variable declarations to catch errors early:
 
 ```brl
-let damage = 10       // inferred as integer
-let name = "warrior"  // inferred as string
+let damage: integer = 10
+let name: string = "warrior"
+let target: id = @player1
+let enemies: list = entities having Enemy
 ```
+
+Type annotations are mandatory for:
+- Variable declarations with `let`
+- Function parameters
+- Function return types
+
+Component fields always require type annotations.
 
 ### 3.4 Optional Types
 
@@ -218,8 +229,14 @@ component Buff {
 
 ### 5.1 Entity Creation
 
+Entities are created using the `let` keyword with mandatory type annotation `id` and the `new entity` syntax:
+
 ```brl
-create entity {
+// Create empty entity
+let hero: id = new entity
+
+// Create entity with components (preferred)
+let hero: id = new entity {
     Character {
         name: "Hero"
         level: 1
@@ -231,6 +248,20 @@ create entity {
         regeneration: 1.0
     }
 }
+```
+
+Components can also be added after entity creation:
+
+```brl
+let hero: id = new entity
+hero.add(Character {
+    name: "Hero"
+    level: 1
+})
+hero.add(Health {
+    current: 100
+    maximum: 100
+})
 ```
 
 ### 5.2 Entity Modification
@@ -263,31 +294,43 @@ delete entity
 
 ### 6.1 Rule Definition
 
-Rules define reactions to events. Each rule binds the triggering event to a named variable (event alias):
+Rules define reactions to events. Each rule receives the triggering event as a parameter:
 
 ```brl
-rule RuleName on EventType eventAlias {
-    // rule body - use eventAlias to reference the event
+rule RuleName on EventType(evt: id) {
+    // rule body - evt is the event entity with type id
 }
 ```
 
-The event alias is mandatory and provides access to the event's properties (components and fields).
+The event parameter is mandatory and provides access to the event's components and fields.
+
+**Event Cancellation**: Rules can cancel further processing of an event:
+
+```brl
+rule InterceptDamage on DamageTaken(dmg: id) {
+    if dmg.DamageEvent.amount > 100 {
+        // Cancel this damage event - no further rules will process it
+        cancel dmg
+        return
+    }
+}
+```
 
 ### 6.2 Event Context
 
-Within a rule, the event alias is the only implicit variable:
+Within a rule, the event parameter provides access to event data:
 
 ```brl
-rule ApplyDamage on DamageTaken dmg {
-    // Access event components/fields via the alias
-    let damage = dmg.amount
-    let target = dmg.target
+rule ApplyDamage on DamageTaken(dmg: id) {
+    // Access event components/fields
+    let damage: integer = dmg.DamageEvent.amount
+    let target: id = dmg.DamageEvent.target
     
     // Modify the target entity
     target.Health.current -= damage
     
     if target.Health.current <= 0 {
-        schedule Death { target: target }
+        let deathEvt: id = schedule Death { target: target }
     }
 }
 ```
@@ -295,11 +338,11 @@ rule ApplyDamage on DamageTaken dmg {
 To process multiple entities, explicitly query them using `entities having`:
 
 ```brl
-rule InitializeHeroes on GameStart gs {
-    let heroes = entities having Team
+rule InitializeHeroes on GameStart(gs: id) {
+    let heroes: list = entities having Team
     for hero in heroes {
         if hero.Team.isPlayer && hero.Health.current > 0 {
-            schedule [delay: 0.1] DoAttack {
+            let attackEvt: id = schedule [delay: 0.1] DoAttack {
                 source: hero
             }
         }
@@ -309,13 +352,13 @@ rule InitializeHeroes on GameStart gs {
 
 ### 6.3 Conditional Rules
 
-Conditions can reference the event alias:
+Conditions can reference the event parameter:
 
 ```brl
-rule CriticalHit on AttackLanded atk when atk.is_critical {
+rule CriticalHit on AttackLanded(atk: id) when atk.AttackEvent.is_critical {
     // Only triggers for critical hits
-    let target = atk.target
-    target.Health.current -= atk.damage * 2
+    let target: id = atk.AttackEvent.target
+    target.Health.current -= atk.AttackEvent.damage * 2
 }
 ```
 
@@ -324,11 +367,11 @@ rule CriticalHit on AttackLanded atk when atk.is_critical {
 Rules can have priority for ordering:
 
 ```brl
-rule HighPriority on Event evt [priority: 100] {
+rule HighPriority on Event(evt: id) [priority: 100] {
     // Executes first
 }
 
-rule LowPriority on Event evt [priority: -100] {
+rule LowPriority on Event(evt: id) [priority: -100] {
     // Executes last
 }
 ```
@@ -363,9 +406,10 @@ component AttackEvent {
 
 ```brl
 // Immediate: goes on top of event stack
-schedule DamageEvent {
-    source: attacker.id
-    target: defender.id
+// Returns the event ID
+let damageEvt: id = schedule DamageEvent {
+    source: attacker
+    target: defender
     amount: 50
     damage_type: "physical"
 }
@@ -375,16 +419,17 @@ schedule DamageEvent {
 
 ```brl
 // Delayed by 2.5 seconds
-schedule [delay: 2.5] PoisonTick {
-    target: entity.id
+// Returns the scheduled event ID
+let poisonEvt: id = schedule [delay: 2.5] PoisonTick {
+    target: entity
     damage: 5
 }
 ```
 
 ### 7.3 Recurring Events
 
-```brl
-// Schedule recurring event every 1.0 seconds
+```brl: id = schedule recurring [interval: 1.0] Regeneration {
+    target: entity event every 1.0 seconds
 let regen_id = schedule recurring [interval: 1.0] Regeneration {
     target: entity.id
 }
@@ -447,10 +492,17 @@ entity.Component[index].field  // for multiple components
 
 ## 9. Statements
 
-### 9.1 Variable Declaration
+All variables must be declared with the `let` keyword and **explicit type annotation**:
 
 ```brl
-let x = 10
+let x: integer = 10
+let name: string = "hero"
+let target: id = @player1
+let enemies: list = entities having Enemy
+let damage: float = 15.5
+```
+
+Type inference is **not supported** - types must always be explicitly declared. x = 10
 let name: string = "hero"
 ```
 

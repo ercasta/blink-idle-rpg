@@ -34,11 +34,11 @@ fn can_cast(character, manaCost): boolean {
 }
 
 fn find_most_injured_ally(allies: list): id {
-    let mostInjured = allies[0]
-    let lowestPct = 1.0
+let mostInjured: id = allies[0]
+let lowestPct: float = 1.0
     
     for ally in allies {
-        let hp_pct = ally.Health.current / ally.Health.max
+let hp_pct: id = ally.Health.current / ally.Health.max
         if hp_pct < lowestPct {
             mostInjured = ally
             lowestPct = hp_pct
@@ -49,9 +49,9 @@ fn find_most_injured_ally(allies: list): id {
 }
 
 fn count_injured_allies(allies: list, threshold: float): number {
-    let count = 0
+let count: integer = 0
     for ally in allies {
-        let hp_pct = ally.Health.current / ally.Health.max
+let hp_pct: id = ally.Health.current / ally.Health.max
         if hp_pct < threshold {
             count = count + 1
         }
@@ -107,8 +107,8 @@ choice fn select_combat_skill(
     allies: list,
     enemies: list
 ): string {
-    let hp_pct = health_percentage(character)
-    let mana_pct = mana_percentage(character)
+let hp_pct: float = health_percentage(character)
+let mana_pct: float = mana_percentage(character)
     
     // Check for dead allies that need resurrection
     for ally in allies {
@@ -127,7 +127,7 @@ choice fn select_combat_skill(
     }
     
     // Check how many allies need healing
-    let injuredCount = count_injured_allies(allies, 0.6)
+let injuredCount: integer = count_injured_allies(allies, 0.6)
     
     // Multiple allies injured - use group heal
     if injuredCount >= 2 && can_cast(character, 35) {
@@ -138,7 +138,7 @@ choice fn select_combat_skill(
     
     // Single ally critically injured - use single target heal
     for ally in allies {
-        let ally_hp_pct = ally.Health.current / ally.Health.max
+let ally_hp_pct: id = ally.Health.current / ally.Health.max
         if ally_hp_pct < 0.3 && can_cast(character, 15) {
             if character.Skills.skill1 == "heal" {
                 return "heal"
@@ -149,7 +149,7 @@ choice fn select_combat_skill(
     // Tank is taking heavy damage - use holy shield
     for ally in allies {
         if ally.Character.class == "Warrior" {
-            let ally_hp_pct = ally.Health.current / ally.Health.max
+let ally_hp_pct: id = ally.Health.current / ally.Health.max
             if ally_hp_pct < 0.5 && can_cast(character, 25) {
                 if character.Skills.skill3 == "holy_shield" {
                     return "holy_shield"
@@ -193,12 +193,12 @@ choice fn select_heal_target(
     character: Character,
     allies: list
 ): id? {
-    let critical_threshold = 0.3
-    let heal_threshold = 0.7
+let critical_threshold: float = 0.3
+let heal_threshold: float = 0.7
     
     // First, find critically wounded
     for ally in allies {
-        let hp_pct = ally.Health.current / ally.Health.max
+let hp_pct: id = ally.Health.current / ally.Health.max
         if hp_pct < critical_threshold {
             return ally.id
         }
@@ -206,7 +206,7 @@ choice fn select_heal_target(
     
     // Then, find anyone needing healing
     for ally in allies {
-        let hp_pct = ally.Health.current / ally.Health.max
+let hp_pct: id = ally.Health.current / ally.Health.max
         if hp_pct < heal_threshold {
             return ally.id
         }
@@ -223,11 +223,11 @@ choice fn select_attack_target(
     character: Character,
     enemies: list
 ): id {
-    let target = enemies[0]
-    let lowestThreat = 999999
+let target: id = enemies[0]
+let lowestThreat: integer = 999999
     
     for enemy in enemies {
-        let threat = enemy.Combat.damage * (enemy.Health.current / enemy.Health.max)
+let threat: id = enemy.Combat.damage * (enemy.Health.current / enemy.Health.max)
         if threat < lowestThreat {
             target = enemy
             lowestThreat = threat

@@ -77,7 +77,7 @@ choice fn select_combat_skill(
     allies: list,
     enemies: list
 ): string {
-    let hp_pct = health_percentage(character)
+let hp_pct: float = health_percentage(character)
     
     // Emergency survival: Use evasion or smoke bomb
     if hp_pct < 0.25 {
@@ -92,7 +92,7 @@ choice fn select_combat_skill(
     // Check for assassinate opportunity
     if character.Skills.skill4 == "assassinate" {
         for enemy in enemies {
-            let enemy_hp_pct = enemy.Health.current / enemy.Health.max
+let enemy_hp_pct: id = enemy.Health.current / enemy.Health.max
             if enemy_hp_pct < 0.15 {
                 return "assassinate"
             }
@@ -137,11 +137,11 @@ choice fn select_attack_target(
     character: Character,
     enemies: list
 ): id {
-    let target = enemies[0]
-    let highestPriority = 0
+let target: id = enemies[0]
+let highestPriority: integer = 0
     
     for enemy in enemies {
-        let priority = 0
+let priority: integer = 0
         
         // Prioritize low defense targets
         if enemy.Combat.defense < 5 {
@@ -152,7 +152,7 @@ choice fn select_attack_target(
         priority = priority + enemy.Combat.damage
         
         // Prioritize low health targets
-        let hp_pct = enemy.Health.current / enemy.Health.max
+let hp_pct: id = enemy.Health.current / enemy.Health.max
         if hp_pct < 0.3 {
             priority = priority + 100
         }

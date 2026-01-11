@@ -78,8 +78,11 @@ BDL is a **strict subset** of BRL, limited to entity creation and component init
 
 ### 3.1 Entity Creation
 
+BDL uses the single standardized syntax for entity creation with the `let` keyword:
+
 ```bdl
-entity HeroName {
+// Create entity with components
+let heroName: id = new entity {
     ComponentName {
         field1: value1
         field2: value2
@@ -87,15 +90,13 @@ entity HeroName {
 }
 ```
 
-### 3.2 Named Entity References (Removed)
+**Important**: While the `let` keyword and type annotation (`: id`) are required by the BRL specification,  
+in BDL files (data definition files), the entity name serves as an identifier for the data definition.
 
-The legacy `entity @name { ... }` syntax has been removed. Use anonymous entity
-declarations or the variable-assignment form when an identifier is needed.
-
-Anonymous entity example:
+Example:
 
 ```bdl
-entity {
+let warrior: id = new entity {
     Character {
         name: "Sir Braveheart"
         class: "Warrior"
@@ -103,18 +104,7 @@ entity {
 }
 ```
 
-Variable-assignment (useful when generating IR with an id):
-
-```bdl
-warrior = new entity {
-    Character {
-        name: "Sir Braveheart"
-        class: "Warrior"
-    }
-}
-```
-
-### 3.3 Literal Values
+### 3.2 Literal Values
 
 ```bdl
 // String literals
@@ -133,7 +123,7 @@ false
 null
 ```
 
-### 3.4 Comments
+### 3.3 Comments
 
 ```bdl
 // Single-line comment
@@ -199,7 +189,7 @@ Only literal values are allowed in component fields.
 ### 5.1 Basic Entity
 
 ```bdl
-entity {
+let goblin: id = new entity {
     Character {
         name: "Goblin"
         class: "Monster"
@@ -212,16 +202,10 @@ entity {
 }
 ```
 
-### 5.2 Named Entity (Deprecated)
-
-The `entity @name { ... }` syntax is deprecated and removed. If you need a stable
-identifier for an entity (for tooling or IR generation), use the `variable = new entity { ... }`
-form shown above. Otherwise, anonymous `entity { ... }` declarations are preferred in BDL.
-
-### 5.3 Multiple Components
+### 5.2 Multiple Components
 
 ```bdl
-entity @warrior {
+let warrior: id = new entity {
     Character {
         name: "Sir Braveheart"
         class: "Warrior"
@@ -334,7 +318,7 @@ entity @warrior {
     }
 }
 
-entity @mage {
+let mage: id = new entity {
     Character {
         name: "Elara Flamecaster"
         class: "Mage"
@@ -383,7 +367,7 @@ entity @mage {
 ```bdl
 // Enemy templates for the RPG demo
 
-entity @goblin_scout {
+let goblin_scout: id = new entity {
     Character {
         name: "Goblin Scout"
         class: "Monster"
@@ -475,11 +459,11 @@ BDL supports **bound choice functions** - choice functions that are directly ass
 Choice functions can be bound to entities using the following syntax:
 
 ```bdl
-entity @hero_name {
+let hero_name: id = new entity {
     // ... component definitions ...
     
     // Bind a choice function to this entity
-    chooseEnemy = choice (character: Character, enemies: list): id {
+    .chooseEnemy = choice (character: Character, enemies: list): id {
         // Function body (BCL subset only)
         for enemy in enemies {
             if enemy.Health.current < 50 {
@@ -502,7 +486,7 @@ entity @hero_name {
 ### 7.3 Complete Example
 
 ```bdl
-entity @warrior {
+let warrior: id = new entity {
     Character {
         name: "Sir Braveheart"
         class: "Warrior"
@@ -513,7 +497,7 @@ entity @warrior {
     }
     
     // Bind choice functions directly to the entity
-    select_attack_target = choice (character: Character, enemies: list): id {
+    .select_attack_target = choice (character: Character, enemies: list): id {
         return find_weakest(enemies)
     }
     
