@@ -257,11 +257,42 @@ export function GameUI() {
 
   const handleScenarioSelected = async (scenarioId: string) => {
     try {
-      const ir = await compileScenario(scenarioId);
-      await initialize(ir);
-      const heroes = extractCharactersFromIR(ir);
-      setAvailableHeroes(heroes);
-      setCurrentScreen('party');
+      // Load BRL/BCL/BDL into the IDE and let it compile so errors are highlighted
+      const brlContent = await fetchGameFile('classic-rpg.brl');
+      // load a default BCL (party/config or skills) so the IDE shows BCL content
+      const bclContent = await fetchGameFile('party-config.bcl').catch(() => '');
+      const heroesContent = await fetchGameFile('heroes.bdl');
+      const enemiesContent = await fetchGameFile('enemies.bdl');
+      const scenarioMap: Record<string, string> = {
+        easy: 'scenario-easy.bdl',
+        normal: 'scenario-normal.bdl',
+        hard: 'scenario-hard.bdl',
+      };
+      const scenarioContent = await fetchGameFile(scenarioMap[scenarioId]);
+
+      const mergedBdl = [heroesContent, enemiesContent, scenarioContent].join('\n\n');
+
+      if (!window.BlinkIDE || typeof window.BlinkIDE.loadSources !== 'function') {
+        throw new Error('IDE API not available. Make sure the IDE is loaded.');
+      }
+
+      const result = await window.BlinkIDE.loadSources({ brl: brlContent, bcl: bclContent, bdl: mergedBdl });
+
+      if (result.errors && result.errors.length > 0) {
+        // Errors will be shown/highlighted in the IDE; notify the user and stop
+        alert(`Compilation failed with ${result.errors.length} error(s). See IDE for details.`);
+        return;
+      }
+
+      // If compile succeeded, initialize engine with the IR and continue
+      if (result.ir) {
+        await initialize(result.ir);
+        const heroes = extractCharactersFromIR(result.ir);
+        setAvailableHeroes(heroes);
+        setCurrentScreen('party');
+      } else {
+        throw new Error('No IR produced by compilation.');
+      }
     } catch (error) {
       console.error(error);
       alert(`Failed to load scenario: ${(error as Error).message}`);

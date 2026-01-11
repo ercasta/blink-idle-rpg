@@ -22,6 +22,9 @@ declare global {
       compile: (sources: Array<{ path: string; content: string; language: string }>, options?: { moduleName?: string; includeSourceMap?: boolean }) => { ir: IRModule; errors: CompileError[] };
       compileString: (source: string, language?: string, options?: { moduleName?: string }) => { ir: IRModule; errors: CompileError[] };
     };
+    BlinkIDE?: {
+      loadSources: (sources: { brl?: string; bcl?: string; bdl?: string; snippet?: { content: string; language?: string; name?: string } }) => Promise<{ ir?: IRModule; errors: CompileError[] }>;
+    };
   }
 }
 
@@ -100,6 +103,7 @@ export function IDE({ className }: IDEProps) {
   const [compileErrors, setCompileErrors] = useState<CompileError[]>([]);
   const [consoleMessages, setConsoleMessages] = useState<Array<{ type: 'info' | 'error' | 'success' | 'trace'; message: string; time?: number }>>([]);
   const [compiledIR, setCompiledIR] = useState<IRModule | null>(null);
+  const filesRef = useRef(files);
   
   // Engine state
   const [simulationTime, setSimulationTime] = useState(0);
@@ -123,27 +127,20 @@ export function IDE({ className }: IDEProps) {
     }));
   }, []);
   
-  // Compile handler
-  const handleCompile = useCallback(() => {
+  // Compilation helper used by UI and external callers
+  const doCompile = useCallback((sources: Array<{ path: string; content: string; language: string }>) => {
     if (!window.BlinkCompiler) {
       log('error', 'Compiler not loaded. Make sure blink-compiler.bundle.js is included.');
-      return;
+      return { ir: undefined as IRModule | undefined, errors: [{ type: 'semantic', message: 'Compiler not loaded', file: undefined, line: undefined, column: undefined }] as CompileError[] };
     }
-    
-    const sources = [
-      { path: files.brl.name, content: files.brl.content, language: 'brl' },
-      { path: files.bcl.name, content: files.bcl.content, language: 'bcl' },
-      { path: files.bdl.name, content: files.bdl.content, language: 'bdl' },
-      { path: files.snippet.name || 'snippet.brl', content: files.snippet.content, language: files.snippet.language || 'brl' },
-    ];
-    
+
     try {
       log('info', 'Compiling BRL/BCL/BDL files...');
-      const result = window.BlinkCompiler.compile(sources, { 
+      const result = window.BlinkCompiler.compile(sources, {
         moduleName: 'ide-module',
-        includeSourceMap: true 
+        includeSourceMap: true,
       });
-      
+
       if (result.errors.length > 0) {
         setCompileErrors(result.errors);
         result.errors.forEach(err => {
@@ -154,7 +151,7 @@ export function IDE({ className }: IDEProps) {
         setCompileErrors([]);
         setCompiledIR(result.ir);
         log('success', `Compilation successful! Components: ${result.ir.components.length}, Rules: ${result.ir.rules.length}`);
-        
+
         // Mark files as clean (include snippet)
         setFiles(prev => ({
           brl: { ...prev.brl, isDirty: false },
@@ -163,10 +160,62 @@ export function IDE({ className }: IDEProps) {
           snippet: { ...prev.snippet, isDirty: false },
         }));
       }
+
+      return result;
     } catch (err) {
-      log('error', `Compilation error: ${err instanceof Error ? err.message : String(err)}`);
+      const message = err instanceof Error ? err.message : String(err);
+      log('error', `Compilation error: ${message}`);
+      const compileErr: CompileError = { type: 'semantic', message, file: undefined };
+      setCompileErrors([compileErr]);
+      return { ir: undefined as IRModule | undefined, errors: [compileErr] };
     }
-  }, [files, log]);
+  }, [log]);
+
+  // keep a ref copy of files for external API usage
+  useEffect(() => {
+    filesRef.current = files;
+  }, [files]);
+
+  // Expose a global helper to load sources into the IDE and compile them.
+  useEffect(() => {
+    window.BlinkIDE = {
+      loadSources: async (sources: { brl?: string; bcl?: string; bdl?: string; snippet?: { content: string; language?: string; name?: string } }) => {
+        // update files state with provided content
+        setFiles(prev => ({
+          brl: { ...prev.brl, content: sources.brl ?? prev.brl.content, isDirty: true, name: prev.brl.name },
+          bcl: { ...prev.bcl, content: sources.bcl ?? prev.bcl.content, isDirty: true, name: prev.bcl.name },
+          bdl: { ...prev.bdl, content: sources.bdl ?? prev.bdl.content, isDirty: true, name: prev.bdl.name },
+          snippet: sources.snippet ? { ...prev.snippet, content: sources.snippet.content, language: sources.snippet.language ?? prev.snippet.language, name: sources.snippet.name ?? prev.snippet.name, isDirty: true } : prev.snippet,
+        }));
+
+        // Build compile sources using provided content (or existing ones)
+        const current = filesRef.current;
+        const compileSources = [
+          { path: current?.brl.name ?? 'main.brl', content: sources.brl ?? current?.brl.content ?? '', language: 'brl' },
+          { path: current?.bcl.name ?? 'main.bcl', content: sources.bcl ?? current?.bcl.content ?? '', language: 'bcl' },
+          { path: current?.bdl.name ?? 'main.bdl', content: sources.bdl ?? current?.bdl.content ?? '', language: 'bdl' },
+        ];
+
+        const result = doCompile(compileSources);
+        return result;
+      },
+    };
+
+    return () => {
+      try { delete window.BlinkIDE; } catch {}
+    };
+  }, [doCompile]);
+
+  // Public compile action used by toolbar
+  const handleCompile = useCallback(() => {
+    const sources = [
+      { path: files.brl.name, content: files.brl.content, language: 'brl' },
+      { path: files.bcl.name, content: files.bcl.content, language: 'bcl' },
+      { path: files.bdl.name, content: files.bdl.content, language: 'bdl' },
+      { path: files.snippet.name || 'snippet.brl', content: files.snippet.content, language: files.snippet.language || 'brl' },
+    ];
+    doCompile(sources);
+  }, [files, doCompile]);
   
   // Inject snippet without resetting state
   const handleInjectSnippet = useCallback(() => {
