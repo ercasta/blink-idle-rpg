@@ -34,3 +34,20 @@
 - Next steps (in-doc actions):
   - Add a small code snippet example for the FileReader→canvas→jsQR flow in the docs.
   - Recommend testing with representative 500-byte payloads and with images shared via WhatsApp to confirm decoding success.
+
+
+  ### Phygital (printed) figurines
+- Print physical hero figurines with an integrated QR code on the base or card so anyone can scan and instantly open the public web page to play or import that hero.
+- QR payload options:
+  - Short link to a hosted hero JSON or public hero page (preferred for large payloads).
+  - Encoded/compressed hero JSON directly in the QR if the data is small.
+- Requirements & UX:
+  - Use short, stable URLs (or encourage users to upload the JSON to a cloud storage link) to reduce QR complexity and increase scan reliability.
+  - Include a human-readable hero name/ID and minimal stats on the base for quick identification.
+  - Offer an in-app flow that recognizes scanned links, fetches the hero (with CORS guidance), and prompts to import or view.
+- Printing notes:
+  - Test QR contrast/size for reliable scanning from typical phone cameras.
+  - Consider adding a fallback short code (hero ID) printed on the base for manual entry.
+- Optional enhancements:
+  - NFC tag on the figurine with the same link (for devices that support it).
+  - Seed-based hero generation so QR can contain a short seed/string instead of full JSON.

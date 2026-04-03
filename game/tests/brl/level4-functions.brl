@@ -35,12 +35,12 @@ component Buffs {
 }
 
 // User-defined function for damage calculation
-fn calculate_damage(base: number, bonus: number): number {
+fn calculate_damage(base: integer, bonus: integer): integer {
     return base + bonus
 }
 
 // Function with min/max
-fn clamp_health(current: number, maxVal: number): number {
+fn clamp_health(current: integer, maxVal: integer): integer {
     if current > maxVal {
         return maxVal
     }
@@ -51,44 +51,44 @@ fn clamp_health(current: number, maxVal: number): number {
 }
 
 // Function for percentage calculation
-fn calculate_percentage(current: number, maximum: number): number {
+fn calculate_percentage(current: integer, maximum: integer): integer {
     return current / maximum * 100
 }
 
 // Rule using user-defined function
-rule apply_damage on DamageCalculate {
+rule apply_damage on DamageCalculate(evt: id) {
     let base = entity.Combat.damage
     let bonus = entity.Buffs.damageBonus
     let total = calculate_damage(base, bonus)
-    schedule DamageResult { damage: total }
+    let _r: id = schedule DamageResult { damage: total }
 }
 
 // Rule using built-in min function
-rule cap_health on HealReceived {
+rule cap_health on HealReceived(evt: id) {
     let newHealth = entity.Health.current + 50
     let cappedHealth = min(newHealth, entity.Health.max)
     entity.Health.current = cappedHealth
 }
 
 // Rule using built-in max function
-rule prevent_negative_health on DamageReceived {
+rule prevent_negative_health on DamageReceived(evt: id) {
     let newHealth = entity.Health.current - 30
     entity.Health.current = max(newHealth, 0)
 }
 
 // Rule using len function
-rule count_entities on CountEntities {
+rule count_entities on CountEntities(evt: id) {
     let healthEntities = entities having Health
     let count = len(healthEntities)
-    schedule EntityCount { count: count }
+    let _c: id = schedule EntityCount { count: count }
 }
 
 // Rule with complex binary expressions
-rule calculate_stats on StatsCalc {
+rule calculate_stats on StatsCalc(evt: id) {
     let baseDamage = entity.Stats.strength * 2 + entity.Stats.dexterity / 2
     let baseDefense = entity.Stats.strength / 2 + entity.Stats.dexterity
     let magicPower = entity.Stats.intelligence * 3
-    schedule StatsResult {
+    let _s: id = schedule StatsResult {
         damage: baseDamage
         defense: baseDefense
         magic: magicPower
@@ -96,36 +96,36 @@ rule calculate_stats on StatsCalc {
 }
 
 // Rule with comparison expressions
-rule check_critical on CritCheck {
+rule check_critical on CritCheck(evt: id) {
     let roll = 0.5
     if roll < entity.Combat.critChance {
         let damage = entity.Combat.damage * entity.Combat.critMultiplier
-        schedule CriticalHit { damage: damage }
+        let _c: id = schedule CriticalHit { damage: damage }
     } else {
-        schedule NormalHit { damage: entity.Combat.damage }
+        let _n: id = schedule NormalHit { damage: entity.Combat.damage }
     }
 }
 
 // Rule with has component expression
-rule check_buffs on BuffCheck {
+rule check_buffs on BuffCheck(evt: id) {
     if entity has Buffs {
         let totalBonus = entity.Buffs.damageBonus + entity.Buffs.defenseBonus
-        schedule BuffsActive { totalBonus: totalBonus }
+        let _b: id = schedule BuffsActive { totalBonus: totalBonus }
     } else {
-        schedule NoBuffs { }
+        let _n: id = schedule NoBuffs { }
     }
 }
 
 // Rule with unary expression
-rule check_active on ActivityCheck {
+rule check_active on ActivityCheck(evt: id) {
     let isInactive = entity.Health.current == 0
     if isInactive {
-        schedule EntityDead { target: entity }
+        let _e: id = schedule EntityDead { target: entity }
     }
 }
 
 // Rule with index access
-rule process_first on ProcessFirst {
+rule process_first on ProcessFirst(evt: id) {
     let healthEntities = entities having Health
     if len(healthEntities) > 0 {
         let first = healthEntities[0]
@@ -134,14 +134,14 @@ rule process_first on ProcessFirst {
 }
 
 // Test entities
-entity {
+let strong_entity: id = new entity {
     Health { current: 100 max: 100 }
     Combat { damage: 20 defense: 10 critChance: 0.2 critMultiplier: 2.0 }
     Stats { strength: 15 dexterity: 12 intelligence: 8 }
     Buffs { damageBonus: 5 defenseBonus: 3 }
 }
 
-entity {
+let weaker_entity: id = new entity {
     Health { current: 50 max: 50 }
     Combat { damage: 15 defense: 5 critChance: 0.1 critMultiplier: 1.5 }
     Stats { strength: 10 dexterity: 10 intelligence: 10 }
