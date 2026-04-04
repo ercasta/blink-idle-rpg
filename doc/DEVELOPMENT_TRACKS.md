@@ -21,7 +21,7 @@ See [Architecture Decision: IR and Engine Independence](architecture/ir-decision
 │  ┌─────────────────┐                                                        │
 │  │ TRACK 1         │                                                        │
 │  │ Language Design │                                                        │
-│  │ (BRL/BDL Spec)  │                                                        │
+│  │ (BRL Spec)  │                                                        │
 │  └────────┬────────┘                                                        │
 │           │                                                                 │
 │           │ defines syntax & semantics                                      │
@@ -37,7 +37,7 @@ See [Architecture Decision: IR and Engine Independence](architecture/ir-decision
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
 │  │                         BLINK IR                                     │   │
 │  │  • Component definitions    • Rule instructions                      │   │
-│  │  • Tracker definitions      • Initial state (from BDL)               │   │
+│  │  • Tracker definitions      • Initial state (from BRL data files)               │   │
 │  │  • Format: JSON or Binary   • Versioned contract                     │   │
 │  └────────┬─────────────────────────┬─────────────────────┬────────────┘   │
 │           │                         │                     │                 │
@@ -73,7 +73,7 @@ This means:
 
 ## Track 1: Language Design
 
-**Focus**: Define BRL and BDL specifications
+**Focus**: Define BRL specifications
 
 ### Owner Requirements
 - Programming language design experience
@@ -82,7 +82,7 @@ This means:
 
 ### Deliverables
 1. BRL specification document
-2. BDL specification document
+2. BRL specification document
 3. Language examples
 4. Grammar definition (EBNF)
 

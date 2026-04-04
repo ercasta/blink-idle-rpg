@@ -10,7 +10,7 @@ doc/
 ├── summary.md                   # Project overview
 ├── DEVELOPMENT_TRACKS.md        # Parallel development guide
 ├── ir-specification.md          # IR format specification (central contract)
-├── language/                    # BRL & BDL Language Specification
+├── language/                    # BRL Language Specification
 │   ├── README.md                # Language overview
 │   ├── brl-specification.md     # Blink Rule Language spec
 │   ├── bdl-specification.md     # Blink Data Language spec
@@ -57,7 +57,7 @@ The project is organized to allow parallel development with **IR as the central 
 
 | Track | Folder | Description | Dependencies |
 |-------|--------|-------------|--------------|
-| **Language Design** | `doc/language/` | BRL & BDL specification | None |
+| **Language Design** | `doc/language/` | BRL specification | None |
 | **Compiler** | `packages/blink-compiler-ts/` | Parser, validator, IR gen | Language spec |
 | **Rust Engine** | `src/engines/rust/` | Native Rust simulation | IR spec only |
 | **JS Engine** | `packages/blink-engine/` | TypeScript implementation | IR spec only |

@@ -11,13 +11,11 @@ function readFiles(dir: string, ext: string) {
 }
 
 describe('Full-game integration', () => {
-  it('compiles BRL + BDL sources together with no errors', () => {
+  it('compiles all BRL sources together with no errors', () => {
     const brlFiles = readFiles('game/brl', '.brl');
-    const bdlFiles = readFiles('game/bdl', '.bdl');
 
     const sources = [
       ...brlFiles.map(f => ({ path: f.path, content: f.content, language: 'brl' as const })),
-      ...bdlFiles.map(f => ({ path: f.path, content: f.content, language: 'bdl' as const })),
     ];
 
     // Ensure we have something to compile

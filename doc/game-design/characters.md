@@ -208,7 +208,7 @@ Hero templates encoded in the QR must include the 12 decision fields as integers
 }
 ```
 
-BDL/IR integration:
+BRL/IR integration:
 
 - When compiling hero templates to IR, ensure `decision_values` are present on the template entity and are emitted as integer fields. The runtime rule-set should read and normalise them once per turn and cache the normalised weights in a transient component for that hero.
 
@@ -228,6 +228,6 @@ BDL/IR integration:
 
 ## Design Notes
 
-- The **targeting behaviour** of each hero class is encoded as a bound choice function on the hero template (already used in the existing BDL). This allows per-class AI without conditional branching in shared rules.
-- Stat scaling on level-up uses class-specific **growth tables** (to be defined per class in BDL).
+- The **targeting behaviour** of each hero class is encoded as a bound choice function on the hero template (already used in the existing BRL). This allows per-class AI without conditional branching in shared rules.
+- Stat scaling on level-up uses class-specific **growth tables** (to be defined per class in BRL).
 - Revival mechanics (Paladin passive, Cleric skill) are handled via skill components — see [skills.md](skills.md).

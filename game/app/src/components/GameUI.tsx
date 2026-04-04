@@ -165,24 +165,24 @@ export async function compileScenario(scenarioId: string): Promise<IRModule> {
   if (!window.BlinkCompiler) throw new Error('BlinkCompiler not available.');
 
   const scenarioMap: Record<string, string> = {
-    easy: 'scenario-easy.bdl',
-    normal: 'scenario-normal.bdl',
-    hard: 'scenario-hard.bdl',
+    easy: 'scenario-easy.brl',
+    normal: 'scenario-normal.brl',
+    hard: 'scenario-hard.brl',
   };
 
   const [brlContent, heroesContent, enemiesContent, scenarioContent] =
     await Promise.all([
       fetchGameFile('classic-rpg.brl'),
-      fetchGameFile('heroes.bdl'),
-      fetchGameFile('enemies.bdl'),
+      fetchGameFile('heroes.brl'),
+      fetchGameFile('enemies.brl'),
       fetchGameFile(scenarioMap[scenarioId]),
     ]);
 
   const sources = [
     { path: 'classic-rpg.brl', content: brlContent, language: 'brl' },
-    { path: 'heroes.bdl', content: heroesContent, language: 'bdl' },
-    { path: 'enemies.bdl', content: enemiesContent, language: 'bdl' },
-    { path: scenarioMap[scenarioId], content: scenarioContent, language: 'bdl' },
+    { path: 'heroes.brl', content: heroesContent, language: 'brl' },
+    { path: 'enemies.brl', content: enemiesContent, language: 'brl' },
+    { path: scenarioMap[scenarioId], content: scenarioContent, language: 'brl' },
   ];
 
   const result = window.BlinkCompiler.compile(sources, {
@@ -1011,7 +1011,7 @@ export function GameUI() {
   const [isLoading, setIsLoading] = useState(false);
   const { initialize } = useGame();
 
-  // Preload prebuilt heroes from BDL on mount
+  // Preload prebuilt heroes from BRL on mount
   useEffect(() => {
     (async () => {
       try {

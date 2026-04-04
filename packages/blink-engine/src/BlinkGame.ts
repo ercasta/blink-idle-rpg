@@ -728,7 +728,7 @@ export class BlinkGame {
     return { id: entityId, components };
   }
 
-  // ===== Bound Choice Functions (BDL Resolution) =====
+  // ===== Bound Choice Functions =====
 
   /**
    * Get the bound functions for an entity

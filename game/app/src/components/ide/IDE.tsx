@@ -23,7 +23,7 @@ declare global {
       compileString: (source: string, language?: string, options?: { moduleName?: string }) => { ir: IRModule; errors: CompileError[] };
     };
     BlinkIDE?: {
-      loadSources: (sources: { brl?: string; bcl?: string; bdl?: string; snippet?: { content: string; language?: string; name?: string } }) => Promise<{ ir?: IRModule; errors: CompileError[] }>;
+      loadSources: (sources: { brl?: string; bcl?: string; data?: string; snippet?: { content: string; language?: string; name?: string } }) => Promise<{ ir?: IRModule; errors: CompileError[] }>;
     };
   }
 }
@@ -73,7 +73,7 @@ choice fn select_target(character: Character, enemies: list): id {
 }
 `;
 
-const DEFAULT_BDL = `// Blink Data Language (BDL) Editor
+const DEFAULT_DATA = `// Game Data (BRL)
 // Define entity instances and initial game state here
 
 // Example entity with components
@@ -95,7 +95,7 @@ export function IDE({ className }: IDEProps) {
   const [files, setFiles] = useState<Record<EditorTab, SourceFile>>({
     brl: { id: 'brl-main', name: 'main.brl', content: DEFAULT_BRL, language: 'brl', isDirty: false },
     bcl: { id: 'bcl-main', name: 'main.bcl', content: DEFAULT_BCL, language: 'bcl', isDirty: false },
-    bdl: { id: 'bdl-main', name: 'main.bdl', content: DEFAULT_BDL, language: 'bdl', isDirty: false },
+    data: { id: 'data-main', name: 'data.brl', content: DEFAULT_DATA, language: 'brl', isDirty: false },
     snippet: { id: 'snippet', name: 'snippet.brl', content: '// Quick snippet for injection\n', language: 'brl', isDirty: false },
   });
   
@@ -135,7 +135,7 @@ export function IDE({ className }: IDEProps) {
     }
 
     try {
-      log('info', 'Compiling BRL/BCL/BDL files...');
+      log('info', 'Compiling BRL/BCL files...');
       const result = window.BlinkCompiler.compile(sources, {
         moduleName: 'ide-module',
         includeSourceMap: true,
@@ -156,7 +156,7 @@ export function IDE({ className }: IDEProps) {
         setFiles(prev => ({
           brl: { ...prev.brl, isDirty: false },
           bcl: { ...prev.bcl, isDirty: false },
-          bdl: { ...prev.bdl, isDirty: false },
+          data: { ...prev.data, isDirty: false },
           snippet: { ...prev.snippet, isDirty: false },
         }));
       }
@@ -179,13 +179,13 @@ export function IDE({ className }: IDEProps) {
   // Expose a global helper to load sources into the IDE and compile them.
   useEffect(() => {
     window.BlinkIDE = {
-      loadSources: async (sources: { brl?: string; bcl?: string; bdl?: string; snippet?: { content: string; language?: string; name?: string } }) => {
+      loadSources: async (sources: { brl?: string; bcl?: string; data?: string; snippet?: { content: string; language?: string; name?: string } }) => {
         // update files state with provided content
         setFiles(prev => ({
             brl: { ...prev.brl, content: sources.brl ?? prev.brl.content, isDirty: true, name: prev.brl.name },
             bcl: { ...prev.bcl, content: sources.bcl ?? prev.bcl.content, isDirty: true, name: prev.bcl.name },
-            bdl: { ...prev.bdl, content: sources.bdl ?? prev.bdl.content, isDirty: true, name: prev.bdl.name },
-            snippet: sources.snippet ? { ...prev.snippet, content: sources.snippet.content, language: (sources.snippet.language ?? prev.snippet.language) as 'brl' | 'bcl' | 'bdl', name: sources.snippet.name ?? prev.snippet.name, isDirty: true } : prev.snippet,
+            data: { ...prev.data, content: sources.data ?? prev.data.content, isDirty: true, name: prev.data.name },
+            snippet: sources.snippet ? { ...prev.snippet, content: sources.snippet.content, language: (sources.snippet.language ?? prev.snippet.language) as 'brl' | 'bcl', name: sources.snippet.name ?? prev.snippet.name, isDirty: true } : prev.snippet,
         }));
 
         // Build compile sources using provided content (or existing ones)
@@ -193,7 +193,7 @@ export function IDE({ className }: IDEProps) {
         const compileSources = [
           { path: current?.brl.name ?? 'main.brl', content: sources.brl ?? current?.brl.content ?? '', language: 'brl' },
           { path: current?.bcl.name ?? 'main.bcl', content: sources.bcl ?? current?.bcl.content ?? '', language: 'bcl' },
-          { path: current?.bdl.name ?? 'main.bdl', content: sources.bdl ?? current?.bdl.content ?? '', language: 'bdl' },
+          { path: current?.data.name ?? 'data.brl', content: sources.data ?? current?.data.content ?? '', language: 'brl' },
         ];
 
         const result = doCompile(compileSources);
@@ -211,7 +211,7 @@ export function IDE({ className }: IDEProps) {
     const sources = [
       { path: files.brl.name, content: files.brl.content, language: 'brl' },
       { path: files.bcl.name, content: files.bcl.content, language: 'bcl' },
-      { path: files.bdl.name, content: files.bdl.content, language: 'bdl' },
+      { path: files.data.name, content: files.data.content, language: 'brl' },
       { path: files.snippet.name || 'snippet.brl', content: files.snippet.content, language: files.snippet.language || 'brl' },
     ];
     doCompile(sources);
@@ -243,7 +243,7 @@ export function IDE({ className }: IDEProps) {
       const sources = [
         { path: files.brl.name, content: files.brl.content, language: 'brl' },
         { path: files.bcl.name, content: files.bcl.content, language: 'bcl' },
-        { path: files.bdl.name, content: files.bdl.content, language: 'bdl' },
+        { path: files.data.name, content: files.data.content, language: 'brl' },
         { path: files.snippet.name || 'snippet.brl', content: snippetContent, language: files.snippet.language || 'brl' },
       ];
 
@@ -380,7 +380,7 @@ export function IDE({ className }: IDEProps) {
   
   const handleDownloadAll = useCallback(() => {
     // Download all files as individual downloads
-    ['brl', 'bcl', 'bdl'].forEach(tab => {
+    ['brl', 'bcl', 'data'].forEach(tab => {
       handleDownload(tab as EditorTab);
     });
   }, [handleDownload]);
@@ -466,7 +466,7 @@ export function IDE({ className }: IDEProps) {
         <div className="flex flex-col w-1/2 border-r border-border">
           {/* Editor tabs */}
           <div className="flex border-b border-border bg-card/50">
-            {(['brl', 'bcl', 'bdl', 'snippet'] as const).map(tab => (
+            {(['brl', 'bcl', 'data', 'snippet'] as const).map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}

@@ -712,7 +712,7 @@ The game IDE can:
 
 ### 13.7 Entity-Bound Choice Functions
 
-Choice functions can be bound to specific entities as first-class properties, allowing each entity to have its own decision-making logic. This binding happens in BDL (at entity definition time).
+Choice functions can be bound to specific entities as first-class properties, allowing each entity to have its own decision-making logic. This binding happens at entity definition time.
 
 #### Calling Bound Choice Functions
 
@@ -755,18 +755,18 @@ This strict resolution ensures that:
 When a bound function is not found, the error message includes:
 - The entity ID that was accessed
 - The function name that was called
-- A hint to check the entity's BDL definition
+- A hint to check the entity's definition
 
 Example error:
 ```
 UnboundFunctionError: Function 'select_attack_target' is not bound to entity '@warrior'
   at rule CombatTurn (classic-rpg.brl:153:5)
   
-  Help: Ensure the entity has the function bound in its BDL definition:
+  Help: Ensure the entity has the function bound in its entity definition:
         select_attack_target = choice (...) { ... }
 ```
 
-Developers should ensure all entities have the required functions bound in their BDL definitions before calling them in BRL rules.
+Developers should ensure all entities have the required functions bound in their entity definitions before calling them in BRL rules.
 
 #### Example with Multiple Entities
 

@@ -23,7 +23,7 @@ Also the player will be able to scan hero qr codes to add them to the roster. Se
 
 The game will be played in a browser in mobile, so for efficiency we'll use webassembly.
 
-But in the game interface we won't have brl / bcl / bdl compilation screens (they might fight in a "studio" version for game creators, which will not be initially published).
+But in the game interface we won't have brl / bcl compilation screens (they might fight in a "studio" version for game creators, which will not be initially published).
 
 The user will have the opportunity to configure his/her hero direcly on mobile, so an extensive, mobile friendly character creation screen must be created. Also the game must allow creating the digital figurines to print, or share with friends on whatsapp / other channels. 
 

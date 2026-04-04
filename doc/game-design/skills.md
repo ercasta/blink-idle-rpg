@@ -18,7 +18,7 @@ Additional progression rules:
 Skill tree structure:
 
 - **Per-class DAG:** Each class has its own skill tree arranged as a directed acyclic graph (DAG). Nodes are individual skills; edges denote prerequisite relationships.
-- **Acquisition rule:** To acquire or upgrade a skill, a hero must already have acquired all prerequisite skills (every incoming edge must be satisfied). Prerequisites and skill-level costs are defined per-skill in the class skill data (BDL/BDL templates).
+- **Acquisition rule:** To acquire or upgrade a skill, a hero must already have acquired all prerequisite skills (every incoming edge must be satisfied). Prerequisites and skill-level costs are defined per-skill in the class skill data (BRL templates).
 
 ---
 
@@ -56,7 +56,7 @@ Fire automatically when a specific event occurs in combat.
 
 ## Skill Slot System
 
-Each entity has 4 skill slots. Skills are assigned at entity creation (BDL) or on level-up.
+Each entity has 4 skill slots. Skills are assigned at entity creation (BRL) or on level-up.
 
 | Slot | Unlock Level |
 |------|-------------|
@@ -121,7 +121,7 @@ Each entity has 4 skill slots. Skills are assigned at entity creation (BDL) or o
 
 ### Enemy Skills (by Tier)
 
-Enemies at higher tiers gain skills. Each enemy type specifies skills in its BDL template via the `Skills` component.
+Enemies at higher tiers gain skills. Each enemy type specifies skills in its BRL entity definition via the `Skills` component.
 
 | Skill | Applied By | Type | Effect |
 |-------|-----------|------|--------|

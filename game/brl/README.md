@@ -1,27 +1,28 @@
-# BRL Examples
+# BRL Source Files
 
-Example Blink Rule Language (BRL) source files demonstrating language features.
+Blink Rule Language (BRL) source files for the game. BRL is used for both game rules and game data (entities).
 
 ## Files
 
-| File | Description | Features Demonstrated |
-|------|-------------|----------------------|
-| `simple-clicker.brl` | Minimal clicker game | Components, rules |
-| `simple-combat.brl` | Basic combat system | Functions, conditions, scheduling |
-| `classic-rpg.brl` | Classic RPG with classes and skills | Multiple components, complex rules, game state |
+| File | Description |
+|------|-------------|
+| `classic-rpg.brl` | Classic RPG game rules: components, rules, functions |
+| `heroes.brl` | Hero entity definitions and initial state |
+| `enemies.brl` | Enemy entity definitions |
+| `game-config.brl` | Game configuration entities |
+| `scenario-easy.brl` | Easy difficulty scenario entities |
+| `scenario-normal.brl` | Normal difficulty scenario entities |
+| `scenario-hard.brl` | Hard difficulty scenario entities |
 
-## Compiling Examples
+## Compiling
 
 Once the compiler is built:
 
 ```bash
 # Compile to IR
-blink-compiler compile -i simple-clicker.brl -o simple-clicker.ir.json --pretty
-
-# Check for errors
-blink-compiler check -i simple-combat.brl
+blink-compiler compile -i classic-rpg.brl -o classic-rpg.ir.json --pretty
 ```
 
 ## Language Reference
 
-See the [BRL Specification](../doc/language/brl-specification.md) for complete language documentation.
+See the [BRL Specification](../../doc/language/brl-specification.md) for complete language documentation.

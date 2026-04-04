@@ -5,7 +5,7 @@ export interface Scenario {
   name: string;
   difficulty: 'Easy' | 'Normal' | 'Hard';
   irFile: string;
-  bdlFile: string;
+  dataFile: string;
   cssClass: string;
   description?: string;
 }

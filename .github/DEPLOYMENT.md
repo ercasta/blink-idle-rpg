@@ -38,7 +38,7 @@ The `github-pages.yml` workflow:
   - Game demos (`index.html`, `rpg-demo.html`)
   - Compiled JavaScript bundles
   - Game data files
-  - Downloadable game files (BRL, BDL, IR)
+  - Downloadable game files (BRL, IR)
 - Deploys to GitHub Pages using the standard `actions/deploy-pages@v4` action
 
 This is the correct deployment method and should be the only workflow that runs.

@@ -48,7 +48,7 @@ dev-setup:
 	@echo ""
 	@echo "Development setup complete!"
 	@echo "Open game/demos/classic-rpg.html in a browser to play."
-	@echo "The game will compile BRL/BDL files in real-time using the TypeScript compiler."
+	@echo "The game will compile BRL files in real-time using the TypeScript compiler."
 
 # Build for development (TypeScript compiler + engine)
 dev: build-compiler-ts build-packages-dev
@@ -139,9 +139,7 @@ demo-package: dev
 	
 	@echo "Copying source files for in-browser compilation..."
 	mkdir -p demo-package/brl
-	mkdir -p demo-package/bdl
 	cp game/brl/*.brl demo-package/brl/
-	cp game/bdl/*.bdl demo-package/bdl/
 	
 	@echo "Copying BCL files..."
 	cp game/bcl/warrior-skills.bcl demo-package/
