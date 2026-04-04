@@ -192,8 +192,8 @@ describe('Simulation Harness', () => {
       if (gs && gs.enemiesDefeated >= 3) break;
     }
 
-    const gs    = game.getComponent(99, 'GameState') as any as any;
-    const score = game.getComponent(96, 'Score') as any as any;
+    const gs    = game.getComponent(99, 'GameState') as any;
+    const score = game.getComponent(96, 'Score') as any;
     game.destroy();
 
     assert.ok(gs,    'GameState should exist');
@@ -352,12 +352,9 @@ describe('Simulation Harness', () => {
     assert.ok(meanScore > 0,  `Mean score (${meanScore}) should be positive`);
     // All runs should kill some enemies
     assert.ok(meanKills >= 1, `Mean kills (${meanKills}) should be at least 1`);
-    // Boss should be worth more than regular enemies
-    const anyBossScore = scores.some((_, i) => {
-      const g2 = buildFastGame({ heroClasses: ['Warrior', 'Mage'] });
-      g2.destroy();
-      return true; // placeholder — actual check done via score sub-components above
-    });
-    assert.ok(anyBossScore !== undefined);
+    // Score should be positively correlated with kills (more kills = higher score)
+    // In fast games all runs reach victory, so all scores should be similar and positive
+    const minScore = Math.min(...scores);
+    assert.ok(minScore > 0, `All runs should have positive scores; min was ${minScore}`);
   });
 });

@@ -99,8 +99,7 @@ function createHeroEntity(game, id, heroClass) {
   return eid;
 }
 
-function createEnemyTemplate(game, id, tier, name, hp, damage, speed, expReward, isBoss) {
-  isBoss = isBoss || false;
+function createEnemyTemplate(game, id, tier, name, hp, damage, speed, expReward, isBoss = false) {
   const eid = game.createEntity(id);
   game.addComponent(eid, 'Character', { name: name, class: isBoss ? 'Boss' : 'Monster', level: tier, experience: 0, experienceToLevel: 999 });
   game.addComponent(eid, 'Health', { current: hp, max: hp });

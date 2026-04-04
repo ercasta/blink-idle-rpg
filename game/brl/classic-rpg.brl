@@ -238,7 +238,7 @@ fn calculate_exp_for_level(level: float): float {
 // Rule 1: Start hero attacks when game begins
 rule initialize_hero_attacks on GameStart(gs: id) {
     if entity has GameState {
-let heroes: list = entities having Team
+        let heroes: list = entities having Team
         for hero in heroes {
             if hero.Team.isPlayer && hero.Health.current > 0 {
                 // Stagger attacks by 0.1s per hero to avoid perfect synchronization
@@ -272,8 +272,7 @@ rule spawn_initial_enemies on GameStart(gs: id) {
         entity.GameState.bossSpawned = false
 
         // Spawn initial wave enemies (spread by small delays)
-let count: id = entity.SpawnConfig.initialEnemyCount
-let indices: list = [0, 1, 2, 3, 4]
+        let indices: list = [0, 1, 2, 3, 4]
         for i in indices {
             schedule [delay: 0.5 * (i + 1)] SpawnEnemy {
                 tier: 1
@@ -948,11 +947,11 @@ let runStatsEntities: list = entities having RunStats
             if len(runStatsEntities) > 0 {
 let runStats: id = runStatsEntities[0]
 
-                // Speed bonus: decays with total time
+                // Speed bonus: decays with total time; floor-divide by interval to get whole steps
 let timeBonusPts: integer = entity.ScoringRules.timeBonusPoints
 let interval: float = entity.ScoringRules.timeBonusInterval
 let totalTime: float = runStats.RunStats.totalTime
-let decayed: integer = totalTime / interval
+let decayed: integer = floor(totalTime / interval)
 let speedBonus: integer = max(0, timeBonusPts - decayed)
                 entity.Score.speedBonus = speedBonus
                 entity.Score.total += speedBonus
