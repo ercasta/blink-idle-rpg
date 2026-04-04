@@ -69,10 +69,30 @@ All engines are **independent** - they depend only on the IR specification, not 
 See [DEVELOPMENT_TRACKS.md](DEVELOPMENT_TRACKS.md) for detailed coordination guidelines.  
 See [architecture/ir-decision.md](architecture/ir-decision.md) for the architectural rationale.
 
+## Game Design Documentation
+
+The `game-design/` folder contains the full game design specification:
+
+```
+doc/game-design/
+├── README.md            # Overview and index
+├── characters.md        # Hero classes, stats, progression, components
+├── enemies.md           # Enemy tiers, boss mechanics, components
+├── combat.md            # Combat loop, damage formulas, targeting
+├── skills.md            # Hero and enemy skills, components
+├── status-effects.md    # Frozen, poisoned, stunned, etc. and their components
+├── encounters.md        # Encounter structure, wave progression, scaling
+├── scoring.md           # Score formula, KPIs, scoring components
+├── game-modes.md        # Game modes and scoring rule configurations
+└── simulation.md        # Playtesting harness: parallel runs, balance tooling
+```
+
+See [game-design/README.md](game-design/README.md) for the full index.
+
 ## Getting Started
 
 - **Language Designers**: Start with [language/README.md](language/README.md)
 - **Compiler Developers**: Start with [../packages/blink-compiler-ts/README.md](../packages/blink-compiler-ts/README.md)
 - **Engine Developers**: Start with [ir-specification.md](ir-specification.md) and use examples in [../game/ir/](../game/ir/)
-- **Game Designers**: See [summary.md](summary.md) for game concepts
+- **Game Designers**: Start with [game-design/README.md](game-design/README.md)
 - **All Developers**: Read [hie/README.md](hie/README.md) to understand architecture enforcement
