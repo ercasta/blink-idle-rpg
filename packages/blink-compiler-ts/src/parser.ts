@@ -85,7 +85,7 @@ export class Parser {
       case TokenKind.Module:
         return this.parseModuleDef();
       case TokenKind.Let:
-        // Entity definitions: let name: id = new entity { ... }
+        // Entity definitions: let name: id = new entity { ... } or let name = new entity { ... }
         return this.parseEntityDeclaration();
       case TokenKind.Entity:
         // Legacy entity syntax: entity { ... } or entity @name { ... }
@@ -99,14 +99,14 @@ export class Parser {
         throw new ParseError(
           token.span.start,
           `Unexpected token '${token.text}' at position ${token.span.start}. ` +
-          `Entities must be declared with: let name: id = new entity { ... }`
+          `Entities can be declared as: let name: id = new entity { ... } or name = new entity { ... }`
         );
       }
       default:
         throw new ParseError(
           token.span.start,
           `Unexpected token '${token.text}' at position ${token.span.start}. ` +
-          `Entities must be declared with: let name: id = new entity { ... }`
+          `Entities can be declared as: let name: id = new entity { ... } or name = new entity { ... }`
         );
     }
   }
