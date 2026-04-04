@@ -1,0 +1,226 @@
+// Party Configuration BCL
+// Complete party setup for Classic RPG
+
+module my_party
+
+// === PARTY COMPOSITION ===
+
+party {
+    warrior {
+        name: "Sir Braveheart"
+        class: "Warrior"
+        stats {
+            strength: 16
+            dexterity: 10
+            intelligence: 8
+            constitution: 14
+            wisdom: 8
+        }
+        equipment {
+            weapon: "longsword"
+            armor: "plate_mail"
+            accessory: "ring_of_protection"
+        }
+    }
+    
+    mage {
+        name: "Elara Flamecaster"
+        class: "Mage"
+        stats {
+            strength: 6
+            dexterity: 12
+            intelligence: 18
+            constitution: 8
+            wisdom: 14
+        }
+        equipment {
+            weapon: "staff_of_fire"
+            armor: "arcane_robes"
+            accessory: "amulet_of_mana"
+        }
+    }
+    
+    rogue {
+        name: "Shadow"
+        class: "Rogue"
+        stats {
+            strength: 10
+            dexterity: 18
+            intelligence: 10
+            constitution: 10
+            wisdom: 8
+        }
+        equipment {
+            weapon: "twin_daggers"
+            armor: "leather_armor"
+            accessory: "cloak_of_shadows"
+        }
+    }
+    
+    cleric {
+        name: "Brother Aldric"
+        class: "Cleric"
+        stats {
+            strength: 10
+            dexterity: 8
+            intelligence: 12
+            constitution: 12
+            wisdom: 18
+        }
+        equipment {
+            weapon: "holy_mace"
+            armor: "chainmail"
+            accessory: "holy_symbol"
+        }
+    }
+}
+
+// === GLOBAL STRATEGY SETTINGS ===
+
+strategy {
+    // When to use potions
+    potion_threshold: 0.3
+    
+    // When to flee - balanced strategy (30% avg party health)
+    flee_threshold: 0.3
+    
+    // Priority: survival > dps > utility
+    priority: "balanced"
+}
+
+// === FLEE DECISION LOGIC ===
+
+// Helper: Calculate average party health percentage
+fn calculate_avg_party_health(party: list): float {
+    let total_health = 0.0
+    let total_max_health = 0.0
+    
+    for hero in party {
+        total_health += hero.Health.current
+        total_max_health += hero.Health.max
+    }
+    
+    if total_max_health == 0 {
+        return 0.0
+    }
+    
+    return total_health / total_max_health
+}
+
+// Helper: Count alive heroes
+fn count_alive_heroes(party: list): integer {
+    let count = 0
+    
+    for hero in party {
+        if hero.Health.current > 0 {
+            count += 1
+        }
+    }
+    
+    return count
+}
+
+// Helper: Check if healer is alive
+fn has_alive_healer(party: list): boolean {
+    for hero in party {
+        if hero.Character.class == "Cleric" && hero.Health.current > 0 {
+            return true
+        }
+    }
+    return false
+}
+
+// Helper: Count alive enemies
+fn count_alive_enemies(enemies: list): integer {
+    let count = 0
+    
+    for enemy in enemies {
+        if enemy.Health.current > 0 {
+            count += 1
+        }
+    }
+    
+    return count
+}
+
+// Main flee decision - balanced strategy
+// Flees when party health is low to avoid death penalties (50s vs 10s)
+choice fn should_flee_from_battle(
+    party: list,
+    enemies: list,
+    runStats: RunStats
+): boolean {
+    // Never flee if on cooldown
+    if !runStats.canFlee {
+        return false
+    }
+    
+    let avg_health = calculate_avg_party_health(party)
+    let alive_count = count_alive_heroes(party)
+    let enemy_count = count_alive_enemies(enemies)
+    let healer_alive = has_alive_healer(party)
+    
+    // Flee if average party health below 30% AND multiple enemies
+    // Math: Preventing 3+ deaths (150s) worth fleeing (10s)
+    if avg_health < 0.3 && enemy_count >= 3 {
+        return true
+    }
+    
+    // Flee if healer dead AND health below 50%
+    if !healer_alive && avg_health < 0.5 {
+        return true
+    }
+    
+    // Flee if down to 1 hero
+    if alive_count <= 1 {
+        return true
+    }
+    
+    return false
+}
+
+// === IMPORT CLASS-SPECIFIC STRATEGIES ===
+
+import warrior_skills
+import mage_skills
+import rogue_skills
+import cleric_skills
+
+// === GLOBAL TARGET SELECTION ===
+
+// Priority targeting based on enemy type
+fn enemy_priority(enemy: Character & Enemy): number {
+    // Bosses are high priority
+    if enemy.Enemy.isBoss {
+        return 100
+    }
+    
+    // Higher tier enemies are more dangerous
+    return enemy.Enemy.tier * 20
+}
+
+// Global target selection - focus fire on priority targets
+choice fn select_party_target(
+    allies: list,
+    enemies: list
+): id {
+    let target = enemies[0]
+    let highestPriority = 0
+    
+    for enemy in enemies {
+        let priority = enemy_priority(enemy)
+        
+        // Add bonus for low health enemies (finish them off)
+        let hp_pct = enemy.Health.current / enemy.Health.max
+        if hp_pct < 0.3 {
+            priority = priority + 50
+        }
+        
+        if priority > highestPriority {
+            target = enemy
+            highestPriority = priority
+        }
+    }
+    
+    return target.id
+}

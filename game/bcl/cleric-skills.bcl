@@ -1,0 +1,238 @@
+// Cleric Skill Choices BCL
+// Defines skill selection strategy for the Cleric class
+
+module cleric_skills
+
+// === SKILL TREE DEFINITIONS ===
+// Tier 1 Skills (Level 2+)
+// - heal: Restore health to target (15 mana)
+// - smite: Holy damage to single enemy (10 mana)
+// - bless: Increase ally damage (12 mana)
+
+// Tier 2 Skills (Level 4+)
+// - group_heal: Heal all allies (35 mana)
+// - holy_shield: Absorb damage on ally (25 mana)
+// - divine_light: Damage and heal (30 mana)
+
+// Tier 3 Skills (Level 7+)
+// - resurrection: Revive fallen ally (100 mana)
+// - sanctuary: Make ally immune briefly (60 mana)
+// - divine_storm: Massive holy AoE (80 mana)
+
+// === HELPER FUNCTIONS ===
+
+fn health_percentage(entity): float {
+    return entity.Health.current / entity.Health.max
+}
+
+fn mana_percentage(entity): float {
+    return entity.Mana.current / entity.Mana.max
+}
+
+fn can_cast(character, manaCost): boolean {
+    return character.Mana.current >= manaCost
+}
+
+fn find_most_injured_ally(allies: list): id {
+    let mostInjured = allies[0]
+    let lowestPct = 1.0
+    
+    for ally in allies {
+        let hp_pct = ally.Health.current / ally.Health.max
+        if hp_pct < lowestPct {
+            mostInjured = ally
+            lowestPct = hp_pct
+        }
+    }
+    
+    return mostInjured.id
+}
+
+fn count_injured_allies(allies: list, threshold: float): number {
+    let count = 0
+    for ally in allies {
+        let hp_pct = ally.Health.current / ally.Health.max
+        if hp_pct < threshold {
+            count = count + 1
+        }
+    }
+    return count
+}
+
+// === SKILL CHOICE IMPLEMENTATION ===
+
+// Called when cleric levels up and gains a skill point
+choice fn select_skill_on_levelup(
+    character: Character & Skills,
+    currentLevel: number
+): string {
+    // At level 2, get heal first
+    if currentLevel == 2 {
+        return "heal"
+    }
+    
+    // At level 3, get bless for damage support
+    if currentLevel == 3 {
+        return "bless"
+    }
+    
+    // At level 4, get smite for offense
+    if currentLevel == 4 {
+        return "smite"
+    }
+    
+    // At level 5, get group heal
+    if currentLevel == 5 {
+        return "group_heal"
+    }
+    
+    // At level 6, get holy shield for protection
+    if currentLevel == 6 {
+        return "holy_shield"
+    }
+    
+    // At level 7+, get resurrection
+    if currentLevel >= 7 {
+        return "resurrection"
+    }
+    
+    return "heal"
+}
+
+// === COMBAT SKILL SELECTION ===
+
+// Called each combat round to select which skill to use
+choice fn select_combat_skill(
+    character: Character & Skills & Health & Mana & Combat,
+    allies: list,
+    enemies: list
+): string {
+    let hp_pct = health_percentage(character)
+    let mana_pct = mana_percentage(character)
+    
+    // Check for dead allies that need resurrection
+    for ally in allies {
+        if ally.Health.current <= 0 {
+            if can_cast(character, 100) && character.Skills.skill4 == "resurrection" {
+                return "resurrection"
+            }
+        }
+    }
+    
+    // Emergency self-heal
+    if hp_pct < 0.25 && can_cast(character, 15) {
+        if character.Skills.skill1 == "heal" {
+            return "heal"
+        }
+    }
+    
+    // Check how many allies need healing
+    let injuredCount = count_injured_allies(allies, 0.6)
+    
+    // Multiple allies injured - use group heal
+    if injuredCount >= 2 && can_cast(character, 35) {
+        if character.Skills.skill3 == "group_heal" {
+            return "group_heal"
+        }
+    }
+    
+    // Single ally critically injured - use single target heal
+    for ally in allies {
+        let ally_hp_pct = ally.Health.current / ally.Health.max
+        if ally_hp_pct < 0.3 && can_cast(character, 15) {
+            if character.Skills.skill1 == "heal" {
+                return "heal"
+            }
+        }
+    }
+    
+    // Tank is taking heavy damage - use holy shield
+    for ally in allies {
+        if ally.Character.class == "Warrior" {
+            let ally_hp_pct = ally.Health.current / ally.Health.max
+            if ally_hp_pct < 0.5 && can_cast(character, 25) {
+                if character.Skills.skill3 == "holy_shield" {
+                    return "holy_shield"
+                }
+            }
+        }
+    }
+    
+    // Everyone healthy - use offensive abilities
+    if injuredCount == 0 {
+        // Divine storm on multiple enemies
+        if enemies.count >= 2 && can_cast(character, 80) {
+            if character.Skills.skill4 == "divine_storm" {
+                return "divine_storm"
+            }
+        }
+        
+        // Bless the highest damage ally
+        if can_cast(character, 12) && character.Skills.skill2 == "bless" {
+            return "bless"
+        }
+        
+        // Smite for damage
+        if can_cast(character, 10) && character.Skills.skill2 == "smite" {
+            return "smite"
+        }
+    }
+    
+    // Moderate injuries - divine light for combo heal/damage
+    if can_cast(character, 30) && character.Skills.skill3 == "divine_light" {
+        return "divine_light"
+    }
+    
+    // Low mana - conserve with basic attack
+    return "basic_attack"
+}
+
+// === TARGET SELECTION FOR HEALING ===
+
+choice fn select_heal_target(
+    character: Character,
+    allies: list
+): id? {
+    let critical_threshold = 0.3
+    let heal_threshold = 0.7
+    
+    // First, find critically wounded
+    for ally in allies {
+        let hp_pct = ally.Health.current / ally.Health.max
+        if hp_pct < critical_threshold {
+            return ally.id
+        }
+    }
+    
+    // Then, find anyone needing healing
+    for ally in allies {
+        let hp_pct = ally.Health.current / ally.Health.max
+        if hp_pct < heal_threshold {
+            return ally.id
+        }
+    }
+    
+    // No one needs healing
+    return null
+}
+
+// === TARGET SELECTION FOR ATTACKS ===
+
+// Cleric attacks lowest threat enemy
+choice fn select_attack_target(
+    character: Character,
+    enemies: list
+): id {
+    let target = enemies[0]
+    let lowestThreat = 999999
+    
+    for enemy in enemies {
+        let threat = enemy.Combat.damage * (enemy.Health.current / enemy.Health.max)
+        if threat < lowestThreat {
+            target = enemy
+            lowestThreat = threat
+        }
+    }
+    
+    return target.id
+}

@@ -71,11 +71,15 @@ jobs:
       
       - name: Copy source files for in-browser compilation
         run: |
-          # Copy BRL/BDL source files
+          # Copy BRL source files
           mkdir -p demo-package/brl
-          mkdir -p demo-package/bdl
           cp game/brl/*.brl demo-package/brl/
-          cp game/bdl/*.bdl demo-package/bdl/
+
+          # Copy BDL source files if they exist
+          mkdir -p demo-package/bdl
+          if ls game/bdl/*.bdl 1> /dev/null 2>&1; then
+            cp game/bdl/*.bdl demo-package/bdl/
+          fi
           
           # Copy BCL files
           cp game/bcl/warrior-skills.bcl demo-package/

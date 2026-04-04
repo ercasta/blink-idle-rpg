@@ -85,8 +85,23 @@ export class Parser {
       case TokenKind.Module:
         return this.parseModuleDef();
       case TokenKind.Let:
-        // Entity definitions must use: let name: id = new entity { ... }
+        // Entity definitions: let name: id = new entity { ... }
         return this.parseEntityDeclaration();
+      case TokenKind.Entity:
+        // Legacy entity syntax: entity { ... } or entity @name { ... }
+        return this.parseLegacyEntityDeclaration();
+      case TokenKind.Identifier: {
+        // Legacy named entity syntax: name = new entity { ... }
+        const next = this.peekNext();
+        if (next.kind === TokenKind.Eq) {
+          return this.parseLegacyNamedEntityDeclaration();
+        }
+        throw new ParseError(
+          token.span.start,
+          `Unexpected token '${token.text}' at position ${token.span.start}. ` +
+          `Entities must be declared with: let name: id = new entity { ... }`
+        );
+      }
       default:
         throw new ParseError(
           token.span.start,
@@ -229,13 +244,24 @@ export class Parser {
     this.consume(TokenKind.On, 'on');
     const triggerEvent = this.consume(TokenKind.Identifier, 'event name').text;
     
-    // Mandatory typed event parameter: (paramName: type)
-    this.consume(TokenKind.LParen, '(');
+    // Event parameter: either (paramName: type) or legacy bare paramName (defaults to id)
     const paramStart = this.peek().span.start;
-    const paramName = this.consume(TokenKind.Identifier, 'event parameter name').text;
-    this.consume(TokenKind.Colon, ':');
-    const paramType = this.parseType();
-    this.consume(TokenKind.RParen, ')');
+    let paramName: string;
+    let paramType: AST.TypeExpr;
+
+    if (this.check(TokenKind.LParen)) {
+      // New syntax: (paramName: type)
+      this.advance();
+      paramName = this.consume(TokenKind.Identifier, 'event parameter name').text;
+      this.consume(TokenKind.Colon, ':');
+      paramType = this.parseType();
+      this.consume(TokenKind.RParen, ')');
+    } else {
+      // Legacy syntax: bare paramName, type defaults to id
+      paramName = this.consume(TokenKind.Identifier, 'event parameter name').text;
+      paramType = { type: 'id' };
+    }
+
     const paramEnd = this.tokens[this.pos - 1]?.span.end ?? paramStart;
     
     const eventParam: AST.ParamDef = {
@@ -497,6 +523,81 @@ export class Parser {
     };
   }
 
+  /**
+   * Parse legacy anonymous entity: entity { ... } or entity @name { ... }
+   */
+  private parseLegacyEntityDeclaration(): AST.EntityDef {
+    const start = this.consume(TokenKind.Entity, 'entity').span.start;
+
+    // Optional entity reference name: entity @name { ... }
+    let variable: string | null = null;
+    if (this.check(TokenKind.EntityRef)) {
+      const refToken = this.advance();
+      variable = refToken.text.slice(1); // Remove leading @
+    }
+
+    const components: AST.ComponentInit[] = [];
+    const boundFunctions: AST.BoundFunctionDef[] = [];
+
+    if (this.check(TokenKind.LBrace)) {
+      this.advance();
+      while (!this.check(TokenKind.RBrace) && !this.isAtEnd()) {
+        if (this.check(TokenKind.Dot)) {
+          boundFunctions.push(this.parseBoundFunction());
+        } else {
+          components.push(this.parseComponentInit());
+        }
+      }
+      this.consume(TokenKind.RBrace, '}');
+    }
+
+    const end = this.tokens[this.pos - 1]?.span.end ?? start;
+
+    return {
+      type: 'entity',
+      variable,
+      components,
+      boundFunctions,
+      span: { start, end },
+    };
+  }
+
+  /**
+   * Parse legacy named entity: name = new entity { ... }
+   */
+  private parseLegacyNamedEntityDeclaration(): AST.EntityDef {
+    const start = this.peek().span.start;
+    const variable = this.consume(TokenKind.Identifier, 'entity name').text;
+    this.consume(TokenKind.Eq, '=');
+    this.consume(TokenKind.New, 'new');
+    this.consume(TokenKind.Entity, 'entity');
+
+    const components: AST.ComponentInit[] = [];
+    const boundFunctions: AST.BoundFunctionDef[] = [];
+
+    if (this.check(TokenKind.LBrace)) {
+      this.advance();
+      while (!this.check(TokenKind.RBrace) && !this.isAtEnd()) {
+        if (this.check(TokenKind.Dot)) {
+          boundFunctions.push(this.parseBoundFunction());
+        } else {
+          components.push(this.parseComponentInit());
+        }
+      }
+      this.consume(TokenKind.RBrace, '}');
+    }
+
+    const end = this.tokens[this.pos - 1]?.span.end ?? start;
+
+    return {
+      type: 'entity',
+      variable,
+      components,
+      boundFunctions,
+      span: { start, end },
+    };
+  }
+
   private parseBoundFunction(): AST.BoundFunctionDef {
     const start = this.consume(TokenKind.Dot, '.').span.start;
     const name = this.consume(TokenKind.Identifier, 'function name').text;
@@ -598,9 +699,12 @@ export class Parser {
     const start = this.consume(TokenKind.Let, 'let').span.start;
     const name = this.consume(TokenKind.Identifier, 'variable name').text;
     
-    // Mandatory type annotation
-    this.consume(TokenKind.Colon, ': (type annotation required)');
-    const typeAnnotation = this.parseType();
+    // Optional type annotation: let x: type = ...
+    let typeAnnotation: AST.TypeExpr | null = null;
+    if (this.check(TokenKind.Colon)) {
+      this.advance();
+      typeAnnotation = this.parseType();
+    }
     
     this.consume(TokenKind.Eq, '=');
     const value = this.parseExpression();

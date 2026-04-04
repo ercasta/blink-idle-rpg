@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blink Idle RPG - Demos</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      color: #eee;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+    h1 { color: #e94560; text-align: center; font-size: 2.5rem; margin-bottom: 8px; }
+    .subtitle { text-align: center; color: #888; margin-bottom: 40px; }
+    .demos { display: grid; gap: 20px; }
+    .demo-card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 24px;
+      transition: border-color 0.2s;
+    }
+    .demo-card:hover { border-color: rgba(233,69,96,0.5); }
+    .demo-card h2 { color: #4ade80; margin-top: 0; }
+    .demo-card p { color: #aaa; line-height: 1.6; }
+    .demo-link {
+      display: inline-block;
+      background: linear-gradient(135deg, #e94560, #c23152);
+      color: white;
+      padding: 10px 24px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: bold;
+      margin-top: 12px;
+    }
+    .demo-link:hover { opacity: 0.9; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎮 Blink Idle RPG</h1>
+    <p class="subtitle">Browser demos powered by the Blink Engine</p>
+    <div class="demos">
+      <div class="demo-card">
+        <h2>⚔️ Classic RPG Demo</h2>
+        <p>
+          A classic idle RPG experience with heroes, monsters, and turn-based combat.
+          Features multiple hero classes, enemy tiers, and a boss encounter.
+          Game rules are written in BRL and compiled in-browser.
+        </p>
+        <a href="rpg-demo.html" class="demo-link">Play Demo</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
