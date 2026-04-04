@@ -284,20 +284,6 @@ struct RuleContext {
 }
 ```
 
-### 6.4 BCL Integration
-
-Rules can call BCL choice functions:
-
-```brl
-rule on TurnStart {
-    let target = call_choice("select_attack_target", entity, enemies)
-    schedule AttackEvent {
-        attacker: entity.id
-        target: target
-    }
-}
-```
-
 ---
 
 ## 7. Tracker System

@@ -47,7 +47,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `simple-clicker.brl` - Simple clicker game
 - `simple-combat.ir.json` - Compiled combat IR
 - `classic-rpg.ir.json` - Full RPG system IR
-- BCL (Blink Choice Language) examples for party configuration
 
 ### Known Limitations
 - BRL specification is still in draft form

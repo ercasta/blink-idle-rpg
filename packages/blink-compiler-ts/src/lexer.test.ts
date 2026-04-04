@@ -1,6 +1,6 @@
 /**
  * Lexer Tests for Blink Compiler
- * Tests tokenization of all token types in BRL/BCL/BDL
+ * Tests tokenization of all token types in BRL/BDL
  */
 
 import { tokenize, Token, TokenKind, LexerError } from './lexer';

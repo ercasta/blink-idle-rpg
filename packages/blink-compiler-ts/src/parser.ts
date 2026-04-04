@@ -1,5 +1,5 @@
 /**
- * Parser for Blink Rule Language (BRL/BCL/BDL)
+ * Parser for Blink Rule Language (BRL/BDL)
  * Converts a stream of tokens into an Abstract Syntax Tree (AST).
  */
 

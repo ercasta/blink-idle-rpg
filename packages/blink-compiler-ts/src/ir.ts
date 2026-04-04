@@ -8,7 +8,7 @@
 export interface SourceFile {
   path: string;
   content: string;
-  language: 'brl' | 'bcl' | 'bdl';
+  language: 'brl' | 'bdl';
 }
 
 export interface SourceMap {

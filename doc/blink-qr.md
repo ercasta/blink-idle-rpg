@@ -27,4 +27,6 @@ But in the game interface we won't have brl / bcl / bdl compilation screens (the
 
 The user will have the opportunity to configure his/her hero direcly on mobile, so an extensive, mobile friendly character creation screen must be created. Also the game must allow creating the digital figurines to print, or share with friends on whatsapp / other channels. 
 
-The game right now is in an unfinished / buggy state. We must So we must create a 
+The game right now is in an unfinished / buggy state. 
+
+First perform an analysis of the repository to identify which parts will need to be updated according to this new specification. Create a document to drive the repository cleanup. Propose different options and in general if you have doubts leave Open Issues in the document, for my review

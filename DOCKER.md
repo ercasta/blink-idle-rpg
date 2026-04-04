@@ -47,7 +47,6 @@ docker build -t blink-idle-rpg .
 # Run the container
 docker run -p 3000:3000 \
   -v $(pwd)/game/brl:/workspace/game/brl \
-  -v $(pwd)/game/bcl:/workspace/game/bcl \
   -v $(pwd)/game/ir:/workspace/game/ir \
   -v $(pwd)/game/demos:/workspace/game/demos \
   blink-idle-rpg
@@ -64,16 +63,14 @@ The Docker setup uses volume mapping to allow you to edit game files on your hos
 | Host Directory | Container Directory | Purpose |
 |---------------|---------------------|---------|
 | `./game/brl` | `/workspace/game/brl` | **BRL files** - Edit game rules and logic |
-| `./game/bcl` | `/workspace/game/bcl` | **BCL files** - Edit player AI strategies |
 | `./game/ir` | `/workspace/game/ir` | **IR files** - View compiled game rules |
 | `./game/demos` | `/workspace/game/demos` | **Demo HTML/JS** - Modify demo pages |
 
 ### How to Edit Files
 
 1. **Start the Docker container** using `docker-compose up` or `docker run`
-2. **Edit BRL or BCL files** on your host machine using your favorite text editor:
-   - Edit files in `./game/brl/` (e.g., `simple-combat.brl`)
-   - Edit files in `./game/bcl/` (e.g., `warrior-skills.bcl`)
+2. **Edit BRL files** on your host machine using your favorite text editor:
+   - Edit files in `./game/brl/` (e.g., `classic-rpg.brl`)
 3. **Recompile** the BRL files:
    ```bash
    # Execute a command in the running container
@@ -377,7 +374,6 @@ docker system prune -a
 
 - [Read the main README](README.md) for project overview
 - [View BRL User Guide](doc/language/brl-user-guide.md) to learn the language
-- [View BCL User Guide](doc/language/bcl-user-guide.md) to create AI strategies
 - [Check the demos README](examples/demos/README.md) for demo details
 
 ## Support

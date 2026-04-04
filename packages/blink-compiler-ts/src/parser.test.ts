@@ -1,6 +1,6 @@
 /**
  * Parser Tests for Blink Compiler
- * Tests parsing of all language constructs in BRL/BCL/BDL
+ * Tests parsing of all language constructs in BRL/BDL
  */
 
 import { tokenize } from './lexer';

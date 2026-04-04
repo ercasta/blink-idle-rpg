@@ -21,7 +21,7 @@ See [Architecture Decision: IR and Engine Independence](architecture/ir-decision
 │  ┌─────────────────┐                                                        │
 │  │ TRACK 1         │                                                        │
 │  │ Language Design │                                                        │
-│  │ (BRL/BCL Spec)  │                                                        │
+│  │ (BRL/BDL Spec)  │                                                        │
 │  └────────┬────────┘                                                        │
 │           │                                                                 │
 │           │ defines syntax & semantics                                      │
@@ -37,7 +37,7 @@ See [Architecture Decision: IR and Engine Independence](architecture/ir-decision
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
 │  │                         BLINK IR                                     │   │
 │  │  • Component definitions    • Rule instructions                      │   │
-│  │  • Tracker definitions      • BCL choice functions                   │   │
+│  │  • Tracker definitions      • Initial state (from BDL)               │   │
 │  │  • Format: JSON or Binary   • Versioned contract                     │   │
 │  └────────┬─────────────────────────┬─────────────────────┬────────────┘   │
 │           │                         │                     │                 │
@@ -73,7 +73,7 @@ This means:
 
 ## Track 1: Language Design
 
-**Focus**: Define BRL and BCL specifications
+**Focus**: Define BRL and BDL specifications
 
 ### Owner Requirements
 - Programming language design experience
@@ -82,14 +82,14 @@ This means:
 
 ### Deliverables
 1. BRL specification document
-2. BCL specification document  
+2. BDL specification document
 3. Language examples
 4. Grammar definition (EBNF)
 
 ### Files
 - `doc/language/brl-specification.md`
-- `doc/language/bcl-specification.md`
-- `doc/language/game/`
+- `doc/language/bdl-specification.md`
+- `doc/language/examples/`
 
 ### Dependencies
 - None (can start immediately)
@@ -106,7 +106,7 @@ cat doc/language/README.md
 
 # Work on specifications
 code doc/language/brl-specification.md
-code doc/language/bcl-specification.md
+code doc/language/bdl-specification.md
 
 # Add examples
 mkdir -p doc/language/examples
@@ -465,7 +465,6 @@ pub fn get_diagnostics(source: &str) -> Vec<Diagnostic>;
 - All engines pass IR conformance tests
 
 ### M4: Polish (Week 7-8)
-- BCL support
 - Developer experience
 - Documentation
 - Examples

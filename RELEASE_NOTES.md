@@ -33,7 +33,6 @@ This is the first official release of Blink Idle RPG, featuring an interactive c
 - `simple-combat.ir.json` - Compiled IR version
 - `simple-clicker.brl` - Simple clicker game example
 - `classic-rpg.ir.json` - Full RPG system IR
-- BCL (Blink Choice Language) examples for AI strategies
 
 ## Quick Start
 
@@ -129,7 +128,6 @@ This is an early release with some limitations:
 - Limited number of game examples
 - No save/load functionality in demos
 - Testing framework present but limited coverage
-- BCL (Blink Choice Language) specification not yet complete
 
 ## What's Next
 

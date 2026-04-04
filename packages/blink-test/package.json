@@ -1,7 +1,7 @@
 {
   "name": "@blink/test",
   "version": "0.1.0",
-  "description": "Integrated testing framework for BRL and BCL - test game rules and player choices",
+  "description": "Integrated testing framework for BRL and BDL - test game rules and player choices",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
@@ -14,7 +14,6 @@
     "blink",
     "testing",
     "brl",
-    "bcl",
     "game-rules",
     "idle-rpg"
   ],

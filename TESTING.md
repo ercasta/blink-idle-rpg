@@ -1,19 +1,19 @@
-# Testing Guide - Party Build Leaderboard Feature
+# Testing Guide
 
 ## Overview
-The leaderboard feature is now implemented in BRL/BCL with the HTML serving as UI layer only.
+Game logic is implemented in BRL with the HTML serving as UI layer only.
 
 ## Testing Checklist
 
-### 1. BRL Compilation ✅
+### 1. BRL Compilation
 ```bash
 make compile-brl
 # Should compile without errors
-# Verify game/ir/classic-rpg.ir.json contains RunStats and FleeConfig components
+# Verify game/ir/classic-rpg.ir.json contains expected components
 ```
 
 ### 2. Game Initialization
--- Open `game/demos/classic-rpg.html`
+- Open `game/demos/classic-rpg.html`
 - Select 4 heroes
 - Click "Start Adventure"
 - Verify:
@@ -47,25 +47,7 @@ make compile-brl
   - Leaderboard displays the run
   - Shows completion time, party, stats
 
-### 6. BCL Flee Strategies
-
-**Test with different BCL files**:
-
-**Balanced (party-config.bcl)** - Default:
-- Flees at 30% avg party health
-- Expected: 5-10 retreats, 2-5 deaths
-
-**Conservative (flee-conservative.bcl)**:
-- Flees at 40% health
-- Expected: 10-15 retreats, 0-2 deaths
-- Higher total time due to retreat penalties
-
-**Aggressive (flee-aggressive.bcl)**:
-- Only flees with 1 hero remaining
-- Expected: 0-3 retreats, 5-10 deaths
-- Variable time (fast if few deaths, slow if many)
-
-### 7. Leaderboard UI
+### 6. Leaderboard UI
 - Complete multiple runs
 - Open leaderboard panel
 - Verify:
@@ -124,13 +106,5 @@ Display updated penalties
 ```
 
 ## Known Issues
-- Initial entity targeting may have bugs (from previous implementation)
-- Need to ensure RunStats/FleeConfig entities created at game start
+- Game is currently being restructured; some features may not work as described
 
-## Files Changed
-1. `game/brl/classic-rpg.brl` - Core rules
-2. `game/bcl/party-config.bcl` - Balanced strategy
-3. `game/bcl/flee-conservative.bcl` - Safe strategy
-4. `game/bcl/flee-aggressive.bcl` - Risky strategy
-5. `game/ir/classic-rpg.ir.json` - Compiled output
-6. `game/demos/classic-rpg.html` - UI layer

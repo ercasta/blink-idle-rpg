@@ -1,8 +1,8 @@
 /**
- * @blink/test - Testing Framework for BRL and BCL
+ * @blink/test - Testing Framework for BRL
  * 
  * This package provides an integrated testing framework that allows
- * developers and players to test game rules (BRL) and player choices (BCL).
+ * developers to test game rules (BRL).
  * 
  * Features:
  * - Scenario-based testing with readable DSL

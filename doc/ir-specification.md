@@ -15,10 +15,9 @@
 7. [Functions](#functions)
 8. [Expressions](#expressions)
 9. [Expressions](#expressions)
-10. [Choice Functions (BCL)](#choice-functions-bcl)
-11. [Source Map](#source-map)
-12. [Serialization](#serialization)
-13. [Versioning](#versioning)
+10. [Source Map](#source-map)
+11. [Serialization](#serialization)
+12. [Versioning](#versioning)
 
 ---
 
@@ -56,8 +55,6 @@
   "functions": [...],
   "constants": {...},
   "initial_state": {...},
-  "choice_functions": [...],
-  "choice_points": [...],
   "source_map": {...}
 }
 ```
@@ -74,8 +71,6 @@
 | `functions` | Yes | Helper functions (from BRL) |
 | `constants` | No | Named constants |
 | `initial_state` | No | Initial entities (from BDL) |
-| `choice_functions` | No | Player choice functions (from BCL) |
-| `choice_points` | No | Metadata about customizable choices |
 | `source_map` | No | Original source code for debugging |
 ```
 
@@ -372,68 +367,7 @@ Engines must provide these built-in functions:
 
 ---
 
-## 10. Choice Functions (BCL)
-
-Choice functions are player-customizable decision points compiled from BCL (Blink Choice Language).
-
-### 10.1 Choice Function Definition
-
-```json
-{
-  "choice_functions": [
-    {
-      "id": 0,
-      "name": "select_target",
-      "params": [
-        { "name": "attacker", "type": "entity" },
-        { "name": "enemies", "type": "list" }
-      ],
-      "return_type": "entity",
-      "body": {
-        "type": "call",
-        "function": "first",
-        "args": [
-          { "type": "call", "function": "sort", "args": [...] }
-        ]
-      },
-      "source_location": { "file": "warrior-skills.bcl", "line": 15, "column": 1 }
-    }
-  ]
-}
-```
-
-### 10.2 Choice Points
-
-Choice points are metadata about customizable choices, used by UI editors:
-
-```json
-{
-  "choice_points": [
-    {
-      "id": "select_target",
-      "name": "Target Selection",
-      "signature": "choice fn select_target(attacker: entity_id, enemies: list): entity_id",
-      "docstring": "Choose which enemy to attack based on party strategy",
-      "category": "targeting",
-      "applicable_classes": ["Warrior", "Rogue", "Ranger"],
-      "default_behavior": "Targets the enemy with lowest health"
-    },
-    {
-      "id": "should_flee",
-      "name": "Flee Decision",
-      "signature": "choice fn should_flee(party: list, enemies: list): boolean",
-      "docstring": "Decide when to tactically retreat from combat",
-      "category": "strategy",
-      "applicable_classes": null,
-      "default_behavior": "Flees when party health drops below 30%"
-    }
-  ]
-}
-```
-
----
-
-## 11. Source Map
+## 10. Source Map
 
 The source map contains original source code for debugging and development tools.
 
@@ -449,14 +383,9 @@ The source map contains original source code for debugging and development tools
         "content": "// Classic RPG System\ncomponent Character { ... }"
       },
       {
-        "path": "warrior-skills.bcl",
-        "language": "bcl",
-        "content": "// Warrior targeting strategy\nchoice fn select_target(...)"
-      },
-      {
         "path": "heroes.bdl",
         "language": "bdl",
-        "content": "// Hero definitions\nentity @warrior { ... }"
+        "content": "// Hero definitions\nentity warrior { ... }"
       }
     ]
   }
@@ -485,23 +414,22 @@ Rules, functions, and entities can reference their source location:
 }
 ```
 
-### 11.3 Usage
+### 10.3 Usage
 
 Source maps are optional but recommended for:
 - Integrated development environments (IDE)
 - Step-through debugging
 - Error messages with source context
-- BCL editor showing original code
 
 To include source maps, compile with: `blink-compiler compile --source-map`
 
 ---
 
-## 11.4 Initial State
+## 10.4 Initial State
 
-The `initial_state` section contains entity definitions from BDL files, including their components and bound choice functions.
+The `initial_state` section contains entity definitions from BDL files.
 
-### 11.4.1 Initial State Structure
+### 10.4.1 Initial State Structure
 
 Bound choice functions are stored directly on entities as first-class properties, not in a separate component:
 
@@ -551,9 +479,9 @@ warrior = new entity {
 }
 ```
 
-### 11.4.2 Entity Queries
+### 10.4.2 Entity Queries
 
-BRL/BCL can query entities by component using the `entities having` expression:
+BRL can query entities by component using the `entities having` expression:
 
 ```brl
 let warriors = entities having Character
@@ -571,7 +499,7 @@ This generates an IR call expression:
 }
 ```
 
-### 11.4.3 Bound Functions
+### 10.4.3 Bound Functions
 
 Bound choice functions are defined inline in BDL and stored as first-class properties of entities. When BRL code calls a choice function on an entity, the engine looks up the function directly in the entity's `bound_functions` map.
 
@@ -580,13 +508,13 @@ Bound choice functions are defined inline in BDL and stored as first-class prope
 | `params` | array | Function parameters |
 | `return_type` | string | Return type |
 | `body` | IRExpression | Compiled function body |
-| `source` | string | Original BCL/BDL source (for UI display) |
+| `source` | string | Original BDL source (for UI display) |
 
 **Resolution**: If the called function is not found in the entity's `bound_functions`, a runtime error is raised. There is no fallback mechanism.
 
 ---
 
-## 12. Serialization
+## 11. Serialization
 
 ### 12.1 JSON Schema
 
@@ -644,7 +572,7 @@ Full JSON Schema available at: `schemas/ir-v1.json`
 
 ---
 
-## 13. Versioning
+## 12. Versioning
 
 ### 13.1 Version Format
 

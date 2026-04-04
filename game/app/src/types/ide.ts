@@ -7,7 +7,7 @@ export interface SourceFile {
   id: string;
   name: string;
   content: string;
-  language: 'brl' | 'bcl' | 'bdl';
+  language: 'brl' | 'bdl';
   isDirty: boolean;
 }
 
@@ -124,7 +124,7 @@ export interface IRModule {
 /**
  * Editor tab configuration
  */
-export type EditorTab = 'brl' | 'bcl' | 'bdl' | 'snippet';
+export type EditorTab = 'brl' | 'bdl' | 'snippet';
 
 /**
  * Inspector tab configuration
