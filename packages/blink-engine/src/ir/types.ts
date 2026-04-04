@@ -22,7 +22,7 @@ export interface SourceLocation {
 export interface SourceFile {
   path: string;
   content: string;
-  language: 'brl' | 'bdl';
+  language: 'brl';
 }
 
 /**
@@ -321,11 +321,11 @@ export interface IRBoundFunctions {
 }
 
 /**
- * A choice function bound directly to an entity (from BDL)
+ * A choice function bound directly to an entity (from BRL)
  */
 export interface IRBoundFunction {
   params: IRParam[];
   return_type: IRReturnType;
   body: IRExpression;
-  source?: string; // Original BDL source for UI display
+  source?: string; // Original BRL source for UI display
 }

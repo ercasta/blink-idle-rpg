@@ -1,7 +1,7 @@
 /**
  * Editor Component
  * 
- * A code editor for BRL/BCL/BDL files with error highlighting.
+ * A code editor for BRL/BCL files with error highlighting.
  * Currently uses a plain textarea. See IDE.tsx header comments for
  * future syntax highlighting implementation options.
  */

@@ -8,7 +8,7 @@ The Classic RPG is an idle game where heroes automatically battle waves of enemi
 
 ## Game Configuration
 
-From `game/bdl/game-config.bdl`:
+From `game/brl/game-config.brl`:
 
 | Parameter | Value | Description |
 |-----------|-------|-------------|
@@ -162,9 +162,9 @@ const { compile } = require('./packages/blink-compiler-ts/dist/index.js');
 // Compile game sources
 const sources = [
     { path: 'classic-rpg.brl', content: brlContent, language: 'brl' },
-    { path: 'enemies.bdl', content: enemiesContent, language: 'bdl' },
-    { path: 'heroes.bdl', content: heroesContent, language: 'bdl' },
-    { path: 'game-config.bdl', content: gameConfigContent, language: 'bdl' },
+    { path: 'enemies.brl', content: enemiesContent, language: 'brl' },
+    { path: 'heroes.brl', content: heroesContent, language: 'brl' },
+    { path: 'game-config.brl', content: gameConfigContent, language: 'brl' },
 ];
 const result = compile(sources);
 

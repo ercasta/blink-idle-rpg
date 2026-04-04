@@ -16,7 +16,7 @@ This document describes the playtesting harness: how to run many simulation runs
 
 ```
 SimulationHarness
-  ├── Load IR (compiled BRL + BDL)
+  ├── Load IR (compiled BRL + BRL)
   ├── For each (gameModeId, seed) pair:
   │     └── BlinkGame.create()
   │           ├── loadRulesFromObject(ir)

@@ -27,7 +27,7 @@ export class CodeGenerator {
     this.options = options;
   }
 
-  addSourceFile(path: string, content: string, language: 'brl' | 'bdl'): void {
+  addSourceFile(path: string, content: string, language: 'brl'): void {
     this.sourceFiles.push({ path, content, language });
   }
 

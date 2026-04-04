@@ -85,7 +85,7 @@ defender.Buffs.shieldAmount -= shieldAbsorb
 
 ## Targeting Rules
 
-Each entity has exactly one active target at a time (`Target.entity`). Target selection runs via the entity's **bound choice function** `select_attack_target`, which is defined per hero class or enemy type in BDL.
+Each entity has exactly one active target at a time (`Target.entity`). Target selection runs via the entity's **bound choice function** `select_attack_target`, which is defined per hero class or enemy type in BRL.
 
 Default fallback (no choice function defined):
 - **Heroes**: target the first living enemy in the encounter list.

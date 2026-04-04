@@ -2,7 +2,7 @@
 
 This folder contains the game design documentation for Blink Idle RPG.
 
-Each file covers a focused area of the game design and defines the **logical components** that will eventually be implemented in BRL/BDL. Components listed here are design-level concepts — not yet code.
+Each file covers a focused area of the game design and defines the **logical components** that will eventually be implemented in BRL. Components listed here are design-level concepts — not yet code.
 
 ## Design Philosophy
 
@@ -35,10 +35,10 @@ Components are named in `PascalCase`. Each component definition lists:
 - **Purpose** — which entity/entities carry this component.
 - **Related events** — events that read or modify this component.
 
-## Relationship to BRL/BDL
+## Relationship to BRL
 
-This document does **not** define BRL rules or BDL data yet. It defines the logical model that BRL/BDL will eventually implement. When implementation begins:
+This document does **not** define BRL rules or BRL data yet. It defines the logical model that BRL will eventually implement. When implementation begins:
 
 - Components defined here → `component` declarations in BRL.
-- Entity definitions here → entity initializations in BDL.
+- Entity definitions here → entity initializations in BRL.
 - Events listed here → event triggers in BRL rules.

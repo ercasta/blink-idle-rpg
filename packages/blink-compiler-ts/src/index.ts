@@ -1,7 +1,7 @@
 /**
  * Blink TypeScript Compiler
  *
- * A TypeScript-only compiler for BRL/BDL languages.
+ * A TypeScript-only compiler for BRL language.
  * Compiles source files directly in the browser to IR JSON format.
  */
 
@@ -22,7 +22,7 @@ export * as IR from './ir';
 export interface SourceFile {
   path: string;
   content: string;
-  language: 'brl' | 'bdl';
+  language: 'brl';
 }
 
 export interface CompileOptions {
@@ -177,11 +177,11 @@ export function compile(sources: SourceFile[], options: CompileOptions = {}): Co
  */
 export function compileString(
   source: string,
-  language: 'brl' | 'bdl' = 'brl',
+  language: 'brl' = 'brl',
   options: CompileOptions = {}
 ): CompileResult {
   return compile([{
-    path: `input.${language}`,
+    path: `input.brl`,
     content: source,
     language,
   }], options);

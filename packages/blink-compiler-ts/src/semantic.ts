@@ -26,7 +26,7 @@ interface Scope {
 }
 
 /**
- * Semantic analyzer for BRL/BDL
+ * Semantic analyzer for BRL
  */
 export class SemanticAnalyzer {
   private components: Map<string, ComponentInfo> = new Map();

@@ -12,7 +12,7 @@ Transform the current developer-oriented Blink Idle RPG into a streamlined mobil
 ## Current State Assessment
 
 ### What works
-- TypeScript compiler (BRL/BDL → IR) is functional
+- TypeScript compiler (BRL → IR) is functional
 - JavaScript engine (ECS, timeline, rule execution) works
 - Game rules (classic-rpg.brl) define complete combat system (3 tiers, wave-based, boss fight)
 - Enemy definitions and game config are solid
@@ -26,7 +26,7 @@ Transform the current developer-oriented Blink Idle RPG into a streamlined mobil
 - No QR/figurine functionality
 
 ### What must fundamentally change for Blink-QR
-- Hero definition: from BDL entity templates → compact binary (~140 bytes)
+- Hero definition: from BRL entity templates → compact binary (~140 bytes)
 - Player interaction: from code editing → mobile UI sliders/pickers
 - Decision logic: 24 "behaviour bytes" per game phase drive hero AI
 - IDE removed from player app (kept for future "Studio" version)
@@ -37,7 +37,7 @@ Transform the current developer-oriented Blink Idle RPG into a streamlined mobil
 ## Work Areas (Parallel Tracks)
 
 ### Track 1: Language & Engine
-- BRL (game rules) and BDL (game data) remain the core languages
+- BRL is the single language for both game rules and game data
 - No separate BCL — decision logic is encoded in the QR hero binary format as "behaviour bytes"
 - Engine improvements for mobile performance
 - Compiler cleanup and test suite
@@ -169,8 +169,8 @@ Goal: Encode a complete hero in a URL-safe string fitting in a QR code.
 - packages/blink-compiler-ts/src/ — Compiler (for Studio)
 - packages/blink-test/ — Test framework
 - game/brl/classic-rpg.brl — Combat rules
-- game/bdl/enemies.bdl — Enemy definitions
-- game/bdl/game-config.bdl — Game config
+- game/brl/enemies.brl — Enemy definitions
+- game/brl/game-config.brl — Game config
 
 ### Modify
 - game/app/src/App.tsx — Remove IDE split-pane, add router

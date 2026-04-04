@@ -103,5 +103,5 @@ Multiple engine implementations can exist:
 
 ## Related Documentation
 
-- [Language Specification](../language/README.md) - BRL/BDL reference
+- [Language Specification](../language/README.md) - BRL reference
 - [Project Summary](../summary.md) - High-level overview

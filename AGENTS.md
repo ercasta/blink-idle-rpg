@@ -5,7 +5,7 @@
 **NEVER version derived/generated code.** Generated files like JavaScript bundles (`.bundle.js`), compiled outputs, and IR files (`.ir.json`) must NOT be committed to the repository.
 
 - **Generated JavaScript files** (e.g., `*.bundle.js`) must be built from their TypeScript sources using the build process
-- **IR files** (`.ir.json`) must be compiled from BRL/BDL source files
+- **IR files** (`.ir.json`) must be compiled from BRL source files
 - **Reason:** Versioning generated files leads to stale file issues, merge conflicts, and unnecessarily large repository size
 
 If code fails to load due to missing generated files, fix the build process or documentation to ensure users know to build first (e.g., run `make dev-setup`).

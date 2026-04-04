@@ -6,8 +6,7 @@ An idle RPG where you complete the entire game in a blink... more or less!
 
 In Blink you define your RPG party and some decision rules, then the entire game runs without interaction. The system uses:
 
-- **BRL (Blink Rule Language)**: Game developers define game rules, components, and events
-- **BDL (Blink Data Language)**: Content creators define game entities and data
+- **BRL (Blink Rule Language)**: Game developers define game rules, components, events, and game data (entities)
 - **Multiple Engines**: Rust, JavaScript, and Batch engines execute compiled IR
 
 ## Project Status
@@ -18,11 +17,11 @@ This project is in early development with parallel work streams:
 
 | Track | Status | Description |
 |-------|--------|-------------|
-| Language Design | 📝 Spec Draft | BRL/BDL specifications |
+| Language Design | 📝 Spec Draft | BRL specification |
 | **Compiler** | ✅ Scaffold | Lexer, Parser, IR Generator |
 | Rust Engine | 📋 Planned | Native performance engine |
 | **JS Engine** | ✅ Implemented | Browser-based engine |
-| **Testing Framework** | ✅ Implemented | Integrated testing for BRL/BDL |
+| **Testing Framework** | ✅ Implemented | Integrated testing for BRL |
 | Batch Engine | 📋 Planned | Balance testing engine |
 | Dev Tools | 📋 Planned | LSP and VS Code extension |
 
@@ -41,8 +40,8 @@ docker compose up --build
 # Open http://localhost:3000 in your browser
 ```
 
-**Volume Mapping:** The Docker setup maps local folders so you can edit BRL and BDL files on your host machine:
-- Edit files in `./game/brl/` and `./game/bdl/`
+**Volume Mapping:** The Docker setup maps local folders so you can edit BRL files on your host machine:
+- Edit files in `./game/brl/`
 - Recompile in the container: `docker compose exec blink-app blink-compiler compile -i /workspace/game/brl/YOUR_FILE.brl -o /workspace/game/ir/YOUR_FILE.ir.json --pretty`
 - Refresh your browser to see changes
 
@@ -118,7 +117,7 @@ The demos are automatically deployed to GitHub Pages on every push to the main b
 The GitHub Pages deployment includes:
 - All interactive demos (combat demo, RPG demo)
 - Pre-compiled game files (IR)
-- Downloadable source files (BRL, BDL)
+- Downloadable source files (BRL)
 
 **Note:** The first deployment requires enabling GitHub Pages in the repository settings:
 1. Go to repository Settings → Pages
@@ -180,7 +179,7 @@ npx @blink/compiler-ts compile -i ../../examples/brl/simple-clicker.brl --pretty
 
 #### Building
 
-The `@blink/test` package provides an integrated testing framework for BRL and BDL:
+The `@blink/test` package provides an integrated testing framework for BRL:
 
 ```bash
 cd packages/blink-test
@@ -255,11 +254,10 @@ All workflows can be manually triggered using the "workflow_dispatch" event.
 - [Development Tracks](doc/DEVELOPMENT_TRACKS.md) - Parallel development guide
 - [IR Specification](doc/ir-specification.md) - Central contract for engines
 - [BRL Specification](doc/language/brl-specification.md) - BRL language reference
-- [BDL Specification](doc/language/bdl-specification.md) - BDL language reference
 - [Engine Architecture](doc/engine/architecture.md) - How engines work
 - [Browser Engine](doc/engine/browser-engine.md) - JavaScript engine details
 - [JS Engine README](packages/blink-engine/README.md) - Engine API documentation
-- [Testing Framework](packages/blink-test/README.md) - Testing framework for BRL/BDL
+- [Testing Framework](packages/blink-test/README.md) - Testing framework for BRL
 
 ## License
 

@@ -8,33 +8,16 @@ Blink uses two domain-specific languages:
 
 | Language | Full Name | Purpose | Users |
 |----------|-----------|---------|-------|
-| **BRL** | Blink Rule Language | Define game rules, components, events | Game developers |
-| **BDL** | Blink Data Language | Define game data (entities) | Content creators |
+| **BRL** | Blink Rule Language | Define game rules, components, events, and game data (entities) | Game developers and content creators |
+| **BCL** | Blink Choice Language | Customize AI choice functions | Players |
 
-## Relationship Between Languages
+## BRL: One Language for Everything
 
-BDL is a **subset** of BRL focused purely on data definition:
+BRL handles both game logic and game data in a single, unified language:
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                   BRL (Full Language)                   │
-│  ┌────────────────────────────────────────────────────┐ │
-│  │  Game Developer Features:                         │ │
-│  │  • Component definitions                          │ │
-│  │  • Rules (triggered by events)                    │ │
-│  │  • Functions and modules                          │ │
-│  │  • Entity creation and mutation                   │ │
-│  │  • Choice functions (bound to entities in BDL)   │ │
-│  └────────────────────────────────────────────────────┘ │
-│                                                         │
-│  ┌────────────────────────────────────────────────────┐ │
-│  │  BDL (Data Subset)                                │ │
-│  │  • Entity creation with literal values            │ │
-│  │  • Component value initialization                 │ │
-│  │  • Bound choice functions (inline BRL fragments)  │ │
-│  └────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────┘
-```
+- **Game rules**: Component definitions, rules triggered by events, functions
+- **Game data**: Entity creation with component initialization and bound choice functions
+- **Choice functions**: Decision-making logic that can be bound to individual entities
 
 ## Documents in This Folder
 
@@ -44,7 +27,6 @@ BDL is a **subset** of BRL focused purely on data definition:
 |----------|-------------|--------|
 | [brl-specification.md](brl-specification.md) | Complete BRL language spec | Draft |
 | [brl-user-guide.md](brl-user-guide.md) | BRL User Guide - Tutorials and examples | Draft |
-| [bdl-specification.md](bdl-specification.md) | BDL language spec (data subset) | Draft |
 
 ### Examples
 
@@ -54,28 +36,19 @@ BDL is a **subset** of BRL focused purely on data definition:
 
 ## Quick Start
 
-### For Game Developers (BRL)
+### For Game Developers
 
-Creating game rules? Start here:
+Creating game rules and data? Start here:
 
 1. Read the [BRL User Guide](brl-user-guide.md)
 2. Check out [BRL examples](../../game/brl/)
 3. Reference the [BRL Specification](brl-specification.md) when needed
 
-### For Content Creators (BDL)
-
-Defining game data? Start here:
-
-1. Read the [BDL Specification](bdl-specification.md)
-2. Check out [BDL examples](../../game/bdl/)
-3. Define heroes, enemies, and configuration
-4. BDL is simple — only entity creation with literal values and optional bound functions
-
 ## Core Concepts
 
 ### Entity-Component System (ECS)
-Both languages operate on an ECS architecture:
-- **Entities**: Unique identifiers (ids) representing game objects
+BRL operates on an ECS architecture:
+- **Entities**: Unique identifiers representing game objects
 - **Components**: Data structures attached to entities
 - **Rules**: BRL rules triggered by events that process entities
 
@@ -91,14 +64,4 @@ Base types supported:
 ## Related Documentation
 
 - [Engine Architecture](../engine/architecture.md) - How the engine executes BRL
-- [Project Summary](../summary.md) - High-level project overview
-
-1. **Consistency**: Ensure BCL remains a true subset of BRL
-2. **Simplicity**: BCL should be accessible to players
-3. **Expressiveness**: BRL must handle all game mechanics
-4. **Performance**: Consider compilation/interpretation implications
-
-## Related Documentation
-
-- [Engine Architecture](../engine/architecture.md) - How the engine executes BRL/BCL
 - [Project Summary](../summary.md) - High-level project overview

@@ -70,7 +70,7 @@
 | `rules` | Yes | Game rules (from BRL) |
 | `functions` | Yes | Helper functions (from BRL) |
 | `constants` | No | Named constants |
-| `initial_state` | No | Initial entities (from BDL) |
+| `initial_state` | No | Initial entities (from BRL data files) |
 | `source_map` | No | Original source code for debugging |
 ```
 
@@ -383,8 +383,8 @@ The source map contains original source code for debugging and development tools
         "content": "// Classic RPG System\ncomponent Character { ... }"
       },
       {
-        "path": "heroes.bdl",
-        "language": "bdl",
+        "path": "heroes.brl",
+        "language": "brl",
         "content": "// Hero definitions\nentity warrior { ... }"
       }
     ]
@@ -427,7 +427,7 @@ To include source maps, compile with: `blink-compiler compile --source-map`
 
 ## 10.4 Initial State
 
-The `initial_state` section contains entity definitions from BDL files.
+The `initial_state` section contains entity definitions from BRL files.
 
 ### 10.4.1 Initial State Structure
 
@@ -467,10 +467,10 @@ Bound choice functions are stored directly on entities as first-class properties
 }
 ```
 
-**Note**: The `variable` field replaces the old `name` field (and the `@name` syntax in BDL).
-Entities are nameless; variables reference them. The new BDL syntax is:
+**Note**: The `variable` field replaces the old `name` field (and the `@name` syntax in BRL).
+Entities are nameless; variables reference them. The new entity syntax is:
 
-```bdl
+```brl
 warrior = new entity {
     Character {
         name: "Sir Braveheart"
@@ -501,14 +501,14 @@ This generates an IR call expression:
 
 ### 10.4.3 Bound Functions
 
-Bound choice functions are defined inline in BDL and stored as first-class properties of entities. When BRL code calls a choice function on an entity, the engine looks up the function directly in the entity's `bound_functions` map.
+Bound choice functions are defined inline in BRL and stored as first-class properties of entities. When BRL code calls a choice function on an entity, the engine looks up the function directly in the entity's `bound_functions` map.
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `params` | array | Function parameters |
 | `return_type` | string | Return type |
 | `body` | IRExpression | Compiled function body |
-| `source` | string | Original BDL source (for UI display) |
+| `source` | string | Original BRL source (for UI display) |
 
 **Resolution**: If the called function is not found in the entity's `bound_functions`, a runtime error is raised. There is no fallback mechanism.
 

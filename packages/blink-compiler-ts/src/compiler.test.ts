@@ -46,7 +46,7 @@ describe('End-to-End Compiler', () => {
         entity {
           Health { current: 100 max: 100 }
         }
-      `, 'bdl');
+      `, 'brl');
       
       expect(result.errors).toHaveLength(0);
       expect(result.ir.initial_state?.entities).toHaveLength(1);
@@ -75,14 +75,14 @@ describe('End-to-End Compiler', () => {
           language: 'brl',
         },
         {
-          path: 'entities.bdl',
+          path: 'entities.brl',
           content: `
             entity {
               Health { current: 100 max: 100 }
               Combat { damage: 20 }
             }
           `,
-          language: 'bdl',
+          language: 'brl',
         },
       ]);
       
@@ -240,7 +240,7 @@ describe('End-to-End Compiler', () => {
             return target
           }
         }
-      `, 'bdl');
+      `, 'brl');
       
       expect(result.errors).toHaveLength(0);
       expect(result.ir.initial_state?.entities).toHaveLength(1);

@@ -13,7 +13,7 @@ This document describes the game mode system: how modes are defined, how they al
 
 ## Mode Selection
 
-At game start, the player (or the simulation harness) selects exactly one game mode. The selected mode's `ScoringRules` and `SpawnConfig` override the defaults defined in `game-config.bdl`.
+At game start, the player (or the simulation harness) selects exactly one game mode. The selected mode's `ScoringRules` and `SpawnConfig` override the defaults defined in `game-config.brl`.
 
 Note: boss spawns and tier progression are driven by the global kill count (`GameState.enemiesDefeated`) — see the Combat Kill System for exact behaviour.
 
@@ -121,7 +121,7 @@ Note: boss spawns and tier progression are driven by the global kill count (`Gam
 ## Adding a New Game Mode
 
 To add a new mode:
-1. Create a new BDL file (e.g., `game/bdl/scenario-mymode.bdl`) that initialises a `GameMode` entity and overrides `ScoringRules`, `SpawnConfig`, and `FleeConfig` entities.
+1. Create a new BRL file (e.g., `game/brl/scenario-mymode.brl`) that initialises a `GameMode` entity and overrides `ScoringRules`, `SpawnConfig`, and `FleeConfig` entities.
 2. Register the mode ID in the `GameModeRegistry`.
 3. No BRL rule changes are required unless the mode needs new events or behaviours.
 
