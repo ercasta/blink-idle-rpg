@@ -196,8 +196,15 @@ export function HeroGallery({ onClose }: Props) {
     setGallery([]);
   }, []);
 
+  const handleOverlayClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.target === e.currentTarget) onClose();
+    },
+    [onClose]
+  );
+
   return (
-    <div className="figurine-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="figurine-overlay" onClick={handleOverlayClick}>
       <div className="gallery-modal">
         <div className="figurine-modal-header">
           <h3>📚 Hero Gallery</h3>

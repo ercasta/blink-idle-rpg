@@ -166,7 +166,7 @@ export function embedPngMetadata(
     // Convert to binary string in 8 KiB chunks to avoid call-stack limits on large PNGs
     const chunks: string[] = [];
     for (let i = 0; i < out.length; i += 8192) {
-      chunks.push(String.fromCharCode(...(out.subarray(i, i + 8192) as unknown as number[])));
+      chunks.push(String.fromCharCode(...Array.from(out.subarray(i, i + 8192))));
     }
     return 'data:image/png;base64,' + btoa(chunks.join(''));
   } catch {

@@ -135,8 +135,15 @@ export function HeroFigurine({ hero, onClose, onSaved }: Props) {
     onSaved?.();
   }, [hero, onSaved]);
 
+  const handleOverlayClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.target === e.currentTarget) onClose();
+    },
+    [onClose]
+  );
+
   return (
-    <div className="figurine-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="figurine-overlay" onClick={handleOverlayClick}>
       <div className="figurine-modal">
         {/* Header */}
         <div className="figurine-modal-header">
