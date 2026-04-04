@@ -103,6 +103,12 @@ const DIFFICULTY_COLORS: Record<string, string> = {
   Hard: '#f87171',
 };
 
+/** Maximum number of entries kept in the combat log. */
+const MAX_LOG_ENTRIES = 80;
+
+/** Number of engine steps executed per UI tick (~100 ms). */
+const STEPS_PER_INTERVAL = 10;
+
 // ─── Local hero storage ───────────────────────────────────────────────────────
 
 const HEROES_KEY = 'blink-rpg-heroes';
@@ -118,6 +124,14 @@ function loadCustomHeroes(): Character[] {
 
 function saveCustomHeroes(heroes: Character[]): void {
   localStorage.setItem(HEROES_KEY, JSON.stringify(heroes));
+}
+
+function generateDefaultHeroName(heroClass: string, difficulty: string): string {
+  const suffix =
+    difficulty === 'Easy' ? 'Defender' :
+    difficulty === 'Hard' ? 'Slayer' :
+    'Wanderer';
+  return `${heroClass} ${suffix} ${Math.floor(Math.random() * 90) + 10}`;
 }
 
 function createHeroFromClass(cls: ClassDef, name: string): Character {
@@ -373,8 +387,7 @@ function CreateHeroScreen({ onBack, onCreate }: CreateHeroProps) {
 
   const handleCreate = () => {
     if (!selectedClass) return;
-    const name = heroName.trim() ||
-      `${selectedClass.name} ${selectedClass.difficulty === 'Easy' ? 'Defender' : selectedClass.difficulty === 'Hard' ? 'Slayer' : 'Wanderer'} ${Math.floor(Math.random() * 90) + 10}`;
+    const name = heroName.trim() || generateDefaultHeroName(selectedClass.name, selectedClass.difficulty);
     onCreate(createHeroFromClass(selectedClass, name));
   };
 
@@ -768,7 +781,7 @@ function GameScreen({ onReturnToTitle }: GameScreenProps) {
   const appendLog = useCallback((msg: string) => {
     setLog((prev) => {
       const next = [...prev, msg];
-      return next.length > 80 ? next.slice(next.length - 80) : next;
+      return next.length > MAX_LOG_ENTRIES ? next.slice(next.length - MAX_LOG_ENTRIES) : next;
     });
   }, []);
 
@@ -853,7 +866,7 @@ function GameScreen({ onReturnToTitle }: GameScreenProps) {
     // Run simulation loop
     intervalRef.current = setInterval(() => {
       if (!engine) return;
-      for (let i = 0; i < 10; i++) {
+      for (let i = 0; i < STEPS_PER_INTERVAL; i++) {
         if (!engine.hasEvents()) break;
         engine.step();
       }
@@ -881,7 +894,7 @@ function GameScreen({ onReturnToTitle }: GameScreenProps) {
         // resume
         intervalRef.current = setInterval(() => {
           if (!engine) return;
-          for (let i = 0; i < 10; i++) {
+          for (let i = 0; i < STEPS_PER_INTERVAL; i++) {
             if (!engine.hasEvents()) break;
             engine.step();
           }
