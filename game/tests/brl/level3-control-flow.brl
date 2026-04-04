@@ -73,7 +73,7 @@ rule complex_check on ComplexCheck(evt: id) {
 
 // For loop with list literal
 rule spawn_multiple on SpawnWave(evt: id) {
-    let indices = [0, 1, 2, 3, 4]
+    let indices: list<integer> = [0, 1, 2, 3, 4]
     for i in indices {
         let _s: id = schedule [delay: 0.1 * i] SpawnEnemy { index: i }
     }
@@ -81,7 +81,7 @@ rule spawn_multiple on SpawnWave(evt: id) {
 
 // For loop with entities having
 rule damage_all_enemies on AreaDamage(evt: id) {
-    let enemies = entities having Enemy
+    let enemies: list<id> = entities having Enemy
     for enemy in enemies {
         enemy.Health.current -= 20
     }
@@ -89,9 +89,9 @@ rule damage_all_enemies on AreaDamage(evt: id) {
 
 // Let statement with expression
 rule calculate_damage on CalculateDamage(evt: id) {
-    let baseDamage = 10
-    let modifier = 1.5
-    let totalDamage = baseDamage * modifier
+    let baseDamage: integer = 10
+    let modifier: float = 1.5
+    let totalDamage: float = baseDamage * modifier
     entity.Health.current -= totalDamage
 }
 
@@ -109,7 +109,7 @@ rule wave_progression on WaveComplete(evt: id) {
 
 // Loop with conditional inside
 rule process_enemies on ProcessEnemies(evt: id) {
-    let enemies = entities having Enemy
+    let enemies: list<id> = entities having Enemy
     for enemy in enemies {
         if enemy.Enemy.tier > 2 {
             let _b: id = schedule BossAlert { boss: enemy }

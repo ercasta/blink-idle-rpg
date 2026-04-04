@@ -57,37 +57,37 @@ fn calculate_percentage(current: integer, maximum: integer): integer {
 
 // Rule using user-defined function
 rule apply_damage on DamageCalculate(evt: id) {
-    let base = entity.Combat.damage
-    let bonus = entity.Buffs.damageBonus
-    let total = calculate_damage(base, bonus)
+    let base: integer = entity.Combat.damage
+    let bonus: integer = entity.Buffs.damageBonus
+    let total: integer = calculate_damage(base, bonus)
     let _r: id = schedule DamageResult { damage: total }
 }
 
 // Rule using built-in min function
 rule cap_health on HealReceived(evt: id) {
-    let newHealth = entity.Health.current + 50
-    let cappedHealth = min(newHealth, entity.Health.max)
+    let newHealth: integer = entity.Health.current + 50
+    let cappedHealth: integer = min(newHealth, entity.Health.max)
     entity.Health.current = cappedHealth
 }
 
 // Rule using built-in max function
 rule prevent_negative_health on DamageReceived(evt: id) {
-    let newHealth = entity.Health.current - 30
+    let newHealth: integer = entity.Health.current - 30
     entity.Health.current = max(newHealth, 0)
 }
 
 // Rule using len function
 rule count_entities on CountEntities(evt: id) {
-    let healthEntities = entities having Health
-    let count = len(healthEntities)
+    let healthEntities: list<id> = entities having Health
+    let count: integer = len(healthEntities)
     let _c: id = schedule EntityCount { count: count }
 }
 
 // Rule with complex binary expressions
 rule calculate_stats on StatsCalc(evt: id) {
-    let baseDamage = entity.Stats.strength * 2 + entity.Stats.dexterity / 2
-    let baseDefense = entity.Stats.strength / 2 + entity.Stats.dexterity
-    let magicPower = entity.Stats.intelligence * 3
+    let baseDamage: integer = entity.Stats.strength * 2 + entity.Stats.dexterity / 2
+    let baseDefense: integer = entity.Stats.strength / 2 + entity.Stats.dexterity
+    let magicPower: integer = entity.Stats.intelligence * 3
     let _s: id = schedule StatsResult {
         damage: baseDamage
         defense: baseDefense
@@ -97,9 +97,9 @@ rule calculate_stats on StatsCalc(evt: id) {
 
 // Rule with comparison expressions
 rule check_critical on CritCheck(evt: id) {
-    let roll = 0.5
+    let roll: float = 0.5
     if roll < entity.Combat.critChance {
-        let damage = entity.Combat.damage * entity.Combat.critMultiplier
+        let damage: float = entity.Combat.damage * entity.Combat.critMultiplier
         let _c: id = schedule CriticalHit { damage: damage }
     } else {
         let _n: id = schedule NormalHit { damage: entity.Combat.damage }
@@ -109,7 +109,7 @@ rule check_critical on CritCheck(evt: id) {
 // Rule with has component expression
 rule check_buffs on BuffCheck(evt: id) {
     if entity has Buffs {
-        let totalBonus = entity.Buffs.damageBonus + entity.Buffs.defenseBonus
+        let totalBonus: integer = entity.Buffs.damageBonus + entity.Buffs.defenseBonus
         let _b: id = schedule BuffsActive { totalBonus: totalBonus }
     } else {
         let _n: id = schedule NoBuffs { }
@@ -118,7 +118,7 @@ rule check_buffs on BuffCheck(evt: id) {
 
 // Rule with unary expression
 rule check_active on ActivityCheck(evt: id) {
-    let isInactive = entity.Health.current == 0
+    let isInactive: boolean = entity.Health.current == 0
     if isInactive {
         let _e: id = schedule EntityDead { target: entity }
     }
@@ -126,9 +126,9 @@ rule check_active on ActivityCheck(evt: id) {
 
 // Rule with index access
 rule process_first on ProcessFirst(evt: id) {
-    let healthEntities = entities having Health
+    let healthEntities: list<id> = entities having Health
     if len(healthEntities) > 0 {
-        let first = healthEntities[0]
+        let first: id = healthEntities[0]
         first.Health.current -= 10
     }
 }

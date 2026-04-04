@@ -51,3 +51,58 @@
 - Optional enhancements:
   - NFC tag on the figurine with the same link (for devices that support it).
   - Seed-based hero generation so QR can contain a short seed/string instead of full JSON.
+---
+
+## Proposed canonical encoding (documentation-only)
+
+This section defines the concrete information content that can be carried in a 512-byte figurine payload. It is intended for discussion and review — implementation is paused.
+
+Canonical fields
+- name: fixed ASCII, max 25 bytes (name_len:1 + name)
+- class_id: 1 byte
+- stats: sequence of (stat_id:1, value:1) pairs
+- skills: sequence of (skill_id:1, level:1) pairs
+- embedding: raw byte vector (0..255 values), prefixed with length (1 byte)
+- header: magic(2), version(1), flags(1), payload_len(2), crc16(2)
+- footer: optional crc16 (2 bytes)
+
+Canonical layout (human-readable)
+- Header (8 bytes): magic(2), version(1), flags(1), payload_len(2), crc16(2)
+- Body:
+  - name_len(1) + name (up to 25 bytes)
+  - class_id(1)
+  - stats_count(1) + stats[stat_id(1), value(1)] * stats_count
+  - skills_count(1) + skills[skill_id(1), level(1)] * skills_count
+  - embed_len(1) + embed_bytes[embed_len]
+  - optional footer crc16(2)
+
+Size-budget examples
+- Fixed overhead: header(8) + name(1+25) + class(1) + embed_len(1) + footer(2) = 39 bytes
+- Examples:
+  - Small: 64-dim embedding, 10 stats, 8 skills => ~140 bytes
+  - Medium: 128-dim, 20 stats, 16 skills => ~240 bytes
+  - Large: 256-dim, 50 stats, 20 skills => ~436 bytes
+(All examples ≤ 512 bytes)
+
+Compression & QR guidance
+- Compress body with DEFLATE (zlib) and set compressed flag in header.
+- Use QR byte mode (binary) and error correction M; use Q for risky physical prints.
+- For 4x4 cm prints, target module size 0.45–0.5mm (quiet zone included) → QR versions ~14–16 typically sufficient for compressed 512-byte payloads.
+- If compressed payload exceeds capacity for print size, use a short hosted URL encoded in the QR and include the short code on the figurine.
+
+Trade-offs & notes
+- ASCII names are simpler and fixed-size; switch to UTF-8 later if needed.
+- Per-entry stat/skill pairs are simple and extensible; use bitmasks to save space when entries are presence-only.
+- Embedding as raw bytes is convenient; consider quantization/delta encoding for tighter packing if needed.
+
+Examples to include (for review)
+- Example A: 25-char name, class 3, 10 stats, 8 skills, 64-dim embedding — include hex sample and estimated QR version.
+- Example B: 12-char name, class 7, 20 stats, 16 skills, 128-dim embedding — include compressed size sample.
+- Example C: 8-char name, class 2, 50 stats, 20 skills, 256-dim embedding — show packing and trade-offs.
+
+Next steps
+- This document is the requested artefact. Implementation/prototyping will remain paused until review.
+- If approved, the next action would be to add a reference serializer and test payloads.
+
+---
+
