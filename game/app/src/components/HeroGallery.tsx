@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import type { SavedHero } from '../lib/figurineUtils';
 import {
+  GALLERY_KEY,
   loadGallery,
   deleteFromGallery,
   drawDigitalFigurine,
@@ -191,7 +192,7 @@ export function HeroGallery({ onClose }: Props) {
 
   const handleClearAll = useCallback(() => {
     if (!window.confirm('Remove all saved heroes from the gallery?')) return;
-    localStorage.removeItem('blink-rpg-hero-gallery');
+    localStorage.removeItem(GALLERY_KEY);
     setGallery([]);
   }, []);
 

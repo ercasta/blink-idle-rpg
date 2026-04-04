@@ -4,21 +4,11 @@ import { useGame } from './GameContext';
 import type { IRModule } from '@/types/ide';
 import { HeroFigurine } from './HeroFigurine';
 import { HeroGallery } from './HeroGallery';
+import type { HeroData } from '../lib/figurineUtils';
 
 // Data structures
-export interface Character {
-  id: string | number;
-  name: string;
-  class: string;
-  level: number;
-  baseHealth: number;
-  baseMana: number;
-  baseDamage: number;
-  baseDefense: number;
-  description: string;
-  role: string;
-  difficulty: string;
-}
+/** Full hero data used in the game UI (extends figurine HeroData with a runtime entity id). */
+export type Character = HeroData & { id: string | number };
 
 interface Entity {
     id: string | number;

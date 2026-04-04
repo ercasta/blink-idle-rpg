@@ -20,7 +20,7 @@ export interface SavedHero {
   heroData: HeroData;
 }
 
-const GALLERY_KEY = 'blink-rpg-hero-gallery';
+export const GALLERY_KEY = 'blink-rpg-hero-gallery';
 export const MAX_GALLERY_ITEMS = 20;
 
 // ── Class icons ─────────────────────────────────────────────────────────────
@@ -65,7 +65,9 @@ export function decodeHeroFromHash(hash: string): Partial<HeroData> | null {
     const match = hash.match(/^#hero\/([A-Za-z0-9\-_]+)/);
     if (!match) return null;
     const padded = match[1].replace(/-/g, '+').replace(/_/g, '/');
-    const json = atob(padded + '=='.slice((padded.length * 3) % 4));
+    // Re-add the base64 '=' padding that was stripped during URL-safe encoding
+    const paddingNeeded = (4 - (padded.length % 4)) % 4;
+    const json = atob(padded + '='.repeat(paddingNeeded));
     const d = JSON.parse(json);
     return {
       name: d.n,
@@ -161,9 +163,12 @@ export function embedPngMetadata(
     out.set(chunk, ihdrEnd);
     out.set(bytes.slice(ihdrEnd), ihdrEnd + chunk.length);
 
-    let binary = '';
-    out.forEach((b) => (binary += String.fromCharCode(b)));
-    return 'data:image/png;base64,' + btoa(binary);
+    // Convert to binary string in 8 KiB chunks to avoid call-stack limits on large PNGs
+    const chunks: string[] = [];
+    for (let i = 0; i < out.length; i += 8192) {
+      chunks.push(String.fromCharCode(...(out.subarray(i, i + 8192) as unknown as number[])));
+    }
+    return 'data:image/png;base64,' + btoa(chunks.join(''));
   } catch {
     return dataUrl; // fallback: return original on any error
   }
@@ -537,7 +542,9 @@ export function loadGallery(): SavedHero[] {
 export function saveHeroToGallery(hero: HeroData): SavedHero {
   const gallery = loadGallery();
   const entry: SavedHero = {
-    id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    id: (typeof crypto !== 'undefined' && crypto.randomUUID)
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
     savedAt: Date.now(),
     heroData: hero,
   };
