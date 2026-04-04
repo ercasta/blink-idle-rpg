@@ -35,12 +35,12 @@ component Buffs {
 }
 
 // User-defined function for damage calculation
-fn calculate_damage(base: number, bonus: number): number {
+fn calculate_damage(base: integer, bonus: integer): integer {
     return base + bonus
 }
 
 // Function with min/max
-fn clamp_health(current: number, maxVal: number): number {
+fn clamp_health(current: integer, maxVal: integer): integer {
     if current > maxVal {
         return maxVal
     }
@@ -51,44 +51,44 @@ fn clamp_health(current: number, maxVal: number): number {
 }
 
 // Function for percentage calculation
-fn calculate_percentage(current: number, maximum: number): number {
+fn calculate_percentage(current: integer, maximum: integer): integer {
     return current / maximum * 100
 }
 
 // Rule using user-defined function
-rule apply_damage on DamageCalculate {
-    let base = entity.Combat.damage
-    let bonus = entity.Buffs.damageBonus
-    let total = calculate_damage(base, bonus)
-    schedule DamageResult { damage: total }
+rule apply_damage on DamageCalculate(evt: id) {
+    let base: integer = entity.Combat.damage
+    let bonus: integer = entity.Buffs.damageBonus
+    let total: integer = calculate_damage(base, bonus)
+    let _r: id = schedule DamageResult { damage: total }
 }
 
 // Rule using built-in min function
-rule cap_health on HealReceived {
-    let newHealth = entity.Health.current + 50
-    let cappedHealth = min(newHealth, entity.Health.max)
+rule cap_health on HealReceived(evt: id) {
+    let newHealth: integer = entity.Health.current + 50
+    let cappedHealth: integer = min(newHealth, entity.Health.max)
     entity.Health.current = cappedHealth
 }
 
 // Rule using built-in max function
-rule prevent_negative_health on DamageReceived {
-    let newHealth = entity.Health.current - 30
+rule prevent_negative_health on DamageReceived(evt: id) {
+    let newHealth: integer = entity.Health.current - 30
     entity.Health.current = max(newHealth, 0)
 }
 
 // Rule using len function
-rule count_entities on CountEntities {
-    let healthEntities = entities having Health
-    let count = len(healthEntities)
-    schedule EntityCount { count: count }
+rule count_entities on CountEntities(evt: id) {
+    let healthEntities: list<id> = entities having Health
+    let count: integer = len(healthEntities)
+    let _c: id = schedule EntityCount { count: count }
 }
 
 // Rule with complex binary expressions
-rule calculate_stats on StatsCalc {
-    let baseDamage = entity.Stats.strength * 2 + entity.Stats.dexterity / 2
-    let baseDefense = entity.Stats.strength / 2 + entity.Stats.dexterity
-    let magicPower = entity.Stats.intelligence * 3
-    schedule StatsResult {
+rule calculate_stats on StatsCalc(evt: id) {
+    let baseDamage: integer = entity.Stats.strength * 2 + entity.Stats.dexterity / 2
+    let baseDefense: integer = entity.Stats.strength / 2 + entity.Stats.dexterity
+    let magicPower: integer = entity.Stats.intelligence * 3
+    let _s: id = schedule StatsResult {
         damage: baseDamage
         defense: baseDefense
         magic: magicPower
@@ -96,52 +96,52 @@ rule calculate_stats on StatsCalc {
 }
 
 // Rule with comparison expressions
-rule check_critical on CritCheck {
-    let roll = 0.5
+rule check_critical on CritCheck(evt: id) {
+    let roll: float = 0.5
     if roll < entity.Combat.critChance {
-        let damage = entity.Combat.damage * entity.Combat.critMultiplier
-        schedule CriticalHit { damage: damage }
+        let damage: float = entity.Combat.damage * entity.Combat.critMultiplier
+        let _c: id = schedule CriticalHit { damage: damage }
     } else {
-        schedule NormalHit { damage: entity.Combat.damage }
+        let _n: id = schedule NormalHit { damage: entity.Combat.damage }
     }
 }
 
 // Rule with has component expression
-rule check_buffs on BuffCheck {
+rule check_buffs on BuffCheck(evt: id) {
     if entity has Buffs {
-        let totalBonus = entity.Buffs.damageBonus + entity.Buffs.defenseBonus
-        schedule BuffsActive { totalBonus: totalBonus }
+        let totalBonus: integer = entity.Buffs.damageBonus + entity.Buffs.defenseBonus
+        let _b: id = schedule BuffsActive { totalBonus: totalBonus }
     } else {
-        schedule NoBuffs { }
+        let _n: id = schedule NoBuffs { }
     }
 }
 
 // Rule with unary expression
-rule check_active on ActivityCheck {
-    let isInactive = entity.Health.current == 0
+rule check_active on ActivityCheck(evt: id) {
+    let isInactive: boolean = entity.Health.current == 0
     if isInactive {
-        schedule EntityDead { target: entity }
+        let _e: id = schedule EntityDead { target: entity }
     }
 }
 
 // Rule with index access
-rule process_first on ProcessFirst {
-    let healthEntities = entities having Health
+rule process_first on ProcessFirst(evt: id) {
+    let healthEntities: list<id> = entities having Health
     if len(healthEntities) > 0 {
-        let first = healthEntities[0]
+        let first: id = healthEntities[0]
         first.Health.current -= 10
     }
 }
 
 // Test entities
-entity {
+let strong_entity: id = new entity {
     Health { current: 100 max: 100 }
     Combat { damage: 20 defense: 10 critChance: 0.2 critMultiplier: 2.0 }
     Stats { strength: 15 dexterity: 12 intelligence: 8 }
     Buffs { damageBonus: 5 defenseBonus: 3 }
 }
 
-entity {
+let weaker_entity: id = new entity {
     Health { current: 50 max: 50 }
     Combat { damage: 15 defense: 5 critChance: 0.1 critMultiplier: 1.5 }
     Stats { strength: 10 dexterity: 10 intelligence: 10 }

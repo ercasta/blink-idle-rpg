@@ -10,11 +10,11 @@ doc/
 ├── summary.md                   # Project overview
 ├── DEVELOPMENT_TRACKS.md        # Parallel development guide
 ├── ir-specification.md          # IR format specification (central contract)
-├── language/                    # BRL & BCL Language Specification
+├── language/                    # BRL & BDL Language Specification
 │   ├── README.md                # Language overview
 │   ├── brl-specification.md     # Blink Rule Language spec
-│   ├── bcl-specification.md     # Blink Choice Language spec
-│   └── game/                # Language examples
+│   ├── bdl-specification.md     # Blink Data Language spec
+│   └── examples/                # Language examples
 ├── engine/                      # Engine & Toolchain
 │   ├── README.md                # Engine overview
 │   ├── architecture.md          # Core architecture
@@ -57,7 +57,7 @@ The project is organized to allow parallel development with **IR as the central 
 
 | Track | Folder | Description | Dependencies |
 |-------|--------|-------------|--------------|
-| **Language Design** | `doc/language/` | BRL & BCL specification | None |
+| **Language Design** | `doc/language/` | BRL & BDL specification | None |
 | **Compiler** | `packages/blink-compiler-ts/` | Parser, validator, IR gen | Language spec |
 | **Rust Engine** | `src/engines/rust/` | Native Rust simulation | IR spec only |
 | **JS Engine** | `packages/blink-engine/` | TypeScript implementation | IR spec only |
@@ -69,10 +69,30 @@ All engines are **independent** - they depend only on the IR specification, not 
 See [DEVELOPMENT_TRACKS.md](DEVELOPMENT_TRACKS.md) for detailed coordination guidelines.  
 See [architecture/ir-decision.md](architecture/ir-decision.md) for the architectural rationale.
 
+## Game Design Documentation
+
+The `game-design/` folder contains the full game design specification:
+
+```
+doc/game-design/
+├── README.md            # Overview and index
+├── characters.md        # Hero classes, stats, progression, components
+├── enemies.md           # Enemy tiers, boss mechanics, components
+├── combat.md            # Combat loop, damage formulas, targeting
+├── skills.md            # Hero and enemy skills, components
+├── status-effects.md    # Frozen, poisoned, stunned, etc. and their components
+├── encounters.md        # Encounter structure, wave progression, scaling
+├── scoring.md           # Score formula, KPIs, scoring components
+├── game-modes.md        # Game modes and scoring rule configurations
+└── simulation.md        # Playtesting harness: parallel runs, balance tooling
+```
+
+See [game-design/README.md](game-design/README.md) for the full index.
+
 ## Getting Started
 
 - **Language Designers**: Start with [language/README.md](language/README.md)
 - **Compiler Developers**: Start with [../packages/blink-compiler-ts/README.md](../packages/blink-compiler-ts/README.md)
 - **Engine Developers**: Start with [ir-specification.md](ir-specification.md) and use examples in [../game/ir/](../game/ir/)
-- **Game Designers**: See [summary.md](summary.md) for game concepts
+- **Game Designers**: Start with [game-design/README.md](game-design/README.md)
 - **All Developers**: Read [hie/README.md](hie/README.md) to understand architecture enforcement

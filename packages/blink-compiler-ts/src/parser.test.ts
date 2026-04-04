@@ -1,6 +1,6 @@
 /**
  * Parser Tests for Blink Compiler
- * Tests parsing of all language constructs in BRL/BCL/BDL
+ * Tests parsing of all language constructs in BRL/BDL
  */
 
 import { tokenize } from './lexer';
@@ -139,7 +139,7 @@ describe('Parser', () => {
     it('should parse function without return type', () => {
       const ast = parseSource(`
         fn doSomething(x: number) {
-          let y = x + 1
+          let y: number = x + 1
         }
       `);
       const func = ast.items[0] as AST.FunctionDef;
@@ -170,19 +170,20 @@ describe('Parser', () => {
   describe('Entity definitions', () => {
     it('should parse entity with components', () => {
       const ast = parseSource(`
-        entity {
+        let e1: id = new entity {
           Health { current: 100 max: 100 }
           Combat { damage: 20 }
         }
       `);
       const entity = ast.items[0] as AST.EntityDef;
       expect(entity.type).toBe('entity');
+      expect(entity.variable).toBe('e1');
       expect(entity.components).toHaveLength(2);
     });
 
     it('should parse named entity with variable', () => {
       const ast = parseSource(`
-        entity @warrior {
+        let warrior: id = new entity {
           Health { current: 100 }
         }
       `);
@@ -192,7 +193,7 @@ describe('Parser', () => {
 
     it('should parse new entity syntax', () => {
       const ast = parseSource(`
-        warrior = new entity {
+        let warrior: id = new entity {
           Health { current: 100 }
         }
       `);
@@ -202,7 +203,7 @@ describe('Parser', () => {
 
     it('should parse entity with bound functions', () => {
       const ast = parseSource(`
-        entity {
+        let e2: id = new entity {
           Health { current: 100 }
           .selectTarget = choice(enemies: list): id {
             return enemies[0]
@@ -218,8 +219,8 @@ describe('Parser', () => {
   describe('Statements', () => {
     it('should parse let statement', () => {
       const ast = parseSource(`
-        rule test on Test t {
-          let x = 10
+        rule test on Test(t: id) {
+          let x: number = 10
         }
       `);
       const rule = ast.items[0] as AST.RuleDef;
@@ -230,7 +231,7 @@ describe('Parser', () => {
 
     it('should parse let statement with type annotation', () => {
       const ast = parseSource(`
-        rule test on Test t {
+        rule test on Test(t: id) {
           let x: number = 10
         }
       `);
@@ -241,7 +242,7 @@ describe('Parser', () => {
 
     it('should parse if statement', () => {
       const ast = parseSource(`
-        rule test on Test t {
+        rule test on Test(t: id) {
           if x > 0 {
             y = 1
           }
@@ -255,7 +256,7 @@ describe('Parser', () => {
 
     it('should parse if-else statement', () => {
       const ast = parseSource(`
-        rule test on Test t {
+        rule test on Test(t: id) {
           if x > 0 {
             y = 1
           } else {
@@ -270,7 +271,7 @@ describe('Parser', () => {
 
     it('should parse if-else if chain', () => {
       const ast = parseSource(`
-        rule test on Test t {
+        rule test on Test(t: id) {
           if x > 10 {
             y = 2
           } else if x > 0 {
@@ -287,7 +288,7 @@ describe('Parser', () => {
 
     it('should parse for loop', () => {
       const ast = parseSource(`
-        rule test on Test t {
+        rule test on Test(t: id) {
           for item in items {
             process(item)
           }
@@ -301,7 +302,7 @@ describe('Parser', () => {
 
     it('should parse while loop', () => {
       const ast = parseSource(`
-        rule test on Test t {
+        rule test on Test(t: id) {
           while x > 0 {
             x -= 1
           }
@@ -325,7 +326,7 @@ describe('Parser', () => {
 
     it('should parse schedule statement', () => {
       const ast = parseSource(`
-        rule test on Test t {
+        rule test on Test(t: id) {
           schedule DoAttack { source: entity }
         }
       `);
@@ -337,7 +338,7 @@ describe('Parser', () => {
 
     it('should parse schedule with delay', () => {
       const ast = parseSource(`
-        rule test on Test t {
+        rule test on Test(t: id) {
           schedule [delay: 2.0] DoAttack { source: entity }
         }
       `);
@@ -348,7 +349,7 @@ describe('Parser', () => {
 
     it('should parse recurring schedule', () => {
       const ast = parseSource(`
-        rule test on Test t {
+        rule test on Test(t: id) {
           schedule recurring [interval: 1.0] Tick { }
         }
       `);
@@ -359,7 +360,7 @@ describe('Parser', () => {
 
     it('should parse create statement', () => {
       const ast = parseSource(`
-        rule test on Test t {
+        rule test on Test(t: id) {
           create entity {
             Health { current: 100 }
           }
@@ -372,7 +373,7 @@ describe('Parser', () => {
 
     it('should parse delete statement', () => {
       const ast = parseSource(`
-        rule test on Test t {
+        rule test on Test(t: id) {
           delete enemy
         }
       `);
@@ -383,7 +384,7 @@ describe('Parser', () => {
 
     it('should parse assignment statements', () => {
       const ast = parseSource(`
-        rule test on Test t {
+        rule test on Test(t: id) {
           x = 10
           x += 5
           x -= 3
@@ -399,8 +400,8 @@ describe('Parser', () => {
   describe('Expressions', () => {
     it('should parse binary expressions', () => {
       const ast = parseSource(`
-        rule test on Test t {
-          let x = a + b * c
+        rule test on Test(t: id) {
+          let x: number = a + b * c
         }
       `);
       const rule = ast.items[0] as AST.RuleDef;
@@ -410,7 +411,7 @@ describe('Parser', () => {
 
     it('should parse comparison expressions', () => {
       const ast = parseSource(`
-        rule test on Test t {
+        rule test on Test(t: id) {
           if a > b && c <= d {
             x = 1
           }
@@ -423,9 +424,9 @@ describe('Parser', () => {
 
     it('should parse unary expressions', () => {
       const ast = parseSource(`
-        rule test on Test t {
-          let x = !flag
-          let y = -value
+        rule test on Test(t: id) {
+          let x: boolean = !flag
+          let y: number = -value
         }
       `);
       const rule = ast.items[0] as AST.RuleDef;
@@ -437,8 +438,8 @@ describe('Parser', () => {
 
     it('should parse field access', () => {
       const ast = parseSource(`
-        rule test on Test t {
-          let hp = entity.Health.current
+        rule test on Test(t: id) {
+          let hp: number = entity.Health.current
         }
       `);
       const rule = ast.items[0] as AST.RuleDef;
@@ -448,8 +449,8 @@ describe('Parser', () => {
 
     it('should parse index access', () => {
       const ast = parseSource(`
-        rule test on Test t {
-          let first = items[0]
+        rule test on Test(t: id) {
+          let first: id = items[0]
         }
       `);
       const rule = ast.items[0] as AST.RuleDef;
@@ -459,8 +460,8 @@ describe('Parser', () => {
 
     it('should parse function calls', () => {
       const ast = parseSource(`
-        rule test on Test t {
-          let result = calculate(a, b)
+        rule test on Test(t: id) {
+          let result: number = calculate(a, b)
         }
       `);
       const rule = ast.items[0] as AST.RuleDef;
@@ -473,8 +474,8 @@ describe('Parser', () => {
 
     it('should parse method calls', () => {
       const ast = parseSource(`
-        rule test on Test t {
-          let result = mylist.length()
+        rule test on Test(t: id) {
+          let result: number = mylist.length()
         }
       `);
       const rule = ast.items[0] as AST.RuleDef;
@@ -484,8 +485,8 @@ describe('Parser', () => {
 
     it('should parse list literals', () => {
       const ast = parseSource(`
-        rule test on Test t {
-          let nums = [1, 2, 3]
+        rule test on Test(t: id) {
+          let nums: list = [1, 2, 3]
         }
       `);
       const rule = ast.items[0] as AST.RuleDef;
@@ -497,8 +498,8 @@ describe('Parser', () => {
 
     it('should parse parenthesized expressions', () => {
       const ast = parseSource(`
-        rule test on Test t {
-          let x = (a + b) * c
+        rule test on Test(t: id) {
+          let x: number = (a + b) * c
         }
       `);
       const rule = ast.items[0] as AST.RuleDef;
@@ -508,8 +509,8 @@ describe('Parser', () => {
 
     it('should parse entities having expression', () => {
       const ast = parseSource(`
-        rule test on Test t {
-          let enemies = entities having Enemy
+        rule test on Test(t: id) {
+          let enemies: list = entities having Enemy
         }
       `);
       const rule = ast.items[0] as AST.RuleDef;
@@ -532,8 +533,8 @@ describe('Parser', () => {
 
     it('should parse clone expression', () => {
       const ast = parseSource(`
-        rule test on Test t {
-          let newEnemy = clone template
+        rule test on Test(t: id) {
+          let newEnemy: id = clone template
         }
       `);
       const rule = ast.items[0] as AST.RuleDef;
@@ -543,9 +544,9 @@ describe('Parser', () => {
 
     it('should parse clone with overrides', () => {
       const ast = parseSource(`
-        rule test on Test t {
-          let newEnemy = clone template {
-            Health { current: 200 }
+        rule test on Test(t: id) {
+          let newEnemy: id = clone template {
+            Health { current: 10 }
           }
         }
       `);
@@ -558,8 +559,8 @@ describe('Parser', () => {
 
     it('should parse entity reference', () => {
       const ast = parseSource(`
-        rule test on Test t {
-          let e = @warrior
+        rule test on Test(t: id) {
+          let e: id = @warrior
         }
       `);
       const rule = ast.items[0] as AST.RuleDef;

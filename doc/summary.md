@@ -35,23 +35,9 @@ In Blink you define your Rpg party and some decision rules, then the entire game
 - The syntax uses curly brackets to define code blocks (e.g. functions)
 - The typing system is based on base types (string, boolean, integer, float, decimal(fixed-size precision), or id (i.e. a reference to another entity)) and components; when a rule / function works on a component, it means it can work on an entity having that component (as entities can have multiple components)
 
-## (BCL) Blink Choice Language
-- The player can define "choice rules" that are used by game rules to run the game
-- The Choice rules are written in "Blink Choice Language"
-- The syntax of the language allows:
-    - READ (not write) components and entities
-    - Return values (the choice)
-    - Functions and modules are supported, for modularization
-- The player express everything in BCL (even the choice of the party and their characteristics)
-
-The Blink Choice Language is actually a subset of the Blink Rule Language (some expressions are disallowed, such as creating new entities, or modifying components / component values)
-
 ## Engine and toolchain implementation
 
-- Multiple engine implementation can exist, for example a browser-only, javascript engine, a client-server engine, batch engines to run lots of games for checking rule balance, dev engines which allow fast reloading.
-- The BRL (Blink Rule Language) can be compiled to various engines
-- The BCL (Blink Choice Language) is usually interpreted, as it is usually written by players. Nevertheless, it could also be compiled before the game runs, for performance reasons (e.g. for batch engines)
-- The BRL compiler is written in Rust: consider using an intermediate representation
-- A Language Server Protocol, and VSCode Extension, is needed to support game development
-- The system is documented using the Hielements Language from ercasta/hielements Github repository
+- Multiple engine implementations can exist, for example a browser-only javascript engine, a client-server engine, batch engines to run lots of games for checking rule balance, dev engines which allow fast reloading.
+- The BRL (Blink Rule Language) can be compiled to various engines via an Intermediate Representation (IR)
+- A Language Server Protocol and VSCode Extension is needed to support game development
 

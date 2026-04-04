@@ -31,36 +31,36 @@ component Enemy {
 }
 
 // Simple if statement
-rule check_health on HealthCheck {
+rule check_health on HealthCheck(evt: id) {
     if entity.Health.current < 50 {
         entity.Health.current += 10
     }
 }
 
 // If-else statement
-rule classify_health on HealthClassify {
+rule classify_health on HealthClassify(evt: id) {
     if entity.Health.current > 75 {
-        schedule HealthStatus { status: "healthy" }
+        let _s: id = schedule HealthStatus { status: "healthy" }
     } else {
-        schedule HealthStatus { status: "injured" }
+        let _s: id = schedule HealthStatus { status: "injured" }
     }
 }
 
 // If-else-if chain
-rule classify_health_detailed on DetailedHealthCheck {
+rule classify_health_detailed on DetailedHealthCheck(evt: id) {
     if entity.Health.current > 80 {
-        schedule HealthStatus { status: "excellent" }
+        let _s: id = schedule HealthStatus { status: "excellent" }
     } else if entity.Health.current > 50 {
-        schedule HealthStatus { status: "good" }
+        let _s: id = schedule HealthStatus { status: "good" }
     } else if entity.Health.current > 25 {
-        schedule HealthStatus { status: "injured" }
+        let _s: id = schedule HealthStatus { status: "injured" }
     } else {
-        schedule HealthStatus { status: "critical" }
+        let _s: id = schedule HealthStatus { status: "critical" }
     }
 }
 
 // Nested conditionals
-rule complex_check on ComplexCheck {
+rule complex_check on ComplexCheck(evt: id) {
     if entity.Health.current > 0 {
         if entity.Health.current < entity.Health.max {
             entity.Health.current += 5
@@ -72,69 +72,69 @@ rule complex_check on ComplexCheck {
 }
 
 // For loop with list literal
-rule spawn_multiple on SpawnWave {
-    let indices = [0, 1, 2, 3, 4]
+rule spawn_multiple on SpawnWave(evt: id) {
+    let indices: list<integer> = [0, 1, 2, 3, 4]
     for i in indices {
-        schedule [delay: 0.1 * i] SpawnEnemy { index: i }
+        let _s: id = schedule [delay: 0.1 * i] SpawnEnemy { index: i }
     }
 }
 
 // For loop with entities having
-rule damage_all_enemies on AreaDamage {
-    let enemies = entities having Enemy
+rule damage_all_enemies on AreaDamage(evt: id) {
+    let enemies: list<id> = entities having Enemy
     for enemy in enemies {
         enemy.Health.current -= 20
     }
 }
 
 // Let statement with expression
-rule calculate_damage on CalculateDamage {
-    let baseDamage = 10
-    let modifier = 1.5
-    let totalDamage = baseDamage * modifier
+rule calculate_damage on CalculateDamage(evt: id) {
+    let baseDamage: integer = 10
+    let modifier: float = 1.5
+    let totalDamage: float = baseDamage * modifier
     entity.Health.current -= totalDamage
 }
 
 // Conditional with comparison operators
-rule wave_progression on WaveComplete {
+rule wave_progression on WaveComplete(evt: id) {
     if entity has GameState {
         if entity.GameState.wave < 10 {
             entity.GameState.wave += 1
             entity.GameState.score += 100
         } else {
-            schedule GameWon { }
+            let _g: id = schedule GameWon { }
         }
     }
 }
 
 // Loop with conditional inside
-rule process_enemies on ProcessEnemies {
-    let enemies = entities having Enemy
+rule process_enemies on ProcessEnemies(evt: id) {
+    let enemies: list<id> = entities having Enemy
     for enemy in enemies {
         if enemy.Enemy.tier > 2 {
-            schedule BossAlert { boss: enemy }
+            let _b: id = schedule BossAlert { boss: enemy }
         } else {
-            schedule EnemySpotted { enemy: enemy }
+            let _e: id = schedule EnemySpotted { enemy: enemy }
         }
     }
 }
 
 // Test entity
-entity {
+let participant_one: id = new entity {
     Health { current: 100 max: 100 }
     Counter { value: 0 }
 }
 
-entity {
+let game_state_entity: id = new entity {
     GameState { phase: "playing" score: 0 wave: 1 }
 }
 
-entity {
+let goblin_entity: id = new entity {
     Enemy { tier: 1 name: "Goblin" }
     Health { current: 30 max: 30 }
 }
 
-entity {
+let dragon_entity: id = new entity {
     Enemy { tier: 3 name: "Dragon" }
     Health { current: 200 max: 200 }
 }

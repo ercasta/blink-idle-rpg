@@ -1,5 +1,5 @@
 /**
- * GameTest - Main test harness for BRL and BCL testing
+ * GameTest - Main test harness for BRL testing
  * 
  * Provides a fluent API for defining and running game tests.
  */

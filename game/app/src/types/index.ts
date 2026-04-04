@@ -77,11 +77,6 @@ export interface ChoicePoint {
   defaultBehavior: string;
 }
 
-export interface BCLFile {
-  name: string;
-  content: string;
-}
-
 export interface LeaderboardRun {
   runId: string;
   timestamp: number;
@@ -90,7 +85,6 @@ export interface LeaderboardRun {
   partyComposition: {
     characters: string[];
     characterIds: string[];
-    bclFiles: string[];
   };
   statistics: {
     enemiesDefeated: number;

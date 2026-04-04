@@ -76,3 +76,36 @@ enemy_compendium = new entity {
         entries: []
     }
 }
+
+// Scoring rules for Normal mode (see doc/game-design/game-modes.md)
+let scoring_entity: id = new entity {
+    ScoringRules {
+        pointsPerKill: 10
+        pointsPerWave: 50
+        pointsPerBoss: 500
+        pointsLostPerDeath: 100
+        pointsLostPerRetreat: 50
+        pointsLostPerPenaltySecond: 2
+        timeBonusPoints: 1000
+        timeBonusInterval: 10.0
+    }
+    Score {
+        total: 0
+        killScore: 0
+        waveScore: 0
+        bossScore: 0
+        speedBonus: 0
+        deathPenaltyTotal: 0
+        retreatPenaltyTotal: 0
+        timePenaltyTotal: 0
+        bossesDefeated: 0
+        wavesCompleted: 0
+    }
+    GameMode {
+        id: "normal"
+        name: "Classic Campaign"
+        description: "The standard Blink RPG experience with balanced difficulty and progression."
+        difficulty: "Normal"
+        hasVictoryCondition: true
+    }
+}

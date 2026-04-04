@@ -1,5 +1,5 @@
 /**
- * Lexer for Blink Rule Language (BRL/BCL/BDL)
+ * Lexer for Blink Rule Language (BRL/BDL)
  * Converts source code into a stream of tokens.
  */
 
@@ -484,7 +484,7 @@ export class Lexer {
 }
 
 /**
- * Tokenize BRL/BCL/BDL source code
+ * Tokenize BRL/BDL source code
  */
 export function tokenize(source: string): Token[] {
   const lexer = new Lexer(source);

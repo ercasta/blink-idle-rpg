@@ -266,7 +266,7 @@ describe('End-to-End Compiler', () => {
           }
           return "attack"
         }
-      `, 'bcl');
+      `, 'brl');
       
       expect(result.errors).toHaveLength(0);
       expect(result.ir.functions).toHaveLength(2);
