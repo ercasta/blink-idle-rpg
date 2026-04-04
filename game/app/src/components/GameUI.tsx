@@ -2,21 +2,13 @@ import { useState, useMemo, useEffect } from 'react';
 import './GameUI.css';
 import { useGame } from './GameContext';
 import type { IRModule } from '@/types/ide';
+import { HeroFigurine } from './HeroFigurine';
+import { HeroGallery } from './HeroGallery';
+import type { HeroData } from '../lib/figurineUtils';
 
 // Data structures
-interface Character {
-  id: string | number;
-  name: string;
-  class: string;
-  level: number;
-  baseHealth: number;
-  baseMana: number;
-  baseDamage: number;
-  baseDefense: number;
-  description: string;
-  role: string;
-  difficulty: string;
-}
+/** Full hero data used in the game UI (extends figurine HeroData with a runtime entity id). */
+export type Character = HeroData & { id: string | number };
 
 interface Entity {
     id: string | number;
@@ -112,7 +104,7 @@ const ScenarioSelection = ({ onScenarioSelected }: { onScenarioSelected: (scenar
   </div>
 );
 
-const HeroCard = ({ hero }: { hero: Character }) => (
+const HeroCard = ({ hero, onFigurine }: { hero: Character; onFigurine?: () => void }) => (
   <div className="hero-card">
     <div className="character-header">
       <div className="character-title">
@@ -131,12 +123,19 @@ const HeroCard = ({ hero }: { hero: Character }) => (
         <span className="stat-preview-value">{hero.baseDamage}</span>
       </div>
     </div>
+    {onFigurine && (
+      <button className="hero-figurine-btn" onClick={onFigurine}>
+        🖼️ Figurine
+      </button>
+    )}
   </div>
 );
 
 const PartySelection = ({ heroes, onPartySelected }: { heroes: Character[], onPartySelected: (party: (Character | null)[]) => void }) => {
     const [party, setParty] = useState<(Character | null)[]>([null, null, null, null]);
     const [carouselIndex, setCarouselIndex] = useState([0, 1, 2, 3]);
+    const [figurineHero, setFigurineHero] = useState<Character | null>(null);
+    const [showGallery, setShowGallery] = useState(false);
 
     const handleSelectHero = (slotIndex: number, hero: Character) => {
         const newParty = [...party];
@@ -155,7 +154,12 @@ const PartySelection = ({ heroes, onPartySelected }: { heroes: Character[], onPa
 
     return (
         <div id="party-selection-screen">
-            <h2>⚔️ Choose Your Party ⚔️</h2>
+            <div className="party-selection-header">
+                <h2>⚔️ Choose Your Party ⚔️</h2>
+                <button className="gallery-open-btn" onClick={() => setShowGallery(true)}>
+                    📚 Gallery
+                </button>
+            </div>
             <div className="slots-container">
                 {party.map((_, i) => (
                     <div key={i} className="hero-slot">
@@ -168,7 +172,10 @@ const PartySelection = ({ heroes, onPartySelected }: { heroes: Character[], onPa
                                 <div className="carousel-indicator">{carouselIndex[i] + 1} / {heroes.length}</div>
                                 <button className="carousel-btn" onClick={() => handleCarousel(i, 1)}>▶</button>
                             </div>
-                            <HeroCard hero={heroes[carouselIndex[i]]} />
+                            <HeroCard
+                                hero={heroes[carouselIndex[i]]}
+                                onFigurine={() => setFigurineHero(heroes[carouselIndex[i]])}
+                            />
                         </div>
                     </div>
                 ))}
@@ -176,6 +183,17 @@ const PartySelection = ({ heroes, onPartySelected }: { heroes: Character[], onPa
             <button className="start-game-btn" onClick={() => onPartySelected(party)} disabled={!isPartyFull}>
                 🎮 Start Adventure
             </button>
+
+            {figurineHero && (
+                <HeroFigurine
+                    hero={figurineHero}
+                    onClose={() => setFigurineHero(null)}
+                    onSaved={() => {/* gallery refreshes on open */}}
+                />
+            )}
+            {showGallery && (
+                <HeroGallery onClose={() => setShowGallery(false)} />
+            )}
         </div>
     );
 };
