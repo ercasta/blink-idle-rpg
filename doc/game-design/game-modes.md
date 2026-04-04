@@ -15,6 +15,8 @@ This document describes the game mode system: how modes are defined, how they al
 
 At game start, the player (or the simulation harness) selects exactly one game mode. The selected mode's `ScoringRules` and `SpawnConfig` override the defaults defined in `game-config.bdl`.
 
+Note: boss spawns and tier progression are driven by the global kill count (`GameState.enemiesDefeated`) — see the Combat Kill System for exact behaviour.
+
 ---
 
 ## Predefined Game Modes

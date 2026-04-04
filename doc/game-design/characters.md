@@ -38,8 +38,9 @@ This document covers hero character design: classes, base stats, progression, an
 
 - Heroes start at **level 1** and gain experience from defeating enemies.
 - On level-up, each stat increases by an amount determined by the hero's class growth table.
-- Maximum level is **20** (soft cap for balance; enemies scale beyond this point).
-- Skill slots unlock at levels 1, 5, 10, and 15.
+- Maximum level is **50** (soft cap for balance; enemies scale beyond this point).
+
+- Heroes gain **1 skill point** at each character level. Skill points are used to learn or upgrade skills (see `skills.md`).
 
 ---
 

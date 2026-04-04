@@ -10,6 +10,16 @@ This document covers hero and enemy skills: categories, triggering, cooldown man
 - Skills consume mana or require a cooldown; the simulation enforces these constraints.
 - Each skill may apply one or more **status effects** (see [status-effects.md](status-effects.md)).
 
+Additional progression rules:
+
+- **Max skill level:** Each skill can be leveled up to a maximum of **50**.
+- **Skill points per level:** Heroes gain **1 skill point** each time they gain a character level. Skill points are spent to increase individual skill levels or unlock/upgrade skill effects.
+
+Skill tree structure:
+
+- **Per-class DAG:** Each class has its own skill tree arranged as a directed acyclic graph (DAG). Nodes are individual skills; edges denote prerequisite relationships.
+- **Acquisition rule:** To acquire or upgrade a skill, a hero must already have acquired all prerequisite skills (every incoming edge must be satisfied). Prerequisites and skill-level costs are defined per-skill in the class skill data (BDL/BDL templates).
+
 ---
 
 ## Skill Categories

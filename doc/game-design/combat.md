@@ -47,6 +47,23 @@ FindNewTarget (entity)
 
 ---
 
+## Kill System
+
+- `EnemyDefeated` is emitted when an enemy's HP reaches zero. The event includes the `enemy` entity and a `killedBy` field that records the entity (or `null`) that delivered the killing blow.
+- On `EnemyDefeated`:
+  - Increment `GameState.enemiesDefeated` (global run-wide kill count) and update `RunStats` counters.
+  - Award experience equal to the defeated enemy's `Enemy.expReward` split evenly among all living player heroes at the moment of death. If there are no living heroes, XP is not awarded.
+  - Record kill credit: the `killedBy` entity receives explicit kill credit for loot/achievement attribution; assists are acknowledged via XP share.
+  - Apply scoring and time-based effects according to the selected `GameMode`'s `ScoringRules`.
+
+- Boss spawns and tier progression:
+  - When `GameState.enemiesDefeated` reaches a multiple of `SpawnConfig.bossEveryKills`, the next scheduled wave will include a boss spawn.
+  - When `GameState.enemiesDefeated` reaches a multiple of `SpawnConfig.tierProgressionKills`, increment `GameState.currentTier` (capped by `SpawnConfig.maxTier`) and reset `waveInTier`.
+
+- Edge cases:
+  - Simultaneous deaths (e.g., AoE) produce multiple `EnemyDefeated` events; XP shares are computed against the set of living heroes at the time each death is processed.
+  - If `killedBy` is `null` or environmental, the party still receives shared XP but killer-specific rewards are not awarded.
+
 ## Damage Formula
 
 ```
