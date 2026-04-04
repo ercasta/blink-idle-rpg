@@ -122,7 +122,9 @@ function saveCustomHeroes(heroes: Character[]): void {
 
 function createHeroFromClass(cls: ClassDef, name: string): Character {
   return {
-    id: `custom-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    id: (typeof crypto !== 'undefined' && crypto.randomUUID)
+      ? crypto.randomUUID()
+      : `custom-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
     name: name.trim() || `${cls.name} Hero`,
     class: cls.name,
     level: 1,
@@ -371,7 +373,8 @@ function CreateHeroScreen({ onBack, onCreate }: CreateHeroProps) {
 
   const handleCreate = () => {
     if (!selectedClass) return;
-    const name = heroName.trim() || `${selectedClass.name} ${Math.floor(Math.random() * 9000) + 1000}`;
+    const name = heroName.trim() ||
+      `${selectedClass.name} ${selectedClass.difficulty === 'Easy' ? 'Defender' : selectedClass.difficulty === 'Hard' ? 'Slayer' : 'Wanderer'} ${Math.floor(Math.random() * 90) + 10}`;
     onCreate(createHeroFromClass(selectedClass, name));
   };
 
@@ -705,17 +708,17 @@ interface CombatantCardProps {
   hpCurrent: number;
   hpMax: number;
   isPlayer: boolean;
-  className?: string;
+  heroClass?: string;
 }
 
-function CombatantCard({ name, hpCurrent, hpMax, isPlayer, className }: CombatantCardProps) {
+function CombatantCard({ name, hpCurrent, hpMax, isPlayer, heroClass }: CombatantCardProps) {
   const pct = hpMax > 0 ? Math.max(0, (hpCurrent / hpMax) * 100) : 0;
   const barColor = pct > 50 ? '#4ade80' : pct > 25 ? '#f59e0b' : '#f87171';
   return (
     <div className={`combatant-card${isPlayer ? ' player-combatant' : ' enemy-combatant'}`}>
       <div className="combatant-header">
         <span className="combatant-emoji">{isPlayer ? '🛡️' : '👹'}</span>
-        <span className="combatant-name">{className ? `${name} (${className})` : name}</span>
+        <span className="combatant-name">{heroClass ? `${name} (${heroClass})` : name}</span>
         <span className="combatant-hp">
           {hpCurrent}/{hpMax}
         </span>
@@ -731,7 +734,6 @@ function CombatantCard({ name, hpCurrent, hpMax, isPlayer, className }: Combatan
 }
 
 interface GameScreenProps {
-  party: Character[];
   onReturnToTitle: () => void;
 }
 
@@ -934,7 +936,7 @@ function GameScreen({ onReturnToTitle }: GameScreenProps) {
             <CombatantCard
               key={p.id}
               name={p.name}
-              className={p.class}
+              heroClass={p.class}
               hpCurrent={p.hpCurrent}
               hpMax={p.hpMax}
               isPlayer={true}
@@ -991,7 +993,6 @@ export function GameUI() {
   const [screen, setScreen] = useState<Screen>('title');
   const [customHeroes, setCustomHeroes] = useState<Character[]>(loadCustomHeroes);
   const [prebuiltHeroes, setPrebuiltHeroes] = useState<Character[]>([]);
-  const [selectedParty, setSelectedParty] = useState<Character[]>([]);
   const [showGallery, setShowGallery] = useState(false);
   const [figurineHero, setFigurineHero] = useState<Character | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -1003,8 +1004,8 @@ export function GameUI() {
       try {
         const ir = await compileScenario('easy');
         setPrebuiltHeroes(extractHeroesFromIR(ir));
-      } catch {
-        // Ignore: prebuilt heroes just won't appear if engine unavailable
+      } catch (err) {
+        console.warn('Could not preload prebuilt heroes:', (err as Error).message);
       }
     })();
   }, []);
@@ -1085,8 +1086,7 @@ export function GameUI() {
         <PartySelectionScreen
           allHeroes={allHeroes}
           onBack={() => setScreen('title')}
-          onConfirm={(party) => {
-            setSelectedParty(party);
+          onConfirm={() => {
             setScreen('difficulty');
           }}
           onCreateHero={() => setScreen('create-hero')}
@@ -1103,7 +1103,6 @@ export function GameUI() {
 
       {screen === 'game' && (
         <GameScreen
-          party={selectedParty}
           onReturnToTitle={() => setScreen('title')}
         />
       )}
