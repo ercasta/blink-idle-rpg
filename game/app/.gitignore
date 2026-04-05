@@ -29,3 +29,6 @@ public/blink-compiler.bundle.js
 
 # Generated IR files — compiled from BRL at build time (make compile-brl)
 public/ir/
+
+# Generated WASM engine artefacts — built at deploy time (make build-wasm)
+public/wasm/

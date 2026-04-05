@@ -1,0 +1,30 @@
+# Cargo.toml.template — filled in by blink-engine-wasm-js/build.js
+#
+# Placeholders:
+#   {{RUNTIME_PATH}}  — absolute path to packages/blink-runtime/
+#
+[package]
+name = "blink-rpg-wasm"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "blink_rpg_wasm"
+path = "src/lib.rs"
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = ["console_error_panic_hook"]
+
+[dependencies]
+blink-runtime  = { path = "{{RUNTIME_PATH}}" }
+wasm-bindgen   = "0.2"
+serde_json     = "1"
+
+# Optional — shows Rust panic messages in the browser devtools console.
+console_error_panic_hook = { version = "0.1", optional = true }
+
+[profile.release]
+# Optimise for size (important for WASM download time).
+opt-level = "z"
+lto        = true

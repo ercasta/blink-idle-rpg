@@ -124,6 +124,20 @@ impl World {
         id
     }
 
+    /// Spawn an entity with a specific ID (used by the WASM/JS bridge to create
+    /// entities that match the IDs assigned by the JavaScript SimEngine).
+    /// If the ID is already alive, this is a no-op and returns the ID.
+    /// Advances `next_entity_id` past this ID to avoid future collisions.
+    pub fn spawn_with_id(&mut self, id: EntityId) -> EntityId {
+        if !self.alive.contains(&id) {
+            self.alive.insert(id);
+            if id >= self.next_entity_id {
+                self.next_entity_id = id + 1;
+            }
+        }
+        id
+    }
+
     /// Despawn an entity, removing all its components.
     pub fn despawn(&mut self, id: EntityId) {
         self.alive.remove(&id);

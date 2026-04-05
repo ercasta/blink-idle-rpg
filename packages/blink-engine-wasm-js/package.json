@@ -1,0 +1,20 @@
+{
+  "name": "@blink/engine-wasm-js",
+  "version": "0.1.0",
+  "description": "WASM engine build tooling for Blink Idle RPG — compiles BRL → Rust → WASM and provides the TypeScript wrapper",
+  "type": "module",
+  "scripts": {
+    "build": "node build.js",
+    "build:dev": "node build.js --dev"
+  },
+  "dependencies": {
+    "@blink/compiler-ts": "file:../blink-compiler-ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "~5.4.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
