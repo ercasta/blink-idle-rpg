@@ -47,6 +47,8 @@ The previous React app at `game/app/` has been deleted; it was a developer-orien
 
 > ⚠️ **OI-1 (Engine choice)**: The WASM engine (Track 7) is not yet complete. The JS engine (Track 4) is functional. The player app should **start with the JS engine** behind an `IEngine` abstraction interface, then swap in the WASM engine when it passes conformance tests. Keeping the abstraction clean is the critical design choice — the swap should be a one-line config change, not a refactor.
 
+DECISION: WASM Engine. Let's first fix that
+
 ---
 
 ## 3. Application Routes
@@ -117,6 +119,9 @@ Five stats: STR, DEX, INT, CON, WIS.
 > - **Value range per stat**: Characters.md says "0–7 (3 bits) or 0–15 (4 bits)"; figurine-qr-design.md uses 4 bits. **Recommend: 4-bit values (0–15)** as a reasonable balance between expressiveness and QR space efficiency.
 > - **Progression model**: (A) Fixed linear growth per level set at creation — simplest, fits QR. (B) Point-buy at character creation only. (C) Per-level allocation at play time (requires mid-run player interaction, incompatible with idle). **Recommend Option A**: each stat has a `base_value` (0–15) and a `growth_rate` (0–7, 3-bit) encoding how many points the stat gains per level. Both encoded in QR.
 
+DECISION: we'll address this in game design first. 
+
+
 **UI**: 5 rows of:
 ```
 STR  [────────●───] 8   [+][−]
@@ -133,9 +138,13 @@ Five growth-rate sliders (one per stat), range 0–7 (3 bits each). Show a level
 
 Show the class skill tree as a scrollable DAG. Each node is a skill card (name, type, brief effect). Players pick **up to 10 skills** in priority order (the order defines the leveling sequence: skill 1 is unlocked first, skill 2 second, etc.).
 
+DECISION: each class starts with the same stats point distribution, and with 1 skill point which is part of the hero definition.
+
 > ⚠️ **OI-4 (Skill tree depth)**: The skills.md document currently lists 4 skills per class (Warrior, Mage, Ranger, Paladin, Rogue, Cleric) — too few for a meaningful tree. Review.md mentions 36 skills across 4 classes (9 each). The actual skill DAG structure (prerequisites per class) needs to be designed and added to the game design docs before this screen can be fully implemented. **This is a blocking game design dependency.**
 >
 > For the UI, plan for up to 20 nodes per class in a 2–3 column scrollable grid. Prerequisite edges are shown as connecting lines. Locked skills are greyed out; eligible skills have a pulsing highlight.
+
+DECISION: already addressed in a separate game design branch
 
 #### Step 5 — Early Game Behaviour
 
@@ -157,6 +166,8 @@ The 24 behaviour bytes map to the named decision values defined in `doc/game-des
 > **This is a blocking game design decision** that directly controls the QR encoding and the engine's AI integration. Must be resolved before implementation.
 
 The 3 skill pickers show only skills already chosen in Step 4, filtered by type (active for primary/secondary, passive for passive slot).
+
+Decision: we'll use 12 decision fields. addressed in separate design branch
 
 #### Step 6 — Mid Game Behaviour
 
@@ -287,6 +298,8 @@ Constraints:
 >
 > **For v1**: local-only party selection. Design the QR scan flow so "scan → add to roster → select for party" is seamless.
 
+Decision: absolutely local only
+
 ---
 
 ### 4.7 Battle Screen (`/play/battle`)
@@ -316,6 +329,8 @@ Constraints:
 └─────────────────────────────┘
 ```
 
+Decision: the interface must be much simpler. Consider the game with progress by steps of... 10 encounters? So I'd just show the player levels, and some aggregated metrics, such as an overall score, a progress indicator (we'll add this in game design so the player knows how far is in the game).
+
 **Simulation behaviour**:
 - WASM (or JS) engine runs in a background `requestAnimationFrame` loop or `setInterval`.
 - Engine state is polled every ~100 ms (game time) and React state is updated for rendering.
@@ -330,10 +345,16 @@ Constraints:
 - Wave complete: brief celebratory animation before next wave spawns.
 
 > ⚠️ **OI-9 (WASM/JS engine integration)**: The battle screen requires the engine to produce a "snapshot" each tick for the React layer to render. The current JS engine exposes `getAllEntities()`, `step()`, etc. The WASM engine should expose the same `BlinkGame` interface. Key design question: **should the engine run synchronously (blocked JS thread) or asynchronously (Worker + postMessage)?** Recommendation: run the WASM engine in a **Web Worker** so it never blocks the UI thread. The Worker posts `GameSnapshot` messages at each frame boundary. This requires careful serialisation (JSON or a shared `SharedArrayBuffer` ring buffer).
+
+Decision: it's good to make it run asynchronously. In terms of user experience, we are looking at roughly 30 steps overall to complete the game, with 1 update per second. The UI should show 1 update per second despite how far the simulation run. Note that since there is no user interaction, the simulation might even complete in half a second, but nevertheless we need to show roughly 30 updates to the user before the game ends. This means we might have to "snapshot" values at given progress steps. In general I prefer decoupling the simulation from the UI.
+
 >
 > See also: `doc/engine/wasm-engine-plan.md` for the existing WASM design.
 
 > ⚠️ **OI-10 (Hero AI integration)**: The behaviour bytes from the hero QR must drive the simulation AI. The connection point is the `decision_values` fields on the hero template entity (defined in `characters.md`). The QR encode/decode package must map the 12 (or 24) behaviour bytes onto the `decision_values` component fields before the hero entity is loaded into the engine. The exact mapping depends on the resolution of OI-5.
+
+
+Decision: I don't understand the open points. The hero values, together with other "data" (e.g. enemy, levels) must be loaded into the engine when the game runs
 
 ---
 
@@ -413,7 +434,11 @@ A 1080 × 1920 px `<canvas>` element rendered at 360 × 640 px display size (sca
 >
 > **Recommend testing empirically** with real WhatsApp sharing before deciding. The design should support both variants regardless.
 
+Decision: let's test this empirically.
+
 > ⚠️ **OI-12 (Hero portrait artwork)**: The figurine screen requires hero class portraits. For v1, use large class emojis or simple SVG placeholder art. For production, commission or generate (AI) per-class artwork in a consistent style. The canvas drawing code should accept an `img` element as the portrait layer, so swapping in real art is a drop-in change.
+
+Decision: for now let's not use portraits. We'll add them later
 
 ---
 
@@ -499,6 +524,8 @@ Offset  Size    Field
 
 > ⚠️ **OI-13 (behaviour bytes vs decision values alignment)**: See OI-5 above. The bit layout above uses 24 bytes per phase as in `blink-qr.md`; characters.md uses 12 signed 6-bit values (-32 to +31). Until OI-5 is resolved, implement the QR format with 24 bytes per phase (the superset) and map bytes 0–11 to the 12 named decision values using `clamp(byte, -32, 31)` (lower 6 bits of the signed byte). Bytes 12–23 are reserved and written as 0.
 
+Decision: this is ok as a first version. We'll revised this later.
+
 ---
 
 ## 6. WASM Engine Integration
@@ -565,6 +592,8 @@ The Worker is initialized lazily when the battle screen mounts and terminated wh
 
 > ⚠️ **OI-14 (Worker vs main thread for JS engine)**: The JS engine is synchronous and runs on the main thread in the current prototype. For v1 (JS engine), keeping it on the main thread is acceptable since JS execution is fast enough at 1× speed. When the WASM engine is added, always run it in a Worker. The `IBlinkEngine` abstraction should make the Worker wrapper transparent.
 
+Decision: forget the JS engine for now. In terms of WASM engine design. Also see OI-9 related to stepping behaviour
+
 ### 6.4 Hero Entity Injection
 
 The hero QR payload must be converted to IR initial state entities before the engine is loaded:
@@ -582,6 +611,8 @@ engine.loadIR(mergedIR)
 2. Reading `qrHero.behaviour_bytes` → `DecisionValues` component fields (see OI-5 / OI-10)
 3. Reading `qrHero.skill_ids` → `Skills` component fields
 4. Creating the hero entity with `Character`, `Team`, `HeroTemplate` components
+
+Decision: watch out, at runtime we're not going to work with the IR. The Engine must expose an interface allowing to set entities / components, that's how we'll load the initial state.
 
 ---
 
