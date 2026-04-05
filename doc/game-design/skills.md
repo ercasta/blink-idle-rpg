@@ -454,3 +454,42 @@ If you'd like, I can next:
 - Convert this DAG into a visual graph (Mermaid) and embed it into `doc/game-design/skills.md`.
 - Produce BRL/IR-friendly skill metadata stubs for each skill ID to ease implementation.
 
+## Metrics & Leaderboard
+
+Beyond a single numeric score, the client should display additional persistent metrics to help players understand performance and progression. These metrics are recorded in the browser `localStorage` leaderboard alongside the existing `score` value.
+
+- **Kills:** Total number of enemy kills during a run/encounter/session.
+- **Party Deaths / Retreats:** Number of times party members died and number of manual or automatic retreats/flees (separate counters).
+- **Average DPS (last 10 encounters):** Rolling average DPS computed from the most recent up to 10 completed encounters. DPS for an encounter = total damage dealt by the party / encounter duration (seconds). The average is the mean of the last N encounter DPS values where N <= 10.
+
+Suggested `localStorage` schema (single leaderboard key storing an array of entries):
+
+{
+	"leaderboard": [
+		{
+			"timestamp": 1670000000000,
+			"playerId": "player123",
+			"score": 12345,
+			"kills": 42,
+			"partyDeaths": 3,
+			"retreats": 1,
+			"avgDPS": 256.7,
+			"encounters": 37
+		}
+	]
+}
+
+Implementation notes:
+- Emit a high-level `EncounterEnd` event from the simulation containing `{ damageDone, durationSeconds, kills, partyDeaths, retreats }` for each encounter.
+- On the client, maintain a sliding array of the last 10 `damageDone/durationSeconds` values per player; compute `avgDPS = sum(values)/values.length` and store that value in the leaderboard entry.
+- Update the leaderboard entry after each encounter/run save. Include both the raw counters (`kills`, `partyDeaths`, `retreats`) and the computed `avgDPS` for display and sorting.
+
+UI notes:
+- Show the new metrics in the leaderboard row: `Score | Kills | Deaths / Retreats | Avg DPS`.
+- Allow sorting by `score` (default) and optionally by `avgDPS` or `kills`.
+- Provide a tooltip or small help icon explaining that `Avg DPS` is computed over the last up to 10 encounters.
+
+If you want, I can also:
+- Add a short client-side code snippet showing how to maintain the last-10 sliding window and persist the leaderboard to `localStorage`.
+- Create a leaderboard UI mockup (simple HTML/CSS) and a tiny script to demo saving/loading these metrics.
+
