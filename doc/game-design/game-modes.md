@@ -103,19 +103,24 @@ Note: boss spawns and tier progression are driven by the global kill count (`Gam
 
 ---
 
-### 5. Endless (`endless`)
-**Intent**: No final boss; run goes until the party is wiped. Score measures how deep you go.
+## Run Structure — Fixed Steps and Encounters
 
-| Parameter | Value | Notes |
-|-----------|-------|-------|
-| `pointsPerKill` | 10 | Normal |
-| `pointsPerWave` | 50 | Normal |
-| `pointsPerBoss` | 500 | Normal |
-| `pointsLostPerDeath` | 150 | Slightly higher |
-| `maxTier` | 99 | No cap (enemies scale infinitely) |
-| `bossEveryKills` | 50 | Bosses appear twice as often |
-| Victory condition | None | Run ends only on `GameOver` |
+The game uses a deliberate, fixed-run structure rather than an open-ended "endless" run. Each run is composed of a configurable number of *steps* (N), and each step contains a configurable number of *encounters* (M). The run completes when the player has progressed through all N steps (i.e., after N × M encounters), at which point the `Victory` condition is evaluated and a final score is produced.
 
+Key parameters (set per mode or scenario):
+
+- `stepsPerRun` (integer): Number of high-level steps in the run (N).
+- `encountersPerStep` (integer): Number of encounters inside each step (M).
+- `totalEncounters` (derived): `stepsPerRun * encountersPerStep`.
+- `hasVictoryCondition` (boolean): `true` for fixed-step runs; the run has an explicit end.
+
+Behavioural notes:
+
+- After every `encountersPerStep` encounters the game advances the `currentStep` counter and may apply step-specific changes (difficulty bump, loot tier, UI milestone). 
+- When the `currentStep` exceeds `stepsPerRun`, the run ends and the `Victory` condition is evaluated. Final scoring aggregates across all encounters and steps.
+- Modes that previously used an open-ended playstyle should be implemented as high-`stepsPerRun` scenarios or replaced by a dedicated scenario that mimics long runs while preserving a final victory condition.
+
+This structure focuses player goals on achieving the highest possible score within a bounded run and simplifies UI progress indicators and replay analysis.
 ---
 
 ## Adding a New Game Mode

@@ -10,6 +10,20 @@ This document covers how encounters are structured, how the party progresses thr
 - Encounter difficulty scales via enemy tier, count, and stat multipliers.
 - Boss encounters are special and use different selection logic.
 
+## Steps and Encounters (Run Structure)
+
+- A run is composed of `stepsPerRun` (N) high-level steps. Each step groups `encountersPerStep` (M) encounters.
+- Progress is tracked using `GameProgress` fields attached to the global game-state entity:
+	- `stepsPerRun`: integer (N)
+	- `encountersPerStep`: integer (M)
+	- `currentStep`: integer (1..N)
+	- `encountersCompletedInStep`: integer (0..M)
+	- `totalEncountersCompleted`: integer (monotonic)
+
+- After `encountersPerStep` encounters the `currentStep` is incremented and `encountersCompletedInStep` resets to 0. When `currentStep > stepsPerRun` the run ends and `Victory` is evaluated.
+
+- This fixed structure makes the run length predictable, enables clear UI progress indicators, and simplifies scoring balance (score per step / encounter).
+
 ---
 
 ## Encounter Structure
@@ -78,7 +92,10 @@ Additionally, `initialEnemyCount` may increase by one for every N waves (configu
 - If all heroes die, `GameOver` is triggered and the run ends.
 - If the final boss is defeated, `Victory` is triggered and the run ends.
 
-Both endings produce a final score (see [scoring.md](scoring.md)).
+- If all heroes die during an encounter the run does *not* immediately terminate. Instead the engine emits a `PartyWiped` event, the run applies a configurable `wipeoutPenalty` (scoring penalty) and then immediately fully heals and restores the party to a ready state before continuing with the next encounter. This allows runs to continue toward the step/encounter target while penalising wipeouts.
+- The run still ends when `currentStep > stepsPerRun` (all steps completed) or when a scenario-specific victory condition is met (e.g., final boss defeated). The `wipeoutPenalty` is included in the final score calculation.
+
+Both regular completion and wipeout-continued runs produce a final score (see [scoring.md](scoring.md)).
 
 ---
 

@@ -709,3 +709,42 @@ The design assumes a single hero template entity (`hero_template`) in BRL. If th
 | Version | Date | Changes |
 |---|---|---|
 | 0.1.0 | 2026-04-05 | Initial draft — gap analysis, hero injection design, stepping strategy, integration architecture |
+
+## Next Steps
+
+This project now has a clear implementation plan (see §7). The immediate next engineering tasks to make the WASM engine production-ready are listed below in priority order. Each item is written as a discrete, testable deliverable that can be picked up by a single PR.
+
+1. Implement `FieldSetterRegistry` and `patch_entity` (Rust).
+  - Add `packages/blink-runtime/src/field_registry.rs` and wire it into `Engine`.
+  - Extend `packages/blink-compiler-ts/src/codegen-rust.ts` to emit `register_field_setters` for all components.
+  - Unit test: native `init_game` + `clone_named_entity` + `patch_entity` modifies a cloned hero's fields as expected.
+
+2. Add snapshot recording and `drain_snapshots_json` (Rust).
+  - Add `log_buffer` and `snapshot_triggers` fields to `Engine`.
+  - Emit snapshots on `WaveComplete`, `BossKilled`, and `GameOver` events.
+  - Integration test: a short BRL scenario that triggers 3 wave-complete snapshots; verify `drain_snapshots_json` returns them.
+
+3. Add `exports.rs` WASM bindings and `wasm-pack` Makefile target.
+  - Annotate the necessary functions with `#[wasm_bindgen]` and provide JSON-friendly signatures (`patch_entity`, `clone_named_entity`, `drain_snapshots_json`, `drain_log_json`, etc.).
+  - Add `build-wasm` to the Makefile that runs codegen → `wasm-pack build` → copies output to `game/wasm/`.
+  - CI: add an optional WASM build job (can be gated behind an env flag) to validate the pipeline.
+
+4. Create `packages/blink-engine-wasm-js` (TS wrapper + Worker).
+  - Implement `IBlinkEngine` and `BlinkEngineWrapper` running the Worker lifecycle.
+  - Implement `hero-patch-builder.ts` and unit tests for the QR→patch mapping.
+  - Demo: `game/demos/rpg-demo-wasm.html` that loads the Worker and logs snapshots.
+
+5. React integration and UX polish.
+  - Implement `RunContext.startRun` to call the wrapper, receive snapshots, and play them back at 1/sec.
+  - Update the battle screen to show `currentStep`, `encountersRemaining`, and `overall progress` according to the fixed-run structure (see `doc/game-design/encounters.md`).
+  - UX: handle zero-snapshot runs, snapshot sub-sampling (>60), and cancellation.
+
+6. BRL + scenario updates.
+  - Add canonical snapshot trigger event names (documented in BRL constants) and ensure BRL rules fire them consistently.
+  - Add `stepsPerRun`, `encountersPerStep`, and `wipeoutPenalty` fields to relevant scenario BRL files (`game/brl/game-config.brl` or scenario-specific BRL).
+
+7. Tests & Conformance.
+  - Add conformance tests that run the same BRL scenario on the JS engine and the WASM engine and compare snapshots/state after each step (reusing the existing e2e harness where possible).
+  - Add unit tests for `patch_entity` field setters to protect regressions when component schemas change.
+
+If you'd like, I can start implementing these in order. Tell me which item to pick first (Rust field registry, snapshot recording, WASM exports, TS wrapper, or React integration) and I'll create a focused TODO plan and begin editing files.

@@ -329,7 +329,7 @@ Decision: absolutely local only
 └─────────────────────────────┘
 ```
 
-Decision: the interface must be much simpler. Consider the game with progress by steps of... 10 encounters? So I'd just show the player levels, and some aggregated metrics, such as an overall score, a progress indicator (we'll add this in game design so the player knows how far is in the game).
+Decision: the interface must be much simpler. The game uses a fixed-run structure: `N` steps × `M` encounters per step (for example, 3 steps × 10 encounters = 30 encounters). UI should show current step, encounters remaining in the step, and overall progress/score. This keeps the player oriented and matches the game-design `stepsPerRun` / `encountersPerStep` parameters.
 
 **Simulation behaviour**:
 - WASM (or JS) engine runs in a background `requestAnimationFrame` loop or `setInterval`.
