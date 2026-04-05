@@ -219,9 +219,12 @@ export async function runSimulation(
     damageScaleRate: cfg.damageScaleRate,
     initialEnemyCount: cfg.initialEnemyCount,
   });
-  // N=30 checkpoints: one per enemy defeated (interval=1).
-  // With a 5-second JS budget we typically capture 30–60 snapshots,
-  // giving a 30–60-second battle replay at 1 second per snapshot.
+  // N checkpoints: one per enemy defeated (interval=1).
+  // The design spec targets N=30 checkpoints every 10 kills, but the JS
+  // engine is CPU-bound so we capture every kill and display as many
+  // snapshots as we collect within the 5-second wall-clock budget.
+  // The WASM engine (v2) will run the full 300-kill game in ~300ms and
+  // always produce exactly 30 checkpoints at interval=10.
   game.addComponent(gsId, 'ProgressTracker', {
     checkpointInterval: 1,
     checkpointsReached: 0,
