@@ -76,7 +76,16 @@ jobs:
           test -f game/demos/blink-engine.bundle.js || (echo "Error: Engine bundle not found" && exit 1)
           test -f game/demos/blink-compiler.bundle.js || (echo "Error: Compiler bundle not found" && exit 1)
           ls -lh game/demos/blink-engine.bundle.js
-          ls -lh game/demos/blink-compiler.bundle.js      
+          ls -lh game/demos/blink-compiler.bundle.js
+
+      - name: Compile BRL to IR
+        run: |
+          echo "Compiling BRL source files to IR..."
+          node tools/compile-brl-to-ir.js
+          echo "Verifying demo IR was created..."
+          test -f game/demos/ir/rpg-demo.ir.json || (echo "Error: Demo IR not found" && exit 1)
+          ls -lh game/demos/ir/rpg-demo.ir.json
+      
       - name: Prepare deployment directory
         run: |
           mkdir -p _site
@@ -92,13 +101,25 @@ jobs:
           cp game/demos/blink-engine.bundle.js _site/
           cp game/demos/blink-compiler.bundle.js _site/
           
+          # Copy pre-compiled IR files for the demo
+          echo "Copying pre-compiled IR files..."
+          mkdir -p _site/ir
+          cp game/demos/ir/rpg-demo.ir.json _site/ir/
+          
           # Copy BRL/BCL/BDL source files for runtime compilation
           echo "Copying source files for runtime compilation..."
           mkdir -p _site/game
           cp -r game/brl _site/game/
           if [ -d game/bcl ]; then cp -r game/bcl _site/game/; fi
           if [ -d game/bdl ]; then cp -r game/bdl _site/game/; fi
-          echo "Copied source files to _site/game/"
+          
+          # Also copy BRL files to _site/brl/ for compatibility with local dev paths
+          echo "Copying BRL files to /brl/ for path compatibility..."
+          mkdir -p _site/brl
+          if ls game/brl/*.brl 1> /dev/null 2>&1; then
+            cp game/brl/*.brl _site/brl/
+          fi
+          echo "Copied source files"
           
           # Copy data files for runtime use
           echo "Copying data files..."

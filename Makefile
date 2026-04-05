@@ -50,8 +50,9 @@ dev-setup:
 	@test -f $(COMPILER_BUNDLE) || (echo "Error: Compiler bundle not found at $(COMPILER_BUNDLE)" && exit 1)
 	@echo ""
 	@echo "Development setup complete!"
-	@echo "Open game/demos/classic-rpg.html in a browser to play."
-	@echo "The game will compile BRL files in real-time using the TypeScript compiler."
+	@echo "To compile BRL to IR and serve the demo:"
+	@echo "  make compile-brl"
+	@echo "  cd game/demos && npx serve ."
 
 # Build for development (TypeScript compiler + engine)
 dev: build-compiler-ts build-packages-dev

@@ -73,4 +73,27 @@ const classicOut = path.join(OUTPUT_DIR, 'classic-rpg.ir.json');
 fs.writeFileSync(classicOut, JSON.stringify(classicIR, null, 2));
 console.log(`  → ${classicOut}  (${(fs.statSync(classicOut).size / 1024).toFixed(1)} KB)`);
 
+// ─── Compile standalone demo IR (all BRL files, WITH entities) ────────────
+// This is used by the GitHub Pages demo (rpg-demo.html) which loads
+// pre-compiled IR instead of compiling BRL at runtime.
+const DEMO_OUTPUT_DIR = path.join(ROOT, 'game/demos/ir');
+fs.mkdirSync(DEMO_OUTPUT_DIR, { recursive: true });
+
+console.log('Compiling rpg-demo.ir.json (standalone demo with entities) …');
+const demoIR = compileBrlFiles(
+  [
+    path.join(ROOT, 'game/brl/game-config.brl'),
+    path.join(ROOT, 'game/brl/heroes.brl'),
+    path.join(ROOT, 'game/brl/enemies.brl'),
+    path.join(ROOT, 'game/brl/scenario-normal.brl'),
+    path.join(ROOT, 'game/brl/classic-rpg.brl'),
+  ],
+  'rpg-demo'
+);
+
+// Keep initial_state entities — the standalone demo needs them
+const demoOut = path.join(DEMO_OUTPUT_DIR, 'rpg-demo.ir.json');
+fs.writeFileSync(demoOut, JSON.stringify(demoIR, null, 2));
+console.log(`  → ${demoOut}  (${(fs.statSync(demoOut).size / 1024).toFixed(1)} KB)`);
+
 console.log('\n✅ BRL compilation complete.');
