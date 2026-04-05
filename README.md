@@ -7,7 +7,7 @@ An idle RPG where you complete the entire game in a blink... more or less!
 In Blink you define your RPG party and some decision rules, then the entire game runs without interaction. The system uses:
 
 - **BRL (Blink Rule Language)**: Game developers define game rules, components, events, and game data (entities)
-- **Multiple Engines**: Rust, JavaScript, and Batch engines execute compiled IR
+- **Multiple Engines**: JavaScript and WASM engines execute compiled IR (Intermediate Representation)
 
 ## Project Status
 
@@ -18,9 +18,9 @@ This project is in early development with parallel work streams:
 | Track | Status | Description |
 |-------|--------|-------------|
 | Language Design | 📝 Spec Draft | BRL specification |
-| **Compiler** | ✅ Scaffold | Lexer, Parser, IR Generator |
-| Rust Engine | 📋 Planned | Native performance engine |
+| **Compiler** | ✅ Implemented | Lexer, Parser, IR Generator |
 | **JS Engine** | ✅ Implemented | Browser-based engine |
+| **WASM Engine** | 🚧 In Progress | BRL → Rust → WASM compilation |
 | **Testing Framework** | ✅ Implemented | Integrated testing for BRL |
 | Batch Engine | 📋 Planned | Balance testing engine |
 | Dev Tools | 📋 Planned | LSP and VS Code extension |
@@ -70,12 +70,12 @@ make demo-package
 ```
 
 - Available targets:
-- `make build-compiler` - Build the TypeScript BRL compiler (packages/blink-compiler-ts)
-- `make compile-brl` - Compile all BRL files to IR
+- `make build-compiler-ts` - Build the TypeScript BRL compiler (packages/blink-compiler-ts)
+- `make compile-brl` - Compile all BRL files to IR (app IR + demo IR)
 - `make install-packages` - Install npm dependencies
 - `make build-packages` - Build TypeScript packages
 - `make test` - Run all tests (compiler + packages)
-- `make test-compiler` - Run compiler tests only
+- `make test-compiler-ts` - Run compiler tests only
 - `make test-packages` - Run package tests only
 - `make test-examples` - Run example tests
 - `make demo-package` - Create demo distribution package
@@ -86,8 +86,9 @@ make demo-package
 **First, build the required files:**
 
 ```bash
-# From repository root - builds TypeScript bundles
+# From repository root - builds TypeScript bundles and compiles BRL to IR
 make dev-setup
+make compile-brl
 ```
 
 Then serve the demos using a local web server:
@@ -115,9 +116,9 @@ The demos are automatically deployed to GitHub Pages on every push to the main b
 🎮 **[Play Now on GitHub Pages](https://ercasta.github.io/blink-idle-rpg/)**
 
 The GitHub Pages deployment includes:
-- All interactive demos (combat demo, RPG demo)
-- Pre-compiled game files (IR)
-- Downloadable source files (BRL)
+- Interactive RPG demo with pre-compiled game rules (IR)
+- Engine bundle (no compiler needed at runtime)
+- Downloadable source files (BRL, BCL)
 
 **Note:** The first deployment requires enabling GitHub Pages in the repository settings:
 1. Go to repository Settings → Pages
@@ -228,16 +229,16 @@ The project uses GitHub Actions for automated builds and deployment:
 ### Workflows
 
 - **GitHub Pages Deployment** - Automatically deploys demos to GitHub Pages on push to main
-  - Builds the compiler and compiles BRL files to IR
-  - Builds the JavaScript engine packages
-  - Deploys demos to GitHub Pages at https://ercasta.github.io/blink-idle-rpg/
+  - Builds the compiler and engine packages
+  - Compiles BRL source to pre-compiled IR for the demo
+  - Deploys to GitHub Pages at https://ercasta.github.io/blink-idle-rpg/
   
 - **Build Demo Package (Linux)** - Creates a distributable demo package for Linux
-  - Triggered on push to main, tags, and PRs
+  - Triggered on tags, PRs, and manual dispatch
   - Uploads artifact and creates GitHub releases on tags
 
 - **Build Demo Package (Windows)** - Creates a distributable demo package for Windows
-  - Triggered on push to main, tags, and PRs
+  - Triggered on tags, PRs, and manual dispatch
   - Uploads artifact and creates GitHub releases on tags
 
 All workflows can be manually triggered using the "workflow_dispatch" event.

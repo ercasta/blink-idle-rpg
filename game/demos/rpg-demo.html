@@ -153,7 +153,7 @@
   <div id="app">
     <div id="loading">
       <div class="spinner"></div>
-      <p>Loading game engine and compiling rules...</p>
+      <p>Loading game engine and rules...</p>
     </div>
     <div id="error"></div>
     <div id="game" style="display:none">
@@ -205,58 +205,50 @@
   </div>
 
   <script src="blink-engine.bundle.js"></script>
-  <script src="blink-compiler.bundle.js"></script>
   <script>
     let engine = null;
     let running = false;
     let gameLoop = null;
-    const logEntries = [];
 
-    async function loadBRLFile(path) {
-      const res = await fetch(path);
-      if (!res.ok) throw new Error(`Failed to load ${path}: ${res.status}`);
-      return res.text();
+    /**
+     * Convert the Map<EntityId, Map<string, ComponentData>> returned by
+     * engine.getState().entities into an array of plain objects for easy
+     * filtering and rendering.
+     */
+    function entitiesToArray(entityMap) {
+      const result = [];
+      for (const [id, components] of entityMap) {
+        const entity = { _id: id };
+        for (const [name, data] of components) {
+          entity[name] = data;
+        }
+        result.push(entity);
+      }
+      return result;
     }
 
     async function initGame() {
       try {
-        // Load BRL source files
-        const brlFiles = [
-          '../brl/game-config.brl',
-          '../brl/heroes.brl',
-          '../brl/enemies.brl',
-          '../brl/scenario-normal.brl',
-          '../brl/classic-rpg.brl',
-        ];
-
-        const sources = await Promise.all(
-          brlFiles.map(async (path) => {
-            const content = await loadBRLFile(path);
-            return { path: path.split('/').pop(), content, language: 'brl' };
-          })
-        );
-
-        // Compile BRL sources
-        if (!window.BlinkCompiler) throw new Error('BRL Compiler not loaded');
-        const result = window.BlinkCompiler.compile(sources, { moduleName: 'classic-rpg' });
-
-        if (result.errors && result.errors.length > 0) {
-          throw new Error('Compilation errors:\n' + result.errors.map(e => `${e.file}:${e.line}: ${e.message}`).join('\n'));
-        }
+        // Load pre-compiled IR (no BRL compiler needed at runtime)
+        const irUrl = 'ir/rpg-demo.ir.json';
+        const res = await fetch(irUrl);
+        if (!res.ok) throw new Error('Failed to load IR from ' + irUrl + ': ' + res.status + ' ' + res.statusText);
+        const ir = await res.json();
 
         // Initialize engine with compiled IR
         if (!window.BlinkEngine) throw new Error('Blink Engine not loaded');
-        engine = new window.BlinkEngine.GameEngine(result.ir);
+        engine = window.BlinkEngine.BlinkGame.createSync({ debug: false });
+        engine.loadRulesFromObject(ir);
 
         document.getElementById('loading').style.display = 'none';
         document.getElementById('game').style.display = 'block';
-        addLog('Game engine initialized. Click Start to begin!');
+        addLog('Game engine initialized with ' + engine.getState().entities.size + ' entities. Click Start to begin!');
         updateUI();
       } catch (err) {
         document.getElementById('loading').style.display = 'none';
         const errorDiv = document.getElementById('error');
         errorDiv.style.display = 'block';
-        errorDiv.innerHTML = `<strong>Failed to initialize:</strong><br><pre>${err.message}</pre>`;
+        errorDiv.innerHTML = '<strong>Failed to initialize:</strong><br><pre>' + err.message + '</pre>';
         console.error(err);
       }
     }
@@ -268,14 +260,17 @@
       document.getElementById('btn-pause').disabled = false;
       document.getElementById('score-bar').style.display = 'flex';
 
-      // Schedule the game start event
-      engine.scheduleEvent('GameStart', {});
+      // Schedule the game start event (delay = 0)
+      engine.scheduleEvent('GameStart', 0);
 
-      // Run game loop
+      // Run game loop — multiple steps per tick for faster progression
       gameLoop = setInterval(() => {
         if (!running) return;
         try {
-          engine.step();
+          for (let i = 0; i < 10; i++) {
+            const r = engine.step();
+            if (!r) break;
+          }
           updateUI();
           checkGameOver();
         } catch (e) {
@@ -296,7 +291,6 @@
       if (gameLoop) clearInterval(gameLoop);
       running = false;
       engine = null;
-      logEntries.length = 0;
       document.getElementById('log').innerHTML = '';
       document.getElementById('heroes-list').innerHTML = '';
       document.getElementById('enemies-list').innerHTML = '';
@@ -312,77 +306,75 @@
     }
 
     function checkGameOver() {
-      const state = engine.getState();
-      const heroes = Object.values(state.entities || {}).filter(e => e.Team && e.Team.isPlayer);
-      const enemies = Object.values(state.entities || {}).filter(e => e.Team && !e.Team.isPlayer);
+      if (!engine) return;
+      const entities = entitiesToArray(engine.getState().entities);
+      const heroes = entities.filter(e => e.Team && e.Team.isPlayer && e.Health && e.Health.current > 0);
       if (heroes.length === 0) {
+        running = false;
+        if (gameLoop) clearInterval(gameLoop);
         document.getElementById('game-status').textContent = '💀 Party Defeated';
         document.getElementById('game-desc').textContent = 'All heroes have fallen. Better luck next time!';
+        document.getElementById('btn-start').disabled = true;
+        document.getElementById('btn-pause').disabled = true;
       }
     }
 
     function updateUI() {
       if (!engine) return;
-      const state = engine.getState();
-      const entities = Object.values(state.entities || {});
+      const entities = entitiesToArray(engine.getState().entities);
 
-      const heroes = entities.filter(e => e.Team && e.Team.isPlayer);
+      const heroes = entities.filter(e => e.Team && e.Team.isPlayer && e.Health);
       const enemies = entities.filter(e => e.Team && !e.Team.isPlayer && e.Health);
 
-      renderEntityList('heroes-list', heroes, '#4ade80');
-      renderEntityList('enemies-list', enemies, '#f87171');
+      renderEntityList('heroes-list', heroes);
+      renderEntityList('enemies-list', enemies);
 
       // Update scores if available
-      const gameState = entities.find(e => e.RunStats);
-      if (gameState && gameState.RunStats) {
-        document.getElementById('score-kills').textContent = gameState.RunStats.totalKills || 0;
-        document.getElementById('score-deaths').textContent = gameState.RunStats.totalDeaths || 0;
-        document.getElementById('score-bosses').textContent = gameState.RunStats.bossesDefeated || 0;
-        document.getElementById('score-total').textContent = gameState.Score ? gameState.Score.totalScore || 0 : 0;
+      const runStats = entities.find(e => e.RunStats);
+      if (runStats) {
+        document.getElementById('score-kills').textContent = runStats.RunStats.totalKills || 0;
+        document.getElementById('score-deaths').textContent = runStats.RunStats.totalDeaths || 0;
+        document.getElementById('score-bosses').textContent = runStats.RunStats.bossesDefeated || 0;
+        const score = runStats.Score ? runStats.Score.totalScore || 0 : 0;
+        document.getElementById('score-total').textContent = score;
       }
     }
 
-    function renderEntityList(containerId, entities, hpColor) {
+    function renderEntityList(containerId, entities) {
       const container = document.getElementById(containerId);
       if (!container) return;
 
       const html = entities.map(e => {
-        const name = e.Character ? e.Character.name : (e.variable || 'Unknown');
-        const cls = e.Character ? e.Character.class : '';
+        const name = e.Character ? e.Character.name : (e.EnemyTemplate ? e.EnemyTemplate.name : 'Unknown');
+        const cls = e.Character ? e.Character.class : (e.EnemyTemplate ? e.EnemyTemplate.tier : '');
         const hp = e.Health ? e.Health.current : 0;
         const maxHp = e.Health ? e.Health.max : 1;
         const hpPct = Math.max(0, Math.min(100, (hp / maxHp) * 100));
-        const lvl = e.Character ? ` Lv.${e.Character.level}` : '';
-        return `
-          <div class="entity-card">
-            <div class="entity-name">${name}${lvl}</div>
-            <div class="entity-class">${cls}</div>
-            <div class="hp-bar"><div class="hp-fill${hpPct < 30 ? ' low' : ''}" style="width:${hpPct}%"></div></div>
-            <div class="hp-text">${hp} / ${maxHp} HP</div>
-          </div>
-        `;
+        const lvl = e.Character ? ' Lv.' + e.Character.level : '';
+        return '<div class="entity-card">'
+          + '<div class="entity-name">' + name + lvl + '</div>'
+          + '<div class="entity-class">' + cls + '</div>'
+          + '<div class="hp-bar"><div class="hp-fill' + (hpPct < 30 ? ' low' : '') + '" style="width:' + hpPct + '%"></div></div>'
+          + '<div class="hp-text">' + hp + ' / ' + maxHp + ' HP</div>'
+          + '</div>';
       }).join('');
 
       container.innerHTML = html || '<p style="color:#666;font-size:0.9rem">None</p>';
     }
 
-    function addLog(msg, type = '') {
+    function addLog(msg, type) {
       const log = document.getElementById('log');
       if (!log) return;
       const entry = document.createElement('div');
-      entry.className = `log-entry ${type}`;
+      entry.className = 'log-entry' + (type ? ' ' + type : '');
       entry.textContent = msg;
       log.appendChild(entry);
       log.scrollTop = log.scrollHeight;
+      // Keep log size manageable
+      while (log.children.length > 200) {
+        log.removeChild(log.firstChild);
+      }
     }
-
-    // Listen for engine events
-    window.addEventListener('blink:event', (e) => {
-      const { name, data } = e.detail || {};
-      if (name === 'Death') addLog(`💀 Entity died`, 'death');
-      else if (name === 'LevelUp') addLog(`⬆️ Level up!`, 'level');
-      else if (name === 'DoAttack') addLog(`⚔️ Attack!`, 'combat');
-    });
 
     initGame();
   </script>
