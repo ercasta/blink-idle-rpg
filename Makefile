@@ -1,7 +1,7 @@
 # Blink Idle RPG - Local Development Pipeline
 # This Makefile allows you to run build and test pipelines locally
 
-.PHONY: help all clean build-compiler-ts install-packages build-packages test demo-package dev-setup dev
+.PHONY: help all clean build-compiler-ts install-packages build-packages test demo-package dev-setup dev build-runtime test-runtime test-wasm
 
 # Bundle output locations
 DEMOS_DIR=game/demos
@@ -26,6 +26,9 @@ help:
 	@echo "  make test-compiler-ts - Run TypeScript compiler tests only"
 	@echo "  make test-packages    - Run package tests only"
 	@echo "  make test-examples    - Run example tests"
+	@echo "  make build-runtime    - Build the Rust blink-runtime crate"
+	@echo "  make test-runtime     - Run Rust runtime unit tests"
+	@echo "  make test-wasm        - Run WASM engine end-to-end tests (BRL → Rust → native)"
 	@echo "  make demo-package     - Create demo package for distribution"
 	@echo "  make clean            - Clean all build artifacts"
 	@echo ""
@@ -74,6 +77,9 @@ clean:
 	rm -rf packages/blink-engine/dist
 	rm -rf packages/blink-test/dist
 	rm -rf packages/blink-compiler-ts/dist
+	rm -rf packages/blink-runtime/target
+	rm -rf packages/blink-engine-wasm/generated
+	rm -rf packages/blink-engine-wasm/dist
 	rm -rf demo-package
 	rm -rf blink-demo-package.zip
 	@echo "Clean complete"
@@ -157,4 +163,33 @@ demo-package: dev
 	@echo "Creating demo package ZIP..."
 	cd demo-package && zip -r ../blink-demo-package.zip .
 	@echo "Demo package created: blink-demo-package.zip"
+
+# Build the Rust blink-runtime crate
+build-runtime:
+	@echo "Building blink-runtime Rust crate..."
+	@command -v cargo >/dev/null 2>&1 || (echo "Rust/cargo not installed — skipping runtime build" && exit 0)
+	cd packages/blink-runtime && cargo build
+	@echo "blink-runtime built successfully"
+
+# Run Rust runtime unit tests
+test-runtime:
+	@echo "Running blink-runtime unit tests..."
+	@command -v cargo >/dev/null 2>&1 || (echo "Rust/cargo not installed — skipping runtime tests" && exit 0)
+	cd packages/blink-runtime && cargo test
+	@echo "blink-runtime tests complete"
+
+# Run WASM engine end-to-end tests (BRL → Rust → native → execute)
+test-wasm: build-compiler-ts build-runtime
+	@echo "Running WASM engine end-to-end tests..."
+	@command -v cargo >/dev/null 2>&1 || (echo "Rust/cargo not installed — skipping WASM tests" && exit 0)
+	cd packages/blink-engine-wasm && npm install && npm test
+	@echo "WASM engine tests complete"
+
+# Clean WASM artifacts
+clean-wasm:
+	@echo "Cleaning WASM build artifacts..."
+	rm -rf packages/blink-runtime/target
+	rm -rf packages/blink-engine-wasm/generated
+	rm -rf packages/blink-engine-wasm/dist
+	@echo "WASM clean complete"
 

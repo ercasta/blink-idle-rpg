@@ -1,0 +1,4 @@
+# Generated files - built by the test harness, not committed
+generated/
+dist/
+node_modules/

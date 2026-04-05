@@ -1,0 +1,55 @@
+// =============================================================================
+// FUNCTIONS DEMO - Tests user-defined functions and builtins
+// =============================================================================
+
+component Stats {
+    base_damage: integer
+    bonus: integer
+    effective_damage: integer
+    random_value: integer
+}
+
+component Result {
+    total: integer
+    computed: boolean
+}
+
+fn calculate_damage(base: integer, bonus: integer): integer {
+    return base + bonus
+}
+
+fn clamp_value(value: integer, min_val: integer, max_val: integer): integer {
+    if value < min_val {
+        return min_val
+    }
+    if value > max_val {
+        return max_val
+    }
+    return value
+}
+
+stats_entity = new entity {
+    Stats {
+        base_damage: 10
+        bonus: 5
+        effective_damage: 0
+        random_value: 0
+    }
+    Result {
+        total: 0
+        computed: false
+    }
+}
+
+rule on GameStart(gs: id) {
+    schedule [delay: 0.0] ComputeDamage {}
+}
+
+rule on ComputeDamage(cd: id) {
+    for e in entities having Stats {
+        let dmg: integer = calculate_damage(e.Stats.base_damage, e.Stats.bonus)
+        e.Stats.effective_damage = dmg
+        e.Result.total = clamp_value(dmg, 0, 20)
+        e.Result.computed = true
+    }
+}
