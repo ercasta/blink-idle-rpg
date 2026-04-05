@@ -8,6 +8,7 @@
 import { tokenize, Token, TokenKind, Span, LexerError } from './lexer';
 import { parse, Parser, ParseError } from './parser';
 import { generate, CodeGenerator, GeneratorOptions } from './codegen';
+import { generateRust, RustCodeGenerator, RustCodegenOptions, RustCodegenResult } from './codegen-rust';
 import { analyze, SemanticAnalyzer, SemanticError } from './semantic';
 import * as AST from './ast';
 import * as IR from './ir';
@@ -15,6 +16,7 @@ import * as IR from './ir';
 export { tokenize, Token, TokenKind, Span, LexerError } from './lexer';
 export { parse, Parser, ParseError } from './parser';
 export { generate, CodeGenerator, GeneratorOptions } from './codegen';
+export { generateRust, RustCodeGenerator, RustCodegenOptions, RustCodegenResult } from './codegen-rust';
 export { analyze, SemanticAnalyzer, SemanticError } from './semantic';
 export * as AST from './ast';
 export * as IR from './ir';
@@ -290,16 +292,75 @@ export function mergeIRModules(modules: IR.IRModule[], moduleName?: string): IR.
   return result;
 }
 
+/**
+ * Compile multiple source files to Rust source code.
+ * Returns a map of filename → Rust source content.
+ */
+export function compileToRust(
+  sources: SourceFile[],
+  options: RustCodegenOptions = {}
+): { files: Map<string, string>; errors: CompileError[] } {
+  const errors: CompileError[] = [];
+  const modules: AST.Module[] = [];
+
+  // Parse each source file
+  for (const source of sources) {
+    try {
+      const tokens = tokenize(source.content);
+      const ast = parse(tokens);
+      modules.push(ast);
+    } catch (e) {
+      if (e instanceof LexerError) {
+        const { line, column } = positionToLineColumn(source.content, e.position);
+        errors.push({
+          type: 'lexer',
+          message: e.message,
+          file: source.path,
+          position: e.position,
+          line,
+          column,
+        });
+      } else if (e instanceof ParseError) {
+        const { line, column } = positionToLineColumn(source.content, e.position);
+        errors.push({
+          type: 'parser',
+          message: e.message,
+          file: source.path,
+          position: e.position,
+          line,
+          column,
+        });
+      } else {
+        errors.push({
+          type: 'semantic',
+          message: String(e),
+          file: source.path,
+        });
+      }
+    }
+  }
+
+  if (errors.length > 0) {
+    return { files: new Map(), errors };
+  }
+
+  // Generate Rust source code
+  const result = generateRust(modules, options);
+  return { files: result.files, errors };
+}
+
 // Browser-friendly global export for script tags
 if (typeof window !== 'undefined') {
   (window as any).BlinkCompiler = {
     compile,
     compileString,
+    compileToRust,
     parseSource,
     tokenizeSource,
     mergeIRModules,
     tokenize,
     parse,
     generate,
+    generateRust,
   };
 }
