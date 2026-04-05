@@ -335,7 +335,7 @@ pub fn rule_spawn_initial_enemies(event: &Event, world: &mut World, timeline: &m
 ```brl
 // 'attacker' comes from event field, not from a typed query
 let attacker: id = da.source
-let damage: id = attacker.Combat.damage  // accessing Combat on an entity we only have an ID for
+let damage: id = attacker.Combat.damage  // Note: BRL uses 'id' as a catch-all type here; ideally this should be 'float'
 ```
 
 **For Rust compilation**: The component name (`Combat`) and field name (`damage`) are compile-time literals. The only dynamic part is the entity ID. This compiles to:
