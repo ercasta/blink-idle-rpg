@@ -401,26 +401,26 @@ let newBoss: id = clone bossTemplate {
 // ============================================================================
 
 // Main attack rule: apply damage and schedule next attack
+// The attack loop always reschedules while the attacker is alive,
+// so FindNewTarget does NOT need to create an extra DoAttack.
 rule attack_rule on DoAttack(da: id) {
     if entity has GameState {
 let attacker: id = da.source
-        if attacker.Target.entity != null && attacker.Health.current > 0 {
+        if attacker.Health.current > 0 {
+            // Only deal damage if we have a living target
+            if attacker.Target.entity != null {
 let target: id = attacker.Target.entity
-            // Only attack living targets; dead targets need retargeting
-            if target.Health.current > 0 {
+                if target.Health.current > 0 {
 let damage: id = attacker.Combat.damage + attacker.Buffs.damageBonus
-                
-                // Apply damage to target
-                target.Health.current -= damage
-                
-                // Emit after attack event
-                schedule AfterAttack {
-                    attacker: attacker
-                    target: target
+                    target.Health.current -= damage
+                    schedule AfterAttack {
+                        attacker: attacker
+                        target: target
+                    }
                 }
             }
-            
-            // Schedule next attack
+            // Always schedule the next attack for living attackers
+            // so the loop never depends on FindNewTarget to restart it
 let attackSpeedTotal: id = attacker.Combat.attackSpeed + attacker.Buffs.hasteBonus
             if attackSpeedTotal <= 0 {
                 attackSpeedTotal = 0.1
@@ -502,6 +502,10 @@ let p: id = rp.player
         p.Buffs.damageBonus = 0
         p.Buffs.defenseBonus = 0
         p.Buffs.hasteBonus = 0.0
+        // Restart the attack loop (stopped when health reached 0)
+        schedule [delay: 0.5] DoAttack {
+            source: p
+        }
     }
 }
 
@@ -806,16 +810,18 @@ rule start_global_retargeting on EnemySpawned(es: id) {
 rule check_entity_target on CheckAllTargets(cat: id) {
     if entity has Target {
         if entity.Health.current > 0 {
-            // Skip enemy templates - they don't participate in combat
-let isTemplate: boolean = false
-let enemyTemplates: list = entities having EnemyTemplate
-            for tmpl in enemyTemplates {
-                if tmpl == entity && tmpl.EnemyTemplate.isTemplate {
-                    isTemplate = true
+            // Skip enemy templates using direct component access (O(1) vs O(N))
+            if entity has EnemyTemplate {
+                if entity.EnemyTemplate.isTemplate == false {
+let target: id = entity.Target.entity
+                    if target == null || target.Health.current <= 0 {
+                        schedule FindNewTarget {
+                            seeker: entity
+                        }
+                    }
                 }
-            }
-            
-            if isTemplate == false {
+            } else {
+                // Non-enemy entity (hero, etc.)
 let target: id = entity.Target.entity
                 if target == null || target.Health.current <= 0 {
                     schedule FindNewTarget {
@@ -849,28 +855,17 @@ let seeker: id = fnt.seeker
     
     // Determine if seeker is a player or enemy
     if seeker.Team.isPlayer {
-        // Player characters target enemies
+        // Player characters target enemies:
+        // look for non-template Enemy entities that are alive
 let enemies: list = entities having Enemy
 let foundTarget: boolean = false
         for enemy in enemies {
-            // Skip templates and only process if we haven't found a target yet
             if foundTarget == false {
-let isTemplate: boolean = false
-let templates: list = entities having EnemyTemplate
-                for tmpl in templates {
-                    if tmpl == enemy && tmpl.EnemyTemplate.isTemplate {
-                        isTemplate = true
-                    }
-                }
-                
-                if isTemplate == false {
+                if enemy.EnemyTemplate.isTemplate == false {
                     if enemy.Health.current > 0 {
-                        // Found a valid target
+                        // Found a valid target — just update; the existing
+                        // attack loop will pick it up on the next tick
                         seeker.Target.entity = enemy
-                        // Schedule attack now that we have a target
-                        schedule DoAttack {
-                            source: seeker
-                        }
                         foundTarget = true
                     }
                 }
@@ -889,12 +884,9 @@ let foundTarget: boolean = false
             if foundTarget == false {
                 if player.Team.isPlayer {
                     if player.Health.current > 0 {
-                        // Found a valid target
+                        // Found a valid target — just update; the existing
+                        // attack loop will pick it up on the next tick
                         seeker.Target.entity = player
-                        // Schedule attack now that we have a target
-                        schedule DoAttack {
-                            source: seeker
-                        }
                         foundTarget = true
                     }
                 }
@@ -992,17 +984,21 @@ let retreatPenalty: integer = retreatCount * entity.ScoringRules.pointsLostPerRe
 rule check_progress_checkpoint on EnemyDefeated(ed: id) {
     if entity has ProgressTracker {
         if entity has GameState {
-            if entity has RunStats {
 let nextThreshold: integer = (entity.ProgressTracker.checkpointsReached + 1) * entity.ProgressTracker.checkpointInterval
-                if entity.GameState.enemiesDefeated >= nextThreshold {
-                    entity.ProgressTracker.checkpointsReached += 1
-                    schedule ProgressCheckpoint {
-                        step: entity.ProgressTracker.checkpointsReached
-                        enemiesDefeated: entity.GameState.enemiesDefeated
-                        simulationTime: entity.RunStats.simulationTime
-                        currentTier: entity.GameState.currentTier
-                        currentWave: entity.GameState.currentWave
-                    }
+            if entity.GameState.enemiesDefeated >= nextThreshold {
+                entity.ProgressTracker.checkpointsReached += 1
+                // Look up simulation time from RunStats entity
+let runStatsEntities: list = entities having RunStats
+let simTime: float = 0.0
+                if len(runStatsEntities) > 0 {
+                    simTime = runStatsEntities[0].RunStats.simulationTime
+                }
+                schedule ProgressCheckpoint {
+                    step: entity.ProgressTracker.checkpointsReached
+                    enemiesDefeated: entity.GameState.enemiesDefeated
+                    simulationTime: simTime
+                    currentTier: entity.GameState.currentTier
+                    currentWave: entity.GameState.currentWave
                 }
             }
         }

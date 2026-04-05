@@ -26,3 +26,6 @@ dist-ssr
 # Generated bundle files (copied from builds, should not be committed)
 public/blink-engine.bundle.js
 public/blink-compiler.bundle.js
+
+# Generated IR files — compiled from BRL at build time (make compile-brl)
+public/ir/

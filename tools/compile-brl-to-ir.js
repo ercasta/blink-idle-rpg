@@ -4,6 +4,10 @@
  *
  * Output: game/app/public/ir/classic-rpg.ir.json
  *
+ * Note: Only the rules/components file (classic-rpg.brl) is compiled to IR.
+ * Entity data (heroes, enemies, game state) is set up programmatically at
+ * runtime by the SimEngine, following the same pattern as tools/simulate.js.
+ *
  * Usage:
  *   node tools/compile-brl-to-ir.js
  */
@@ -46,51 +50,27 @@ function compileBrlFiles(files, outputName) {
 // ─── Ensure output directory exists ───────────────────────────────────────
 fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 
-// ─── Compile classic-rpg (core rules + normal scenario + heroes + enemies) ─
+// ─── Compile game rules (classic-rpg.brl + heroes.brl for functions) ──────
+// Only the rules/components/functions are needed in the IR.
+// Entity initial state (heroes, enemies, game config) is set up
+// programmatically at runtime by the SimEngine.
 console.log('Compiling classic-rpg.ir.json …');
 const classicIR = compileBrlFiles(
   [
     path.join(ROOT, 'game/brl/classic-rpg.brl'),
-    path.join(ROOT, 'game/brl/game-config.brl'),
     path.join(ROOT, 'game/brl/heroes.brl'),
-    path.join(ROOT, 'game/brl/enemies.brl'),
-    path.join(ROOT, 'game/brl/scenario-normal.brl'),
   ],
   'classic-rpg'
 );
 
+// Remove all initial_state entities — they are set up at runtime
+// to avoid conflicts and allow party customisation.
+if (classicIR.initial_state) {
+  classicIR.initial_state.entities = [];
+}
+
 const classicOut = path.join(OUTPUT_DIR, 'classic-rpg.ir.json');
 fs.writeFileSync(classicOut, JSON.stringify(classicIR, null, 2));
 console.log(`  → ${classicOut}  (${(fs.statSync(classicOut).size / 1024).toFixed(1)} KB)`);
-
-// ─── Compile easy scenario variant ────────────────────────────────────────
-console.log('Compiling scenario-easy.ir.json …');
-const easyIR = compileBrlFiles(
-  [
-    path.join(ROOT, 'game/brl/classic-rpg.brl'),
-    path.join(ROOT, 'game/brl/heroes.brl'),
-    path.join(ROOT, 'game/brl/enemies.brl'),
-    path.join(ROOT, 'game/brl/scenario-easy.brl'),
-  ],
-  'scenario-easy'
-);
-const easyOut = path.join(OUTPUT_DIR, 'scenario-easy.ir.json');
-fs.writeFileSync(easyOut, JSON.stringify(easyIR, null, 2));
-console.log(`  → ${easyOut}  (${(fs.statSync(easyOut).size / 1024).toFixed(1)} KB)`);
-
-// ─── Compile hard scenario variant ────────────────────────────────────────
-console.log('Compiling scenario-hard.ir.json …');
-const hardIR = compileBrlFiles(
-  [
-    path.join(ROOT, 'game/brl/classic-rpg.brl'),
-    path.join(ROOT, 'game/brl/heroes.brl'),
-    path.join(ROOT, 'game/brl/enemies.brl'),
-    path.join(ROOT, 'game/brl/scenario-hard.brl'),
-  ],
-  'scenario-hard'
-);
-const hardOut = path.join(OUTPUT_DIR, 'scenario-hard.ir.json');
-fs.writeFileSync(hardOut, JSON.stringify(hardIR, null, 2));
-console.log(`  → ${hardOut}  (${(fs.statSync(hardOut).size / 1024).toFixed(1)} KB)`);
 
 console.log('\n✅ BRL compilation complete.');
