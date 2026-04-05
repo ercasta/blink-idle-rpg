@@ -1,0 +1,17 @@
+{
+  "name": "@blink/engine-wasm",
+  "version": "0.1.0",
+  "description": "Blink WASM engine - BRL → Rust → native/WASM compilation and test harness",
+  "scripts": {
+    "test": "npx tsx tests/e2e-test.ts",
+    "clean": "rm -rf generated dist"
+  },
+  "dependencies": {
+    "@blink/compiler-ts": "file:../blink-compiler-ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.2"
+  }
+}

@@ -1,0 +1,30 @@
+// =============================================================================
+// COUNTER DEMO - Minimal BRL for end-to-end WASM testing
+// =============================================================================
+// A trivially simple BRL program: a counter that increments every tick.
+// Perfect for verifying the BRL → Rust → build pipeline works.
+
+component Counter {
+    value: integer
+    limit: integer
+}
+
+counter = new entity {
+    Counter {
+        value: 0
+        limit: 10
+    }
+}
+
+rule on Tick(t: id) {
+    if entity has Counter {
+        entity.Counter.value = entity.Counter.value + 1
+        if entity.Counter.value < entity.Counter.limit {
+            schedule [delay: 1.0] Tick {}
+        }
+    }
+}
+
+rule on GameStart(gs: id) {
+    schedule [delay: 1.0] Tick {}
+}

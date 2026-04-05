@@ -1,0 +1,86 @@
+// =============================================================================
+// COMBAT DEMO - Simple combat for WASM engine testing
+// =============================================================================
+// Two entities fight. Tests: components, rules, field access, scheduling,
+// conditionals, entity queries, and event dispatch.
+
+component Character {
+    name: string
+    level: integer
+}
+
+component Health {
+    current: integer
+    max: integer
+}
+
+component Combat {
+    damage: integer
+    attack_speed: float
+}
+
+component Target {
+    entity: id
+}
+
+component Team {
+    id: string
+    is_player: boolean
+}
+
+// Hero entity
+hero = new entity {
+    Character { name: "Hero" level: 1 }
+    Health { current: 100 max: 100 }
+    Combat { damage: 15 attack_speed: 1.0 }
+    Target { entity: 0 }
+    Team { id: "player" is_player: true }
+}
+
+// Enemy entity
+goblin = new entity {
+    Character { name: "Goblin" level: 1 }
+    Health { current: 30 max: 30 }
+    Combat { damage: 5 attack_speed: 0.8 }
+    Target { entity: 0 }
+    Team { id: "enemy" is_player: false }
+}
+
+// Initialize combat
+rule on GameStart(gs: id) {
+    for h in entities having Team {
+        if h.Team.is_player == true {
+            for e in entities having Team {
+                if e.Team.is_player == false {
+                    h.Target.entity = e
+                    e.Target.entity = h
+                    schedule [delay: 1.0] DoAttack { source: h }
+                    schedule [delay: 1.2] DoAttack { source: e }
+                }
+            }
+        }
+    }
+}
+
+// Attack rule
+rule on DoAttack(da: id) {
+    let attacker: id = da.source
+    if attacker has Health {
+        if attacker.Health.current > 0 {
+            let target: id = attacker.Target.entity
+            if target has Health {
+                if target.Health.current > 0 {
+                    let dmg: integer = attacker.Combat.damage
+                    target.Health.current = target.Health.current - dmg
+                    if target.Health.current < 0 {
+                        target.Health.current = 0
+                    }
+                    if target.Health.current > 0 {
+                        let speed: float = attacker.Combat.attack_speed
+                        schedule [delay: speed] DoAttack { source: attacker }
+                    }
+                }
+            }
+        }
+    }
+}

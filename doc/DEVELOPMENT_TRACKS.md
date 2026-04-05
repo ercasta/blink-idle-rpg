@@ -50,6 +50,12 @@ See [Architecture Decision: IR and Engine Independence](architecture/ir-decision
 │  └─────────────────┘      └─────────────────┘    └─────────────────┘       │
 │                                                                             │
 │  ┌─────────────────┐                                                        │
+│  │ TRACK 7         │◄─── Uses IR (same as Track 3/4/5)                      │
+│  │ WASM Engine     │                                                        │
+│  │ (Browser, Rust) │                                                        │
+│  └─────────────────┘                                                        │
+│                                                                             │
+│  ┌─────────────────┐                                                        │
 │  │ TRACK 6         │◄─── Uses compiler AST                                  │
 │  │ Dev Tools       │                                                        │
 │  │ (LSP, VSCode)   │                                                        │
@@ -371,9 +377,67 @@ yo code  # VSCode extension generator
 
 ---
 
+## Track 7: WASM Engine
+
+**Focus**: High-performance WebAssembly engine for mobile browsers
+
+**Status**: Planning — see [WASM Engine Plan](engine/wasm-engine-plan.md)
+
+### Owner Requirements
+- Rust proficiency
+- WASM/wasm-bindgen experience
+- TypeScript compiler development (for Rust codegen pass)
+
+### Deliverables
+1. Rust runtime library (`packages/blink-runtime/`) — typed ECS, timeline, event dispatch
+2. BRL → Rust codegen in the existing TypeScript compiler
+3. Build pipeline: BRL → Rust → WASM (`cargo build --target wasm32`)
+4. TypeScript wrapper (`packages/blink-engine-wasm-js/`) with same `BlinkGame` API as Track 4
+5. Conformance tests validating identical results to JS engine
+6. Performance benchmarks (target: 10× throughput vs JS engine)
+
+### Files
+```
+packages/
+├── blink-compiler-ts/           # Extended with Rust codegen
+│   └── src/codegen-rust.ts      # NEW: BRL AST → Rust source
+├── blink-runtime/               # Rust runtime library
+│   ├── Cargo.toml
+│   └── src/
+├── blink-engine-wasm-js/        # TypeScript wrapper
+│   ├── package.json
+│   └── src/
+```
+
+### Dependencies
+- **Track 2: Compiler** (Rust codegen is a new pass in the existing compiler)
+- No dependency on Track 3 (Rust Engine) or Track 4 (JS Engine)
+
+### Key Design Decisions
+- **BRL → Rust → WASM**: Compile BRL directly to Rust source code, then Rust to WASM. No interpretation at runtime.
+- **Same public API** as JS engine — drop-in replacement
+- **No debug/trace support** — use JS engine for debugging
+- **Batch execution**: `runSteps(n)` processes N events in WASM, then yields to JS for UI
+
+### Getting Started
+```bash
+# Read the detailed plan
+cat doc/engine/wasm-engine-plan.md
+
+# Read IR specification
+cat doc/ir-specification.md
+
+# Set up Rust project (requires cargo + wasm-pack)
+cd packages/blink-runtime
+cargo init --lib
+# Configure for wasm-pack (see plan for details)
+```
+
+---
+
 ## Interface Contracts
 
-### IR Format Contract (Track 2 → Tracks 3, 4, 5)
+### IR Format Contract (Track 2 → Tracks 3, 4, 5, 7)
 
 The IR is the **central contract** between compiler and all engines.
 Engines do NOT depend on each other—each engine depends only on the IR specification.

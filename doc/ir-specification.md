@@ -583,9 +583,9 @@ Full JSON Schema available at: `schemas/ir-v1.json`
 
 ### 13.2 Compatibility Matrix
 
-| IR Version | Rust Engine | JS Engine | Batch Engine |
-|------------|-------------|-----------|--------------|
-| 1.0 | 0.1.0+ | 0.1.0+ | 0.1.0+ |
+| IR Version | Rust Engine | JS Engine | WASM Engine | Batch Engine |
+|------------|-------------|-----------|-------------|--------------|
+| 1.0 | 0.1.0+ | 0.1.0+ | planned | 0.1.0+ |
 
 ### 13.3 Version Checking
 
@@ -612,6 +612,7 @@ All engines must pass the conformance test suite:
 # Run conformance tests
 blink-test conformance --engine rust
 blink-test conformance --engine js
+blink-test conformance --engine wasm
 blink-test conformance --engine batch
 ```
 
