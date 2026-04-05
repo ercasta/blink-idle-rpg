@@ -386,21 +386,22 @@ yo code  # VSCode extension generator
 ### Owner Requirements
 - Rust proficiency
 - WASM/wasm-bindgen experience
-- Understanding of ECS patterns and bytecode VMs
+- TypeScript compiler development (for Rust codegen pass)
 
 ### Deliverables
-1. Rust WASM engine core (`packages/blink-engine-wasm/`)
-2. IR → bytecode compiler (runs at load time in WASM)
-3. Bytecode VM (stack-based, executes compiled rules)
-4. SoA ECS store, binary heap timeline
-5. TypeScript wrapper (`packages/blink-engine-wasm-js/`) with same `BlinkGame` API as Track 4
-6. Conformance tests validating identical results to JS engine
-7. Performance benchmarks (target: 5× throughput vs JS engine)
+1. Rust runtime library (`packages/blink-runtime/`) — typed ECS, timeline, event dispatch
+2. BRL → Rust codegen in the existing TypeScript compiler
+3. Build pipeline: BRL → Rust → WASM (`cargo build --target wasm32`)
+4. TypeScript wrapper (`packages/blink-engine-wasm-js/`) with same `BlinkGame` API as Track 4
+5. Conformance tests validating identical results to JS engine
+6. Performance benchmarks (target: 10× throughput vs JS engine)
 
 ### Files
 ```
 packages/
-├── blink-engine-wasm/           # Rust WASM core
+├── blink-compiler-ts/           # Extended with Rust codegen
+│   └── src/codegen-rust.ts      # NEW: BRL AST → Rust source
+├── blink-runtime/               # Rust runtime library
 │   ├── Cargo.toml
 │   └── src/
 ├── blink-engine-wasm-js/        # TypeScript wrapper
@@ -409,11 +410,11 @@ packages/
 ```
 
 ### Dependencies
-- **Track 2: IR specification only** (same as all engine tracks)
+- **Track 2: Compiler** (Rust codegen is a new pass in the existing compiler)
 - No dependency on Track 3 (Rust Engine) or Track 4 (JS Engine)
 
 ### Key Design Decisions
-- **Hybrid approach**: Rust runtime with bytecode-compiled rules (not pure IR interpretation, not full WASM compilation)
+- **BRL → Rust → WASM**: Compile BRL directly to Rust source code, then Rust to WASM. No interpretation at runtime.
 - **Same public API** as JS engine — drop-in replacement
 - **No debug/trace support** — use JS engine for debugging
 - **Batch execution**: `runSteps(n)` processes N events in WASM, then yields to JS for UI
@@ -426,8 +427,8 @@ cat doc/engine/wasm-engine-plan.md
 # Read IR specification
 cat doc/ir-specification.md
 
-# Set up Rust project (requires wasm-pack)
-cd packages/blink-engine-wasm
+# Set up Rust project (requires cargo + wasm-pack)
+cd packages/blink-runtime
 cargo init --lib
 # Configure for wasm-pack (see plan for details)
 ```

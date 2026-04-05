@@ -1,6 +1,6 @@
 # WebAssembly Engine Implementation Plan
 
-**Version**: 0.1.0-draft  
+**Version**: 0.2.0-draft  
 **Status**: Draft — Open for review  
 **Last Updated**: 2026-04-05  
 **Track**: New Track (alongside Track 3: Rust Engine and Track 4: JS Engine)
@@ -35,7 +35,7 @@ The WASM engine should run alongside the existing JS engine — not replace it. 
 
 ## 2. Approach Analysis
 
-Three possible approaches were evaluated:
+Four possible approaches were evaluated:
 
 ### Approach A: WASM Interpreter — Rust runtime that interprets IR
 
@@ -59,7 +59,7 @@ Add a new compiler pass that takes IR and generates WASM bytecode directly. Each
 | Maintenance burden | **High**. The WASM codegen must be updated for every new IR feature. Debugging generated WASM is harder. |
 | Risk | **High**. String handling, dynamic entity queries (`entities_having`), and dynamic field access are inherently hard to compile to static WASM. These would likely still need runtime support functions, reducing the benefit. |
 
-### Approach C: Hybrid — Rust runtime with AOT-compiled hot paths (Recommended)
+### Approach C: Hybrid — Rust runtime with bytecode VM
 
 Write the core runtime (ECS, Timeline, event dispatch) in Rust/WASM. For rule execution, use an **efficient bytecode interpreter** rather than tree-walking. The IR is compiled to a flat bytecode format (a lower-level IR) at load time in Rust, then executed by a tight Rust bytecode interpreter.
 
@@ -70,22 +70,343 @@ Write the core runtime (ECS, Timeline, event dispatch) in Rust/WASM. For rule ex
 | Maintenance burden | **Moderate**. IR → bytecode compilation is a straightforward transform. Bytecode is internal — not a public contract. |
 | Risk | **Low-Moderate**. Bytecode interpreters are proven (Lua, Python, etc.). |
 
-### Why not pure IR → WASM compilation (Approach B)?
+### Approach D: BRL → Rust → WASM (Recommended)
 
-The original proposal suggested compiling BRL code directly so it's "not interpreted." While the intent is correct (minimize interpretation overhead), full WASM compilation faces fundamental challenges with the Blink runtime model:
+Compile BRL source code directly to Rust source code. Then compile the generated Rust code (plus a small runtime library) to WASM using standard Rust/WASM tooling. At runtime, everything is native WASM — no interpretation, no bytecode, no IR parsing.
 
-1. **Dynamic entity queries**: `entities_having("Character")` requires runtime iteration over all entities. This cannot be statically compiled — it needs a runtime data structure.
-2. **String-keyed components**: Component access is by string name (`entity.Health.current`). In WASM, we'd need string interning and lookup tables regardless.
-3. **Dynamic entity creation/destruction**: `spawn` and `despawn` actions create and destroy entities at runtime. The WASM code can't know ahead of time which entities exist.
-4. **Event-driven execution**: Rules fire in response to runtime events. The dispatch logic needs a runtime scheduler.
+The key insight: **everything in BRL is known at compile time**. The set of component types, their fields and types, the set of rules and their triggers, the set of functions — all are defined in BRL source files and fully resolved by the compiler. The generated Rust code can use concrete structs, direct field access, and statically-dispatched function calls.
 
-These runtime requirements mean ~60% of the execution time would still be spent in runtime support functions, not in the compiled rule code itself. **Approach C captures most of the performance benefit at significantly lower complexity.**
+| Aspect | Assessment |
+|--------|------------|
+| Performance gain | **Maximum** (10–50× over JS). Zero interpretation overhead. Component field access compiles to direct struct field reads. Arithmetic compiles to native WASM instructions. Entity queries compile to typed iteration. |
+| Implementation complexity | **Moderate**. The BRL → Rust codegen is a straightforward AST-to-source transform (similar to the existing BRL → IR codegen). The Rust runtime library is small. |
+| Maintenance burden | **Low**. The codegen lives in the existing TypeScript compiler. The Rust runtime library is stable. New BRL features only require updating the codegen — not a separate engine. |
+| Risk | **Low-Moderate**. Some BRL features need small language adjustments to be fully static (see [Section 2.1](#21-brl-language-analysis-for-static-compilation)). |
+
+**How it works:**
+
+```
+BRL source files
+      │
+      ▼
+┌─────────────────┐
+│ BRL Compiler     │  (existing TypeScript compiler, extended with Rust codegen)
+│ (blink-compiler) │
+└────────┬────────┘
+         │ generates
+         ▼
+┌─────────────────┐
+│ Generated Rust   │  game_components.rs, game_rules.rs, game_entities.rs
+│ source code      │
+└────────┬────────┘
+         │ + links with
+         ▼
+┌─────────────────┐
+│ Runtime library  │  blink_runtime (small Rust crate: ECS, Timeline, event dispatch)
+│ (Rust crate)     │
+└────────┬────────┘
+         │ cargo build --target wasm32-unknown-unknown
+         ▼
+┌─────────────────┐
+│ game.wasm        │  Single WASM binary, all game logic compiled to native code
+└─────────────────┘
+```
+
+**Example of what the generated Rust looks like:**
+
+```rust
+// ── Generated from component definitions ──────────────────────────
+// (BRL: component Health { current: integer, max: integer })
+
+#[derive(Clone, Default)]
+pub struct Health {
+    pub current: i64,
+    pub max: i64,
+}
+
+#[derive(Clone, Default)]
+pub struct Combat {
+    pub damage: f64,
+    pub attack_speed: f64,
+}
+
+// ── Generated from entity definitions ─────────────────────────────
+// (BRL: goblin = new entity { Character {...} Health {...} })
+
+pub fn create_initial_entities(world: &mut World) {
+    let goblin = world.spawn();
+    world.insert(goblin, Character { name: intern("Goblin Scout"), class: intern("Enemy"), level: 1, .. });
+    world.insert(goblin, Health { current: 30, max: 30 });
+    world.insert(goblin, Combat { damage: 5.0, attack_speed: 1.0 });
+    world.insert(goblin, EnemyTemplate { is_template: true });
+    // ...
+}
+
+// ── Generated from rules ──────────────────────────────────────────
+// (BRL: rule attack_rule on DoAttack(da: id) { ... })
+
+pub fn rule_attack_rule(event: &Event, world: &mut World, timeline: &mut Timeline) {
+    let da_source = event.source;
+    // Iterate entities matching the rule's implicit filter
+    for entity_id in world.query_component::<GameState>() {
+        let attacker = da_source;
+        if world.get::<Target>(attacker).entity != EntityId::NONE
+            && world.get::<Health>(attacker).current > 0
+        {
+            let target = world.get::<Target>(attacker).entity;
+            if world.get::<Health>(target).current > 0 {
+                let damage = world.get::<Combat>(attacker).damage
+                    + world.get::<Buffs>(attacker).damage_bonus;
+                world.get_mut::<Health>(target).current -= damage as i64;
+
+                timeline.schedule(Event::new(intern("AfterAttack"))
+                    .with_field("attacker", Value::Entity(attacker))
+                    .with_field("target", Value::Entity(target)));
+            }
+            let speed = world.get::<Combat>(attacker).attack_speed
+                + world.get::<Buffs>(attacker).haste_bonus;
+            let delay = 1.0 / if speed <= 0.0 { 0.1 } else { speed };
+            timeline.schedule_delay(delay, Event::new(intern("DoAttack")).with_source(attacker));
+        }
+    }
+}
+
+// ── Generated from functions ──────────────────────────────────────
+// (BRL: fn calculate_damage(base: float, bonus: float): float { ... })
+
+#[inline]
+pub fn calculate_damage(base: f64, bonus: f64) -> f64 {
+    base + bonus
+}
+
+// ── Generated event dispatch ──────────────────────────────────────
+
+pub fn dispatch_event(event: &Event, world: &mut World, timeline: &mut Timeline) {
+    match event.event_type {
+        e if e == intern("DoAttack") => rule_attack_rule(event, world, timeline),
+        e if e == intern("AfterAttack") => {
+            rule_death_check(event, world, timeline);
+        }
+        e if e == intern("GameStart") => {
+            rule_initialize_hero_attacks(event, world, timeline);
+            rule_start_retargeting_system(event, world, timeline);
+            rule_spawn_initial_enemies(event, world, timeline);
+        }
+        // ... all event types known at compile time
+        _ => {}
+    }
+}
+```
+
+**Why this is feasible — analysis of the actual BRL codebase:**
+
+We audited every BRL file in the game. The findings support static compilation:
+
+| Feature | Occurrences | Static? | Notes |
+|---------|------------|---------|-------|
+| Component definitions | ~25 types | ✅ All known at compile time | Become Rust structs |
+| Entity creation (`new entity`) | ~40 entities | ✅ All in top-level definitions | Become `world.spawn()` + `world.insert()` |
+| `entities having X` queries | ~17 calls | ✅ Component name is **always** a literal | Become `world.query_component::<X>()` |
+| `clone` entity | 2 calls | ⚠️ Source is runtime-determined | Needs runtime clone (see below) |
+| Component field access | ~100+ sites | ✅ Component and field always literals | Become `world.get::<C>(id).field` |
+| User-defined functions | ~8 functions | ✅ All signatures known | Become Rust functions |
+| Built-in functions | ~12 types | ✅ Fixed set | Become inline Rust |
+| `for` loops | ~15 loops | ✅ Over literals or query results | Become Rust `for` loops |
+| Event scheduling | ~25 sites | ✅ Event names are literals | Become `timeline.schedule()` |
+| List type usage | ~10 sites | ⚠️ Unparameterized `list` | Needs typed lists (see below) |
+
+### 2.1 BRL Language Analysis for Static Compilation
+
+A detailed audit of every BRL file in the game reveals that BRL is **already very close to being statically compilable**. The vast majority of language features map directly to static Rust code. A few features need small adjustments:
+
+#### Features that compile directly (no changes needed)
+
+1. **Component definitions** → Rust structs
+2. **Top-level entity creation** → `world.spawn()` + `world.insert()`
+3. **User-defined functions** → Rust functions with explicit signatures
+4. **Built-in functions** (`min`, `max`, `floor`, `random`, etc.) → Inline Rust
+5. **Binary/unary operations** → Native Rust operators
+6. **Conditional actions** (`if/else`) → Rust `if/else`
+7. **Event scheduling** (`schedule`, `emit`) → `timeline.schedule()`/`timeline.schedule_immediate()`
+8. **Component field reads** (`entity.Health.current`) → `world.get::<Health>(entity).current`
+9. **Component field writes** (`entity.Health.current -= 10`) → `world.get_mut::<Health>(entity).current -= 10`
+10. **`has` component checks** (`entity has GameState`) → `world.has::<GameState>(entity)`
+11. **`entities having X`** → `world.query_component::<X>()` (component name is always a literal in all game BRL)
+12. **`while` loops** → Rust `while` with iteration guard
+
+#### Features that need minor BRL language adjustments
+
+##### 2.1.1 `clone` with runtime-determined source
+
+**Current BRL:**
+```brl
+let templates: list = entities having EnemyTemplate
+let templateId: id = templates[0]
+for t in templates {
+    if t.EnemyTemplate.isTemplate && t.Enemy.tier == se.tier {
+        templateId = t
+    }
+}
+let newEnemy: id = clone templateId { EnemyTemplate { isTemplate: false } }
+```
+
+**Problem**: The clone source (`templateId`) is determined at runtime. In Rust, `clone` needs to know the exact set of components to copy. Since `templateId` comes from a query, the compiler doesn't statically know which entity is being cloned.
+
+**However** — the clone source always has a known component archetype. All entities returned by `entities having EnemyTemplate` have the same component set (Character, Health, Mana, Stats, Combat, Target, Team, Enemy, EnemyTemplate, Buffs). This is an archetype — and it's known at compile time from the entity definitions.
+
+**Proposed solution — archetype-aware clone**:
+
+The compiler can analyze entity definitions and determine that all entities with `EnemyTemplate` share the same archetype. The generated Rust `clone` function copies exactly those components:
+
+```rust
+// Generated: clone for EnemyTemplate archetype
+fn clone_enemy_template_archetype(world: &mut World, source: EntityId) -> EntityId {
+    let new_id = world.spawn();
+    world.insert(new_id, world.get::<Character>(source).clone());
+    world.insert(new_id, world.get::<Health>(source).clone());
+    world.insert(new_id, world.get::<Combat>(source).clone());
+    // ... all components in the archetype
+    new_id
+}
+```
+
+**BRL language suggestion**: No change required if we assume entities from the same query share an archetype. Document this as a constraint: **entities returned by `entities having X` must have the same component set** (archetype homogeneity). This is already true in practice — all enemy templates have identical component sets.
+
+If we want to be explicit, we could add an optional archetype annotation:
+
+```brl
+// Optional: explicit archetype declaration
+archetype EnemyArchetype = [Character, Health, Mana, Stats, Combat, Target, Team, Enemy, EnemyTemplate, Buffs]
+
+let newEnemy: EnemyArchetype = clone templateId { EnemyTemplate { isTemplate: false } }
+```
+
+##### 2.1.2 Unparameterized `list` type
+
+**Current BRL:**
+```brl
+let heroes: list = entities having Team
+let indices: list = [0, 1, 2, 3, 4]
+```
+
+**Problem**: `list` has no element type. Rust needs `Vec<EntityId>` vs `Vec<i64>`.
+
+**Proposed solution**: The compiler can infer the element type from the right-hand side:
+- `entities having X` → `Vec<EntityId>` (always)
+- `[0, 1, 2, 3, 4]` → `Vec<i64>` (from literal types)
+- Function return types provide element types
+
+**BRL language suggestion**: Make list type inference explicit in the compiler. No syntax change required — the existing type annotations (`let heroes: list`) are sufficient because the compiler can infer `list<id>` from the `entities having` expression. Optionally, allow explicit parameterization:
+
+```brl
+let heroes: list<id> = entities having Team
+let indices: list<integer> = [0, 1, 2, 3, 4]
+```
+
+##### 2.1.3 Implicit `entity` binding in rules
+
+**Current BRL:**
+```brl
+rule on GameStart(gs: id) {
+    if entity has GameState {
+        entity.GameState.currentWave = 1
+    }
+}
+```
+
+**How it works**: The engine iterates ALL entities (or those matching a filter). For each entity, it binds the implicit `entity` variable and executes the rule body. So the rule above runs once per entity, and the `if entity has GameState` check filters at runtime.
+
+**For Rust compilation**: This maps directly to a `for` loop over queried entities:
+
+```rust
+pub fn rule_spawn_initial_enemies(event: &Event, world: &mut World, timeline: &mut Timeline) {
+    for entity_id in world.query_component::<GameState>() {
+        // rule body with `entity` = entity_id
+        world.get_mut::<GameState>(entity_id).current_wave = 1;
+    }
+}
+```
+
+**No BRL change needed.** The compiler can analyze the `if entity has X` pattern and convert it to a typed query. When a rule body starts with `if entity has GameState`, the generated code iterates `world.query_component::<GameState>()` instead of all entities.
+
+##### 2.1.4 Dynamic component access on arbitrary entities
+
+**Current BRL:**
+```brl
+// 'attacker' comes from event field, not from a typed query
+let attacker: id = da.source
+let damage: id = attacker.Combat.damage  // accessing Combat on an entity we only have an ID for
+```
+
+**For Rust compilation**: The component name (`Combat`) and field name (`damage`) are compile-time literals. The only dynamic part is the entity ID. This compiles to:
+
+```rust
+let attacker = event.source;
+let damage = world.get::<Combat>(attacker).damage;
+```
+
+This is safe as long as the entity actually has the `Combat` component. The generated code should include a runtime check (or the game design guarantees it).
+
+**No BRL change needed.** The generated Rust uses direct struct access.
+
+##### 2.1.5 Runtime component addition
+
+**Current BRL** (in `classic-rpg.brl`):
+```brl
+entity.LordVexarDefeated.defeatedAt = entity.RunStats.simulationTime
+```
+
+**Problem**: `LordVexarDefeated` component may not be pre-initialized on the GameState entity.
+
+**BRL language suggestion**: Require all components to be declared at entity creation. If a rule writes to a component, the entity must have that component initialized (possibly with default values). This is already good practice — add it as a compiler warning or error:
+
+```brl
+// In game-config.brl: pre-initialize the component with defaults
+game_state = new entity {
+    GameState { ... }
+    LordVexarDefeated { defeatedAt: 0.0, defeatedByHeroCount: 0 }
+}
+```
+
+#### Summary of suggested BRL adjustments
+
+| Adjustment | Impact on existing BRL | Difficulty |
+|-----------|------------------------|------------|
+| Archetype-homogeneous queries (document constraint) | None — already true in practice | Trivial |
+| List type inference in compiler | None — no syntax change | Easy (compiler work) |
+| Pre-initialize all components on entities | Add default-valued components to entity defs | Easy (BRL file edits) |
+| Optional: explicit list parameterization `list<id>` | Backward-compatible addition | Easy |
+| Optional: explicit archetype declarations | Backward-compatible addition | Moderate |
+
+**None of these require breaking changes to the BRL language.** The first three are constraints that are already satisfied by the existing game code; they just need to be formalized.
+
+### Approach comparison
+
+| Aspect | A: Interpret | B: IR→WASM | C: Bytecode VM | **D: BRL→Rust→WASM** |
+|--------|-------------|-----------|----------------|---------------------|
+| Performance | 2–5× | 5–20× | 5–10× | **10–50×** |
+| Interpretation overhead | Full tree-walk | None | Flat bytecode | **None** |
+| Runtime data structures | Maps, dynamic | Dynamic dispatch | Typed arrays | **Native Rust structs** |
+| Component access | String lookup | String lookup | Integer lookup | **Direct struct field** |
+| Entity queries | O(n) scan | O(n) scan | O(n) scan | **Typed O(n) scan, no dispatch** |
+| Codegen complexity | None | Very High | Moderate | **Moderate** (AST→Rust source) |
+| Maintenance | Dual engine | Dual engine | Dual engine | **Single compiler, Rust runtime lib** |
+| Debugging | Full support | Hard | Moderate | **Rust debug tools + source maps** |
+| BRL changes needed | None | None | None | **Minor (formalize existing constraints)** |
 
 ### Recommendation
 
-**Approach C (Hybrid)** — Rust WASM runtime with bytecode-compiled rules.
+**Approach D (BRL → Rust → WASM)** is recommended.
 
-This achieves the "compiled, not interpreted" goal for the parts that benefit from it (expression evaluation, action dispatch), while keeping the necessary runtime infrastructure (ECS, timeline, event dispatch) in efficient Rust. The bytecode is not "interpretation" in the tree-walking sense — it's a flat, cache-friendly instruction stream executed by a tight loop.
+It provides maximum performance with moderate implementation complexity. The BRL language is already almost entirely statically compilable — the few dynamic features (entity queries, clone) map cleanly to typed Rust code because component names and field names are always compile-time literals in practice.
+
+Key advantages over the other approaches:
+- **No runtime engine to maintain**: The runtime library is small and stable (ECS store, timeline, event dispatch). Game-specific logic is generated code.
+- **Native performance**: Component field access is a direct struct field read — no maps, no string lookups, no dispatch tables.
+- **Existing compiler infrastructure**: The codegen is an addition to the existing TypeScript compiler, similar to the existing IR codegen.
+- **Standard tooling**: `cargo build --target wasm32-unknown-unknown` and `wasm-pack` are mature, well-documented tools.
+
+Approach C (bytecode VM) remains a valid fallback if Approach D proves more complex than estimated.
 
 ---
 
@@ -95,24 +416,45 @@ This achieves the "compiled, not interpreted" goal for the parts that benefit fr
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                        BROWSER ENVIRONMENT                          │
+│                        BUILD TIME (offline)                          │
 │                                                                     │
-│  ┌──────────────────────────────────────────────────────────────┐   │
-│  │                   GAME CLIENT (React App)                    │   │
-│  │                                                              │   │
-│  │   UI reads state ◄───────── JS API Layer ──────── UI events │   │
-│  └──────────────────────────────┬───────────────────────────────┘   │
+│  ┌──────────────┐     ┌───────────────────┐    ┌────────────────┐  │
+│  │ BRL source   │────►│ BRL Compiler      │───►│ Generated Rust │  │
+│  │ (.brl files) │     │ (TypeScript)      │    │ source code    │  │
+│  └──────────────┘     │                   │    │                │  │
+│                       │ Existing compiler │    │ components.rs  │  │
+│                       │ + new Rust codegen│    │ rules.rs       │  │
+│                       └───────────────────┘    │ entities.rs    │  │
+│                                                │ functions.rs   │  │
+│                                                │ dispatch.rs    │  │
+│                                                └───────┬────────┘  │
+│                                                        │           │
+│                                                        ▼           │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │  cargo build --target wasm32-unknown-unknown                 │  │
+│  │                                                              │  │
+│  │  Generated game code + blink_runtime crate → game.wasm       │  │
+│  └──────────────────────────────────────────────────────────────┘  │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────┐
+│                        BROWSER (runtime)                             │
+│                                                                     │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │                   GAME CLIENT (React App)                    │  │
+│  │   UI reads state ◄───────── JS API Layer ──────── UI events │  │
+│  └──────────────────────────────┬───────────────────────────────┘  │
 │                                 │                                   │
 │                                 ▼                                   │
-│  ┌──────────────────────────────────────────────────────────────┐   │
-│  │              @blink/engine-wasm (TypeScript Wrapper)          │   │
-│  │                                                              │   │
-│  │  • Same public API as @blink/engine (BlinkGame interface)    │   │
-│  │  • Manages WASM module lifecycle                             │   │
-│  │  • Marshals IR JSON → binary format for WASM                 │   │
-│  │  • Reads state snapshots from WASM shared memory             │   │
-│  │  • Provides simulation callbacks to React                     │   │
-│  └──────────────────────────────┬───────────────────────────────┘   │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │              @blink/engine-wasm (TypeScript Wrapper)          │  │
+│  │                                                              │  │
+│  │  • Same public API as @blink/engine (BlinkGame interface)    │  │
+│  │  • Loads game.wasm                                           │  │
+│  │  • Translates getState() into JS objects                     │  │
+│  │  • Provides simulation callbacks to React                     │  │
+│  └──────────────────────────────┬───────────────────────────────┘  │
 │                                 │                                   │
 │                    ┌────────────┼────────────┐                      │
 │                    │  JS ↔ WASM boundary     │                      │
@@ -120,33 +462,26 @@ This achieves the "compiled, not interpreted" goal for the parts that benefit fr
 │                    └────────────┼────────────┘                      │
 │                                 │                                   │
 │                                 ▼                                   │
-│  ┌──────────────────────────────────────────────────────────────┐   │
-│  │              blink-engine-wasm (Rust → WASM)                  │   │
-│  │                                                              │   │
-│  │  ┌─────────────────┐  ┌──────────────────┐                  │   │
-│  │  │  IR Loader       │  │  IR → Bytecode   │                  │   │
-│  │  │  (binary format) │  │  Compiler        │                  │   │
-│  │  └────────┬─────────┘  └────────┬─────────┘                  │   │
-│  │           │                     │                            │   │
-│  │           ▼                     ▼                            │   │
-│  │  ┌─────────────────────────────────────────────────────┐    │   │
-│  │  │                  Runtime Core                        │    │   │
-│  │  │                                                     │    │   │
-│  │  │  ┌──────────┐  ┌──────────┐  ┌──────────────────┐  │    │   │
-│  │  │  │ ECS Store │  │ Timeline │  │ Bytecode VM      │  │    │   │
-│  │  │  │ (SoA)    │  │ (heap)   │  │ (register-based) │  │    │   │
-│  │  │  └──────────┘  └──────────┘  └──────────────────┘  │    │   │
-│  │  │                                                     │    │   │
-│  │  │  ┌──────────────────┐  ┌────────────────────────┐  │    │   │
-│  │  │  │ String Intern    │  │ Built-in Functions     │  │    │   │
-│  │  │  │ Table            │  │ (min, max, random...) │  │    │   │
-│  │  │  └──────────────────┘  └────────────────────────┘  │    │   │
-│  │  └─────────────────────────────────────────────────────┘    │   │
-│  │                                                              │   │
-│  │  ┌──────────────────────────────────────────────────────┐   │   │
-│  │  │  State Export Buffer (shared memory for JS reads)    │   │   │
-│  │  └──────────────────────────────────────────────────────┘   │   │
-│  └──────────────────────────────────────────────────────────────┘   │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │                      game.wasm                                │  │
+│  │                                                              │  │
+│  │  ┌─────────────────────────────────────────────────────┐    │  │
+│  │  │  blink_runtime (Rust crate)                          │    │  │
+│  │  │  ┌──────────┐  ┌──────────┐  ┌──────────────────┐  │    │  │
+│  │  │  │ ECS World │  │ Timeline │  │ String Intern    │  │    │  │
+│  │  │  │ (typed)   │  │ (heap)   │  │ Table            │  │    │  │
+│  │  │  └──────────┘  └──────────┘  └──────────────────┘  │    │  │
+│  │  └─────────────────────────────────────────────────────┘    │  │
+│  │                                                              │  │
+│  │  ┌─────────────────────────────────────────────────────┐    │  │
+│  │  │  Generated game code (compiled from BRL)             │    │  │
+│  │  │  • Component structs (Health, Combat, ...)          │    │  │
+│  │  │  • Rule functions (rule_attack, rule_death, ...)    │    │  │
+│  │  │  • User functions (calculate_damage, ...)           │    │  │
+│  │  │  • Entity init (create_initial_entities)            │    │  │
+│  │  │  • Event dispatch table                             │    │  │
+│  │  └─────────────────────────────────────────────────────┘    │  │
+│  └──────────────────────────────────────────────────────────────┘  │
 │                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -155,12 +490,69 @@ This achieves the "compiled, not interpreted" goal for the parts that benefit fr
 
 | Component | Language | Role |
 |-----------|----------|------|
-| `@blink/engine-wasm` (npm) | TypeScript | JS wrapper with the same BlinkGame API. Manages WASM lifecycle, marshals data. |
-| `blink-engine-wasm` (crate) | Rust | Core runtime compiled to WASM. Contains ECS, Timeline, bytecode VM, IR loader. |
-| IR → Bytecode compiler | Rust | Converts IR JSON rules/expressions into flat bytecode at load time. Runs inside WASM. |
-| State Export Buffer | Shared | WASM linear memory region that the JS wrapper reads to build state snapshots. |
+| BRL Compiler (Rust codegen) | TypeScript | New codegen pass in the existing compiler. Reads BRL AST, writes `.rs` files. |
+| `blink_runtime` (crate) | Rust | Small, stable runtime library: typed ECS world, timeline (binary heap), event dispatch loop, string interning, built-in functions. |
+| Generated game code | Rust (generated) | Component structs, rule functions, entity initializers, dispatch table. All compiled from BRL source. |
+| `game.wasm` | WASM | Single binary containing runtime + generated code. All game logic is native WASM. |
+| `@blink/engine-wasm` (npm) | TypeScript | JS wrapper with the same `BlinkGame` API. Loads `game.wasm`, manages lifecycle, reads state. |
 
-### 3.3 Interaction with Existing JS Engine
+### 3.3 The `blink_runtime` Crate
+
+The runtime library is small and game-agnostic. It provides:
+
+```rust
+// ── ECS World ─────────────────────────────────────────────────────
+pub struct World { /* typed component storage, entity management */ }
+
+impl World {
+    pub fn spawn(&mut self) -> EntityId;
+    pub fn despawn(&mut self, id: EntityId);
+    pub fn insert<C: Component>(&mut self, id: EntityId, component: C);
+    pub fn get<C: Component>(&self, id: EntityId) -> &C;
+    pub fn get_mut<C: Component>(&mut self, id: EntityId) -> &mut C;
+    pub fn has<C: Component>(&self, id: EntityId) -> bool;
+    pub fn query_component<C: Component>(&self) -> Vec<EntityId>;
+    pub fn clone_entity(&mut self, source: EntityId) -> EntityId;
+    pub fn get_all_entities(&self) -> Vec<EntityId>;
+    pub fn get_state_json(&self) -> String;  // For JS state export
+}
+
+// ── Timeline ──────────────────────────────────────────────────────
+pub struct Timeline { /* binary heap priority queue */ }
+
+impl Timeline {
+    pub fn schedule(&mut self, event: Event);
+    pub fn schedule_delay(&mut self, delay: f64, event: Event);
+    pub fn schedule_immediate(&mut self, event: Event);
+    pub fn pop(&mut self) -> Option<Event>;
+    pub fn has_events(&self) -> bool;
+    pub fn get_time(&self) -> f64;
+    pub fn cancel(&mut self, event_id: EventId);
+}
+
+// ── Event ─────────────────────────────────────────────────────────
+pub struct Event {
+    pub event_type: InternedString,
+    pub source: Option<EntityId>,
+    pub target: Option<EntityId>,
+    pub fields: HashMap<InternedString, Value>,
+}
+
+// ── Value (for event fields and dynamic contexts) ─────────────────
+pub enum Value {
+    Integer(i64),
+    Number(f64),
+    String(InternedString),
+    Boolean(bool),
+    Entity(EntityId),
+    List(Vec<Value>),
+    None,
+}
+```
+
+The `World` uses a component storage strategy based on `HashMap<EntityId, C>` per component type. Each component type `C` gets its own storage map. This gives O(1) component access by entity ID and O(n) iteration for queries.
+
+### 3.4 Interaction with Existing JS Engine
 
 The WASM engine is a **drop-in alternative** to the JS engine. Both implement the same `BlinkGame` public API:
 
@@ -171,13 +563,14 @@ import { BlinkGame } from '@blink/engine-wasm';   // WASM engine
 
 // Same API:
 const game = await BlinkGame.create({ msPerFrame: 100 });
-game.loadRulesFromObject(ir);
 game.start();
 game.onSimulation(event => { /* update UI */ });
 const state = game.getState();
 ```
 
-The game client can choose which engine to use (e.g., via a config flag or build-time selection). Both engines produce identical simulation results for the same IR input (validated by conformance tests).
+**Key difference**: The WASM engine does NOT load IR at runtime. The game rules are compiled into the WASM binary at build time. The `BlinkGame.create()` call initializes the pre-compiled game directly.
+
+Both engines produce identical simulation results for the same BRL input (validated by conformance tests).
 
 ---
 
@@ -187,23 +580,19 @@ The game client can choose which engine to use (e.g., via a config flag or build
 
 Every JS ↔ WASM call has overhead (~100ns). For a game processing thousands of events per second, this matters. The interface is designed around **batch operations**:
 
-- **`runSteps(n)`**: Process N events entirely within WASM. Return only the count of events processed and the new simulation time.
-- **`getState()`**: Read a full snapshot from WASM memory. Done once per UI frame (60fps = every 16ms).
-- **`loadIR(binary)`**: One-time bulk transfer of IR data into WASM.
+- **`run_steps(n)`**: Process N events entirely within WASM. Return only the count of events processed and the new simulation time.
+- **`get_state_json()`**: Read a full snapshot from WASM memory. Done once per UI frame (60fps = every 16ms).
+- No IR loading at runtime — game rules are compiled into the WASM binary.
 
 ### 4.2 Exported WASM Functions
 
 ```rust
-// Core lifecycle
+// Core lifecycle — game is pre-compiled into WASM, no IR loading needed
 #[wasm_bindgen]
 pub fn create_engine(config_json: &str) -> EngineHandle;
 
 #[wasm_bindgen]
 pub fn destroy_engine(handle: EngineHandle);
-
-// IR loading
-#[wasm_bindgen]
-pub fn load_ir(handle: EngineHandle, ir_json: &str) -> bool;
 
 // Simulation control
 #[wasm_bindgen]
@@ -221,13 +610,9 @@ pub fn get_time(handle: EngineHandle) -> f64;
 #[wasm_bindgen]
 pub fn has_events(handle: EngineHandle) -> bool;
 
-// State queries (returns JSON — simple but not fastest)
+// State queries (returns JSON)
 #[wasm_bindgen]
 pub fn get_state_json(handle: EngineHandle) -> String;
-
-// State queries (returns binary — fastest, read from shared buffer)
-#[wasm_bindgen]
-pub fn get_state_binary(handle: EngineHandle, buffer_ptr: *mut u8, buffer_len: u32) -> u32;
 
 // Entity queries
 #[wasm_bindgen]
@@ -236,7 +621,7 @@ pub fn query_entities(handle: EngineHandle, component_names_json: &str) -> Strin
 #[wasm_bindgen]
 pub fn get_component_json(handle: EngineHandle, entity_id: u32, component_name: &str) -> String;
 
-// Event management
+// Event management (for external triggers, e.g., player actions from UI)
 #[wasm_bindgen]
 pub fn schedule_event(handle: EngineHandle, event_json: &str) -> u32;
 
@@ -263,9 +648,7 @@ export class BlinkGame {
     return new BlinkGame(wasm, handle);
   }
 
-  loadRulesFromObject(ir: IRModule): void {
-    this.wasmEngine.load_ir(this.handle, JSON.stringify(ir));
-  }
+  // No loadRulesFromObject() — game rules are pre-compiled into the WASM binary.
 
   // Run simulation in batches, yielding to UI between batches
   async start(): Promise<void> {
@@ -325,50 +708,50 @@ The JS engine has three callback types: `onSimulation`, `onDebug`, `onTrace`. Fo
 
 ## 5. Memory Layout
 
-### 5.1 ECS Store: Struct-of-Arrays (SoA)
+### 5.1 ECS: Typed Component Storage
 
-The JS engine uses a Map-of-Maps (entity → component → field → value). In WASM, we use **Struct-of-Arrays** for cache locality:
+With BRL → Rust compilation, the ECS uses **native Rust structs** instead of generic maps:
 
-```
-Component "Health" storage:
-  ┌──────────────────────────────────────────────────────┐
-  │  entity_ids:  [  0,    1,    5,    8   ]             │  (u32 array)
-  │  current:     [ 100,  85,   50,  120  ]              │  (f64 array)
-  │  max:         [ 100, 100,  100,  120  ]              │  (f64 array)
-  └──────────────────────────────────────────────────────┘
-
-Component "Character" storage:
-  ┌──────────────────────────────────────────────────────┐
-  │  entity_ids:  [  0,    1,    5,    8   ]             │  (u32 array)
-  │  name:        [ s3,   s7,   s12,  s15 ]              │  (string IDs)
-  │  class:       [ s1,   s2,   s1,   s4  ]              │  (string IDs)
-  │  level:       [  5,    3,    1,    7  ]              │  (i32 array)
-  │  experience:  [ 450,  120,   0,  800  ]              │  (i32 array)
-  └──────────────────────────────────────────────────────┘
+```rust
+// Each component type gets its own storage (generated from BRL component definitions)
+pub struct ComponentStorage {
+    pub health: HashMap<EntityId, Health>,
+    pub combat: HashMap<EntityId, Combat>,
+    pub character: HashMap<EntityId, Character>,
+    pub target: HashMap<EntityId, Target>,
+    pub game_state: HashMap<EntityId, GameState>,
+    // ... one HashMap per component type, all generated from BRL
+}
 ```
 
-**Benefits:**
-- Iterating all `Health.current` values is a linear memory scan (cache-friendly).
-- Numeric fields stored as typed arrays — no boxing, no GC.
-- Entity queries ("all entities with Health") scan one `entity_ids` array per component.
+**Component access is a direct struct field read:**
+
+```rust
+// JS engine: store.getField(entityId, "Health", "current") — 3 string lookups
+// WASM engine: world.get::<Health>(entity_id).current       — 1 HashMap lookup + direct field
+```
+
+Benefits over the JS engine's Map-of-Maps:
+- No string-keyed lookups for component names or field names
+- No boxing/unboxing of values — fields are natively typed (`i64`, `f64`, `bool`)
+- No garbage collection — all data in WASM linear memory
+- Entity queries (`world.query_component::<Health>()`) iterate one HashMap's keys
 
 ### 5.2 String Interning
 
-All strings (component names, event types, field names, string field values) are assigned integer IDs at IR load time:
+String fields in components (e.g., `Character.name`, `Character.class`) are interned at compile time. The generated code uses integer IDs for comparisons:
 
-```
-String Intern Table:
-  0: "Health"
-  1: "Warrior"
-  2: "Mage"
-  3: "Sir Braveheart"
-  4: "Cleric"
-  ...
+```rust
+// Generated from BRL: if character.Character.class == "Warrior"
+if world.get::<Character>(entity_id).class == intern("Warrior")
+// Both sides are InternedString (u32) — integer comparison, not string comparison
 ```
 
-At runtime, all string operations use integer comparisons. The intern table is only used for JS ↔ WASM marshaling (converting string IDs back to strings for JSON export).
+The intern table maps IDs to strings only for JSON export to JS.
 
 ### 5.3 Timeline (Binary Heap)
+
+Same as the JS engine's timeline, but in Rust with typed events:
 
 ```rust
 struct Timeline {
@@ -378,170 +761,80 @@ struct Timeline {
 }
 
 struct ScheduledEvent {
-    time: f64,             // 8 bytes
-    sequence: u64,         // 8 bytes — deterministic ordering
-    event_type: u32,       // 4 bytes — interned string ID
-    source: u32,           // 4 bytes — entity ID (0 = none)
-    target: u32,           // 4 bytes — entity ID (0 = none)
-    fields_offset: u32,    // 4 bytes — offset into fields buffer
-    fields_count: u16,     // 2 bytes — number of fields
-    recurring: bool,       // 1 byte
-    interval: f64,         // 8 bytes (only if recurring)
-}
-// Total: ~43 bytes per event (vs ~200+ bytes for the JS Map-based event)
-```
-
-### 5.4 Bytecode Format
-
-Rules and expressions are compiled from the IR tree format to a flat bytecode:
-
-```
-Opcode format: u8 opcode + variable-length operands
-
-Opcodes:
-  // Stack operations
-  0x01  LOAD_CONST    <const_idx: u16>       — Push constant onto stack
-  0x02  LOAD_LOCAL    <local_idx: u8>        — Push local variable
-  0x03  STORE_LOCAL   <local_idx: u8>        — Pop and store in local
-  0x04  LOAD_FIELD    <entity_reg: u8> <component_id: u16> <field_id: u16>
-  0x05  STORE_FIELD   <entity_reg: u8> <component_id: u16> <field_id: u16>
-
-  // Arithmetic (pop 2, push 1)
-  0x10  ADD
-  0x11  SUB
-  0x12  MUL
-  0x13  DIV
-  0x14  MOD
-
-  // Comparison (pop 2, push 1 boolean)
-  0x20  EQ
-  0x21  NEQ
-  0x22  LT
-  0x23  LTE
-  0x24  GT
-  0x25  GTE
-
-  // Logic
-  0x30  AND
-  0x31  OR
-  0x32  NOT
-
-  // Control flow
-  0x40  JUMP          <offset: i16>
-  0x41  JUMP_IF_FALSE <offset: i16>
-  0x42  CALL          <func_id: u16> <arg_count: u8>
-  0x43  RETURN
-
-  // Entity operations
-  0x50  SPAWN         <template_id: u16>
-  0x51  DESPAWN       <entity_reg: u8>
-  0x52  HAS_COMPONENT <entity_reg: u8> <component_id: u16>
-  0x53  CLONE_ENTITY  <source_reg: u8>
-
-  // Event operations
-  0x60  SCHEDULE      <event_type_id: u16>     — delay on stack
-  0x61  EMIT          <event_type_id: u16>     — immediate schedule
-  0x62  CANCEL_EVENT  <event_id_reg: u8>
-
-  // Entity query
-  0x70  QUERY_ENTITIES <component_count: u8>   — component IDs on stack
-
-  // Modify operations (optimized for the most common action)
-  0x80  MODIFY_ADD    <entity_reg: u8> <component_id: u16> <field_id: u16>
-  0x81  MODIFY_SUB    <entity_reg: u8> <component_id: u16> <field_id: u16>
-  0x82  MODIFY_SET    <entity_reg: u8> <component_id: u16> <field_id: u16>
-  0x83  MODIFY_MUL    <entity_reg: u8> <component_id: u16> <field_id: u16>
-  0x84  MODIFY_DIV    <entity_reg: u8> <component_id: u16> <field_id: u16>
-
-  // Built-in functions
-  0x90  BUILTIN_MIN
-  0x91  BUILTIN_MAX
-  0x92  BUILTIN_FLOOR
-  0x93  BUILTIN_CEIL
-  0x94  BUILTIN_ROUND
-  0x95  BUILTIN_ABS
-  0x96  BUILTIN_RANDOM
-  0x97  BUILTIN_RANDOM_RANGE
-  0x98  BUILTIN_LEN
-```
-
-Each IR rule is compiled to a bytecode chunk. The bytecode VM executes chunks in a tight loop:
-
-```rust
-fn execute_bytecode(&mut self, chunk: &[u8]) {
-    let mut ip = 0;
-    loop {
-        match chunk[ip] {
-            0x01 => { /* LOAD_CONST */ }
-            0x10 => { /* ADD */ }
-            0x40 => { /* JUMP */ }
-            // ...
-            _ => break,
-        }
-    }
+    time: f64,                                     // When to fire
+    sequence: u64,                                 // Deterministic same-time ordering
+    event_type: InternedString,                    // Event name (interned)
+    source: Option<EntityId>,                      // Source entity
+    target: Option<EntityId>,                      // Target entity
+    fields: SmallVec<[(InternedString, Value); 4]>, // Event fields (stack-allocated for ≤4)
+    recurring: bool,
+    interval: f64,
 }
 ```
-
-This is dramatically faster than the JS engine's recursive `evaluateExpression()` which creates closures, branches on string-typed IR nodes, and triggers GC on every temporary value.
 
 ---
 
 ## 6. Implementation Phases
 
-### Phase 1: Foundation — Rust project scaffold and core data structures
+### Phase 1: Runtime library — `blink_runtime` Rust crate
 
 **Duration**: ~2 weeks  
 **Deliverables**:
-- Rust crate `packages/blink-engine-wasm/` with `wasm-pack` build configuration
-- String interning table
-- SoA ECS Store (create, delete, add/remove/get/set component, query)
+- Rust crate `packages/blink-runtime/` — game-agnostic runtime library
+- Typed ECS World (spawn, despawn, insert/get/get_mut/has/query_component, clone_entity)
 - Timeline (binary heap with schedule, pop, cancel, recurring events)
-- IR JSON parser in Rust (read `IRModule` from JSON)
-- Basic `wasm-bindgen` exports: `create_engine`, `load_ir`, `step`, `get_time`, `has_events`
-- Unit tests in Rust for ECS and Timeline
+- String interning (intern, resolve, compare)
+- Event struct with typed fields
+- Value enum for dynamic event fields
+- Built-in functions (min, max, floor, ceil, round, abs, random, random_range, len)
+- `wasm-bindgen` exports for JS interop (create_engine, step, run_steps, get_state_json, etc.)
+- Unit tests for all runtime components
 
 **Build integration**:
-- Add Makefile targets: `build-wasm`, `test-wasm`
-- Require `wasm-pack` (or `wasm-bindgen-cli`) as a dev dependency
-- Output: `packages/blink-engine-wasm/pkg/` with `.wasm` + JS glue
+- Add Makefile targets: `build-runtime`, `test-runtime`
+- Output: Rust crate usable as a dependency by generated game code
 
-### Phase 2: Rule execution — Bytecode compiler and VM
+### Phase 2: Rust codegen — BRL → Rust source generation
 
 **Duration**: ~3 weeks  
 **Deliverables**:
-- IR → bytecode compiler (runs in Rust at IR load time)
-  - Expression compilation (literal, field, var, param, binary, unary, call, if)
-  - Action compilation (modify, schedule, emit, despawn, conditional, loop, let, while)
-- Register-based or stack-based bytecode VM
-- Rule matching (event type → matching rules)
-- Entity filtering (component-based filters)
-- Condition evaluation
-- Built-in functions (min, max, floor, ceil, round, abs, random, random_range, len, entities_having, list, get)
-- Initial state loading (entity definitions from IR)
-- End-to-end test: load IR, run simulation, verify state matches JS engine
+- New codegen pass in `packages/blink-compiler-ts/`
+  - Component definitions → Rust struct definitions
+  - Entity definitions → `create_initial_entities()` function
+  - User-defined functions → Rust functions
+  - Rules → Rust rule functions (one per rule)
+  - Event dispatch → `dispatch_event()` match table
+  - `if entity has X` pattern → `world.query_component::<X>()` iteration
+  - `entities having X` → `world.query_component::<X>()`
+  - `clone` → archetype-specific clone functions
+  - `modify` → direct struct field mutations
+  - `schedule` / `emit` → `timeline.schedule()` / `timeline.schedule_immediate()`
+- CLI command: `blink-compiler compile --target rust -i game.brl -o generated/`
+- Generated code compiles with `cargo build` against `blink_runtime`
+- End-to-end test: BRL → Rust → cargo build → run → verify state matches JS engine
 
-### Phase 3: JS wrapper and integration
+### Phase 3: WASM build pipeline and JS wrapper
 
 **Duration**: ~2 weeks  
 **Deliverables**:
 - `packages/blink-engine-wasm-js/` — TypeScript wrapper package (npm)
+- Build pipeline: `blink-compiler compile --target rust` → `cargo build --target wasm32` → `wasm-pack`
 - `BlinkGame` API matching the JS engine's public API
-- State snapshot export (JSON-based initially)
+- State snapshot export (JSON-based)
 - Simulation lifecycle (start, pause, resume, stop, step, runSteps)
-- Entity query API
-- Event scheduling API from JS
+- Entity query and event scheduling from JS
+- Makefile targets: `build-wasm`, `test-wasm`
 - `game/demos/rpg-demo-wasm.html` — demo page using WASM engine
-- Bundle build script outputting `blink-engine-wasm.bundle.js`
 
 ### Phase 4: Conformance testing and optimization
 
 **Duration**: ~2 weeks  
 **Deliverables**:
-- Conformance test suite: run same IR on both JS and WASM engines, compare state after N steps
+- Conformance test suite: run same BRL on both JS and WASM engines, compare state after N steps
 - Edge case tests: empty rules, zero entities, recursive events, max iterations on while loops
-- Performance benchmarks: JS vs WASM on real game IR (classic-rpg scenario)
+- Performance benchmarks: JS vs WASM on real game BRL (classic-rpg scenario)
 - Profile on mobile devices (Chrome Android, Safari iOS)
-- Optimization based on profiling results (binary state export if needed, component query indices, etc.)
+- Optimization based on profiling results
 
 ### Phase 5: Production readiness
 
@@ -561,19 +854,21 @@ This is dramatically faster than the JS engine's recursive `evaluateExpression()
 
 ### 7.1 Conformance Tests (Critical)
 
-The WASM engine MUST produce identical simulation results to the JS engine for the same IR input. This is validated by **conformance tests**:
+The WASM engine MUST produce identical simulation results to the JS engine for the same BRL input. This is validated by **conformance tests**:
 
 ```
 For each test case:
-  1. Load the same IR into both JS and WASM engines
-  2. Run N steps on both
+  1. Compile the same BRL files to both:
+     a. IR JSON → load into JS engine
+     b. Rust source → cargo build → WASM
+  2. Run N steps on both engines
   3. Compare entity state (component values) after each step
   4. Compare timeline state (pending events)
   5. Assert equality
 ```
 
-**Test fixtures**: Use existing game BRL files compiled to IR:
-- `game/ir/` — compiled IR files from real game scenarios
+**Test fixtures**: Use existing game BRL files:
+- `game/brl/` — real game BRL files (classic-rpg, heroes, enemies, scenarios)
 - `game/tests/brl/` — test BRL files
 
 **Determinism requirement**: Both engines must use the same PRNG seed for `random()` / `random_range()` to produce identical results. This means:
@@ -582,27 +877,34 @@ For each test case:
 
 ### 7.2 Unit Tests (Rust)
 
-Standard Rust unit tests for each subsystem:
+Standard Rust unit tests for the runtime library:
 - ECS: entity CRUD, component operations, queries
 - Timeline: scheduling, ordering, recurring, cancellation
-- Bytecode compiler: IR → bytecode conversion correctness
-- Bytecode VM: instruction execution
 - String interning: intern/resolve roundtrip
+- Built-in functions: correctness
 
-### 7.3 Integration Tests
+### 7.3 Codegen Tests
 
-End-to-end tests using `wasm-pack test --headless`:
-- Load real game IR, run full simulation, verify expected outcomes
+Tests for the BRL → Rust codegen:
+- Compile test BRL files to Rust, verify the generated Rust compiles
+- Verify generated component structs match BRL definitions
+- Verify generated rule functions match expected logic
+- Verify dispatch table includes all event types
+
+### 7.4 Integration Tests
+
+End-to-end tests:
+- Compile real game BRL → Rust → WASM, run full simulation, verify expected outcomes
 - Test JS wrapper API matches expected behavior
-- Test error handling (invalid IR, WASM traps)
+- Test error handling (WASM traps → JS error callbacks)
 
-### 7.4 Performance Tests
+### 7.5 Performance Tests
 
 Benchmarks comparing JS and WASM engines:
 - Events per second (throughput)
 - Time to simulate 10,000 events (latency)
 - Memory usage
-- Startup time (IR loading + compilation)
+- Startup time (WASM instantiation vs JS IR loading)
 
 ---
 
@@ -612,13 +914,14 @@ Benchmarks comparing JS and WASM engines:
 
 | Issue | Impact | Mitigation |
 |-------|--------|------------|
-| **WASM module size** | Larger download on mobile | Use `wasm-opt -Oz`, enable LTO, strip debug info. Target: <200KB gzipped. |
+| **WASM module size** | Larger download on mobile | Use `wasm-opt -Oz`, enable LTO, strip debug info. Target: <200KB gzipped. Each game compiles to its own WASM — the runtime lib is small. |
 | **WASM startup time** | Delay before game can start | Use `WebAssembly.compileStreaming()` for parallel download+compile. Cache compiled module in IndexedDB. |
-| **String handling in WASM** | Strings are not native to WASM; every string operation needs intern table lookups | All strings interned at IR load time. Runtime uses integer IDs exclusively. String operations are rare in the hot path. |
+| **String handling in WASM** | Strings are not native to WASM | All string literals interned at compile time. Runtime uses integer IDs. String intern table only used for JSON export to JS. |
 | **Random number determinism** | JS `Math.random()` and Rust `rand` use different algorithms | Implement the same PRNG in both engines (e.g., xoshiro256** with configurable seed). |
-| **Bound choice functions** | These are called from JS (UI) to get entity-specific behavior | Evaluate bound functions inside WASM via a dedicated export (`evaluate_bound_function(handle, entity_id, func_name, args_json) -> String`). The bytecode VM already compiles function bodies — bound functions use the same mechanism. The JS wrapper calls this export on demand when the UI requests a choice. |
-| **`list` and `map` field types** | Variable-size data doesn't fit neatly in SoA layout | Use indirection: SoA stores an offset+length into a separate heap for variable-size data. |
-| **While loop iteration limit** | JS engine has 10,000 iteration guard | Implement same guard in WASM bytecode VM. |
+| **Bound choice functions** | Called from JS (UI) to get entity-specific behavior | Compile bound functions into WASM alongside rules. Export `evaluate_bound_function(handle, entity_id, func_name, args_json) -> String`. The JS wrapper calls this on demand. |
+| **`list` and `map` field types** | Variable-size data in Rust | Use `Vec<Value>` for list fields, `HashMap<InternedString, Value>` for maps. The runtime `Value` enum handles this. |
+| **While loop iteration limit** | JS engine has 10,000 iteration guard | Generate the same guard in compiled Rust rule code. |
+| **Rebuild required for BRL changes** | BRL changes require re-running the Rust compilation pipeline | The JS engine remains available for rapid prototyping. Use WASM build only for testing and production. |
 
 ### 8.2 Open Points Requiring Decisions
 
@@ -631,16 +934,16 @@ Adding Rust to the build pipeline introduces a new toolchain requirement. Develo
 - (b) Pre-built WASM binary checked into repo (violates the no-generated-code policy)
 - (c) Docker-based build for WASM
 
-**Recommendation**: Option (a). Rust builds are isolated to `packages/blink-engine-wasm/`. The Makefile conditionally skips WASM targets if `wasm-pack` is not installed.
+**Recommendation**: Option (a). Rust builds are isolated to `packages/blink-runtime/` and the generated game code. The Makefile conditionally skips WASM targets if `cargo` is not installed.
 
 #### OP-2: WASM engine feature parity
 
 Should the WASM engine support ALL features of the JS engine?
 
-**Proposed policy**: The WASM engine supports the **runtime simulation features** (IR execution, events, entities). It does NOT need to support:
+**Proposed policy**: The WASM engine supports the **runtime simulation features** (rule execution, events, entities). It does NOT need to support:
 - `onDebug` / `onTrace` callbacks (use JS engine for debugging)
 - `devMode` (step-by-step debugging)
-- Dynamic rule merging (`mergeRulesFromIR`) — this is a development feature
+- Dynamic rule loading / merging — rules are compiled into the WASM binary
 - Source maps
 
 **Open question**: Should `setMsPerFrame()` be supported? The WASM engine could operate in "run N steps" mode only, with the JS wrapper controlling timing via `requestAnimationFrame`.
@@ -710,13 +1013,15 @@ The current JS engine lets the UI subscribe to trace events to build a combat lo
 
 | ID | Decision | Rationale | Status |
 |----|----------|-----------|--------|
-| D-1 | Approach C: Hybrid WASM runtime with bytecode VM | Best performance/complexity tradeoff. Pure compilation (Approach B) adds massive complexity for marginal gain. Pure interpretation in WASM (Approach A) leaves performance on the table. | **Proposed** |
-| D-2 | Rust as implementation language | Best WASM tooling, no GC, excellent performance. | **Proposed** |
-| D-3 | SoA memory layout for ECS | Cache-friendly iteration, typed arrays, minimal overhead. | **Proposed** |
-| D-4 | JSON for initial state transfer, binary as optimization | Start simple. Optimize only when profiling shows need. | **Proposed** |
-| D-5 | No debug/trace support in WASM engine | These are dev features; use JS engine for debugging. Avoids JS/WASM boundary overhead. | **Proposed** |
+| D-1 | Approach D: BRL → Rust → WASM | Maximum performance — everything compiles to native code. No interpretation overhead. BRL is already >90% statically compilable. | **Proposed** |
+| D-2 | Rust as implementation language | Best WASM tooling, no GC, excellent performance. BRL compiles to readable Rust. | **Proposed** |
+| D-3 | Typed component storage (HashMap per component type) | Direct struct field access, no string lookups, no boxing. | **Proposed** |
+| D-4 | JSON for state transfer to JS | Start simple. Optimize only when profiling shows need. | **Proposed** |
+| D-5 | No debug/trace support in WASM engine | These are dev features; use JS engine for debugging. | **Proposed** |
 | D-6 | Same public API as JS engine | Drop-in replacement. Game client code doesn't change. | **Proposed** |
 | D-7 | Conformance tests as primary validation | Engines must produce identical results. This is the most important quality gate. | **Proposed** |
+| D-8 | Rust codegen lives in existing TypeScript compiler | Leverages existing parser and AST. Single compiler with multiple backends (IR JSON, Rust). | **Proposed** |
+| D-9 | Minor BRL language constraints for static compilation | Pre-initialize all components, archetype-homogeneous queries. Already satisfied in practice. | **Proposed** |
 
 ---
 
@@ -725,31 +1030,22 @@ The current JS engine lets the UI subscribe to trace events to build a combat lo
 ```
 packages/
 ├── blink-engine/                 # Existing JS engine (unchanged)
-├── blink-engine-wasm/            # NEW: Rust WASM engine core
+├── blink-compiler-ts/            # Existing compiler (extended)
+│   └── src/
+│       ├── codegen.ts            # Existing IR codegen
+│       └── codegen-rust.ts       # NEW: Rust codegen (BRL AST → .rs files)
+├── blink-runtime/                # NEW: Rust runtime library
 │   ├── Cargo.toml
 │   ├── src/
-│   │   ├── lib.rs               # wasm-bindgen entry point
-│   │   ├── engine.rs            # Engine orchestrator
-│   │   ├── ecs/
-│   │   │   ├── mod.rs
-│   │   │   ├── store.rs         # SoA entity-component storage
-│   │   │   └── query.rs         # Component queries
-│   │   ├── timeline/
-│   │   │   ├── mod.rs
-│   │   │   └── heap.rs          # Binary heap priority queue
-│   │   ├── vm/
-│   │   │   ├── mod.rs
-│   │   │   ├── bytecode.rs      # Bytecode definitions
-│   │   │   ├── compiler.rs      # IR → bytecode compiler
-│   │   │   └── executor.rs      # Bytecode VM
-│   │   ├── ir/
-│   │   │   ├── mod.rs
-│   │   │   ├── types.rs         # IR type definitions
-│   │   │   └── loader.rs        # JSON → Rust IR structs
+│   │   ├── lib.rs               # Public API
+│   │   ├── world.rs             # Typed ECS world
+│   │   ├── timeline.rs          # Binary heap event scheduler
+│   │   ├── event.rs             # Event struct
+│   │   ├── value.rs             # Value enum for dynamic fields
 │   │   ├── interning.rs         # String intern table
-│   │   └── builtins.rs          # Built-in functions
-│   ├── tests/                   # Rust unit tests
-│   └── pkg/                     # wasm-pack output (generated, not committed)
+│   │   ├── builtins.rs          # Built-in functions (min, max, random, etc.)
+│   │   └── exports.rs           # wasm-bindgen exports
+│   └── tests/                   # Rust unit tests
 ├── blink-engine-wasm-js/         # NEW: TypeScript wrapper
 │   ├── package.json
 │   ├── src/
@@ -759,6 +1055,18 @@ packages/
 │   ├── scripts/
 │   │   └── build-bundle.js      # Bundle build script
 │   └── dist/                    # Compiled output (generated, not committed)
+│
+│   # Generated per game (not committed):
+├── generated/                    # Output of `blink-compiler --target rust`
+│   ├── Cargo.toml               # Links to blink-runtime
+│   ├── src/
+│   │   ├── lib.rs               # Entry point + wasm-bindgen exports
+│   │   ├── components.rs        # Generated component structs
+│   │   ├── entities.rs          # Generated entity initializers
+│   │   ├── rules.rs             # Generated rule functions
+│   │   ├── functions.rs         # Generated user-defined functions
+│   │   └── dispatch.rs          # Generated event dispatch table
+│   └── pkg/                     # wasm-pack output (game.wasm + JS glue)
 ```
 
 ## Appendix B: Benchmark Targets
@@ -767,27 +1075,36 @@ Based on analysis of the existing JS engine and typical mobile device capabiliti
 
 | Metric | JS Engine (current) | WASM Target | Notes |
 |--------|--------------------|----|-------|
-| Events/second | ~50,000 | ~250,000+ | 5× improvement minimum |
-| 10K event simulation | ~200ms | ~40ms | Important for catch-up scenarios |
-| State snapshot (100 entities) | ~0.5ms | ~1ms (JSON) / ~0.1ms (binary) | JSON slightly slower due to serialization |
-| IR load time | ~5ms | ~15ms (includes bytecode compilation) | One-time cost, acceptable |
+| Events/second | ~50,000 | ~500,000+ | 10× improvement target (native code, no interpretation) |
+| 10K event simulation | ~200ms | ~20ms | Important for catch-up scenarios |
+| State snapshot (100 entities) | ~0.5ms | ~1ms (JSON) | JSON serialization overhead, acceptable |
+| Startup time | ~5ms (IR load) | ~20ms (WASM instantiate) | One-time cost, acceptable |
 | WASM module size | N/A | <200KB gzipped | Download budget for mobile |
-| Memory usage (1000 entities) | ~2MB | ~0.5MB | SoA is more compact |
+| Memory usage (1000 entities) | ~2MB | ~0.5MB | Native structs are more compact |
 
-## Appendix C: Migration Path
+## Appendix C: Build Pipeline
 
 ```
-Phase 1-2: Build WASM engine standalone, test in isolation
-     ↓
-Phase 3: Add JS wrapper, verify API compatibility
-     ↓
-Phase 4: Conformance tests pass → WASM engine is "correct"
-     ↓
-Phase 5: Integrate into React app as optional engine
-     ↓
-Future: Make WASM the default engine for production builds
-        Keep JS engine for development/debugging
+Developer writes BRL
+      │
+      ▼
+blink-compiler compile --target rust -i game/brl/*.brl -o generated/
+      │
+      ▼
+cd generated && cargo build --target wasm32-unknown-unknown --release
+      │
+      ▼
+wasm-pack build --target web
+      │
+      ▼
+game.wasm + JS glue → loaded by @blink/engine-wasm wrapper
+      │
+      ▼
+React app loads WASM, starts simulation, reads state for UI
 ```
+
+For development: use JS engine (no Rust/WASM needed, instant BRL changes).
+For production: compile BRL → Rust → WASM for maximum performance.
 
 ---
 
@@ -795,4 +1112,5 @@ Future: Make WASM the default engine for production builds
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 0.1.0 | 2026-04-05 | Initial draft |
+| 0.1.0 | 2026-04-05 | Initial draft — Approaches A/B/C, recommended bytecode VM (Approach C) |
+| 0.2.0 | 2026-04-05 | Added Approach D (BRL → Rust → WASM). Changed recommendation to Approach D. Added BRL language analysis for static compilation. Updated architecture, phases, and file structure. |
