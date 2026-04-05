@@ -167,6 +167,28 @@ Attached to: a single global registry entity.
 
 ---
 
+## Player Run Workflow
+
+This is the canonical player flow when starting a run.
+
+1. **Select Game Mode**: Choose one of the predefined modes or pick "Custom" to tweak `ScoringRules`, `SpawnConfig`, and related parameters. The UI should show a quick summary of how scoring and penalties will change for the run.
+	- Custom modes may be saved locally as a named mode for reuse.
+	- Provide a preview of the expected difficulty and a sample score breakdown.
+
+2. **Export / Import Game Mode (QR Figurine)**: Allow players to export a game mode as a compact JSON bundle encoded into a QR code that can be printed or saved as a figurine.
+	- The QR bundle should include a `modeId` (optional for anonymous custom modes), a `version` field, and the full `ScoringRules` and `SpawnConfig` payload.
+	- Importing (scanning) a QR restores the mode into the local registry (optionally prompting to save it under a name) and marks it selected for the next run.
+	- Keep the QR format stable and versioned so future engine updates can migrate old exports.
+
+3. **Select Heroes**: After the mode is selected, the player picks heroes/party composition. The UI should validate any mode-specific constraints (e.g., banned classes or forced party size).
+
+4. **Run the Game**: Start the run with the chosen mode and heroes. The selected mode's `ScoringRules` and `SpawnConfig` are applied at initialisation and remain fixed for that run.
+
+Notes:
+- Modes are applied at run initialisation only — no mid-run mode switching.
+- Consider adding a "Test Run" or "Simulate" option in the mode editor that runs a short simulated encounter to preview scoring behaviour.
+- When exporting to QR, keep the bundle minimal (only fields required to reproduce the mode) and sign or checksum the payload if you want to detect tampering.
+
 ## Events (Game Mode-related)
 
 | Event | Fields | Description |
