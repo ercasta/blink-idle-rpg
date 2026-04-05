@@ -82,11 +82,15 @@ jobs:
       
       - name: Copy source files for in-browser compilation
         run: |
-          # Copy BRL/BDL source files
+          # Copy BRL source files
           New-Item -ItemType Directory -Path demo-package\brl -Force
-          New-Item -ItemType Directory -Path demo-package\bdl -Force
           Copy-Item game\brl\*.brl demo-package\brl\
-          Copy-Item game\bdl\*.bdl demo-package\bdl\
+
+          # Copy BDL source files if they exist
+          New-Item -ItemType Directory -Path demo-package\bdl -Force
+          if (Test-Path game\bdl\*.bdl) {
+            Copy-Item game\bdl\*.bdl demo-package\bdl\
+          }
           
           # Copy BCL files
           Copy-Item game\bcl\warrior-skills.bcl demo-package\

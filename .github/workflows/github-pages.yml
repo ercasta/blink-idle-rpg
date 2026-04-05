@@ -96,8 +96,8 @@ jobs:
           echo "Copying source files for runtime compilation..."
           mkdir -p _site/game
           cp -r game/brl _site/game/
-          cp -r game/bcl _site/game/
-          cp -r game/bdl _site/game/
+          if [ -d game/bcl ]; then cp -r game/bcl _site/game/; fi
+          if [ -d game/bdl ]; then cp -r game/bdl _site/game/; fi
           echo "Copied source files to _site/game/"
           
           # Copy data files for runtime use

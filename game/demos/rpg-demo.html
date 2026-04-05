@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blink Idle RPG - Classic RPG Demo</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f0f1a;
+      color: #eee;
+      min-height: 100vh;
+    }
+    header {
+      background: rgba(0,0,0,0.5);
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    header h1 { font-size: 1.4rem; color: #e94560; }
+    header a { color: #888; text-decoration: none; font-size: 0.9rem; margin-left: auto; }
+    #app {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    #status {
+      background: rgba(255,255,255,0.05);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 20px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    #status h2 { color: #4ade80; margin-bottom: 8px; }
+    #status p { color: #aaa; }
+    .panels {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    .panel {
+      background: rgba(255,255,255,0.05);
+      border-radius: 12px;
+      padding: 20px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .panel h3 { color: #60a5fa; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; }
+    .entity-card {
+      background: rgba(0,0,0,0.3);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+    .entity-name { font-weight: bold; color: #fbbf24; }
+    .entity-class { font-size: 0.8rem; color: #888; }
+    .hp-bar {
+      background: rgba(255,255,255,0.1);
+      border-radius: 4px;
+      height: 8px;
+      margin: 6px 0;
+      overflow: hidden;
+    }
+    .hp-fill {
+      background: linear-gradient(90deg, #22c55e, #4ade80);
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.3s;
+    }
+    .hp-fill.low { background: linear-gradient(90deg, #ef4444, #f87171); }
+    .hp-text { font-size: 0.8rem; color: #888; }
+    .log-panel { grid-column: 1 / -1; }
+    #log {
+      background: rgba(0,0,0,0.5);
+      border-radius: 8px;
+      padding: 12px;
+      height: 200px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 0.85rem;
+      color: #aaa;
+    }
+    #log .log-entry { padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.03); }
+    #log .log-entry.combat { color: #fbbf24; }
+    #log .log-entry.death { color: #ef4444; }
+    #log .log-entry.level { color: #4ade80; }
+    .controls {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    button {
+      background: linear-gradient(135deg, #e94560, #c23152);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: bold;
+    }
+    button:hover { opacity: 0.9; }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    button.secondary {
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+    #loading {
+      text-align: center;
+      padding: 60px 20px;
+      color: #888;
+    }
+    #loading .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(233,69,96,0.3);
+      border-top-color: #e94560;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #error {
+      background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.3);
+      border-radius: 12px;
+      padding: 20px;
+      color: #f87171;
+      display: none;
+    }
+    .score-bar {
+      display: flex;
+      gap: 16px;
+      background: rgba(0,0,0,0.3);
+      border-radius: 8px;
+      padding: 10px 16px;
+      margin-bottom: 16px;
+    }
+    .score-item { text-align: center; }
+    .score-item .value { font-size: 1.4rem; font-weight: bold; color: #fbbf24; }
+    .score-item .label { font-size: 0.75rem; color: #888; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>⚔️ Blink Idle RPG</h1>
+    <a href="index.html">← Back to Demos</a>
+  </header>
+
+  <div id="app">
+    <div id="loading">
+      <div class="spinner"></div>
+      <p>Loading game engine and compiling rules...</p>
+    </div>
+    <div id="error"></div>
+    <div id="game" style="display:none">
+      <div id="status">
+        <h2 id="game-status">Ready</h2>
+        <p id="game-desc">Select a party to begin the adventure.</p>
+      </div>
+
+      <div class="controls">
+        <button id="btn-start" onclick="startGame()">▶ Start Game</button>
+        <button id="btn-pause" class="secondary" onclick="pauseGame()" disabled>⏸ Pause</button>
+        <button id="btn-reset" class="secondary" onclick="resetGame()">↺ Reset</button>
+      </div>
+
+      <div class="score-bar" id="score-bar" style="display:none">
+        <div class="score-item">
+          <div class="value" id="score-kills">0</div>
+          <div class="label">Kills</div>
+        </div>
+        <div class="score-item">
+          <div class="value" id="score-deaths">0</div>
+          <div class="label">Deaths</div>
+        </div>
+        <div class="score-item">
+          <div class="value" id="score-bosses">0</div>
+          <div class="label">Bosses</div>
+        </div>
+        <div class="score-item">
+          <div class="value" id="score-total">0</div>
+          <div class="label">Score</div>
+        </div>
+      </div>
+
+      <div class="panels">
+        <div class="panel">
+          <h3>🛡️ Heroes</h3>
+          <div id="heroes-list"></div>
+        </div>
+        <div class="panel">
+          <h3>👹 Enemies</h3>
+          <div id="enemies-list"></div>
+        </div>
+        <div class="panel log-panel">
+          <h3>📜 Combat Log</h3>
+          <div id="log"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="blink-engine.bundle.js"></script>
+  <script src="blink-compiler.bundle.js"></script>
+  <script>
+    let engine = null;
+    let running = false;
+    let gameLoop = null;
+    const logEntries = [];
+
+    async function loadBRLFile(path) {
+      const res = await fetch(path);
+      if (!res.ok) throw new Error(`Failed to load ${path}: ${res.status}`);
+      return res.text();
+    }
+
+    async function initGame() {
+      try {
+        // Load BRL source files
+        const brlFiles = [
+          '../brl/game-config.brl',
+          '../brl/heroes.brl',
+          '../brl/enemies.brl',
+          '../brl/scenario-normal.brl',
+          '../brl/classic-rpg.brl',
+        ];
+
+        const sources = await Promise.all(
+          brlFiles.map(async (path) => {
+            const content = await loadBRLFile(path);
+            return { path: path.split('/').pop(), content, language: 'brl' };
+          })
+        );
+
+        // Compile BRL sources
+        if (!window.BlinkCompiler) throw new Error('BRL Compiler not loaded');
+        const result = window.BlinkCompiler.compile(sources, { moduleName: 'classic-rpg' });
+
+        if (result.errors && result.errors.length > 0) {
+          throw new Error('Compilation errors:\n' + result.errors.map(e => `${e.file}:${e.line}: ${e.message}`).join('\n'));
+        }
+
+        // Initialize engine with compiled IR
+        if (!window.BlinkEngine) throw new Error('Blink Engine not loaded');
+        engine = new window.BlinkEngine.GameEngine(result.ir);
+
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('game').style.display = 'block';
+        addLog('Game engine initialized. Click Start to begin!');
+        updateUI();
+      } catch (err) {
+        document.getElementById('loading').style.display = 'none';
+        const errorDiv = document.getElementById('error');
+        errorDiv.style.display = 'block';
+        errorDiv.innerHTML = `<strong>Failed to initialize:</strong><br><pre>${err.message}</pre>`;
+        console.error(err);
+      }
+    }
+
+    function startGame() {
+      if (!engine) return;
+      running = true;
+      document.getElementById('btn-start').disabled = true;
+      document.getElementById('btn-pause').disabled = false;
+      document.getElementById('score-bar').style.display = 'flex';
+
+      // Schedule the game start event
+      engine.scheduleEvent('GameStart', {});
+
+      // Run game loop
+      gameLoop = setInterval(() => {
+        if (!running) return;
+        try {
+          engine.step();
+          updateUI();
+          checkGameOver();
+        } catch (e) {
+          console.error('Game error:', e);
+        }
+      }, 200);
+
+      document.getElementById('game-status').textContent = 'Battle in Progress';
+      document.getElementById('game-desc').textContent = 'Heroes are fighting against waves of enemies!';
+    }
+
+    function pauseGame() {
+      running = !running;
+      document.getElementById('btn-pause').textContent = running ? '⏸ Pause' : '▶ Resume';
+    }
+
+    function resetGame() {
+      if (gameLoop) clearInterval(gameLoop);
+      running = false;
+      engine = null;
+      logEntries.length = 0;
+      document.getElementById('log').innerHTML = '';
+      document.getElementById('heroes-list').innerHTML = '';
+      document.getElementById('enemies-list').innerHTML = '';
+      document.getElementById('btn-start').disabled = false;
+      document.getElementById('btn-pause').disabled = true;
+      document.getElementById('btn-pause').textContent = '⏸ Pause';
+      document.getElementById('score-bar').style.display = 'none';
+      document.getElementById('game-status').textContent = 'Ready';
+      document.getElementById('game-desc').textContent = 'Select a party to begin the adventure.';
+      document.getElementById('loading').style.display = 'block';
+      document.getElementById('loading').innerHTML = '<div class="spinner"></div><p>Reloading...</p>';
+      initGame();
+    }
+
+    function checkGameOver() {
+      const state = engine.getState();
+      const heroes = Object.values(state.entities || {}).filter(e => e.Team && e.Team.isPlayer);
+      const enemies = Object.values(state.entities || {}).filter(e => e.Team && !e.Team.isPlayer);
+      if (heroes.length === 0) {
+        document.getElementById('game-status').textContent = '💀 Party Defeated';
+        document.getElementById('game-desc').textContent = 'All heroes have fallen. Better luck next time!';
+      }
+    }
+
+    function updateUI() {
+      if (!engine) return;
+      const state = engine.getState();
+      const entities = Object.values(state.entities || {});
+
+      const heroes = entities.filter(e => e.Team && e.Team.isPlayer);
+      const enemies = entities.filter(e => e.Team && !e.Team.isPlayer && e.Health);
+
+      renderEntityList('heroes-list', heroes, '#4ade80');
+      renderEntityList('enemies-list', enemies, '#f87171');
+
+      // Update scores if available
+      const gameState = entities.find(e => e.RunStats);
+      if (gameState && gameState.RunStats) {
+        document.getElementById('score-kills').textContent = gameState.RunStats.totalKills || 0;
+        document.getElementById('score-deaths').textContent = gameState.RunStats.totalDeaths || 0;
+        document.getElementById('score-bosses').textContent = gameState.RunStats.bossesDefeated || 0;
+        document.getElementById('score-total').textContent = gameState.Score ? gameState.Score.totalScore || 0 : 0;
+      }
+    }
+
+    function renderEntityList(containerId, entities, hpColor) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+
+      const html = entities.map(e => {
+        const name = e.Character ? e.Character.name : (e.variable || 'Unknown');
+        const cls = e.Character ? e.Character.class : '';
+        const hp = e.Health ? e.Health.current : 0;
+        const maxHp = e.Health ? e.Health.max : 1;
+        const hpPct = Math.max(0, Math.min(100, (hp / maxHp) * 100));
+        const lvl = e.Character ? ` Lv.${e.Character.level}` : '';
+        return `
+          <div class="entity-card">
+            <div class="entity-name">${name}${lvl}</div>
+            <div class="entity-class">${cls}</div>
+            <div class="hp-bar"><div class="hp-fill${hpPct < 30 ? ' low' : ''}" style="width:${hpPct}%"></div></div>
+            <div class="hp-text">${hp} / ${maxHp} HP</div>
+          </div>
+        `;
+      }).join('');
+
+      container.innerHTML = html || '<p style="color:#666;font-size:0.9rem">None</p>';
+    }
+
+    function addLog(msg, type = '') {
+      const log = document.getElementById('log');
+      if (!log) return;
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = msg;
+      log.appendChild(entry);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    // Listen for engine events
+    window.addEventListener('blink:event', (e) => {
+      const { name, data } = e.detail || {};
+      if (name === 'Death') addLog(`💀 Entity died`, 'death');
+      else if (name === 'LevelUp') addLog(`⬆️ Level up!`, 'level');
+      else if (name === 'DoAttack') addLog(`⚔️ Attack!`, 'combat');
+    });
+
+    initGame();
+  </script>
+</body>
+</html>
