@@ -57,6 +57,11 @@ game_state = new entity {
         damageScaleRate: 450              // 50% faster damage scaling (up from 300)
         initialEnemyCount: 7              // 7 enemies per wave (up from 5)
     }
+    ProgressTracker {
+        checkpointInterval: 10            // one checkpoint per 10 enemies
+        checkpointsReached: 0
+        totalCheckpoints: 30              // N = 30 checkpoints
+    }
 }
 
 run_stats = new entity {
