@@ -50,6 +50,12 @@ See [Architecture Decision: IR and Engine Independence](architecture/ir-decision
 │  └─────────────────┘      └─────────────────┘    └─────────────────┘       │
 │                                                                             │
 │  ┌─────────────────┐                                                        │
+│  │ TRACK 7         │◄─── Uses IR (same as Track 3/4/5)                      │
+│  │ WASM Engine     │                                                        │
+│  │ (Browser, Rust) │                                                        │
+│  └─────────────────┘                                                        │
+│                                                                             │
+│  ┌─────────────────┐                                                        │
 │  │ TRACK 6         │◄─── Uses compiler AST                                  │
 │  │ Dev Tools       │                                                        │
 │  │ (LSP, VSCode)   │                                                        │
@@ -371,9 +377,66 @@ yo code  # VSCode extension generator
 
 ---
 
+## Track 7: WASM Engine
+
+**Focus**: High-performance WebAssembly engine for mobile browsers
+
+**Status**: Planning — see [WASM Engine Plan](engine/wasm-engine-plan.md)
+
+### Owner Requirements
+- Rust proficiency
+- WASM/wasm-bindgen experience
+- Understanding of ECS patterns and bytecode VMs
+
+### Deliverables
+1. Rust WASM engine core (`packages/blink-engine-wasm/`)
+2. IR → bytecode compiler (runs at load time in WASM)
+3. Bytecode VM (stack-based, executes compiled rules)
+4. SoA ECS store, binary heap timeline
+5. TypeScript wrapper (`packages/blink-engine-wasm-js/`) with same `BlinkGame` API as Track 4
+6. Conformance tests validating identical results to JS engine
+7. Performance benchmarks (target: 5× throughput vs JS engine)
+
+### Files
+```
+packages/
+├── blink-engine-wasm/           # Rust WASM core
+│   ├── Cargo.toml
+│   └── src/
+├── blink-engine-wasm-js/        # TypeScript wrapper
+│   ├── package.json
+│   └── src/
+```
+
+### Dependencies
+- **Track 2: IR specification only** (same as all engine tracks)
+- No dependency on Track 3 (Rust Engine) or Track 4 (JS Engine)
+
+### Key Design Decisions
+- **Hybrid approach**: Rust runtime with bytecode-compiled rules (not pure IR interpretation, not full WASM compilation)
+- **Same public API** as JS engine — drop-in replacement
+- **No debug/trace support** — use JS engine for debugging
+- **Batch execution**: `runSteps(n)` processes N events in WASM, then yields to JS for UI
+
+### Getting Started
+```bash
+# Read the detailed plan
+cat doc/engine/wasm-engine-plan.md
+
+# Read IR specification
+cat doc/ir-specification.md
+
+# Set up Rust project (requires wasm-pack)
+cd packages/blink-engine-wasm
+cargo init --lib
+# Configure for wasm-pack (see plan for details)
+```
+
+---
+
 ## Interface Contracts
 
-### IR Format Contract (Track 2 → Tracks 3, 4, 5)
+### IR Format Contract (Track 2 → Tracks 3, 4, 5, 7)
 
 The IR is the **central contract** between compiler and all engines.
 Engines do NOT depend on each other—each engine depends only on the IR specification.
