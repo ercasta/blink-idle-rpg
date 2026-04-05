@@ -616,7 +616,7 @@ Benchmarks comparing JS and WASM engines:
 | **WASM startup time** | Delay before game can start | Use `WebAssembly.compileStreaming()` for parallel download+compile. Cache compiled module in IndexedDB. |
 | **String handling in WASM** | Strings are not native to WASM; every string operation needs intern table lookups | All strings interned at IR load time. Runtime uses integer IDs exclusively. String operations are rare in the hot path. |
 | **Random number determinism** | JS `Math.random()` and Rust `rand` use different algorithms | Implement the same PRNG in both engines (e.g., xoshiro256** with configurable seed). |
-| **Bound choice functions** | These are called from JS (UI) to get entity-specific behavior | Keep bound function evaluation in the JS wrapper. When JS calls `getBoundFunction()`, evaluate using JS engine logic or a dedicated WASM export. |
+| **Bound choice functions** | These are called from JS (UI) to get entity-specific behavior | Evaluate bound functions inside WASM via a dedicated export (`evaluate_bound_function(handle, entity_id, func_name, args_json) -> String`). The bytecode VM already compiles function bodies — bound functions use the same mechanism. The JS wrapper calls this export on demand when the UI requests a choice. |
 | **`list` and `map` field types** | Variable-size data doesn't fit neatly in SoA layout | Use indirection: SoA stores an offset+length into a separate heap for variable-size data. |
 | **While loop iteration limit** | JS engine has 10,000 iteration guard | Implement same guard in WASM bytecode VM. |
 
@@ -692,6 +692,17 @@ The current JS engine lets the UI subscribe to trace events to build a combat lo
 **Proposed approach**: The WASM engine maintains a ring buffer of "notable events" (combat actions, deaths, level-ups). After each `run_steps()` batch, the JS wrapper reads this buffer and dispatches to UI callbacks. The buffer format is defined by the game's needs, not the engine — the engine provides a generic "event log" mechanism.
 
 **This is one of the most important design decisions to get right.** It determines how responsive and detailed the UI can be.
+
+**Implementation alternatives**:
+
+| Alternative | How it works | Pros | Cons |
+|-------------|-------------|------|------|
+| **(a) WASM ring buffer** (recommended) | WASM writes structured events to a fixed-size ring buffer in linear memory. JS reads the buffer after each `run_steps()` call via `drain_event_log(handle) -> String` (JSON array). | Single WASM→JS call per frame. Buffer size is bounded. Events are batched. | Requires defining a binary event format. Buffer overflow must be handled (oldest events dropped). |
+| **(b) Callback per event** | WASM calls a JS callback function for each notable event during execution. | Most compatible with current JS engine model. Fine-grained. | Extremely expensive — each callback crosses the JS/WASM boundary (~100ns). For 1000 events/frame, this adds ~100μs of pure overhead. |
+| **(c) Post-hoc state diff** | JS compares state snapshots before and after `run_steps()` to infer what happened. | No WASM changes needed. | Cannot reconstruct event ordering or details (e.g., "who attacked whom"). Lossy. |
+| **(d) Structured event log export** | WASM accumulates events into a growable Vec. JS calls `get_event_log_json(handle) -> String` to drain it. | Simple API. Full fidelity. | Unbounded memory growth if not drained. JSON serialization cost per frame. |
+
+**Recommendation**: Start with **(d) Structured event log export** — simplest to implement, full fidelity, easy to drain each frame. If memory or serialization becomes an issue, migrate to **(a) ring buffer** with binary encoding. Option **(b)** should be avoided due to boundary crossing overhead.
 
 ---
 
