@@ -116,7 +116,9 @@ jobs:
           # Also copy BRL files to _site/brl/ for compatibility with local dev paths
           echo "Copying BRL files to /brl/ for path compatibility..."
           mkdir -p _site/brl
-          cp game/brl/*.brl _site/brl/ 2>/dev/null || true
+          if ls game/brl/*.brl 1> /dev/null 2>&1; then
+            cp game/brl/*.brl _site/brl/
+          fi
           echo "Copied source files"
           
           # Copy data files for runtime use

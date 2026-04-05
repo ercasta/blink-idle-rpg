@@ -268,8 +268,8 @@
         if (!running) return;
         try {
           for (let i = 0; i < 10; i++) {
-            const r = engine.step();
-            if (!r) break;
+            const stepResult = engine.step();
+            if (!stepResult) break;
           }
           updateUI();
           checkGameOver();
