@@ -116,6 +116,16 @@ component GameState {
     bossSpawned: boolean
 }
 
+// Progress tracking for the N-step checkpoint system
+// Fires ProgressCheckpoint events at defined intervals so the UI can
+// replay game progress at one update per second.
+// N = 30 checkpoints, one per 10 enemies defeated.
+component ProgressTracker {
+    checkpointInterval: integer    // enemies defeated per checkpoint (default: 10)
+    checkpointsReached: integer    // number of checkpoints fired so far
+    totalCheckpoints: integer      // total N checkpoints expected (default: 30)
+}
+
 // Run tracking for leaderboard
 component RunStats {
     simulationTime: float
@@ -967,6 +977,33 @@ let retreatCount: integer = runStats.RunStats.retreatCount
 let retreatPenalty: integer = retreatCount * entity.ScoringRules.pointsLostPerRetreat
                 entity.Score.retreatPenaltyTotal = retreatPenalty
                 entity.Score.total -= retreatPenalty
+            }
+        }
+    }
+}
+
+// ============================================================================
+// PROGRESS CHECKPOINT RULES (N-step UI replay system)
+// Fires ProgressCheckpoint every checkpointInterval enemies defeated.
+// Default: N=30 checkpoints, one per 10 enemies.
+// ============================================================================
+
+// Check and fire a progress checkpoint after each enemy is defeated
+rule check_progress_checkpoint on EnemyDefeated(ed: id) {
+    if entity has ProgressTracker {
+        if entity has GameState {
+            if entity has RunStats {
+let nextThreshold: integer = (entity.ProgressTracker.checkpointsReached + 1) * entity.ProgressTracker.checkpointInterval
+                if entity.GameState.enemiesDefeated >= nextThreshold {
+                    entity.ProgressTracker.checkpointsReached += 1
+                    schedule ProgressCheckpoint {
+                        step: entity.ProgressTracker.checkpointsReached
+                        enemiesDefeated: entity.GameState.enemiesDefeated
+                        simulationTime: entity.RunStats.simulationTime
+                        currentTier: entity.GameState.currentTier
+                        currentWave: entity.GameState.currentWave
+                    }
+                }
             }
         }
     }

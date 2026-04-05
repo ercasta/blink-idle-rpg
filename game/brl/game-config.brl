@@ -35,6 +35,11 @@ game_state = new entity {
         damageScaleRate: 300
         initialEnemyCount: 5
     }
+    ProgressTracker {
+        checkpointInterval: 10
+        checkpointsReached: 0
+        totalCheckpoints: 30
+    }
 }
 
 // -----------------------------------------------------------------------------

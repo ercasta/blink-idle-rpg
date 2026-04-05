@@ -1,7 +1,7 @@
 # Blink Idle RPG - Local Development Pipeline
 # This Makefile allows you to run build and test pipelines locally
 
-.PHONY: help all clean build-compiler-ts install-packages build-packages test demo-package dev-setup dev build-runtime test-runtime test-wasm
+.PHONY: help all clean build-compiler-ts install-packages build-packages test demo-package dev-setup dev build-runtime test-runtime test-wasm compile-brl
 
 # Bundle output locations
 DEMOS_DIR=game/demos
@@ -26,7 +26,7 @@ help:
 	@echo "  make test-compiler-ts - Run TypeScript compiler tests only"
 	@echo "  make test-packages    - Run package tests only"
 	@echo "  make test-examples    - Run example tests"
-	@echo "  make build-runtime    - Build the Rust blink-runtime crate"
+	@echo "  make compile-brl      - Compile BRL source to IR JSON files (game/app/public/ir/)"
 	@echo "  make test-runtime     - Run Rust runtime unit tests"
 	@echo "  make test-wasm        - Run WASM engine end-to-end tests (BRL → Rust → native)"
 	@echo "  make demo-package     - Create demo package for distribution"
@@ -193,3 +193,8 @@ clean-wasm:
 	rm -rf packages/blink-engine-wasm/dist
 	@echo "WASM clean complete"
 
+# Compile BRL source files to IR JSON for the web app
+compile-brl: build-compiler-ts
+	@echo "Compiling BRL source to IR JSON..."
+	node tools/compile-brl-to-ir.js
+	@echo "BRL compilation complete"
