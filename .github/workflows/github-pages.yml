@@ -85,6 +85,41 @@ jobs:
           echo "Verifying demo IR was created..."
           test -f game/demos/ir/rpg-demo.ir.json || (echo "Error: Demo IR not found" && exit 1)
           ls -lh game/demos/ir/rpg-demo.ir.json
+
+      - name: Set up Rust + wasm-pack (for WASM engine build)
+        run: |
+          echo "Installing Rust toolchain…"
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+          source "$HOME/.cargo/env"
+          rustup target add wasm32-unknown-unknown
+          echo "Installing wasm-pack…"
+          curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+          wasm-pack --version
+
+      - name: Build WASM engine
+        run: |
+          source "$HOME/.cargo/env"
+          echo "Building WASM engine (BRL → Rust → WASM)…"
+          cd packages/blink-engine-wasm-js
+          npm install
+          node build.js
+          cd ../..
+          echo "Verifying WASM artefacts…"
+          test -f packages/blink-engine-wasm-js/generated/blink-rpg-wasm/pkg/blink_rpg_wasm.js || \
+            (echo "Error: blink_rpg_wasm.js not found" && exit 1)
+          test -f packages/blink-engine-wasm-js/generated/blink-rpg-wasm/pkg/blink_rpg_wasm_bg.wasm || \
+            (echo "Error: blink_rpg_wasm_bg.wasm not found" && exit 1)
+          ls -lh packages/blink-engine-wasm-js/generated/blink-rpg-wasm/pkg/
+
+      - name: Install WASM artefacts into React app
+        run: |
+          mkdir -p game/app/public/wasm
+          cp packages/blink-engine-wasm-js/generated/blink-rpg-wasm/pkg/blink_rpg_wasm.js \
+             game/app/public/wasm/
+          cp packages/blink-engine-wasm-js/generated/blink-rpg-wasm/pkg/blink_rpg_wasm_bg.wasm \
+             game/app/public/wasm/
+          echo "Installed WASM artefacts:"
+          ls -lh game/app/public/wasm/
       
       - name: Prepare deployment directory
         run: |
@@ -288,6 +323,17 @@ jobs:
           </body>
           </html>
           EOF
+          
+          # Copy WASM engine artefacts (built by the 'Build WASM engine' step)
+          echo "Copying WASM engine artefacts…"
+          if [ -f game/app/public/wasm/blink_rpg_wasm.js ]; then
+            mkdir -p _site/wasm
+            cp game/app/public/wasm/blink_rpg_wasm.js    _site/wasm/
+            cp game/app/public/wasm/blink_rpg_wasm_bg.wasm _site/wasm/
+            echo "WASM files copied to _site/wasm/"
+          else
+            echo "No WASM artefacts found — skipping (JS engine will be used as fallback)"
+          fi
           
           echo "Deployment directory prepared:"
           ls -laR _site/

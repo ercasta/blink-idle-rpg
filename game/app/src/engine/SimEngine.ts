@@ -8,12 +8,16 @@
  * The caller receives the array of snapshots after the simulation finishes
  * or after the wall-clock budget is exhausted.
  *
- * Architecture note (v2): When the WASM engine is ready, a WasmEngine class
- * will implement the same interface but run in a Web Worker.
+ * Architecture note (v2): The WASM engine (WasmSimEngine.ts) implements the
+ * same runSimulation() interface but runs compiled native code in a single
+ * synchronous pass (~300ms for 300 kills vs ~5s for the JS engine).
+ * runSimulation() below tries the WASM engine first and falls back here
+ * automatically when the WASM binary is unavailable.
  */
 
 import { BlinkGame } from '@blink/engine';
 import type { GameSnapshot, HeroDefinition, GameMode } from '../types';
+import { runSimulationWasm } from './WasmSimEngine';
 
 // ── Hero stats per class ────────────────────────────────────────────────────
 
@@ -103,12 +107,33 @@ const MAX_WALL_MS = 5_000;
 // ── Run simulation ──────────────────────────────────────────────────────────
 
 /**
- * Run the BRL simulation with chunked execution (yields to browser between
- * chunks).  Captures a GameSnapshot on every ProgressCheckpoint event and
- * returns all collected snapshots when the simulation ends or the wall-clock
- * budget expires.
+ * Run the BRL simulation.
+ *
+ * Tries the WASM engine first (fast, ~300ms for 300 kills, no IR file needed).
+ * Falls back to the JS engine with chunked execution when the WASM binary is
+ * not present (e.g. in development before running `make build-wasm`).
  */
 export async function runSimulation(
+  irUrl: string,
+  selectedHeroes: HeroDefinition[],
+  mode: GameMode
+): Promise<GameSnapshot[]> {
+  // Try WASM engine — returns null when the binary is unavailable
+  const wasmResult = await runSimulationWasm(selectedHeroes, mode);
+  if (wasmResult !== null) {
+    return wasmResult;
+  }
+
+  // Fall back to JS engine (requires pre-compiled IR)
+  return runSimulationJs(irUrl, selectedHeroes, mode);
+}
+
+/**
+ * JS engine fallback — fetches the IR and runs the simulation in 500-step
+ * chunks, yielding to the browser between chunks so the loading screen stays
+ * responsive.
+ */
+async function runSimulationJs(
   irUrl: string,
   selectedHeroes: HeroDefinition[],
   mode: GameMode

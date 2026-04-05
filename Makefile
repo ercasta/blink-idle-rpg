@@ -1,7 +1,7 @@
 # Blink Idle RPG - Local Development Pipeline
 # This Makefile allows you to run build and test pipelines locally
 
-.PHONY: help all clean build-compiler-ts install-packages build-packages test demo-package dev-setup dev build-runtime test-runtime test-wasm compile-brl
+.PHONY: help all clean build-compiler-ts install-packages build-packages test demo-package dev-setup dev build-runtime test-runtime test-wasm compile-brl build-wasm install-wasm
 
 # Bundle output locations
 DEMOS_DIR=game/demos
@@ -29,8 +29,15 @@ help:
 	@echo "  make compile-brl      - Compile BRL source to IR JSON files (game/app/public/ir/)"
 	@echo "  make test-runtime     - Run Rust runtime unit tests"
 	@echo "  make test-wasm        - Run WASM engine end-to-end tests (BRL → Rust → native)"
+	@echo "  make build-wasm       - Compile RPG BRL → Rust → WASM binary (requires wasm-pack)"
+	@echo "  make install-wasm     - Copy WASM artefacts to game/app/public/wasm/"
 	@echo "  make demo-package     - Create demo package for distribution"
 	@echo "  make clean            - Clean all build artifacts"
+	@echo ""
+	@echo "WASM prerequisites (build-wasm):"
+	@echo "  Rust:       https://www.rust-lang.org/tools/install"
+	@echo "  wasm-pack:  curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh"
+	@echo "  wasm32:     rustup target add wasm32-unknown-unknown"
 	@echo ""
 
 # Build everything
@@ -81,6 +88,9 @@ clean:
 	rm -rf packages/blink-runtime/target
 	rm -rf packages/blink-engine-wasm/generated
 	rm -rf packages/blink-engine-wasm/dist
+	rm -rf packages/blink-engine-wasm-js/generated
+	rm -rf packages/blink-engine-wasm-js/node_modules
+	rm -rf game/app/public/wasm
 	rm -rf demo-package
 	rm -rf blink-demo-package.zip
 	@echo "Clean complete"
@@ -192,6 +202,8 @@ clean-wasm:
 	rm -rf packages/blink-runtime/target
 	rm -rf packages/blink-engine-wasm/generated
 	rm -rf packages/blink-engine-wasm/dist
+	rm -rf packages/blink-engine-wasm-js/generated
+	rm -rf game/app/public/wasm
 	@echo "WASM clean complete"
 
 # Compile BRL source files to IR JSON for the web app
@@ -199,3 +211,45 @@ compile-brl: build-compiler-ts
 	@echo "Compiling BRL source to IR JSON..."
 	node tools/compile-brl-to-ir.js
 	@echo "BRL compilation complete"
+
+# Build the WASM module from RPG BRL source (requires wasm-pack + wasm32 target)
+#
+# Prerequisites:
+#   rustup target add wasm32-unknown-unknown
+#   curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+#
+# The generated artefacts land in packages/blink-engine-wasm-js/generated/
+# Run `make install-wasm` afterwards to copy them into the React app.
+build-wasm: build-compiler-ts
+	@echo "Building WASM engine (BRL → Rust → WASM)…"
+	@command -v wasm-pack >/dev/null 2>&1 || \
+	  (echo "" && \
+	   echo "❌  wasm-pack not found." && \
+	   echo "    Install: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh" && \
+	   echo "" && exit 1)
+	@rustup target list --installed 2>/dev/null | grep -q "wasm32-unknown-unknown" || \
+	  (echo "" && \
+	   echo "❌  wasm32-unknown-unknown target not installed." && \
+	   echo "    Install: rustup target add wasm32-unknown-unknown" && \
+	   echo "" && exit 1)
+	cd packages/blink-engine-wasm-js && npm install && node build.js
+	@echo "WASM build complete. Run 'make install-wasm' to deploy to the React app."
+
+# Build WASM in dev mode (faster compile, larger binary)
+build-wasm-dev: build-compiler-ts
+	@echo "Building WASM engine (dev mode)…"
+	cd packages/blink-engine-wasm-js && npm install && node build.js --dev
+
+# Copy WASM artefacts into the React app's public directory
+install-wasm:
+	@echo "Installing WASM artefacts into game/app/public/wasm/…"
+	@test -d packages/blink-engine-wasm-js/generated/blink-rpg-wasm/pkg || \
+	  (echo "❌  WASM not built yet — run 'make build-wasm' first." && exit 1)
+	mkdir -p game/app/public/wasm
+	cp packages/blink-engine-wasm-js/generated/blink-rpg-wasm/pkg/blink_rpg_wasm.js \
+	   game/app/public/wasm/
+	cp packages/blink-engine-wasm-js/generated/blink-rpg-wasm/pkg/blink_rpg_wasm_bg.wasm \
+	   game/app/public/wasm/
+	@echo "Installed:"
+	@ls -lh game/app/public/wasm/
+
