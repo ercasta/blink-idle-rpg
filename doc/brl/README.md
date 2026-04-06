@@ -9,7 +9,6 @@ Blink uses two domain-specific languages:
 | Language | Full Name | Purpose | Users |
 |----------|-----------|---------|-------|
 | **BRL** | Blink Rule Language | Define game rules, components, events, and game data (entities) | Game developers and content creators |
-| **BCL** | Blink Choice Language | Customize AI choice functions | Players |
 
 ## BRL: One Language for Everything
 
@@ -17,7 +16,6 @@ BRL handles both game logic and game data in a single, unified language:
 
 - **Game rules**: Component definitions, rules triggered by events, functions
 - **Game data**: Entity creation with component initialization and bound choice functions
-- **Choice functions**: Decision-making logic that can be bound to individual entities
 
 ## Documents in This Folder
 

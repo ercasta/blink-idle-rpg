@@ -1,9 +1,5 @@
 # Blink Rule Language (BRL) Specification
 
-**Version**: 0.1.0-draft  
-**Status**: Draft  
-**Last Updated**: 2024-12-31
-
 ## Table of Contents
 
 1. [Introduction](#introduction)
@@ -21,7 +17,7 @@
 
 ---
 
-## 1. Introduction
+## Introduction
 
 The Blink Rule Language (BRL) is a domain-specific language designed for defining game rules in the Blink Idle RPG engine. BRL is based on the Entity-Component-System (ECS) pattern and provides constructs for:
 
@@ -56,9 +52,9 @@ rule on DamageTaken dmg {
 
 ---
 
-## 2. Lexical Structure
+## Lexical Structure
 
-### 2.1 Comments
+### Comments
 
 ```brl
 // Single-line comment
@@ -68,7 +64,7 @@ rule on DamageTaken dmg {
 */
 ```
 
-### 2.2 Identifiers
+### Identifiers
 
 Identifiers start with a letter or underscore, followed by letters, digits, or underscores:
 
@@ -76,7 +72,7 @@ Identifiers start with a letter or underscore, followed by letters, digits, or u
 identifier := [a-zA-Z_][a-zA-Z0-9_]*
 ```
 
-### 2.3 Keywords
+### Keywords
 
 Reserved keywords:
 
@@ -89,7 +85,7 @@ when       create     delete     has        new
 choice     let
 ```
 
-### 2.4 Literals
+### Literals
 
 ```brl
 // String literals
@@ -111,33 +107,32 @@ false
 
 ---
 
-## 3. Type System
+## Type System
 
-### 3.1 Base Types
+### Base Types
 
 | Type | Description | Example |
 |------|-------------|---------|
 | `string` | Text value | `"hello"` |
 | `boolean` | True or false | `true` |
 | `integer` | Whole number | `42` |
-| `float` | Floating-point | `3.14` |
 | `decimal` | Fixed precision | `10.50d` |
 | `id` | Entity reference | `@player1` |
 | `list` | List of entities (shorthand for `list<id>`) | `[entity1, entity2]` |
 | `list<T>` | List of type T (T can be: id, integer, string, etc.) | `[1, 2, 3]` |
 
-### 3.2 Component Types
+### Component Types
 
 Components define structured data types:
 
 ```brl
 component Position {
-	x: float
-	y: float
+	x: integer
+	y: integer
 }
 ```
 
-### 3.3 Type Annotations (Mandatory)
+### Type Annotations (Mandatory)
 
 BRL requires explicit type annotations on all variable declarations to catch errors early:
 
@@ -155,7 +150,7 @@ Type annotations are mandatory for:
 
 Component fields always require type annotations.
 
-### 3.4 Optional Types
+### Optional Types
 
 Fields can be optional:
 
@@ -168,9 +163,9 @@ component Equipment {
 
 ---
 
-## 4. Components
+## Components
 
-### 4.1 Component Definition
+### Component Definition
 
 ```brl
 component ComponentName {
@@ -180,7 +175,7 @@ component ComponentName {
 }
 ```
 
-### 4.2 Component Examples
+### Component Examples
 
 ```brl
 component Character {
@@ -207,7 +202,7 @@ component Inventory {
 }
 ```
 
-### 4.3 Multiple Components of Same Type
+### Multiple Components of Same Type
 
 An entity can have multiple components of the same type, acting as a list:
 
@@ -225,9 +220,9 @@ component Buff {
 
 ---
 
-## 5. Entities
+## Entities
 
-### 5.1 Entity Creation
+### Entity Creation
 
 Entities are created using the `let` keyword with mandatory type annotation `id` and the `new entity` syntax:
 
@@ -264,7 +259,7 @@ hero.add(Health {
 })
 ```
 
-### 5.2 Entity Modification
+### Entity Modification
 
 ```brl
 // Add component to existing entity
@@ -282,7 +277,7 @@ if entity.has(Poisoned) {
 }
 ```
 
-### 5.3 Entity Deletion
+### Entity Deletion
 
 ```brl
 delete entity
@@ -290,9 +285,9 @@ delete entity
 
 ---
 
-## 6. Rules and Triggers
+## Rules and Triggers
 
-### 6.1 Rule Definition
+### Rule Definition
 
 Rules define reactions to events. Each rule receives the triggering event as a parameter:
 
@@ -316,7 +311,7 @@ rule InterceptDamage on DamageTaken(dmg: id) {
 }
 ```
 
-### 6.2 Event Context
+### Event Context
 
 Within a rule, the event parameter provides access to event data:
 
@@ -350,7 +345,7 @@ rule InitializeHeroes on GameStart(gs: id) {
 }
 ```
 
-### 6.3 Conditional Rules
+### Conditional Rules
 
 Conditions can reference the event parameter:
 
@@ -362,7 +357,7 @@ rule CriticalHit on AttackLanded(atk: id) when atk.AttackEvent.is_critical {
 }
 ```
 
-### 6.4 Priority
+### Priority
 
 Rules can have priority for ordering:
 
@@ -378,9 +373,9 @@ rule LowPriority on Event(evt: id) [priority: -100] {
 
 ---
 
-## 7. Events
+## Events
 
-### 7.1 Event Definition
+### Event Definition
 
 Events are entities with components:
 
