@@ -4,7 +4,7 @@ An idle RPG where you complete the entire game in a blink… more or less!
 
 ## Overview
 
-In Blink you define your RPG party and some decision rules, then the entire game runs without interaction. Game rules are written in **BRL (Blink Rule Language)** and compiled to an Intermediate Representation (IR) that the engine executes.
+In Blink you define your RPG party and some decision rules, then the entire game runs without interaction. Game rules are written in **BRL (Blink Rule Language)** 
 
 ## Prerequisites
 
