@@ -69,7 +69,7 @@ The WASM engine compiles BRL → Rust → WASM. Prerequisites must be installed 
 **Windows:**
 ```powershell
 .\scripts\install-rust-wasm-windows.ps1
-npm run build:wasm
+npm run build:wasm        # automatically runs build:compiler:ts first
 npm run install:wasm
 ```
 
@@ -78,8 +78,8 @@ npm run install:wasm
 curl https://sh.rustup.rs -sSf | sh
 rustup target add wasm32-unknown-unknown
 curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-npm run build:wasm      # or: make build-wasm
-npm run install:wasm    # or: make install-wasm
+npm run build:wasm        # automatically runs build:compiler:ts first; or: make build-wasm
+npm run install:wasm      # or: make install-wasm
 ```
 
 Use `npm run build:wasm:dev` (or `make build-wasm-dev`) for faster iteration during development.

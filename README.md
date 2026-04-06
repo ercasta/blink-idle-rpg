@@ -91,7 +91,7 @@ curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 **Build WASM and run the app:**
 
 ```
-npm run build:wasm        # compiles BRL → Rust → WASM (release, ~2 min)
+npm run build:wasm        # builds TS compiler then compiles BRL → Rust → WASM (release, ~2 min)
 npm run install:wasm      # copies artefacts to game/app/public/wasm/
 npm run dev:app           # React app uses WASM engine automatically
 ```
