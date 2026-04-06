@@ -31,7 +31,7 @@ AfterAttack
 
 Death (entity)
   ├─ If entity is hero → fire HeroDeath
-  │     └─ Check if all heroes dead → GameOver
+  │     └─ Apply death penalties to `RunStats`. If all heroes are dead at once, record a party wipeout and apply configured party-wipe penalties; do NOT end the run.
   └─ If entity is enemy → fire EnemyDefeated
         └─ Award XP, update score, check wave clear
 
@@ -120,6 +120,15 @@ deathPenalty = FleeConfig.retreatTimePenalty * FleeConfig.deathTimePenaltyMultip
 
 These penalties are added to `RunStats` and feed directly into the score calculation (see [scoring.md](scoring.md)).
 
+Run completion and snapshots
+
+- Runs are not ended by hero deaths or party wipeouts. Instead, a run completes only when a fixed number of encounters have been played.
+- `GameState.totalEncounters` defines the run length (example default: 3000). `GameState.encountersPlayed` increments when an encounter finishes.
+- Run data is snapshotted every `GameState.snapshotInterval` encounters (example: 100). Snapshots are recorded to `RunStats.snapshots` for later analysis.
+
+- When `GameState.encountersPlayed >= GameState.totalEncounters`, emit a `RunComplete` event to finalize scoring and persist the final snapshot.
+- Hero deaths and party wipeouts apply score/time penalties but do not stop the run.
+
 ---
 
 ## Components
@@ -140,8 +149,10 @@ Attached to: a single global game-state entity.
 | `enemiesDefeated` | integer | Total enemies defeated this run |
 | `playerDeaths` | integer | Total hero deaths this run |
 | `bossDefeated` | boolean | Whether the current boss has been defeated |
-| `gameOver` | boolean | Set to `true` when all heroes are dead |
-| `victory` | boolean | Set to `true` when the final boss is defeated |
+| `encountersPlayed` | integer | Number of encounters completed in this run |
+| `totalEncounters` | integer | Number of encounters that define run completion (e.g., 3000) |
+| `snapshotInterval` | integer | Number of encounters between data snapshots (e.g., 100) |
+| `partyWipeoutOccurred` | boolean | Whether a full-party wipeout has occurred since last snapshot |
 | `retargetingActive` | boolean | Whether the periodic retarget loop is running |
 | `currentTier` | integer | Current enemy tier |
 | `waveInTier` | integer | Wave counter within the current tier |
@@ -172,6 +183,8 @@ Attached to: a single global run-stats entity.
 | `totalTime` | float | `simulationTime + retreatPenalty + deathPenalty` |
 | `canFlee` | boolean | Whether the party can currently flee |
 | `lastFleeTime` | float | Simulation time of the last retreat |
+| `encountersCompleted` | integer | Number of encounters finished (mirrors `GameState.encountersPlayed`) |
+| `snapshots` | list | Stored snapshot metadata recorded every `GameState.snapshotInterval` encounters |
 
 ### `FleeConfig`
 Attached to: a single global flee-config entity.
@@ -195,7 +208,7 @@ Attached to: a single global flee-config entity.
 | `EnemyDefeated` | `enemy`, `killedBy` | An enemy has been killed |
 | `FindNewTarget` | `seeker` | Asks a combatant to acquire a new target |
 | `CheckAllTargets` | — | Periodic retargeting check for all combatants |
-| `GameOver` | `reason` | All heroes are dead |
+| `GameOver` | `reason` | Emitted when the run reaches `GameState.totalEncounters`. Hero deaths and party wipeouts do not trigger game over; they only apply penalties. |
 | `Victory` | — | Final boss is defeated |
 | `Flee` | `party` | Party retreats from the current encounter |
 
