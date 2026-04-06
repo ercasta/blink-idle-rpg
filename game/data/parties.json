@@ -1,0 +1,8 @@
+{
+  "balanced":      ["Warrior", "Mage", "Cleric", "Ranger", "Paladin", "Rogue"],
+  "tank_heavy":    ["Warrior", "Paladin", "Cleric", "Warrior"],
+  "glass_cannon":  ["Mage", "Mage", "Rogue", "Ranger"],
+  "healer_stack":  ["Cleric", "Cleric", "Paladin", "Warrior"],
+  "two_hero":      ["Warrior", "Mage"],
+  "solo_warrior":  ["Warrior"]
+}

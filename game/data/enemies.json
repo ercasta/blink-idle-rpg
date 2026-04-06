@@ -1,0 +1,11 @@
+[
+  { "id": 100, "tier": 1, "name": "Goblin Scout",      "hp": 60,  "damage": 8,  "speed": 1.0, "expReward": 25,  "isBoss": false },
+  { "id": 101, "tier": 2, "name": "Orc Raider",        "hp": 90,  "damage": 12, "speed": 0.8, "expReward": 35,  "isBoss": false },
+  { "id": 102, "tier": 2, "name": "Dark Wolf",          "hp": 75,  "damage": 14, "speed": 1.2, "expReward": 40,  "isBoss": false },
+  { "id": 103, "tier": 3, "name": "Skeleton Warrior",  "hp": 110, "damage": 16, "speed": 0.7, "expReward": 50,  "isBoss": false },
+  { "id": 104, "tier": 3, "name": "Dark Mage",          "hp": 80,  "damage": 22, "speed": 0.5, "expReward": 75,  "isBoss": false },
+  { "id": 105, "tier": 4, "name": "Troll Berserker",   "hp": 180, "damage": 22, "speed": 0.6, "expReward": 80,  "isBoss": false },
+  { "id": 106, "tier": 5, "name": "Demon Knight",      "hp": 250, "damage": 30, "speed": 0.7, "expReward": 150, "isBoss": false },
+  { "id": 107, "tier": 6, "name": "Ancient Dragon",    "hp": 400, "damage": 40, "speed": 0.8, "expReward": 300, "isBoss": false },
+  { "id": 108, "tier": 6, "name": "Dragon Lord Vexar", "hp": 500, "damage": 40, "speed": 0.8, "expReward": 500, "isBoss": true  }
+]

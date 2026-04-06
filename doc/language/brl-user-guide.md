@@ -73,16 +73,15 @@ npx @blink/compiler-ts check -i clicker.brl
 
 ### Running Your Game
 
-```typescript
-// JavaScript/TypeScript
-import { BlinkGame } from '@blink/engine';
+The engine is compiled to WebAssembly via the Rust runtime (`blink-runtime`).
+See `doc/WORKFLOW.md` for the full build and run workflow.
 
-const game = await BlinkGame.create();
-await game.loadRules('./clicker.ir.json');
-game.start();
+```bash
+# Build WASM engine
+npm run build:wasm
 
-// Schedule a click event
-game.scheduleEvent('Click', { entity: entityId });
+# Run the web app
+npm run dev:app
 ```
 
 ---

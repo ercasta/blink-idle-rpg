@@ -1,17 +1,15 @@
 /**
- * WASM engine adapter for the Blink RPG simulation.
+ * WASM engine — sole simulation entry point for the Blink RPG.
  *
- * Uses the pre-compiled WASM module produced by `make build-wasm`.
+ * Uses the pre-compiled WASM module produced by `npm run build:wasm`.
  * The module is served from `public/wasm/blink_rpg_wasm.js` and the
  * associated `.wasm` binary.
  *
- * Compared to the JS engine (SimEngine.ts), the WASM engine:
+ * The WASM engine:
  *   • Runs the full simulation in a single synchronous call (~300 ms)
  *   • Produces exactly 30 checkpoints (one per 10 kills up to 300)
  *   • Does not require an IR file — game rules are baked into the binary
- *
- * Entity IDs used here match SimEngine.ts so the two implementations are
- * interchangeable.
+ *   • Accepts runtime data (heroes, enemies, config) via create_entity/add_component
  */
 
 import type { GameSnapshot, HeroDefinition, GameMode } from '../types';
@@ -158,24 +156,26 @@ async function loadWasmModule(): Promise<WasmModule | null> {
 
 // ── Public API ──────────────────────────────────────────────────────────────
 
-/** True if the WASM module has been loaded (call after a runSimulationWasm attempt). */
-export function isWasmAvailable(): boolean {
-  return cachedModule !== null && cachedModule !== 'loading' && cachedModule !== 'unavailable';
-}
-
 /**
  * Run the simulation using the WASM engine.
  *
- * Returns `null` if the WASM module could not be loaded (caller should fall
- * back to the JS engine).  On success returns an array of GameSnapshots
- * captured at every ProgressCheckpoint event.
+ * Loads the pre-built WASM binary, creates all entities (heroes, enemies,
+ * config), runs the full simulation, and returns an array of GameSnapshots.
+ *
+ * Throws if the WASM module is not available.
+ * Build it with: npm run build:wasm && npm run install:wasm
  */
-export async function runSimulationWasm(
+export async function runSimulation(
   selectedHeroes: HeroDefinition[],
   mode: GameMode,
-): Promise<GameSnapshot[] | null> {
+): Promise<GameSnapshot[]> {
   const mod = await loadWasmModule();
-  if (!mod) return null;
+  if (!mod) {
+    throw new Error(
+      'WASM engine is not available. ' +
+      'Run `npm run build:wasm && npm run install:wasm` to build and install it.'
+    );
+  }
 
   const game = new mod.BlinkWasmGame();
   try {

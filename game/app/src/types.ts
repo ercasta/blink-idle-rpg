@@ -56,7 +56,6 @@ export interface GameModeDefinition {
   name: string;
   description: string;
   difficulty: string;
-  irFile: string;
 }
 
 export interface RunConfig {

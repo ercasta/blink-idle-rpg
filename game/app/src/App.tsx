@@ -14,7 +14,7 @@ import { PartySelectScreen } from './screens/PartySelectScreen';
 import { BattleScreen } from './screens/BattleScreen';
 import { ResultsScreen } from './screens/ResultsScreen';
 import { LoadingScreen } from './screens/LoadingScreen';
-import { runSimulation } from './engine/SimEngine';
+import { runSimulation } from './engine/WasmSimEngine';
 import { GAME_MODES } from './data/gameModes';
 import type { AppScreen, GameMode, HeroDefinition, GameSnapshot, RunResult } from './types';
 
@@ -81,7 +81,7 @@ export default function App() {
       const modeDef = GAME_MODES.find(m => m.id === selectedMode);
       if (!modeDef) throw new Error(`Unknown mode: ${selectedMode}`);
 
-      const snaps = await runSimulation(modeDef.irFile, heroes, selectedMode);
+      const snaps = await runSimulation(heroes, selectedMode);
       setSnapshots(snaps);
       setScreen('battle');
     } catch (e) {

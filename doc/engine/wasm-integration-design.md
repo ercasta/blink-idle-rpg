@@ -11,7 +11,7 @@ This document defines the complete design for integrating the Blink game engine 
 ### Goals
 
 - **Checkpoint-driven UI**: The simulation runs to completion, capturing state at N=30 defined progress checkpoints. The UI replays these snapshots at one per second so the player watches the battle unfold over ~30 seconds regardless of how fast the simulation actually runs.
-- **Engine abstraction**: The JS engine (`@blink/engine`) is used for v1. The WASM engine (`blink-runtime` compiled via `wasm-pack`) is the v2 upgrade path. Both engines expose the same `ISimEngine` TypeScript interface.
+- **Engine abstraction**: The WASM engine (`blink-runtime` compiled via `wasm-pack`) is the sole engine. Game rules are compiled from BRL → Rust → WASM. Entity data (heroes, enemies, config) is injected at runtime via `create_entity`/`add_component`. See `doc/WORKFLOW.md` for the full architecture.
 - **Simple player flow**: No BRL editing. Players pick a game mode and a party of heroes, the simulation runs, and the results are shown.
 - **Mobile-first**: Single-page app built on React 19 + Vite + Tailwind CSS, targeting 375 px phone screens.
 
@@ -125,7 +125,10 @@ interface ISimEngine {
 
 ### 3.1 JS Engine Adapter
 
-`game/app/src/engine/JsEngine.ts` wraps `@blink/engine`'s `BlinkGame`:
+> **Note:** The JS engine has been removed. The only engine is the Rust/WASM engine.
+> The original JS adapter description is kept below for historical context.
+
+`game/app/src/engine/JsEngine.ts` (REMOVED) wrapped `@blink/engine`'s `BlinkGame`:
 
 ```typescript
 class JsEngine implements ISimEngine {
@@ -267,8 +270,8 @@ The Makefile `compile-brl` target outputs IR files to `game/app/public/ir/` as p
 
 ```
 make compile-brl          → compile game/brl/*.brl → game/app/public/ir/
-cd game/app && npm install → install deps (includes @blink/engine workspace link)
-cd game/app && npm run build → Vite bundles React app
+cd game/app && npm install → install deps
+cd game/app && npm run build → Vite bundles React app (WASM loaded from public/wasm/)
 ```
 
 The WASM build (v2, when ready):

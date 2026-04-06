@@ -5,14 +5,11 @@ on:
     branches: [main]
   workflow_dispatch:
 
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
-# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
 concurrency:
   group: "pages"
   cancel-in-progress: false
@@ -20,332 +17,71 @@ concurrency:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    
+
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: |
-            packages/blink-engine/package-lock.json
-            packages/blink-test/package-lock.json
-            packages/blink-compiler-ts/package-lock.json
-      
-      - name: Install package dependencies
+          cache-dependency-path: packages/blink-compiler-ts/package-lock.json
+
+      - name: Install compiler dependencies
         run: |
-          cd packages/blink-engine
-          npm ci
-          cd ../blink-test
-          npm ci
-          cd ../blink-compiler-ts
-          npm ci
-          cd ../..
-      
+          cd packages/blink-compiler-ts && npm ci && cd ../..
+          cd packages/blink-engine-wasm-js && npm install && cd ../..
+
       - name: Build TypeScript compiler
         run: |
-          echo "Building TypeScript compiler..."
           cd packages/blink-compiler-ts
           npm run build
-          npm run build:bundle
           cd ../..
-          echo "TypeScript compiler built successfully"
-      
-      - name: Build packages
-        run: |
-          echo "Building blink-engine..."
-          cd packages/blink-engine
-          npm run build
-          echo "Building browser bundle..."
-          npm run build:bundle
-          cd ../..
-          
-          echo "Building blink-test..."
-          cd packages/blink-test
-          npm run build
-          cd ../..
-          
-          echo "Verifying bundles were created..."
-          test -f game/demos/blink-engine.bundle.js || (echo "Error: Engine bundle not found" && exit 1)
-          test -f game/demos/blink-compiler.bundle.js || (echo "Error: Compiler bundle not found" && exit 1)
-          ls -lh game/demos/blink-engine.bundle.js
-          ls -lh game/demos/blink-compiler.bundle.js
 
-      - name: Compile BRL to IR
+      - name: Set up Rust + wasm-pack
         run: |
-          echo "Compiling BRL source files to IR..."
-          node tools/compile-brl-to-ir.js
-          echo "Verifying demo IR was created..."
-          test -f game/demos/ir/rpg-demo.ir.json || (echo "Error: Demo IR not found" && exit 1)
-          ls -lh game/demos/ir/rpg-demo.ir.json
-
-      - name: Set up Rust + wasm-pack (for WASM engine build)
-        run: |
-          echo "Installing Rust toolchain…"
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
           source "$HOME/.cargo/env"
           rustup target add wasm32-unknown-unknown
-          echo "Installing wasm-pack…"
           curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-          wasm-pack --version
 
       - name: Build WASM engine
         run: |
           source "$HOME/.cargo/env"
-          echo "Building WASM engine (BRL → Rust → WASM)…"
           cd packages/blink-engine-wasm-js
-          npm install
           node build.js
           cd ../..
-          echo "Verifying WASM artefacts…"
-          test -f packages/blink-engine-wasm-js/generated/blink-rpg-wasm/pkg/blink_rpg_wasm.js || \
-            (echo "Error: blink_rpg_wasm.js not found" && exit 1)
-          test -f packages/blink-engine-wasm-js/generated/blink-rpg-wasm/pkg/blink_rpg_wasm_bg.wasm || \
-            (echo "Error: blink_rpg_wasm_bg.wasm not found" && exit 1)
-          ls -lh packages/blink-engine-wasm-js/generated/blink-rpg-wasm/pkg/
 
-      - name: Install WASM artefacts into React app
+      - name: Install WASM into React app
+        run: node scripts/install-wasm.js
+
+      - name: Build React web app
         run: |
-          mkdir -p game/app/public/wasm
-          cp packages/blink-engine-wasm-js/generated/blink-rpg-wasm/pkg/blink_rpg_wasm.js \
-             game/app/public/wasm/
-          cp packages/blink-engine-wasm-js/generated/blink-rpg-wasm/pkg/blink_rpg_wasm_bg.wasm \
-             game/app/public/wasm/
-          echo "Installed WASM artefacts:"
-          ls -lh game/app/public/wasm/
-      
-      - name: Prepare deployment directory
+          cd game/app
+          npm install
+          npm run build
+          cd ../..
+
+      - name: Prepare deployment
         run: |
           mkdir -p _site
-          
-          # Disable Jekyll processing to allow serving .brl, .bcl, .bdl files
-          echo "Creating .nojekyll file to disable Jekyll..."
           touch _site/.nojekyll
-          
-          # Copy demo HTML and JS files
-          echo "Copying demo files..."
-          cp game/demos/index.html _site/
-          cp game/demos/rpg-demo.html _site/
-          cp game/demos/blink-engine.bundle.js _site/
-          cp game/demos/blink-compiler.bundle.js _site/
-          
-          # Copy pre-compiled IR files for the demo
-          echo "Copying pre-compiled IR files..."
-          mkdir -p _site/ir
-          cp game/demos/ir/rpg-demo.ir.json _site/ir/
-          
-          # Copy BRL/BCL/BDL source files for runtime compilation
-          echo "Copying source files for runtime compilation..."
-          mkdir -p _site/game
-          cp -r game/brl _site/game/
-          if [ -d game/bcl ]; then cp -r game/bcl _site/game/; fi
-          if [ -d game/bdl ]; then cp -r game/bdl _site/game/; fi
-          
-          # Also copy BRL files to _site/brl/ for compatibility with local dev paths
-          echo "Copying BRL files to /brl/ for path compatibility..."
-          mkdir -p _site/brl
-          if ls game/brl/*.brl 1> /dev/null 2>&1; then
-            cp game/brl/*.brl _site/brl/
-          fi
-          echo "Copied source files"
-          
-          # Copy data files for runtime use
-          echo "Copying data files..."
-          mkdir -p _site/data
-          if [ -f game/data/characters.json ]; then
-            cp game/data/characters.json _site/data/
-          fi
-          
-          # Copy game files (BRL, BCL, BDL) for users to download
-          echo "Copying game files..."
-          mkdir -p _site/game-files
-          
-          # Copy BRL files if they exist
-          if ls game/brl/*.brl 1> /dev/null 2>&1; then
-            cp game/brl/*.brl _site/game-files/
-          fi
-          
-          # Copy BCL files if they exist
-          if ls game/bcl/*.bcl 1> /dev/null 2>&1; then
-            cp game/bcl/*.bcl _site/game-files/
-          fi
-          
-          # Copy BDL files if they exist
-          if ls game/bdl/*.bdl 1> /dev/null 2>&1; then
-            cp game/bdl/*.bdl _site/game-files/
-          fi
-          
-          # Create a simple index for game files
-          echo "Creating game files index..."
-          cat > _site/game-files/index.html << 'EOF'
-          <!DOCTYPE html>
-          <html lang="en">
-          <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Blink Idle RPG - Game Files</title>
-            <style>
-              body {
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-                background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-                color: #eee;
-                padding: 20px;
-                line-height: 1.6;
-              }
-              .container {
-                max-width: 800px;
-                margin: 0 auto;
-              }
-              h1 {
-                color: #e94560;
-                text-align: center;
-              }
-              .section {
-                background: rgba(255,255,255,0.05);
-                border-radius: 10px;
-                padding: 20px;
-                margin: 20px 0;
-              }
-              h2 {
-                color: #4ade80;
-                border-bottom: 2px solid #4ade80;
-                padding-bottom: 10px;
-              }
-              ul {
-                list-style: none;
-                padding: 0;
-              }
-              li {
-                padding: 8px 0;
-              }
-              a {
-                color: #60a5fa;
-                text-decoration: none;
-                padding: 5px 10px;
-                background: rgba(96, 165, 250, 0.1);
-                border-radius: 5px;
-                display: inline-block;
-              }
-              a:hover {
-                background: rgba(96, 165, 250, 0.2);
-              }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <h1>🎮 Blink Idle RPG - Game Files</h1>
-              <p style="text-align: center; color: #888;">Download game source files</p>
-              
-              <div class="section">
-                <h2>📜 BRL Files (Game Rules)</h2>
-                <p>Blink Rule Language files define game mechanics and systems.</p>
-                <ul id="brl-files"></ul>
-              </div>
-              
-              <div class="section">
-                <h2>🎯 BCL Files (Player Strategies)</h2>
-                <p>Blink Choice Language files define how players make decisions.</p>
-                <ul id="bcl-files"></ul>
-              </div>
-              
-              <div class="section">
-                <h2>📦 BDL Files (Data Definitions)</h2>
-                <p>Blink Data Language files define game entities and data.</p>
-                <ul id="bdl-files"></ul>
-              </div>
-              
-              <div style="text-align: center; margin-top: 40px;">
-                <a href="../index.html" style="background: rgba(233, 69, 96, 0.2);">← Back to Demos</a>
-              </div>
-            </div>
-            
-            <script>
-              // Populate file lists
-              fetch('.')
-                .then(r => r.text())
-                .then(html => {
-                  const parser = new DOMParser();
-                  const doc = parser.parseFromString(html, 'text/html');
-                  const links = doc.querySelectorAll('a');
-                  
-                  const brlList = document.getElementById('brl-files');
-                  const bclList = document.getElementById('bcl-files');
-                  const bdlList = document.getElementById('bdl-files');
-                  
-                  links.forEach(link => {
-                    const href = link.getAttribute('href');
-                    if (!href || href === '../' || href === 'index.html') return;
-                    
-                    const li = document.createElement('li');
-                    const a = document.createElement('a');
-                    a.href = href;
-                    a.textContent = href;
-                    a.download = href;
-                    li.appendChild(a);
-                    
-                    if (href.endsWith('.brl')) {
-                      brlList.appendChild(li);
-                    } else if (href.endsWith('.bcl')) {
-                      bclList.appendChild(li);
-                    } else if (href.endsWith('.bdl')) {
-                      bdlList.appendChild(li);
-                    }
-                  });
-                  
-                  // Add "No files" messages if empty
-                  if (brlList.children.length === 0) {
-                    brlList.innerHTML = '<li style="color: #666;">No BRL files available</li>';
-                  }
-                  if (bclList.children.length === 0) {
-                    bclList.innerHTML = '<li style="color: #666;">No BCL files available</li>';
-                  }
-                  if (bdlList.children.length === 0) {
-                    bdlList.innerHTML = '<li style="color: #666;">No BDL files available</li>';
-                  }
-                })
-                .catch(err => {
-                  console.error('Error loading file list:', err);
-                  // Fallback: just show a message
-                  document.querySelectorAll('ul').forEach(ul => {
-                    if (ul.children.length === 0) {
-                      ul.innerHTML = '<li style="color: #666;">Files available in this directory</li>';
-                    }
-                  });
-                });
-            </script>
-          </body>
-          </html>
-          EOF
-          
-          # Copy WASM engine artefacts (built by the 'Build WASM engine' step)
-          echo "Copying WASM engine artefacts…"
-          if [ -f game/app/public/wasm/blink_rpg_wasm.js ]; then
-            mkdir -p _site/wasm
-            cp game/app/public/wasm/blink_rpg_wasm.js    _site/wasm/
-            cp game/app/public/wasm/blink_rpg_wasm_bg.wasm _site/wasm/
-            echo "WASM files copied to _site/wasm/"
-          else
-            echo "No WASM artefacts found — skipping (JS engine will be used as fallback)"
-          fi
-          
-          echo "Deployment directory prepared:"
-          ls -laR _site/
-      
+          cp -r game/app/dist/* _site/
+
       - name: Setup Pages
         uses: actions/configure-pages@v4
-      
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: '_site'
-      
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

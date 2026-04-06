@@ -1,11 +1,11 @@
 {
   "name": "blink-examples-tests",
   "version": "0.1.0",
-  "description": "Example tests for Blink Idle RPG game rules",
+  "description": "Example tests for Blink Idle RPG game rules (run via WASM E2E harness)",
   "type": "module",
   "scripts": {
     "build": "tsc",
-    "test": "npm run build && node --test dist/*.test.js",
+    "test": "echo 'Tests migrating to WASM E2E harness — use npm run test:harness from root'",
     "clean": "rm -rf dist"
   },
   "devDependencies": {
@@ -13,8 +13,6 @@
     "typescript": "^5.3.0"
   },
   "dependencies": {
-    "@blink/engine": "file:../../packages/blink-engine",
-    "@blink/compiler-ts": "file:../../packages/blink-compiler-ts",
-    "@blink/test": "file:../../packages/blink-test"
+    "@blink/compiler-ts": "file:../../packages/blink-compiler-ts"
   }
 }

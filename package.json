@@ -4,22 +4,15 @@
   "private": true,
   "scripts": {
     "_comment_setup": "── Install npm dependencies ──────────────────────────────",
-    "setup": "npm --prefix packages/blink-compiler-ts install && npm --prefix packages/blink-engine install && npm --prefix packages/blink-test install && npm --prefix packages/blink-engine-wasm install",
+    "setup": "npm --prefix packages/blink-compiler-ts install && npm --prefix packages/blink-engine-wasm install && npm --prefix packages/blink-engine-wasm-js install",
 
-    "_comment_build": "── Build TypeScript packages ─────────────────────────────",
+    "_comment_build": "── Build TypeScript compiler ─────────────────────────────",
     "build:compiler:ts": "npm --prefix packages/blink-compiler-ts run build",
     "build:compiler:bundle": "npm --prefix packages/blink-compiler-ts run build:bundle",
     "build:compiler": "npm run build:compiler:ts && npm run build:compiler:bundle",
-    "build:engine": "npm --prefix packages/blink-engine run build",
-    "build:engine:bundle": "npm --prefix packages/blink-engine run build:bundle",
-    "build:game": "npm --prefix game/app run build",
 
     "_comment_brl": "── Compile BRL game rules to IR ──────────────────────────",
     "compile-brl": "npm run build:compiler:ts && node tools/compile-brl-to-ir.js",
-
-    "_comment_demos": "── Browser demos (HTML, no React build needed) ───────────",
-    "build:demos": "npm run build:compiler && npm run build:engine && npm run build:engine:bundle && npm run compile-brl",
-    "serve:demos": "npx --yes serve game/demos",
 
     "_comment_app": "── React web app (full UI) ────────────────────────────────",
     "dev:app": "npm --prefix game/app run dev",
@@ -28,14 +21,16 @@
     "_comment_test": "── Test harness (BRL → Rust → native, requires Rust) ─────",
     "test:harness": "npm run build:compiler:ts && npm --prefix packages/blink-engine-wasm test",
     "test:compiler": "npm --prefix packages/blink-compiler-ts run test",
-    "test:engine": "npm --prefix packages/blink-engine run test",
 
     "_comment_wasm": "── WASM engine (requires Rust + wasm-pack) ───────────────",
     "build:wasm": "npm run build:compiler:ts && npm --prefix packages/blink-engine-wasm-js install && npm --prefix packages/blink-engine-wasm-js run build",
     "build:wasm:dev": "npm run build:compiler:ts && npm --prefix packages/blink-engine-wasm-js install && npm --prefix packages/blink-engine-wasm-js run build:dev",
     "install:wasm": "node scripts/install-wasm.js",
 
+    "_comment_batch": "── Batch simulation (game designer balancing tool) ───────",
+    "simulate": "npm run build:wasm && node tools/simulate.js",
+
     "_comment_full": "── Full production build ──────────────────────────────────",
-    "build": "npm run build:compiler && npm run build:engine && npm run build:engine:bundle && npm run build:game"
+    "build": "npm run build:compiler && npm run build:wasm && npm run install:wasm && npm run build:app"
   }
 }
