@@ -450,9 +450,6 @@ Notes on DAG wiring and archetype maps
 - Passives support archetypes: tanks get more survivability nodes near W_A1..W_A4; berserker-style damage passives cluster at W_A5..W_A8; warlord/support passives sit at W_A10..W_A16.
 - Some skills have multiple prerequisites (e.g., `M_P14` requires fire and ice mastery inputs), forming true DAG merges rather than simple trees.
 
-If you'd like, I can next:
-- Convert this DAG into a visual graph (Mermaid) and embed it into `doc/game-design/skills.md`.
-- Produce BRL/IR-friendly skill metadata stubs for each skill ID to ease implementation.
 
 ## Metrics & Leaderboard
 

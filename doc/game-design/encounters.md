@@ -75,10 +75,6 @@ Additionally, `initialEnemyCount` may increase by one for every N waves (configu
 - The party can **flee** between attacks (not mid-attack) if `canFlee == true`.
 - On flee, `retreatPenalty` is increased and a `fleeCooldown` prevents immediate re-use.
 - On hero death, `deathPenalty` is accumulated.
-- If all heroes die, `GameOver` is triggered and the run ends.
-- If the final boss is defeated, `Victory` is triggered and the run ends.
-
-Both endings produce a final score (see [scoring.md](scoring.md)).
 
 ---
 
