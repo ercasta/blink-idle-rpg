@@ -1,5 +1,5 @@
 // =============================================================================
-// COMBAT DEMO - Simple combat for WASM engine testing
+// COMBAT - Simple combat for engine pipeline testing
 // =============================================================================
 // Two entities fight. Tests: components, rules, field access, scheduling,
 // conditionals, entity queries, and event dispatch.
@@ -16,7 +16,7 @@ component Health {
 
 component Combat {
     damage: integer
-    attack_speed: float
+    attack_speed: decimal
 }
 
 component Target {
@@ -32,7 +32,7 @@ component Team {
 hero = new entity {
     Character { name: "Hero" level: 1 }
     Health { current: 100 max: 100 }
-    Combat { damage: 15 attack_speed: 1.0 }
+    Combat { damage: 15 attack_speed: 1.0d }
     Target { entity: 0 }
     Team { id: "player" is_player: true }
 }
@@ -41,7 +41,7 @@ hero = new entity {
 goblin = new entity {
     Character { name: "Goblin" level: 1 }
     Health { current: 30 max: 30 }
-    Combat { damage: 5 attack_speed: 0.8 }
+    Combat { damage: 5 attack_speed: 0.8d }
     Target { entity: 0 }
     Team { id: "enemy" is_player: false }
 }
@@ -54,8 +54,8 @@ rule on GameStart(gs: id) {
                 if e.Team.is_player == false {
                     h.Target.entity = e
                     e.Target.entity = h
-                    schedule [delay: 1.0] DoAttack { source: h }
-                    schedule [delay: 1.2] DoAttack { source: e }
+                    schedule [delay: 1.0d] DoAttack { source: h }
+                    schedule [delay: 1.2d] DoAttack { source: e }
                 }
             }
         }
@@ -76,7 +76,7 @@ rule on DoAttack(da: id) {
                         target.Health.current = 0
                     }
                     if target.Health.current > 0 {
-                        let speed: float = attacker.Combat.attack_speed
+                        let speed: decimal = attacker.Combat.attack_speed
                         schedule [delay: speed] DoAttack { source: attacker }
                     }
                 }

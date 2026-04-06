@@ -75,6 +75,13 @@ impl Value {
         }
     }
 
+    pub fn as_string_id(&self) -> crate::interning::InternedString {
+        match self {
+            Value::String(s) => *s,
+            _ => crate::interning::InternedString::NONE,
+        }
+    }
+
     /// Check if value is None.
     pub fn is_none(&self) -> bool {
         matches!(self, Value::None)

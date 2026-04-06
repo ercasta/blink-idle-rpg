@@ -1,0 +1,121 @@
+// =============================================================================
+// BLINK IDLE RPG - Test Hero Entities
+// =============================================================================
+// This file defines two hero entities used by the test harness.
+// It is NOT used in production — the React app creates heroes at runtime from
+// player selections.  This file exists so `npm run test:harness` can compile
+// a fully playable game binary without external runtime data injection.
+//
+// Hero data mirrors game/app/src/data/heroes.ts and
+// packages/blink-engine-wasm-js/build.js (CLASS_BASE_* constants).
+// =============================================================================
+
+// Warrior hero — "Aldric"
+// Class base stats: HP 160, DMG 22, DEF 8, SPEED 0.9
+aldric = new entity {
+    Character {
+        name: "Aldric"
+        class: "Warrior"
+        level: 1
+        experience: 0
+        experienceToLevel: 100
+    }
+    Health {
+        current: 160
+        max: 160
+    }
+    Mana {
+        current: 50
+        max: 50
+    }
+    Stats {
+        strength: 12
+        dexterity: 7
+        intelligence: 4
+        constitution: 14
+        wisdom: 3
+    }
+    Combat {
+        damage: 22
+        defense: 8
+        attackSpeed: 0.9d
+        critChance: 0.05d
+        critMultiplier: 1.5d
+    }
+    Target {
+        entity: null
+    }
+    Team {
+        id: "player"
+        isPlayer: true
+    }
+    Skills {
+        skill1: "power_strike"
+        skill2: "shield_bash"
+        skill3: "defensive_stance"
+        skill4: "execute"
+        skillPoints: 0
+    }
+    Buffs {
+        damageBonus: 0
+        defenseBonus: 0
+        hasteBonus: 0.0d
+        shieldAmount: 0
+        regenAmount: 0
+    }
+}
+
+// Mage hero — "Lyra"
+// Class base stats: HP 90, DMG 30, DEF 2, SPEED 0.6
+lyra = new entity {
+    Character {
+        name: "Lyra"
+        class: "Mage"
+        level: 1
+        experience: 0
+        experienceToLevel: 100
+    }
+    Health {
+        current: 90
+        max: 90
+    }
+    Mana {
+        current: 100
+        max: 100
+    }
+    Stats {
+        strength: 3
+        dexterity: 6
+        intelligence: 15
+        constitution: 5
+        wisdom: 11
+    }
+    Combat {
+        damage: 30
+        defense: 2
+        attackSpeed: 0.6d
+        critChance: 0.08d
+        critMultiplier: 2.0d
+    }
+    Target {
+        entity: null
+    }
+    Team {
+        id: "player"
+        isPlayer: true
+    }
+    Skills {
+        skill1: "fireball"
+        skill2: "frost_bolt"
+        skill3: "arcane_blast"
+        skill4: "mana_shield"
+        skillPoints: 0
+    }
+    Buffs {
+        damageBonus: 0
+        defenseBonus: 0
+        hasteBonus: 0.0d
+        shieldAmount: 0
+        regenAmount: 0
+    }
+}

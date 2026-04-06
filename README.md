@@ -8,7 +8,7 @@ In Blink you define your RPG party and some decision rules, then the entire game
 
 ## Prerequisites
 
-All workflows require **Node.js** (LTS). Nothing else is needed for the browser demos.
+All workflows require **Node.js** (LTS). Nothing else is needed for the browser game.
 
 - Download from [nodejs.org](https://nodejs.org/) (LTS version)
 - Verify: `node --version` and `npm --version`
@@ -31,36 +31,19 @@ npm run setup
 npm run test:harness
 ```
 
-This compiles BRL → Rust → native binary and runs the test suite.  
-Use this to quickly validate rule logic before going to the browser.
+This compiles BRL → Rust → native binary and runs the test suite (engine pipeline
+tests + full game rules test).  Use this to quickly validate rule logic before
+going to the browser.
 
 ---
 
-### Level 2 — Browser demos (HTML pages)
+### Level 2 — Full web app (React)
 
-Serve the classic RPG demo in a browser using the JavaScript engine.  
+Run the complete React app with hot-reload during development.  
 Requires: Node.js only.
 
 ```
 npm run setup
-npm run build:demos
-npm run serve:demos
-```
-
-Then open **http://localhost:3000** in your browser.
-
-To rebuild after editing BRL files, re-run `npm run compile-brl` and reload the page.
-
----
-
-### Level 3 — Full web app (React)
-
-Run the complete React app with hot-reload during development.  
-Requires: Node.js only. Must run `npm run build:demos` first (so the IR files exist).
-
-```
-npm run setup
-npm run build:demos
 cd game/app && npm install
 npm run dev:app
 ```
@@ -69,7 +52,7 @@ Then open the local URL printed by Vite (usually **http://localhost:5173**).
 
 ---
 
-### Level 4 — WASM engine
+### Level 3 — WASM engine
 
 Compile game rules to WebAssembly for maximum performance.  
 Requires: Node.js + Rust + wasm-pack.
@@ -105,30 +88,14 @@ Use `npm run build:wasm:dev` for a faster debug build during iteration.
 | Command | What it does |
 |---------|-------------|
 | `npm run setup` | Install npm deps for all packages |
-| `npm run build:demos` | Build JS bundles + compile BRL → IR (browser demos) |
-| `npm run compile-brl` | Re-compile BRL source to IR only |
-| `npm run serve:demos` | Serve `game/demos/` at http://localhost:3000 |
+| `npm run compile-brl` | Compile BRL source to IR |
 | `npm run dev:app` | Start React dev server (Vite) |
 | `npm run build:app` | Production build of the React app |
-| `npm run test:harness` | BRL → Rust → native test harness |
+| `npm run test:harness` | BRL → Rust → native test harness (engine + game rules) |
 | `npm run test:compiler` | TypeScript compiler unit tests |
-| `npm run test:engine` | JS engine unit tests |
 | `npm run build:wasm` | BRL → Rust → WASM (release) |
 | `npm run build:wasm:dev` | BRL → Rust → WASM (dev, faster) |
 | `npm run install:wasm` | Copy WASM artefacts to React app |
-
-### Makefile (Linux/macOS/WSL)
-
-The `Makefile` wraps the same steps with additional helpers:
-
-```bash
-make help          # list all targets
-make dev-setup     # quick first-time setup
-make test          # compiler + engine tests
-make test-wasm     # WASM harness tests
-make build-wasm    # WASM release build
-make demo-package  # create distributable ZIP
-```
 
 ---
 
@@ -136,10 +103,11 @@ make demo-package  # create distributable ZIP
 
 ```
 game/
-  app/        React web app (Vite + Tailwind)
-  brl/        BRL source files (game rules — edit these!)
+  app/        React web app (Vite + Tailwind) — the game
+  brl/        BRL source files (game rules + data — edit these!)
   bcl/        BCL configuration files (heroes, skills)
-  demos/      Standalone HTML demos
+  examples/   Small standalone BRL programs for engine pipeline testing
+  data/       JSON mirrors of game data (for documentation and UI)
 packages/
   blink-compiler-ts/   TypeScript BRL compiler
   blink-engine/        JavaScript runtime engine
@@ -166,7 +134,8 @@ scripts/
 | [Engine Architecture](doc/engine/architecture.md) | How the runtime works |
 | [WASM Integration](doc/engine/wasm-integration-design.md) | WASM engine design |
 | [Game Design](doc/game-design/README.md) | Combat, characters, scoring |
-| [Game Demo README](game/demos/README.md) | Running the HTML demos |
+| [BRL Source Files](game/brl/README.md) | Where game data is stored and how it loads |
+| [Engine Examples](game/examples/README.md) | Standalone BRL programs for pipeline testing |
 | [Docker Guide](DOCKER.md) | Docker-based development |
 
 ---
@@ -174,7 +143,7 @@ scripts/
 ## CI/CD
 
 GitHub Actions automatically:
-- Deploys demos to **[GitHub Pages](https://ercasta.github.io/blink-idle-rpg/)** on push to main
+- Deploys the game to **[GitHub Pages](https://ercasta.github.io/blink-idle-rpg/)** on push to main
 - Builds distributable packages for Linux and Windows on releases
 
 ---

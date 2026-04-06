@@ -7,7 +7,7 @@ component Character {
     class: string
     level: integer
     experience: integer
-    experienceToLevel: integer
+    experienceToLevel: decimal
 }
 
 // Health component
@@ -300,8 +300,8 @@ rule spawn_initial_enemies on GameStart(gs: id) {
 rule handle_enemy_spawned on EnemySpawned(es: id) {
     if entity has GameState {
         // Determine current tier and wave index
-let tier: id = entity.GameState.currentTier
-let waveIndex: id = entity.GameState.waveInTier
+let tier: integer = entity.GameState.currentTier
+let waveIndex: integer = entity.GameState.waveInTier
 
         // Spawn enemies for this wave
 let indices: list = [0, 1, 2, 3, 4]
@@ -421,7 +421,7 @@ let damage: id = attacker.Combat.damage + attacker.Buffs.damageBonus
             }
             // Always schedule the next attack for living attackers
             // so the loop never depends on FindNewTarget to restart it
-let attackSpeedTotal: id = attacker.Combat.attackSpeed + attacker.Buffs.hasteBonus
+let attackSpeedTotal: decimal = attacker.Combat.attackSpeed + attacker.Buffs.hasteBonus
             if attackSpeedTotal <= 0 {
                 attackSpeedTotal = 0.1d
             }

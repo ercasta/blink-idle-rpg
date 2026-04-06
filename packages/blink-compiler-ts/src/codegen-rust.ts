@@ -38,6 +38,14 @@ export class RustCodeGenerator {
   private ruleCounter = 0;
   // Track the current event alias during rule generation
   private currentEventAlias: string | null = null;
+  // Resolved const names for strings (built during lib.rs generation to handle collisions)
+  private stringConstNameResolved: Map<string, string> = new Map();
+  // Component field types: ComponentName → (fieldName → BRL type string)
+  private componentFieldTypes: Map<string, Map<string, string>> = new Map();
+  // Local variable types for the current rule/function (reset per body)
+  private localVarTypes: Map<string, string> = new Map();
+  // Event field types inferred from schedule statements: eventName → (fieldName → type)
+  private eventFieldTypes: Map<string, Map<string, string>> = new Map();
 
   constructor(options: RustCodegenOptions = {}) {
     this.options = options;
@@ -52,6 +60,12 @@ export class RustCodeGenerator {
     // Collect string literals for the intern table
     this.collectStrings();
 
+    // Resolve string constant names (handles collisions from case variants)
+    this.resolveStringConstNames();
+
+    // Build component field type lookup
+    this.buildComponentFieldTypes();
+
     const files = new Map<string, string>();
 
     files.set('components.rs', this.generateComponentsFile());
@@ -63,6 +77,26 @@ export class RustCodeGenerator {
     files.set('lib.rs', this.generateLibFile());
 
     return { files };
+  }
+
+  private resolveStringConstNames() {
+    // Build a mapping from string literal → unique Rust constant name.
+    // Strings sorted alphabetically so resolution is deterministic.
+    const sortedStrings = Array.from(this.allStrings).sort();
+    const usedNames = new Set<string>(); // ALL resolved names assigned so far
+
+    for (const s of sortedStrings) {
+      const baseName = this.stringConstNameBase(s);
+      // Find a unique candidate by incrementing a suffix counter
+      let candidateName = baseName;
+      let counter = 2;
+      while (usedNames.has(candidateName)) {
+        candidateName = `${baseName}${counter}`;
+        counter++;
+      }
+      usedNames.add(candidateName);
+      this.stringConstNameResolved.set(s, candidateName);
+    }
   }
 
   private collectItems(items: AST.Item[]) {
@@ -110,6 +144,11 @@ export class RustCodeGenerator {
     for (const rule of this.ruleDefs) {
       this.collectStringsFromBlock(rule.body);
     }
+
+    // Collect string literals from function bodies
+    for (const fn_ of this.functionDefs) {
+      this.collectStringsFromBlock(fn_.body);
+    }
   }
 
   private collectStringsFromBlock(block: AST.Block) {
@@ -122,11 +161,14 @@ export class RustCodeGenerator {
     switch (stmt.type) {
       case 'schedule':
         this.allStrings.add(stmt.eventName);
-        for (const [, value] of stmt.fields) {
+        for (const [fieldName, value] of stmt.fields) {
+          // Collect both the field name and any string literals in the value
+          this.allStrings.add(fieldName);
           this.collectStringsFromExpr(value);
         }
         break;
       case 'if':
+        this.collectStringsFromExpr(stmt.condition);
         this.collectStringsFromBlock(stmt.thenBlock);
         if (stmt.elseBlock) {
           if (stmt.elseBlock.type === 'else_if') {
@@ -137,10 +179,23 @@ export class RustCodeGenerator {
         }
         break;
       case 'for':
+        this.collectStringsFromExpr(stmt.iterable);
         this.collectStringsFromBlock(stmt.body);
         break;
       case 'while':
         this.collectStringsFromBlock(stmt.body);
+        break;
+      case 'let':
+        this.collectStringsFromExpr(stmt.value);
+        break;
+      case 'assignment':
+        this.collectStringsFromExpr(stmt.value);
+        break;
+      case 'return':
+        if (stmt.value) this.collectStringsFromExpr(stmt.value);
+        break;
+      case 'expr':
+        this.collectStringsFromExpr(stmt.expr);
         break;
       default:
         break;
@@ -162,10 +217,178 @@ export class RustCodeGenerator {
     }
     if (expr.type === 'field_access') {
       this.collectStringsFromExpr(expr.base);
+      // Collect field names used in event field access (e.g. event.someField)
+      // so they appear in the string intern table before resolveStringConstNames runs.
+      if (expr.base.type === 'identifier') {
+        const baseName = expr.base.name;
+        if (baseName === 'event' ||
+            this.ruleDefs.some(r => r.eventParam.name === baseName)) {
+          const field = expr.field;
+          if (field !== 'source' && field !== 'target') {
+            this.allStrings.add(field);
+          }
+        }
+      }
     }
     if (expr.type === 'unary') {
       this.collectStringsFromExpr(expr.expr);
     }
+    if (expr.type === 'index_access') {
+      this.collectStringsFromExpr(expr.base);
+      this.collectStringsFromExpr(expr.index);
+    }
+  }
+
+  private buildComponentFieldTypes() {
+    for (const comp of this.componentDefs) {
+      const fieldMap = new Map<string, string>();
+      for (const field of comp.fields) {
+        fieldMap.set(field.name, field.fieldType.type);
+      }
+      this.componentFieldTypes.set(comp.name, fieldMap);
+    }
+    // Also build event field types from schedule statements
+    this.buildEventFieldTypes();
+  }
+
+  private buildEventFieldTypes() {
+    // Scan all schedule statements in rules and functions to infer event field types
+    for (const rule of this.ruleDefs) {
+      this.scanBlockForEventFields(rule.body);
+    }
+    for (const fn_ of this.functionDefs) {
+      this.scanBlockForEventFields(fn_.body);
+    }
+  }
+
+  private scanBlockForEventFields(block: AST.Block) {
+    for (const stmt of block.statements) {
+      this.scanStmtForEventFields(stmt);
+    }
+  }
+
+  private scanStmtForEventFields(stmt: AST.Statement) {
+    switch (stmt.type) {
+      case 'schedule':
+        if (!this.eventFieldTypes.has(stmt.eventName)) {
+          this.eventFieldTypes.set(stmt.eventName, new Map());
+        }
+        const fieldMap = this.eventFieldTypes.get(stmt.eventName)!;
+        for (const [fieldName, value] of stmt.fields) {
+          const t = this.inferExprType(value);
+          if (t !== 'unknown' && !fieldMap.has(fieldName)) {
+            fieldMap.set(fieldName, t);
+          }
+        }
+        break;
+      case 'if':
+        this.scanBlockForEventFields(stmt.thenBlock);
+        if (stmt.elseBlock) {
+          if (stmt.elseBlock.type === 'else_if') {
+            this.scanStmtForEventFields(stmt.elseBlock.statement);
+          } else {
+            this.scanBlockForEventFields(stmt.elseBlock.block);
+          }
+        }
+        break;
+      case 'for':
+        this.scanBlockForEventFields(stmt.body);
+        break;
+      case 'while':
+        this.scanBlockForEventFields(stmt.body);
+        break;
+    }
+  }
+
+  /** Infer the BRL type category of an expression for use in exprToValueRust. */
+  private inferExprType(expr: AST.Expr): 'integer' | 'decimal' | 'string' | 'boolean' | 'id' | 'unknown' {
+    if (expr.type === 'literal') {
+      switch (expr.value.type) {
+        case 'integer': return 'integer';
+        case 'decimal': return 'decimal';
+        case 'string': return 'string';
+        case 'boolean': return 'boolean';
+        case 'null': return 'id';
+      }
+    }
+    // entity.Component.field
+    if (expr.type === 'field_access' && expr.base.type === 'field_access') {
+      const componentName = expr.base.field;
+      const fieldName = expr.field;
+      const comp = this.componentFieldTypes.get(componentName);
+      if (comp) {
+        const t = comp.get(fieldName);
+        if (t) {
+          if (t === 'integer') return 'integer';
+          if (t === 'decimal' || t === 'number') return 'decimal';
+          if (t === 'string') return 'string';
+          if (t === 'boolean') return 'boolean';
+          if (t === 'id' || t === 'component' || t === 'composite') return 'id';
+        }
+      }
+    }
+    // Variable reference → look up in localVarTypes
+    if (expr.type === 'identifier') {
+      const t = this.localVarTypes.get(expr.name);
+      if (t) {
+        if (t === 'integer') return 'integer';
+        if (t === 'decimal' || t === 'number') return 'decimal';
+        if (t === 'string') return 'string';
+        if (t === 'boolean') return 'boolean';
+        if (t === 'id' || t === 'component') return 'id';
+      }
+    }
+    // Call expression: infer return type from function name
+    if (expr.type === 'call') {
+      switch (expr.name) {
+        case 'min': case 'max': case 'floor': case 'ceil':
+        case 'round': case 'abs': case 'random': case 'random_range':
+          return 'decimal'; // brl_* builtins always return f64
+        case 'len':
+          return 'integer';
+      }
+      return 'unknown'; // user-defined functions
+    }
+    // Binary expression: propagate type from operands
+    if (expr.type === 'binary') {
+      const leftType = this.inferExprType(expr.left);
+      const rightType = this.inferExprType(expr.right);
+      // If either operand is decimal, the result is decimal
+      if (leftType === 'decimal' || rightType === 'decimal') return 'decimal';
+      // If both are integer (and it's arithmetic), result is integer
+      if (leftType === 'integer' && rightType === 'integer') return 'integer';
+      // Boolean ops
+      if (['eq','neq','lt','lte','gt','gte','and','or'].includes(expr.op)) return 'boolean';
+      return 'unknown';
+    }
+    return 'unknown';
+  }
+
+  /**
+   * Emit a Rust expression that produces an f64, coercing integer sub-expressions
+   * to f64 as needed.  Used for decimal-typed let declarations.
+   */
+  private exprToRustAsFloat(expr: AST.Expr): string {
+    if (expr.type === 'binary') {
+      const leftType = this.inferExprType(expr.left);
+      const rightType = this.inferExprType(expr.right);
+      // Only coerce if both sides are integer (otherwise one side is already float)
+      if (leftType === 'integer' && rightType === 'integer') {
+        const left = `(${this.exprToRust(expr.left)} as f64)`;
+        const right = `(${this.exprToRust(expr.right)} as f64)`;
+        switch (expr.op) {
+          case 'add': return `${left} + ${right}`;
+          case 'sub': return `${left} - ${right}`;
+          case 'mul': return `${left} * ${right}`;
+          case 'div': return `${left} / ${right}`;
+          default: break;
+        }
+      }
+    }
+    // Already a float expression or not a binary op — just cast
+    const base = this.exprToRust(expr);
+    const t = this.inferExprType(expr);
+    return t === 'decimal' ? base : `(${base} as f64)`;
   }
 
   // ── Component file generation ──
@@ -245,9 +468,13 @@ export class RustCodeGenerator {
 
       for (const comp of entity.components) {
         code += `    engine.world.insert(${varName}, ${comp.name} {\n`;
+        const compFields = this.componentFieldTypes.get(comp.name);
         for (const [fieldName, value] of comp.fields) {
-          code += `        ${this.toSnakeCase(fieldName)}: ${this.exprToRust(value)},\n`;
+          const fieldType = compFields?.get(fieldName);
+          code += `        ${this.toSnakeCase(fieldName)}: ${this.exprToRustForField(value, fieldType)},\n`;
         }
+        // Use Default::default() for any fields not explicitly set in the BRL entity
+        code += `        ..Default::default()\n`;
         code += `    });\n`;
       }
 
@@ -287,6 +514,7 @@ export class RustCodeGenerator {
   private generateRuleFunction(rule: AST.RuleDef): string {
     const funcName = this.ruleFuncName(rule);
     this.currentEventAlias = rule.eventParam.name;
+    this.localVarTypes = new Map(); // Reset per-rule variable type tracking
 
     // Track this rule for the dispatch table
     if (!this.rulesByEvent.has(rule.triggerEvent)) {
@@ -363,15 +591,24 @@ export class RustCodeGenerator {
 
   private generateFunction(func: AST.FunctionDef): string {
     const funcName = this.toSnakeCase(func.name);
+    this.localVarTypes = new Map(); // Reset per-function variable type tracking
+
+    // Pre-populate from parameter types
+    for (const p of func.params) {
+      this.localVarTypes.set(p.name, p.paramType.type);
+    }
+
     const params = func.params.map(p =>
       `${this.toSnakeCase(p.name)}: ${this.typeToRust(p.paramType)}`
     ).join(', ');
+    // Always include engine as the last parameter — component data access needs it
+    const engineParam = params ? `, engine: &mut Engine` : `engine: &mut Engine`;
     const returnType = func.returnType ? this.typeToRust(func.returnType) : 'f64';
 
     let code = `#[inline]\n`;
-    code += `pub fn ${funcName}(${params}) -> ${returnType} {\n`;
+    code += `pub fn ${funcName}(${params}${engineParam}) -> ${returnType} {\n`;
 
-    // Generate function body - find return statement
+    // Generate function body
     for (const stmt of func.body.statements) {
       if (stmt.type === 'return' && stmt.value) {
         code += `    ${this.exprToRust(stmt.value)}\n`;
@@ -569,11 +806,12 @@ export class RustCodeGenerator {
     code += 'pub mod string_ids {\n';
     code += '    use blink_runtime::interning::InternedString;\n\n';
 
-    // Generate a constant for each known string
+    // Generate a constant for each known string using the already-resolved names.
     const sortedStrings = Array.from(this.allStrings).sort();
-    for (const s of sortedStrings) {
+    for (let i = 0; i < sortedStrings.length; i++) {
+      const s = sortedStrings[i];
       const constName = this.stringConstName(s);
-      code += `    pub static ${constName}: InternedString = InternedString(${sortedStrings.indexOf(s) + 1});\n`;
+      code += `    pub static ${constName}: InternedString = InternedString(${i + 1});\n`;
     }
     code += '}\n\n';
 
@@ -655,8 +893,31 @@ export class RustCodeGenerator {
     const pad = '    '.repeat(indent);
 
     switch (stmt.type) {
-      case 'let':
-        return `${pad}let mut ${this.toSnakeCase(stmt.name)} = ${this.exprToRust(stmt.value)};\n`;
+      case 'let': {
+        // Track the variable type for later use in exprToValueRust
+        const annotationType = stmt.typeAnnotation ? stmt.typeAnnotation.type : null;
+        if (annotationType) {
+          this.localVarTypes.set(stmt.name, annotationType);
+        } else {
+          // Try to infer from the value expression
+          const inferred = this.inferExprType(stmt.value);
+          if (inferred !== 'unknown') this.localVarTypes.set(stmt.name, inferred);
+        }
+        let valueExpr: string;
+        // When the type annotation says decimal but the expression is integer,
+        // produce a proper float expression (avoid integer division losing precision).
+        const inferredValueType = this.inferExprType(stmt.value);
+        if ((annotationType === 'decimal' || annotationType === 'number') &&
+            inferredValueType === 'integer') {
+          valueExpr = this.exprToRustAsFloat(stmt.value);
+        } else if (annotationType === 'integer' && inferredValueType === 'decimal') {
+          // When annotation says integer but expression is decimal, cast to i64
+          valueExpr = `(${this.exprToRust(stmt.value)}) as i64`;
+        } else {
+          valueExpr = this.exprToRust(stmt.value);
+        }
+        return `${pad}let mut ${this.toSnakeCase(stmt.name)} = ${valueExpr};\n`;
+      }
 
       case 'assignment':
         return this.generateAssignment(stmt, indent);
@@ -699,7 +960,14 @@ export class RustCodeGenerator {
     // Simple identifier assignment (local variable)
     if (stmt.target.type === 'identifier') {
       const op = this.assignOpToRust(stmt.op);
-      return `${pad}${this.toSnakeCase(stmt.target.name)} ${op} ${this.exprToRust(stmt.value)};\n`;
+      const targetType = this.localVarTypes.get(stmt.target.name);
+      const valueType = this.inferExprType(stmt.value);
+      let rawValue = this.exprToRust(stmt.value);
+      // Cast decimal → integer when local variable is integer
+      if (targetType === 'integer' && valueType === 'decimal') {
+        rawValue = `(${rawValue}) as i64`;
+      }
+      return `${pad}${this.toSnakeCase(stmt.target.name)} ${op} ${rawValue};\n`;
     }
 
     // Component field assignment: entity.Component.field = value
@@ -709,10 +977,22 @@ export class RustCodeGenerator {
       const component = baseAccess.field;
       const entity = this.exprToRust(baseAccess.base);
       const rustField = this.toSnakeCase(field);
-      const value = this.exprToRust(stmt.value);
+      const fieldType = this.componentFieldTypes.get(component)?.get(field);
+      const valueType = this.inferExprType(stmt.value);
+      let rawValue = this.exprToRust(stmt.value);
+      // Cast decimal → integer when target component field is integer
+      if (fieldType === 'integer' && valueType === 'decimal') {
+        rawValue = `(${rawValue}) as i64`;
+      }
+      // For compound operators (+=, -=, etc.) with decimal value on integer field,
+      // expand to explicit get+set since Rust won't apply the cast automatically
+      if (fieldType === 'integer' && valueType === 'decimal' && stmt.op !== 'assign') {
+        const readExpr = `engine.world.get::<${component}>(${entity}).${rustField}`;
+        const op = this.assignOpToRust(stmt.op).replace('=', '');  // '+', '-', '*', '/'
+        return `${pad}engine.world.get_mut::<${component}>(${entity}).${rustField} = ((${readExpr} as f64) ${op} ${this.exprToRust(stmt.value)}) as i64;\n`;
+      }
       const op = this.assignOpToRust(stmt.op);
-
-      return `${pad}engine.world.get_mut::<${component}>(${entity}).${rustField} ${op} ${value};\n`;
+      return `${pad}engine.world.get_mut::<${component}>(${entity}).${rustField} ${op} ${rawValue};\n`;
     }
 
     return `${pad}// TODO: unhandled assignment\n`;
@@ -757,7 +1037,10 @@ export class RustCodeGenerator {
       code += `${pad}let ${this.toSnakeCase(stmt.variable)}_ids = engine.world.query_component::<${stmt.iterable.component}>();\n`;
       code += `${pad}for ${this.toSnakeCase(stmt.variable)} in ${this.toSnakeCase(stmt.variable)}_ids {\n`;
     } else {
-      code += `${pad}for ${this.toSnakeCase(stmt.variable)} in ${this.exprToRust(stmt.iterable)} {\n`;
+      // Use iter().copied() to avoid moving the collection, allowing the same
+      // variable to be iterated multiple times within the same scope.
+      // This works for Vec<u32> (EntityId) and Vec<i64> (integer) — all Copy types.
+      code += `${pad}for ${this.toSnakeCase(stmt.variable)} in ${this.exprToRust(stmt.iterable)}.iter().copied() {\n`;
     }
 
     code += this.generateBlockStatements(stmt.body, indent + 1);
@@ -789,17 +1072,10 @@ export class RustCodeGenerator {
     code += `${pad}{\n`;
     code += `${pad}    let mut sched_event = blink_runtime::Event::new(string_ids::${eventConstName});\n`;
 
-    // Set fields
+    // Set fields — field names should already be in the string table from collectStrings()
     for (const [fieldName, value] of stmt.fields) {
       const fieldConst = this.stringConstName(fieldName);
-      // For known field names, check if we have an interned constant
-      if (this.allStrings.has(fieldName)) {
-        code += `${pad}    sched_event.fields.insert(string_ids::${fieldConst}, ${this.exprToValueRust(value)});\n`;
-      } else {
-        // If the field name isn't in our string table, we need to add it
-        this.allStrings.add(fieldName);
-        code += `${pad}    sched_event.fields.insert(string_ids::${fieldConst}, ${this.exprToValueRust(value)});\n`;
-      }
+      code += `${pad}    sched_event.fields.insert(string_ids::${fieldConst}, ${this.exprToValueRust(value)});\n`;
     }
 
     if (stmt.delay) {
@@ -819,9 +1095,12 @@ export class RustCodeGenerator {
     code += `${pad}    let new_entity = engine.world.spawn();\n`;
     for (const comp of stmt.components) {
       code += `${pad}    engine.world.insert(new_entity, ${comp.name} {\n`;
+      const compFields = this.componentFieldTypes.get(comp.name);
       for (const [fieldName, value] of comp.fields) {
-        code += `${pad}        ${this.toSnakeCase(fieldName)}: ${this.exprToRust(value)},\n`;
+        const fieldType = compFields?.get(fieldName);
+        code += `${pad}        ${this.toSnakeCase(fieldName)}: ${this.exprToRustForField(value, fieldType)},\n`;
       }
+      code += `${pad}        ..Default::default()\n`;
       code += `${pad}    });\n`;
     }
     code += `${pad}}\n`;
@@ -829,6 +1108,20 @@ export class RustCodeGenerator {
   }
 
   // ── Expression generation ──
+
+  /**
+   * Emit a Rust expression for a struct field initializer.
+   * Uses the known field type to ensure correct literal types (e.g., 0 → 0.0 for f64 fields).
+   */
+  private exprToRustForField(expr: AST.Expr, fieldType?: string): string {
+    // If field type is decimal/f64, cast integer literals to float
+    if (fieldType === 'decimal' || fieldType === 'number') {
+      if (expr.type === 'literal' && expr.value.type === 'integer') {
+        return `${expr.value.value}.0`;
+      }
+    }
+    return this.exprToRust(expr);
+  }
 
   private exprToRust(expr: AST.Expr): string {
     switch (expr.type) {
@@ -887,8 +1180,32 @@ export class RustCodeGenerator {
       case 'entities_having':
         return `engine.world.query_component::<${expr.component}>()`;
 
-      case 'clone_entity':
-        return `clone_entity(engine, ${this.exprToRust(expr.source)})`;
+      case 'clone_entity': {
+        // Generate inline clone: spawn a new entity, copy all known components,
+        // then apply any field overrides specified in the BRL.
+        const source = this.exprToRust(expr.source);
+        let code = `{\n`;
+        code += `    use std::any::TypeId;\n`;
+        code += `    let __new = engine.world.spawn();\n`;
+        for (const comp of this.componentDefs) {
+          code += `    engine.world.clone_component_by_type_id(TypeId::of::<${comp.name}>(), ${source}, __new);\n`;
+        }
+        // Apply overrides
+        for (const override_ of expr.overrides) {
+          const compFields = this.componentFieldTypes.get(override_.name);
+          for (const [fieldName, value] of override_.fields) {
+            const fieldType = compFields?.get(fieldName);
+            const rustField = this.toSnakeCase(fieldName);
+            const rustValue = this.exprToRustForField(value, fieldType);
+            code += `    if engine.world.has::<${override_.name}>(__new) {\n`;
+            code += `        engine.world.get_mut::<${override_.name}>(__new).${rustField} = ${rustValue};\n`;
+            code += `    }\n`;
+          }
+        }
+        code += `    __new\n`;
+        code += `}`;
+        return code;
+      }
 
       case 'cast':
         return this.exprToRust(expr.expr);
@@ -932,10 +1249,24 @@ export class RustCodeGenerator {
         if (field === 'target') {
           return 'event.target';
         }
-        // Event field access
+        // Event field access — use the correct accessor based on inferred field type
         const fieldConst = this.stringConstName(field);
-        this.allStrings.add(field);
-        return `event.get_field(string_ids::${fieldConst}).as_entity()`;
+        // Look up the event field type from all schedule statements for this event
+        const currentEventName = this.currentEventAlias
+          ? this.ruleDefs.find(r => r.eventParam.name === this.currentEventAlias)?.triggerEvent
+          : undefined;
+        const fieldType = currentEventName
+          ? this.eventFieldTypes.get(currentEventName)?.get(field)
+          : undefined;
+        let accessor: string;
+        switch (fieldType) {
+          case 'integer': accessor = 'as_integer()'; break;
+          case 'decimal': accessor = 'as_number()'; break;
+          case 'string': accessor = 'as_string_id()'; break;
+          case 'boolean': accessor = 'as_boolean()'; break;
+          default: accessor = 'as_entity()'; // entity ID or unknown
+        }
+        return `event.get_field(string_ids::${fieldConst}).${accessor}`;
       }
     }
 
@@ -944,8 +1275,22 @@ export class RustCodeGenerator {
   }
 
   private binaryToRust(expr: AST.BinaryExpr): string {
-    const left = this.exprToRust(expr.left);
-    const right = this.exprToRust(expr.right);
+    const leftType = this.inferExprType(expr.left);
+    const rightType = this.inferExprType(expr.right);
+
+    // When one side is a known decimal and the other isn't, cast the non-decimal
+    // side to f64 so Rust doesn't complain about mixed {integer}/{float} types.
+    // We do this for all numeric operators (arithmetic AND comparison).
+    const numericOps = ['add', 'sub', 'mul', 'div', 'mod', 'lt', 'lte', 'gt', 'gte'];
+    const leftNeedsFloat = numericOps.includes(expr.op) &&
+      rightType === 'decimal' && leftType !== 'decimal';
+    const rightNeedsFloat = numericOps.includes(expr.op) &&
+      leftType === 'decimal' && rightType !== 'decimal';
+
+    const rawLeft = this.exprToRust(expr.left);
+    const rawRight = this.exprToRust(expr.right);
+    const left = leftNeedsFloat ? `(${rawLeft} as f64)` : rawLeft;
+    const right = rightNeedsFloat ? `(${rawRight} as f64)` : rawRight;
 
     switch (expr.op) {
       case 'add': return `${left} + ${right}`;
@@ -980,13 +1325,14 @@ export class RustCodeGenerator {
       case 'len': return `(${args[0]}).len() as i64`;
       case 'entities_having': return `engine.world.query_component::<${this.extractComponentName(expr.args[0])}>()`;
       default:
-        // User-defined function
-        return `${this.toSnakeCase(expr.name)}(${args.join(', ')})`;
+        // User-defined function — append engine as last argument
+        return `${this.toSnakeCase(expr.name)}(${args.length > 0 ? args.join(', ') + ', ' : ''}engine)`;
     }
   }
 
   /**
    * Convert an expression to a Value enum variant (for event fields).
+   * Uses type inference to choose the correct variant.
    */
   private exprToValueRust(expr: AST.Expr): string {
     if (expr.type === 'literal') {
@@ -998,8 +1344,18 @@ export class RustCodeGenerator {
         case 'null': return `Value::None`;
       }
     }
-    // For expressions that evaluate to entities, wrap in Value::Entity
-    return `Value::Entity(${this.exprToRust(expr)})`;
+    // Use type inference to wrap in the correct Value variant
+    const inferredType = this.inferExprType(expr);
+    const rustExpr = this.exprToRust(expr);
+    switch (inferredType) {
+      case 'integer': return `Value::Integer(${rustExpr})`;
+      case 'decimal': return `Value::Number(${rustExpr} as f64)`;
+      case 'string': return `Value::String(${rustExpr})`;
+      case 'boolean': return `Value::Boolean(${rustExpr})`;
+      case 'id': return `Value::Entity(${rustExpr})`;
+      // Unknown type — fall back to entity (original behaviour)
+      default: return `Value::Entity(${rustExpr})`;
+    }
   }
 
   // ── Utility methods ──
@@ -1049,13 +1405,22 @@ export class RustCodeGenerator {
       .replace(/^_/, '');
   }
 
-  private stringConstName(s: string): string {
+  private stringConstNameBase(s: string): string {
     const upper = s
       .replace(/([A-Z])/g, '_$1')
       .toUpperCase()
       .replace(/^_/, '')
       .replace(/[^A-Z0-9]/g, '_');
     return `STR_${upper}`;
+  }
+
+  private stringConstName(s: string): string {
+    const resolved = this.stringConstNameResolved.get(s);
+    if (resolved !== undefined) return resolved;
+    // Fallback for strings that weren't collected upfront (e.g. component names used
+    // as Rust type tags — these don't need to be in the intern table).
+    // Do NOT add to allStrings here to avoid bypassing collision resolution.
+    return this.stringConstNameBase(s);
   }
 
   private escapeRustString(s: string): string {
