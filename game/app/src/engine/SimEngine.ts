@@ -1,18 +1,16 @@
 /**
- * JS Engine adapter — wraps @blink/engine BlinkGame.
+ * Simulation entry point for the Blink Idle RPG web app.
  *
- * Runs the BRL simulation in chunks, yielding to the browser between
- * chunks so the loading screen stays responsive.  Captures a GameSnapshot
- * at every ProgressCheckpoint event (default: every enemy defeated).
+ * Production path (used by the web app):
+ *   runSimulation() → WasmSimEngine — compiled native code, ~300 ms for
+ *   300 kills, no IR file required.  Throws if the WASM binary is absent.
  *
- * The caller receives the array of snapshots after the simulation finishes
- * or after the wall-clock budget is exhausted.
+ * Prototyping / game-designer path:
+ *   runSimulationDev() — JS engine that interprets the pre-compiled IR at
+ *   runtime.  Slower (~5 s) but does not require a WASM build, useful when
+ *   iterating on BRL rules without rebuilding the WASM binary.
  *
- * Architecture note (v2): The WASM engine (WasmSimEngine.ts) implements the
- * same runSimulation() interface but runs compiled native code in a single
- * synchronous pass (~300ms for 300 kills vs ~5s for the JS engine).
- * runSimulation() below tries the WASM engine first and falls back here
- * automatically when the WASM binary is unavailable.
+ * To build the WASM binary: make build-wasm && make install-wasm
  */
 
 import { BlinkGame } from '@blink/engine';
@@ -107,31 +105,49 @@ const MAX_WALL_MS = 5_000;
 // ── Run simulation ──────────────────────────────────────────────────────────
 
 /**
- * Run the BRL simulation.
+ * Run the simulation using the WASM engine (production path).
  *
- * Tries the WASM engine first (fast, ~300ms for 300 kills, no IR file needed).
- * Falls back to the JS engine with chunked execution when the WASM binary is
- * not present (e.g. in development before running `make build-wasm`).
+ * Throws an error when the WASM binary is not installed so that the caller
+ * (App.tsx error screen) surfaces a clear message to the user instead of
+ * falling back to the slower JS engine.
+ *
+ * To install the WASM binary:
+ *   make build-wasm && make install-wasm
  */
 export async function runSimulation(
   irUrl: string,
   selectedHeroes: HeroDefinition[],
   mode: GameMode
 ): Promise<GameSnapshot[]> {
-  // Try WASM engine — returns null when the binary is unavailable
   const wasmResult = await runSimulationWasm(selectedHeroes, mode);
   if (wasmResult !== null) {
     return wasmResult;
   }
 
-  // Fall back to JS engine (requires pre-compiled IR)
+  throw new Error(
+    'WASM engine is not available. ' +
+    'Run `make build-wasm && make install-wasm` to build and install it.'
+  );
+}
+
+/**
+ * Run the simulation using the JS engine (game-designer prototyping path).
+ *
+ * Fetches the pre-compiled IR at `irUrl` and runs in 500-step chunks,
+ * yielding between chunks so the browser stays responsive.  This is slower
+ * than the WASM engine (~5 s vs ~300 ms) and should NOT be used in the
+ * deployed web app — use it when iterating on BRL rules without a WASM build.
+ */
+export async function runSimulationDev(
+  irUrl: string,
+  selectedHeroes: HeroDefinition[],
+  mode: GameMode
+): Promise<GameSnapshot[]> {
   return runSimulationJs(irUrl, selectedHeroes, mode);
 }
 
 /**
- * JS engine fallback — fetches the IR and runs the simulation in 500-step
- * chunks, yielding to the browser between chunks so the loading screen stays
- * responsive.
+ * Internal JS engine runner — not exported; use runSimulationDev() instead.
  */
 async function runSimulationJs(
   irUrl: string,

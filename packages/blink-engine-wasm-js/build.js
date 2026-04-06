@@ -113,7 +113,7 @@ libRs += '\n// WASM entry point (wasm-bindgen API)\npub mod wasm_entry;\n';
 fs.writeFileSync(libRsPath, libRs);
 
 // Write Cargo.toml from template
-const cargoToml = CARGO_TOML_TEMPLATE.replace(
+const cargoToml = CARGO_TOML_TEMPLATE.replaceAll(
   '{{RUNTIME_PATH}}',
   RUNTIME_PATH.replace(/\\/g, '/')   // use forward slashes on Windows too
 );
@@ -142,7 +142,9 @@ checkTool(
   'Install with: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh'
 );
 checkTool(
-  'rustup target list --installed | grep wasm32-unknown-unknown',
+  process.platform === 'win32'
+    ? 'rustup target list --installed | findstr wasm32-unknown-unknown'
+    : 'rustup target list --installed | grep wasm32-unknown-unknown',
   'wasm32 target',
   'Install with: rustup target add wasm32-unknown-unknown'
 );
