@@ -1,25 +1,12 @@
 # Blink Engine Architecture
 
-**Version**: 0.1.0-draft  
+## Timeline System
 
-## 7. Tracker System
-
-The tracker system has been removed from the language and engine design. Previously, trackers automatically captured component data for UI feedback; this functionality should now be implemented explicitly from rules or by emitting UI events from rule actions.
-
-Engines may still encounter legacy IR containing an optional `trackers` field; such entries should be treated as deprecated and ignored.
-      │         └── Event B
-      └── Event A
-```
-
----
-
-## 3. Timeline System
-
-### 3.1 Overview
+### Overview
 
 The timeline manages future events ordered by their scheduled time.
 
-### 3.2 Data Structure
+### Data Structure
 
 ```rust
 // Conceptual structure (not actual implementation)
@@ -46,7 +33,7 @@ struct ScheduledEvent {
 }
 ```
 
-### 3.3 Operations
+### Operations
 
 | Operation | Complexity | Description |
 |-----------|------------|-------------|
@@ -56,7 +43,7 @@ struct ScheduledEvent {
 | `peek()` | O(1) | View next event without removing |
 | `cancel(id)` | O(n) | Remove event by ID |
 
-### 3.4 Recurring Events
+### Recurring Events
 
 ```rust
 struct RecurringEvent {
@@ -71,7 +58,7 @@ struct RecurringEvent {
 }
 ```
 
-### 3.5 Immediate Event Stack
+### Immediate Event Stack
 
 Events can trigger other events immediately. These go on a stack:
 
@@ -87,13 +74,13 @@ Timeline Queue          Immediate Stack
 
 ---
 
-## 4. Entity-Component System
+## Entity-Component System
 
-### 4.1 Overview
+### Overview
 
 The ECS stores all game state as entities with attached components.
 
-### 4.2 Entity
+### Entity
 
 An entity is simply a unique identifier:
 
@@ -101,7 +88,7 @@ An entity is simply a unique identifier:
 struct EntityId(u64);
 ```
 
-### 4.3 Component Storage
+### Component Storage
 
 Components are stored in typed containers:
 
@@ -124,7 +111,7 @@ struct World {
 }
 ```
 
-### 4.4 Operations
+### Operations
 
 | Operation | Description |
 |-----------|-------------|
@@ -137,7 +124,7 @@ struct World {
 | `has_component<T>(entity)` | Check if entity has component |
 | `query<T, U, ...>()` | Find entities with components |
 
-### 4.5 Component Lists
+### Component Lists
 
 When an entity has multiple components of the same type:
 
@@ -155,9 +142,9 @@ for buff in buffs {
 
 ---
 
-## 5. Event System
+## Event System
 
-### 5.1 Events as Entities
+### Events as Entities
 
 Events are entities with special components:
 
@@ -174,7 +161,7 @@ component EventMeta {
 }
 ```
 
-### 5.2 Event Lifecycle
+### Event Lifecycle
 
 ```
 ┌──────────────┐
@@ -197,7 +184,7 @@ component EventMeta {
 └──────────────┘
 ```
 
-### 5.3 Event Types
+### Event Types
 
 ```brl
 // Combat events
@@ -222,9 +209,9 @@ component CombatEnd { victor: string }
 
 ---
 
-## 6. Rule Engine
+## Rule Engine
 
-### 6.1 Rule Matching
+### Rule Matching
 
 When an event triggers, the engine finds matching rules:
 
@@ -247,7 +234,7 @@ struct Rule {
 }
 ```
 
-### 6.2 Execution Order
+### Execution Order
 
 1. Find all rules matching the event type
 2. Evaluate conditions (filter non-matching)
@@ -264,7 +251,7 @@ Matching Rules:
   └── [Priority -50] Death check
 ```
 
-### 6.3 Rule Context
+### Rule Context
 
 Rules execute with context:
 
@@ -284,100 +271,10 @@ struct RuleContext {
 }
 ```
 
----
 
-## 7. Tracker System
+## Intermediate Representation
 
-### 7.1 Purpose
-
-Trackers automatically capture component data for user feedback. They specify which component to track on which events, and the engine handles data collection.
-
-### 7.2 Tracker Definition
-
-```rust
-struct Tracker {
-    /// Tracker identifier
-    id: TrackerId,
-    
-    /// Component type to track
-    component_type: ComponentType,
-    
-    /// Event type(s) that trigger tracking
-    triggers: Vec<EventType>,
-}
-```
-
-### 7.3 Tracking Behavior
-
-When a tracker fires:
-1. Engine queries all entities with the specified component
-2. Captures all field values for each entity
-3. Packages as TrackerOutput with event context
-4. Sends to UI/output stream
-
-### 7.4 Output Format
-
-```rust
-struct TrackerOutput {
-    /// Timestamp when the tracker fired
-    time: Decimal,
-    
-    /// Event that triggered this tracker
-    event_type: EventType,
-    
-    /// Component being tracked
-    component_type: ComponentType,
-    
-    /// All entities with this component and their data
-    entities: Vec<EntityComponentData>,
-}
-
-struct EntityComponentData {
-    /// Entity ID
-    entity_id: EntityId,
-    
-    /// Component fields as key-value pairs
-    fields: HashMap<String, FieldValue>,
-}
-
-enum FieldValue {
-    String(String),
-    Integer(i64),
-    Float(f64),
-    Decimal(Decimal),
-    Boolean(bool),
-    EntityId(EntityId),
-}
-```
-
-### 7.5 Examples
-
-Trackers were removed from the language and engine. Instead of declaring `tracker` blocks, author explicit rule actions that emit UI-friendly events or schedule `LogEvent` entities. The UI subscribes to these events and updates accordingly.
-
-BRL alternative (emit UI event):
-```brl
-rule on_damage on DamageEvent {
-    // Emit a UI-friendly event with necessary context
-    schedule LogEvent {
-        message: "Damage applied",
-        data: "attacker=" + event.DamageEvent.source as string + ", target=" + event.DamageEvent.target as string + ", amount=" + event.DamageEvent.amount as string
-    }
-}
-```
-
-UI behavior:
-```javascript
-// Subscribe to LogEvent or other emitted UI events
-function handleLogEvent(evt) {
-  // Parse evt.data and update health bars, combat log, animations, etc.
-}
-```
-
----
-
-## 8. Intermediate Representation
-
-### 8.1 Purpose
+### Purpose
 
 The IR (Intermediate Representation) allows:
 - Single compiler frontend (BRL parser)
@@ -385,7 +282,7 @@ The IR (Intermediate Representation) allows:
 - Optimization passes
 - Debugging support
 
-### 8.2 IR Structure
+### IR Structure
 
 ```rust
 /// A compiled BRL module
@@ -429,7 +326,7 @@ enum IRType {
 }
 ```
 
-### 8.3 IR Instructions
+### IR Instructions
 
 ```rust
 enum IRInstruction {
@@ -473,9 +370,9 @@ enum IRInstruction {
 
 ---
 
-## 9. Engine Interfaces
+## Engine Interfaces
 
-### 9.1 Core Engine Interface
+### Core Engine Interface
 
 ```rust
 trait BlinkEngine {
@@ -502,7 +399,7 @@ trait BlinkEngine {
 }
 ```
 
-### 9.2 Run Options
+### Run Options
 
 ```rust
 struct RunOptions {
@@ -523,7 +420,7 @@ struct RunOptions {
 }
 ```
 
-### 9.3 Browser-Specific Interface
+### Browser-Specific Interface
 
 See [browser-engine.md](browser-engine.md) for JavaScript/WASM specifics.
 
@@ -547,9 +444,3 @@ See [browser-engine.md](browser-engine.md) for JavaScript/WASM specifics.
 - Consider web workers for heavy computation
 
 ---
-
-## Revision History
-
-| Version | Date | Changes |
-|---------|------|---------|
-| 0.1.0 | 2024-12-31 | Initial draft |

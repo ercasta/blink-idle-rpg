@@ -4,31 +4,22 @@
 
 ---
 
-## 1. Overview
+##  Overview
 
 This document defines the complete design for the Blink Idle RPG player-facing web interface (codename **Blink-QR**).
-
-The previous React app at `game/app/` has been deleted; it was a developer-oriented prototype mixing game play with BRL/BCL compilation screens. This design starts from scratch to serve the actual player audience.
 
 ### Goals
 
 - **Mobile-first**: All screens must work excellently on a 375 px wide phone screen.
-- **Zero compilation**: Players never touch BRL or BCL code. Game mechanics run from pre-compiled IR loaded at startup.
+- **Zero compilation**: Players never touch BRL code. Game mechanics run from pre-compiled IR loaded at startup.
 - **QR-native hero sharing**: Every hero is a compact binary blob that can be encoded in a QR code and decoded by any phone camera.
 - **WASM performance**: The game simulation runs in WebAssembly (compiled from the Blink Rust runtime) for efficient execution on mobile.
 - **Offline-capable**: Core gameplay works with no internet connection after first load.
 - **Social sharing**: Players create and share digital figurines via WhatsApp, Telegram, or print.
 
-### Out of Scope (reserved for the future "Studio" app)
-
-- BRL source editing
-- BCL skill editing
-- Step-by-step debugger / Inspector
-- IR viewer
-
 ---
 
-## 2. Technology Stack
+## Technology Stack
 
 | Layer | Choice | Rationale |
 |---|---|---|
@@ -45,13 +36,9 @@ The previous React app at `game/app/` has been deleted; it was a developer-orien
 | State / persistence | React context + `localStorage` / `IndexedDB` | Roster and settings survive browser restarts |
 | PWA | Vite PWA plugin | Offline support, "Add to home screen" prompt |
 
-> ⚠️ **OI-1 (Engine choice)**: The WASM engine (Track 7) is not yet complete. The JS engine (Track 4) is functional. The player app should **start with the JS engine** behind an `IEngine` abstraction interface, then swap in the WASM engine when it passes conformance tests. Keeping the abstraction clean is the critical design choice — the swap should be a one-line config change, not a refactor.
-
-DECISION: WASM Engine. Let's first fix that
-
 ---
 
-## 3. Application Routes
+## Application Routes
 
 ```
 /                   Home / Title screen
@@ -70,9 +57,9 @@ URL parameter `?h=<base64url>` on the root route `"/"` is handled automatically:
 
 ---
 
-## 4. Screen-by-Screen Design
+## Screen-by-Screen Design
 
-### 4.1 Home Screen (`/`)
+### Home Screen (`/`)
 
 **Purpose**: Entry point. Shows brand, key actions, and any imported hero from URL.
 
@@ -99,7 +86,7 @@ URL parameter `?h=<base64url>` on the root route `"/"` is handled automatically:
 
 ---
 
-### 4.2 Hero Creator Wizard (`/create`)
+### Hero Creator Wizard (`/create`)
 
 **Purpose**: Step-by-step mobile-friendly hero creation.
 
@@ -115,12 +102,6 @@ The wizard has **7 steps** navigated with Back / Next buttons. Progress is shown
 
 Five stats: STR, DEX, INT, CON, WIS.
 
-> ⚠️ **OI-2 (Stat model)**: The characters.md doc defines 5 stats but does not finalise the value range or progression model. Two sub-questions:
-> - **Value range per stat**: Characters.md says "0–7 (3 bits) or 0–15 (4 bits)"; figurine-qr-design.md uses 4 bits. **Recommend: 4-bit values (0–15)** as a reasonable balance between expressiveness and QR space efficiency.
-> - **Progression model**: (A) Fixed linear growth per level set at creation — simplest, fits QR. (B) Point-buy at character creation only. (C) Per-level allocation at play time (requires mid-run player interaction, incompatible with idle). **Recommend Option A**: each stat has a `base_value` (0–15) and a `growth_rate` (0–7, 3-bit) encoding how many points the stat gains per level. Both encoded in QR.
-
-DECISION: we'll address this in game design first. 
-
 
 **UI**: 5 rows of:
 ```
@@ -132,7 +113,6 @@ A point-budget bar at the top prevents unlimited stat allocation. Display a "Rol
 
 Five growth-rate sliders (one per stat), range 0–7 (3 bits each). Show a level-50 projection preview: "At level 50, STR will be 8 + 50 × 2 = 108".
 
-> ⚠️ **OI-3 (Point budget)**: Does each hero have a fixed total points budget for base stats AND growth rates, or are they independent? A shared budget discourages min-maxing; independent budgets give more freedom. **Recommend**: independent budgets with soft guidance (class tips, no hard cap except per-stat max).
 
 #### Step 4 — Skill Progression
 
@@ -140,11 +120,6 @@ Show the class skill tree as a scrollable DAG. Each node is a skill card (name, 
 
 DECISION: each class starts with the same stats point distribution, and with 1 skill point which is part of the hero definition.
 
-> ⚠️ **OI-4 (Skill tree depth)**: The skills.md document currently lists 4 skills per class (Warrior, Mage, Ranger, Paladin, Rogue, Cleric) — too few for a meaningful tree. Review.md mentions 36 skills across 4 classes (9 each). The actual skill DAG structure (prerequisites per class) needs to be designed and added to the game design docs before this screen can be fully implemented. **This is a blocking game design dependency.**
->
-> For the UI, plan for up to 20 nodes per class in a 2–3 column scrollable grid. Prerequisite edges are shown as connecting lines. Locked skills are greyed out; eligible skills have a pulsing highlight.
-
-DECISION: already addressed in a separate game design branch
 
 #### Step 5 — Early Game Behaviour
 
@@ -158,16 +133,6 @@ Fight/Flight   [◀──────●──────▶]   +12
 
 The 24 behaviour bytes map to the named decision values defined in `doc/game-design/characters.md` (12 named decision fields, each -32 to +31). The remaining 12 bytes are reserved for future use and hidden from the player UI (displayed as "Advanced" toggle collapsed by default).
 
-> ⚠️ **OI-5 (Behaviour byte semantics)**: Characters.md defines 12 named decision values (range -32 to +31). `blink-qr.md` and `review.md` describe 24 behaviour bytes (range -128 to +127 as full signed bytes). These are **not aligned**. Three options:
-> - **Option A**: Use exactly the 12 decision fields from characters.md (6 bits each = 72 bits = 9 bytes per phase). Cleaner semantics; smaller payload.
-> - **Option B**: Use 24 full bytes per phase as in blink-qr.md, assigning the first 12 to the named decision values and reserving bytes 12-23.
-> - **Option C**: Redesign behaviour bytes as a distinct higher-level abstraction that maps to decision values internally.
->
-> **This is a blocking game design decision** that directly controls the QR encoding and the engine's AI integration. Must be resolved before implementation.
-
-The 3 skill pickers show only skills already chosen in Step 4, filtered by type (active for primary/secondary, passive for passive slot).
-
-Decision: we'll use 12 decision fields. addressed in separate design branch
 
 #### Step 6 — Mid Game Behaviour
 
@@ -195,7 +160,7 @@ Actions:
 
 ---
 
-### 4.3 Roster Screen (`/roster`)
+### Roster Screen (`/roster`)
 
 **Purpose**: Manage all saved heroes.
 
@@ -221,11 +186,9 @@ Actions:
 - Swipe left on a card reveals delete.
 - Max roster size: 20 heroes (soft limit; warn but don't block).
 
-> ⚠️ **OI-6 (Roster persistence)**: `localStorage` is simple but limited (~5 MB) and cleared by "Clear site data". For a hero collection game, `IndexedDB` is more robust and supports larger payloads. The implementation should use an abstraction (`RosterStore`) so the storage backend can be swapped. For v1, `localStorage` is acceptable (each hero payload is ~200 bytes). Recommend migrating to `IndexedDB` before launch if the roster grows to support more metadata (run history per hero, etc.).
-
 ---
 
-### 4.4 QR Scanner Screen (`/scan`)
+### QR Scanner Screen (`/scan`)
 
 **Purpose**: Import a hero by scanning a QR code or loading an image.
 
@@ -261,7 +224,7 @@ Error states: invalid QR (not a Blink hero), version mismatch (offer upgrade), C
 
 ---
 
-### 4.5 Game Mode Selection (`/play/mode`)
+### Game Mode Selection (`/play/mode`)
 
 **Purpose**: Pick the scoring ruleset for the run.
 
@@ -276,11 +239,10 @@ Each card expands on tap to show the full parameter comparison table vs Normal.
 
 Action at bottom: **[ Continue → Party Selection ]**
 
-> ⚠️ **OI-7 (Custom modes via QR)**: `game-modes.md` defines a flow where game modes can also be exported/imported via QR. This requires a separate QR binary format for mode payloads (different magic bytes, different schema). Since the game mode QR payload is smaller (no behaviour bytes), it can be simpler. However, the same `blink-qr` encoding package should handle both hero and mode payloads (differentiated by the `magic` header bytes). **Defer to v2** unless there is user demand.
 
 ---
 
-### 4.6 Party Selection (`/play/party`)
+### Party Selection (`/play/party`)
 
 **Purpose**: Choose 1–6 heroes from the roster to form the party.
 
@@ -292,13 +254,7 @@ Constraints:
 - The same hero cannot be in the party twice
 - Mode-specific constraints (if any — none defined yet)
 
-> ⚠️ **OI-8 (Multi-player party composition)**: `blink-qr.md` mentions "scan friends for party" — each player brings one hero scanned from their physical figurine, and the phones running the game would share party composition. This requires either:
-> - **Local only (v1)**: All heroes are on the same device. Player manually selects.
-> - **Multi-device (v2+)**: One device is the "host", others scan a session QR to join. Requires either a WebRTC/WebSocket server or a clever NFC/local-wifi peer approach.
->
-> **For v1**: local-only party selection. Design the QR scan flow so "scan → add to roster → select for party" is seamless.
-
-Decision: absolutely local only
+Note: game is local-only, no sync between phones
 
 ---
 
@@ -344,21 +300,11 @@ Decision: the interface must be much simpler. Consider the game with progress by
 - Score counter updates in real time.
 - Wave complete: brief celebratory animation before next wave spawns.
 
-> ⚠️ **OI-9 (WASM/JS engine integration)**: The battle screen requires the engine to produce a "snapshot" each tick for the React layer to render. The current JS engine exposes `getAllEntities()`, `step()`, etc. The WASM engine should expose the same `BlinkGame` interface. Key design question: **should the engine run synchronously (blocked JS thread) or asynchronously (Worker + postMessage)?** Recommendation: run the WASM engine in a **Web Worker** so it never blocks the UI thread. The Worker posts `GameSnapshot` messages at each frame boundary. This requires careful serialisation (JSON or a shared `SharedArrayBuffer` ring buffer).
-
-Decision: it's good to make it run asynchronously. In terms of user experience, we are looking at roughly 30 steps overall to complete the game, with 1 update per second. The UI should show 1 update per second despite how far the simulation run. Note that since there is no user interaction, the simulation might even complete in half a second, but nevertheless we need to show roughly 30 updates to the user before the game ends. This means we might have to "snapshot" values at given progress steps. In general I prefer decoupling the simulation from the UI.
-
->
-> See also: `doc/engine/wasm-engine-plan.md` for the existing WASM design.
-
-> ⚠️ **OI-10 (Hero AI integration)**: The behaviour bytes from the hero QR must drive the simulation AI. The connection point is the `decision_values` fields on the hero template entity (defined in `characters.md`). The QR encode/decode package must map the 12 (or 24) behaviour bytes onto the `decision_values` component fields before the hero entity is loaded into the engine. The exact mapping depends on the resolution of OI-5.
-
-
-Decision: I don't understand the open points. The hero values, together with other "data" (e.g. enemy, levels) must be loaded into the engine when the game runs
+it's good to make the game run asynchronously. In terms of user experience, we are looking at roughly 30 steps overall to complete the game, with 1 update per second. The UI should show 1 update per second despite how far the simulation run. Note that since there is no user interaction, the simulation might even complete in half a second, but nevertheless we need to show roughly 30 updates to the user before the game ends. This means we might have to "snapshot" values at given progress steps. In general I prefer decoupling the simulation from the UI.
 
 ---
 
-### 4.8 Post-Battle Results Screen (`/play/results`)
+### Post-Battle Results Screen (`/play/results`)
 
 **Purpose**: Show final score and KPIs at run end.
 
@@ -388,7 +334,7 @@ Scores are stored in `localStorage` under a `blink-rpg-scores` key for the Recen
 
 ---
 
-### 4.9 Figurine / QR Generator Screen (`/figurine/:heroId`)
+### Figurine / QR Generator Screen (`/figurine/:heroId`)
 
 **Purpose**: Generate, preview, and share the digital hero figurine.
 
@@ -426,27 +372,13 @@ A 1080 × 1920 px `<canvas>` element rendered at 360 × 640 px display size (sca
 8. Display as img preview + enable actions
 ```
 
-> ⚠️ **OI-11 (QR in shared PNG survival)**: WhatsApp and Telegram recompress images (JPEG, ~70% quality). A QR code embedded in a 360 × 640 displayed image may not survive this compression at small sizes. Mitigation strategies:
-> - Render the QR at 400 × 400 px within the 1080 × 1920 canvas (large modules = compression-resistant).
-> - Use EC-Q error correction (recovers up to 25% of damaged data).
-> - Optionally omit the scannable QR from the shared image and instead include only the plain-text URL. Instruct users to copy the URL manually.
-> - Provide two export variants: "Share (image)" (portrait art only, no QR) and "Share (figurine card with QR)".
->
-> **Recommend testing empirically** with real WhatsApp sharing before deciding. The design should support both variants regardless.
-
-Decision: let's test this empirically.
-
-> ⚠️ **OI-12 (Hero portrait artwork)**: The figurine screen requires hero class portraits. For v1, use large class emojis or simple SVG placeholder art. For production, commission or generate (AI) per-class artwork in a consistent style. The canvas drawing code should accept an `img` element as the portrait layer, so swapping in real art is a drop-in change.
-
-Decision: for now let's not use portraits. We'll add them later
-
 ---
 
-## 5. Hero Binary Format
+## Hero Binary Format
 
 See `doc/figurine-qr-design.md` for the full specification. Summary for implementation:
 
-### 5.1 Encoding Pipeline
+### Encoding Pipeline
 
 ```
 HeroData struct (JS/TS)
@@ -462,7 +394,7 @@ Final URL (~127–161 chars)
 QR version 8–10 (very compact)
 ```
 
-### 5.2 Encoding Package Structure
+### Encoding Package Structure
 
 ```
 packages/blink-qr/
@@ -481,7 +413,7 @@ packages/blink-qr/
     └── roundtrip.test.ts
 ```
 
-### 5.3 Hero Binary Layout (byte-aligned first pass)
+### Hero Binary Layout (byte-aligned first pass)
 
 Based on `doc/figurine-qr-design.md` Section 2.1, adapted to align with `characters.md`:
 
@@ -522,97 +454,8 @@ Offset  Size    Field
 (CRC is in header; no separate footer needed)
 ```
 
-> ⚠️ **OI-13 (behaviour bytes vs decision values alignment)**: See OI-5 above. The bit layout above uses 24 bytes per phase as in `blink-qr.md`; characters.md uses 12 signed 6-bit values (-32 to +31). Until OI-5 is resolved, implement the QR format with 24 bytes per phase (the superset) and map bytes 0–11 to the 12 named decision values using `clamp(byte, -32, 31)` (lower 6 bits of the signed byte). Bytes 12–23 are reserved and written as 0.
-
-Decision: this is ok as a first version. We'll revised this later.
-
 ---
 
-## 6. WASM Engine Integration
-
-### 6.1 Engine Abstraction Interface
-
-Both the JS engine and the WASM engine must implement the same `IBlinkEngine` interface. The battle screen and game context only speak to `IBlinkEngine`.
-
-```typescript
-// packages/blink-engine-interface/src/index.ts
-export interface GameSnapshot {
-  simulationTime: number;
-  heroes: HeroSnapshot[];
-  enemies: EnemySnapshot[];
-  score: number;
-  wave: number;
-  tier: number;
-  enemiesDefeated: number;
-  log: LogEntry[];           // events since last snapshot
-}
-
-export interface IBlinkEngine {
-  loadIR(ir: IRModule): Promise<void>;
-  reset(): void;
-  runSteps(n: number): void;       // advance simulation by n steps
-  getSnapshot(): GameSnapshot;     // current UI state
-  scheduleEvent(type: string, delay?: number, fields?: Record<string, unknown>): void;
-  destroy(): void;
-}
-```
-
-### 6.2 Pre-compilation at Build Time
-
-BRL source files are compiled to IR JSON during the Vite build process:
-
-```
-make compile-brl
-  → runs blink-compiler-ts on game/brl/*.brl
-  → outputs game/ir/*.ir.json
-  → Vite includes game/ir/ as static assets
-```
-
-At runtime, the app fetches the IR JSON files:
-```typescript
-const ir = await fetch('/game-files/classic-rpg.ir.json').then(r => r.json());
-await engine.loadIR(ir);
-```
-
-### 6.3 Web Worker Architecture (for WASM)
-
-```
-Main Thread (React)              Worker Thread (WASM Engine)
-─────────────────────────        ─────────────────────────────
-BattleScreen renders UI  ←─────  postMessage({ type: 'snapshot', data })
-                                                ↑
-scheduleEvent('Retreat') ─────►  onmessage → engine.scheduleEvent(...)
-setSpeed(2) ────────────────►  onmessage → tickMultiplier = 2
-                                requestAnimationFrame loop:
-                                  engine.runSteps(tickMultiplier)
-                                  postMessage(engine.getSnapshot())
-```
-
-The Worker is initialized lazily when the battle screen mounts and terminated when it unmounts.
-
-> ⚠️ **OI-14 (Worker vs main thread for JS engine)**: The JS engine is synchronous and runs on the main thread in the current prototype. For v1 (JS engine), keeping it on the main thread is acceptable since JS execution is fast enough at 1× speed. When the WASM engine is added, always run it in a Worker. The `IBlinkEngine` abstraction should make the Worker wrapper transparent.
-
-Decision: forget the JS engine for now. In terms of WASM engine design. Also see OI-9 related to stepping behaviour
-
-### 6.4 Hero Entity Injection
-
-The hero QR payload must be converted to IR initial state entities before the engine is loaded:
-
-```
-QRHero[] (from roster selection)
-  ↓  HeroEntityBuilder.build(qrHero)
-IRInitialState entities (Character, Health, Stats, Skills, DecisionValues)
-  ↓  merge into loaded IR's initial_state
-engine.loadIR(mergedIR)
-```
-
-`HeroEntityBuilder` is responsible for:
-1. Reading `qrHero.base_stats` → `Stats` component fields
-2. Reading `qrHero.behaviour_bytes` → `DecisionValues` component fields (see OI-5 / OI-10)
-3. Reading `qrHero.skill_ids` → `Skills` component fields
-4. Creating the hero entity with `Character`, `Team`, `HeroTemplate` components
-
-Decision: watch out, at runtime we're not going to work with the IR. The Engine must expose an interface allowing to set entities / components, that's how we'll load the initial state.
 
 ---
 
@@ -686,46 +529,3 @@ App
 
 ---
 
-## 9. Open Issues Summary
-
-All issues marked ⚠️ above are collected here for decision tracking.
-
-| ID | Description | Impact | Recommended Path |
-|---|---|---|---|
-| OI-1 | JS vs WASM engine for v1 | Build complexity | Use JS engine behind abstraction; swap in WASM when ready |
-| OI-2 | Stat value range and progression model | QR format, hero creator UI | 4-bit base stats, 3-bit growth rates |
-| OI-3 | Stat/growth point budget shared or independent | Hero balance | Independent budgets with soft guidance |
-| OI-4 | Skill tree structure (DAG prerequisites, skill count) | Hero creator Step 4 | Blocking: requires game design completion |
-| OI-5 | 24 behaviour bytes vs 12 decision values — alignment | QR format, engine AI | Use 24 bytes in QR; map bytes 0–11 to decision values |
-| OI-6 | localStorage vs IndexedDB for roster | Roster reliability | localStorage for v1; migrate to IndexedDB for v2 |
-| OI-7 | Game mode QR export/import | QR format scope | Defer to v2 |
-| OI-8 | Multi-device party composition | Social gameplay | Local-only for v1 |
-| OI-9 | WASM engine Worker vs main thread | Performance architecture | Worker (recommended); main thread acceptable for JS engine v1 |
-| OI-10 | Hero AI behaviour bytes → engine decision values wiring | Engine integration | Depends on OI-5; implement after OI-5 resolved |
-| OI-11 | QR survival in WhatsApp/Telegram shared image | Figurine usability | Test empirically; provide both variants |
-| OI-12 | Hero portrait artwork | Figurine visual quality | Emoji/SVG placeholders for v1 |
-| OI-13 | Behaviour byte bit layout in QR | QR format stability | 24 bytes per phase; bytes 12–23 reserved as 0 |
-| OI-14 | Worker wrapper for JS engine | Code architecture | Defer; JS engine on main thread is acceptable for v1 |
-
----
-
-## 10. Implementation Order
-
-The following sequence minimises blocking dependencies:
-
-1. **Setup**: React Router, Tailwind, Vite config, base layout shell.
-2. **`packages/blink-qr`**: Hero codec (encode/decode), BitWriter/BitReader, skill registry, CRC-16. *(No UI dependency)*
-3. **Hero Creator Wizard**: Steps 1–3 (Identity, Stats, Growth) — no skill tree needed.
-4. **Roster Screen**: Display, add, delete, persist to `localStorage`.
-5. **Figurine Screen** (basic): QR generation only (no portrait art).
-6. **QR Scanner**: Image import tab first (no camera permission complexity); camera tab second.
-7. **Home Screen**: Import from URL param.
-8. **Hero Creator Step 4** (Skill Progression): Unblocked once skill tree is designed (OI-4).
-9. **Hero Creator Steps 5–7** (Behaviour): Unblocked once OI-5 is resolved.
-10. **Game Mode Selection + Party Selection**.
-11. **Engine abstraction** (`IBlinkEngine`) + load IR + inject hero entities.
-12. **Battle Screen**: Render engine snapshots; combat log.
-13. **Post-Battle Results Screen**.
-14. **WASM engine**: Replace JS engine behind the abstraction (Track 7, parallel).
-15. **PWA**: Add Vite PWA plugin, service worker, manifest.
-16. **Portrait art**: Replace placeholders.

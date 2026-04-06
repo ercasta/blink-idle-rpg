@@ -4,9 +4,9 @@
 
 ---
 
-## 1. Overview
+## Overview
 
-This document defines the complete design for integrating the Blink game engine with the web player app (`game/app/`). It supersedes the open issues listed in `web-interface-design.md` with concrete decisions.
+This document defines the complete design for integrating the Blink game engine with the web player app (`game/app/`). 
 
 ### Goals
 
