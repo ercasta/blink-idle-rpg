@@ -1,107 +1,36 @@
-# Blink Engine & Toolchain Documentation
+# Blink Engine Documentation
 
-This folder contains documentation for the Blink game engine and development toolchain.
+## Documents
 
-## Overview
+| Document | Description |
+|----------|-------------|
+| [architecture.md](architecture.md) | ECS, Timeline, event dispatch — how the runtime works |
+| [browser-engine.md](browser-engine.md) | JavaScript engine implementation details |
+| [wasm-integration-design.md](wasm-integration-design.md) | WASM engine and React app integration |
 
-The Blink Engine is responsible for:
-- Executing BRL code
-- Managing the game timeline and events
-- Maintaining entity-component state
-- Providing feedback to players through trackers
+## Engine Overview
 
-## Documents in This Folder
+The Blink engine runs BRL-compiled game rules. Two engines exist:
 
-| Document | Description | Target Developers |
-|----------|-------------|-------------------|
-| [architecture.md](architecture.md) | Core engine architecture | All engine developers |
-| [browser-engine.md](browser-engine.md) | Browser implementation | Frontend/JS developers |
-| [api/](api/) | API documentation | All developers |
+- **JS engine** (`packages/blink-engine/`) — TypeScript, runs in the browser. Primary engine for development.
+- **WASM engine** (`packages/blink-runtime/` + `packages/blink-engine-wasm-js/`) — Rust compiled to WASM. Production performance target.
 
-## Implementation Targets
+Both engines implement the same `ISimEngine` TypeScript interface and are interchangeable from the app's perspective.
 
-Multiple engine implementations can exist:
-
-| Target | Purpose | Technology | Priority |
-|--------|---------|------------|----------|
-| **Browser** | Player-facing game client | JavaScript/WASM | High |
-| **Batch** | Balance testing | Rust native | Medium |
-| **Dev** | Hot-reloading development | Rust + file watching | Medium |
-| **Server** | Client-server games | Rust native | Future |
-
-## Toolchain Components
+### Build pipeline
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                        TOOLCHAIN                                │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  ┌──────────────┐    ┌──────────────────┐  │
-│  │ BRL Compiler │    │ LSP Server       │  │
-│  │   (Rust)     │    │ (Language        │  │
-│  │              │    │  Support)        │  │
-│  └──────┬───────┘    └────────┬─────────┘  │
-│         │                     │            │
-│         ▼                     ▼            │
-│  ┌──────────────────────────────────────────────────────────┐  │
-│  │              Intermediate Representation (IR)             │  │
-│  └──────────────────────────────────────────────────────────┘  │
-│                              │                                  │
-│         ┌────────────────────┼────────────────────┐            │
-│         ▼                    ▼                    ▼            │
-│  ┌─────────────┐     ┌─────────────┐      ┌─────────────┐     │
-│  │ JS/WASM     │     │ Native      │      │ Debug       │     │
-│  │ Backend     │     │ Backend     │      │ Backend     │     │
-│  └─────────────┘     └─────────────┘      └─────────────┘     │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+BRL source files
+    │
+    ▼ blink-compiler-ts
+IR JSON  ──────────────────────────► JS engine (browser)
+    │
+    ▼ codegen-rust.ts
+Rust source
+    │
+    ▼ wasm-pack
+WASM binary  ──────────────────────► WASM engine (browser / native tests)
 ```
 
-## Development Tracks
+See the root [README.md](../../README.md) for local build commands.
 
-### Track 1: Core Engine (Rust)
-- Timeline implementation
-- ECS runtime
-- Event scheduling
-- Intermediate representation
-
-**Prerequisites**: Rust, ECS patterns  
-**Output**: Core library (`blink-core`)
-
-### Track 2: Browser Runtime (JavaScript/WASM)
-- JavaScript API
-- WASM bindings
-- Web worker support
-- Rendering integration
-
-**Prerequisites**: Track 1 architecture, JavaScript, WASM  
-**Output**: NPM package (`@blink/engine`)
-
-### Track 3: Compiler (Rust)
-- BRL parser
-- Semantic analysis
-- IR generation
-- Multiple backends
-
-**Prerequisites**: Track 1 IR definition, Rust, compiler theory  
-**Output**: CLI tool (`blink-compiler`)
-
-### Track 4: Developer Tools
-- Language Server Protocol
-- VS Code extension
-- Hot reload server
-
-**Prerequisites**: Track 3 parser, LSP knowledge  
-**Output**: VS Code extension
-
-## Getting Started
-
-1. **Understand the architecture**: Read [architecture.md](architecture.md)
-2. **Choose your track**: Pick based on expertise
-3. **Set up environment**: Follow track-specific setup
-4. **Implement interfaces**: Use the API documentation
-
-## Related Documentation
-
-- [Language Specification](../language/README.md) - BRL reference
-- [Project Summary](../summary.md) - High-level overview

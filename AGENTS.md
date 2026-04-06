@@ -8,41 +8,32 @@
 - **IR files** (`.ir.json`) must be compiled from BRL source files
 - **Reason:** Versioning generated files leads to stale file issues, merge conflicts, and unnecessarily large repository size
 
-If code fails to load due to missing generated files, fix the build process or documentation to ensure users know to build first (e.g., run `make dev-setup`).
+If code fails to load due to missing generated files, fix the build process or documentation to ensure users know to build first (e.g., run `npm run build:demos`).
 
 ## Pre-submission Build Checks
 
-**ALWAYS** run these checks before submitting a PR to ensure the build passes:
+**ALWAYS** run these checks before submitting a PR to ensure the build passes.
 
-1. **Build the TypeScript compiler:**
-   ```bash
-   cd packages/blink-compiler-ts
-   npm install
-   npm run build
-   ```
+### Cross-platform (npm — works on Windows, Linux, macOS)
 
-2. **Build the packages:**
-   ```bash
-   make install-packages
-   make build-packages
-   ```
+```
+npm run setup
+npm run build:demos
+npm run test:compiler
+npm run test:engine
+```
 
-3. **Compile BRL to IR:**
-   ```bash
-   make compile-brl
-   ```
+### Linux/macOS (Makefile)
 
-4. **Test the demo package creation:**
-   ```bash
-   make demo-package
-   ```
+```bash
+make install-packages
+make build-packages
+make compile-brl
+make test
+make demo-package
+```
 
-5. **Run tests:**
-   ```bash
-   make test
-   ```
-
-All commands must complete successfully before submitting a PR. This ensures CI/CD workflows will pass and prevents build failures.
+All commands must complete successfully before submitting a PR.
 
 ## Language Compilation Test Suite
 
@@ -70,3 +61,26 @@ This test suite validates:
 - Assignment operators
 
 All tests must pass before changes to the compiler are committed.
+
+## WASM Engine Build
+
+The WASM engine compiles BRL → Rust → WASM. Prerequisites must be installed once.
+
+**Windows:**
+```powershell
+.\scripts\install-rust-wasm-windows.ps1
+npm run build:wasm
+npm run install:wasm
+```
+
+**Linux/macOS:**
+```bash
+curl https://sh.rustup.rs -sSf | sh
+rustup target add wasm32-unknown-unknown
+curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+npm run build:wasm      # or: make build-wasm
+npm run install:wasm    # or: make install-wasm
+```
+
+Use `npm run build:wasm:dev` (or `make build-wasm-dev`) for faster iteration during development.
+
