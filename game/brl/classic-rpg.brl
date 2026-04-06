@@ -251,7 +251,7 @@ rule initialize_hero_attacks on GameStart(gs: id) {
         let heroes: list = entities having Team
         for hero in heroes {
             if hero.Team.isPlayer && hero.Health.current > 0 {
-                // Stagger attacks by 0.1ds per hero to avoid perfect synchronization
+                // Stagger attacks by 0.1s per hero to avoid perfect synchronization
                 schedule [delay: 0.1d] DoAttack {
                     source: hero
                 }

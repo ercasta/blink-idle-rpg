@@ -468,10 +468,11 @@ export class SemanticAnalyzer {
       // If accessing a typed reference's component, check it matches the declared type
       if (baseAccess.base.type === 'identifier') {
         const varType = this.getVariableType(baseAccess.base.name, scope);
-        if (varType && varType.type === 'id' && varType.component !== null) {
+        if (varType && varType.type === 'id' && varType.component) {
           if (varType.component !== componentName) {
             this.errors.push({
-              message: `Type mismatch: variable '${baseAccess.base.name}' has typed reference 'id<${varType.component}>', but is being accessed as '${componentName}'`,
+              message: `Type mismatch: variable '${baseAccess.base.name}' has typed reference 'id<${varType.component}>', but is being accessed as '${componentName}'. ` +
+                `Either change the variable's declared type to 'id<${componentName}>' or access '${varType.component}' instead.`,
               span: baseAccess.span,
             });
           }
@@ -503,7 +504,7 @@ export class SemanticAnalyzer {
       // Special case: '.entity' field on a typed reference (id<C>) returns the entity id
       if (expr.field === 'entity') {
         const varType = this.getVariableType(baseName, scope);
-        if (varType && varType.type === 'id' && varType.component !== null) {
+        if (varType && varType.type === 'id' && varType.component) {
           return; // Valid: typed reference .entity returns the owning entity id
         }
       }
