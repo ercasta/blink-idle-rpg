@@ -40,10 +40,9 @@ export type TypeExpr =
   | { type: 'string' }
   | { type: 'boolean' }
   | { type: 'integer' }
-  | { type: 'float' }
   | { type: 'decimal' }
   | { type: 'number' }
-  | { type: 'id' }
+  | { type: 'id'; component: string | null }
   | { type: 'component'; name: string }
   | { type: 'list'; element: TypeExpr }
   | { type: 'optional'; inner: TypeExpr }
@@ -57,7 +56,6 @@ export interface RuleDef {
   triggerEvent: string;
   eventParam: ParamDef;  // The typed parameter for the event (e.g., 'gs: id' in 'rule on GameStart(gs: id)')
   condition: Expr | null;
-  priority: number | null;
   body: Block;
   span: Span;
 }
@@ -257,7 +255,6 @@ export interface LiteralExpr {
 export type LiteralValue =
   | { type: 'string'; value: string }
   | { type: 'integer'; value: number }
-  | { type: 'float'; value: number }
   | { type: 'decimal'; value: string }
   | { type: 'boolean'; value: boolean }
   | { type: 'null' };

@@ -35,9 +35,9 @@ component Stats {
 component Combat {
     damage: integer
     defense: integer
-    attackSpeed: float
-    critChance: float
-    critMultiplier: float
+    attackSpeed: decimal
+    critChance: decimal
+    critMultiplier: decimal
 }
 
 // Current attack target
@@ -74,7 +74,7 @@ component FinalBoss {
 // This component is created on the GameState entity when the final boss is defeated
 // Used for testing and verification that the game ended properly
 component LordVexarDefeated {
-    defeatedAt: float
+    defeatedAt: decimal
     defeatedByHeroCount: integer
 }
 
@@ -97,7 +97,7 @@ component Skills {
 component Buffs {
     damageBonus: integer
     defenseBonus: integer
-    hasteBonus: float
+    hasteBonus: decimal
     shieldAmount: integer
     regenAmount: integer
 }
@@ -128,28 +128,28 @@ component ProgressTracker {
 
 // Run tracking for leaderboard
 component RunStats {
-    simulationTime: float
+    simulationTime: decimal
     retreatCount: integer
-    retreatPenalty: float
-    deathPenalty: float
-    totalTime: float
+    retreatPenalty: decimal
+    deathPenalty: decimal
+    totalTime: decimal
     canFlee: boolean
-    lastFleeTime: float
+    lastFleeTime: decimal
 }
 
 // Flee constants (defined as component for easy tuning)
 component FleeConfig {
-    retreatTimePenalty: float      // 10 seconds
-    deathTimePenaltyMultiplier: float  // 5x = 50 seconds
-    fleeCooldown: float            // 5 seconds between flees
+    retreatTimePenalty: decimal      // 10 seconds
+    deathTimePenaltyMultiplier: decimal  // 5x = 50 seconds
+    fleeCooldown: decimal            // 5 seconds between flees
 }
 
 // Skill cooldown tracking
 component SkillCooldown {
-    skill1Cooldown: float
-    skill2Cooldown: float
-    skill3Cooldown: float
-    skill4Cooldown: float
+    skill1Cooldown: decimal
+    skill2Cooldown: decimal
+    skill3Cooldown: decimal
+    skill4Cooldown: decimal
 }
 
 // Choice context for player decisions
@@ -219,7 +219,7 @@ component ScoringRules {
     pointsLostPerRetreat: integer
     pointsLostPerPenaltySecond: integer
     timeBonusPoints: integer
-    timeBonusInterval: float
+    timeBonusInterval: decimal
 }
 
 // Game mode identity (set at run start)
@@ -232,12 +232,12 @@ component GameMode {
 }
 
 // Helper function to calculate damage
-fn calculate_damage(base: float, bonus: float): float {
+fn calculate_damage(base: decimal, bonus: decimal): decimal {
     return base + bonus
 }
 
 // Helper function to calculate experience for level
-fn calculate_exp_for_level(level: float): float {
+fn calculate_exp_for_level(level: decimal): decimal {
     return 100 * level
 }
 
@@ -252,7 +252,7 @@ rule initialize_hero_attacks on GameStart(gs: id) {
         for hero in heroes {
             if hero.Team.isPlayer && hero.Health.current > 0 {
                 // Stagger attacks by 0.1s per hero to avoid perfect synchronization
-                schedule [delay: 0.1] DoAttack {
+                schedule [delay: 0.1d] DoAttack {
                     source: hero
                 }
             }
@@ -266,7 +266,7 @@ rule start_retargeting_system on GameStart(gs: id) {
         if entity.GameState.retargetingActive == false {
             entity.GameState.retargetingActive = true
             // Schedule first retargeting check in 2 seconds
-            schedule [delay: 2.0] CheckAllTargets {
+            schedule [delay: 2.0d] CheckAllTargets {
             }
         }
     }
@@ -284,13 +284,13 @@ rule spawn_initial_enemies on GameStart(gs: id) {
         // Spawn initial wave enemies (spread by small delays)
         let indices: list = [0, 1, 2, 3, 4]
         for i in indices {
-            schedule [delay: 0.5 * (i + 1)] SpawnEnemy {
+            schedule [delay: 0.5d * (i + 1)] SpawnEnemy {
                 tier: 1
             }
         }
 
         // Notify that the first wave spawned
-        schedule [delay: 3.0] EnemySpawned {
+        schedule [delay: 3.0d] EnemySpawned {
             wave: 1
         }
     }
@@ -306,7 +306,7 @@ let waveIndex: id = entity.GameState.waveInTier
         // Spawn enemies for this wave
 let indices: list = [0, 1, 2, 3, 4]
         for i in indices {
-            schedule [delay: 0.5 * (i + 1)] SpawnEnemy {
+            schedule [delay: 0.5d * (i + 1)] SpawnEnemy {
                 tier: tier
             }
         }
@@ -314,7 +314,7 @@ let indices: list = [0, 1, 2, 3, 4]
         // If this is the final tier, spawn the named final boss once
         if tier == entity.SpawnConfig.maxTier {
             if entity.GameState.bossSpawned == false {
-                schedule [delay: 1.0] SpawnLordVexar {
+                schedule [delay: 1.0d] SpawnLordVexar {
                 }
                 entity.GameState.bossSpawned = true
             }
@@ -330,7 +330,7 @@ let indices: list = [0, 1, 2, 3, 4]
             entity.GameState.currentWave += 1
 
             // Schedule next EnemySpawned event for the next wave
-            schedule [delay: 2.0] EnemySpawned {
+            schedule [delay: 2.0d] EnemySpawned {
                 wave: entity.GameState.currentWave
             }
         }
@@ -368,7 +368,7 @@ let newEnemy: id = clone templateId {
         newEnemy.Target.entity = null
         
         // Schedule the enemy's first attack
-        schedule [delay: 0.1] DoAttack {
+        schedule [delay: 0.1d] DoAttack {
             source: newEnemy
         }
     }
@@ -390,7 +390,7 @@ let newBoss: id = clone bossTemplate {
 
         // Target will be assigned by the retargeting system
         newBoss.Target.entity = null
-        schedule [delay: 0.5] DoAttack {
+        schedule [delay: 0.5d] DoAttack {
             source: newBoss
         }
     }
@@ -423,9 +423,9 @@ let damage: id = attacker.Combat.damage + attacker.Buffs.damageBonus
             // so the loop never depends on FindNewTarget to restart it
 let attackSpeedTotal: id = attacker.Combat.attackSpeed + attacker.Buffs.hasteBonus
             if attackSpeedTotal <= 0 {
-                attackSpeedTotal = 0.1
+                attackSpeedTotal = 0.1d
             }
-let delay: float = 1 / attackSpeedTotal
+let delay: decimal = 1 / attackSpeedTotal
             schedule [delay: delay] DoAttack {
                 source: attacker
             }
@@ -482,7 +482,7 @@ rule respawn_on_player_defeated on PlayerDefeated(pd: id) {
     if entity has GameState {
         // Schedule respawn for the dead player after 120s unless victory
         if entity.GameState.gameOver == false {
-            schedule [delay: 120.0] RespawnPlayer {
+            schedule [delay: 120.0d] RespawnPlayer {
                 player: pd.player
             }
         }
@@ -501,9 +501,9 @@ let p: id = rp.player
         p.Buffs.regenAmount = 0
         p.Buffs.damageBonus = 0
         p.Buffs.defenseBonus = 0
-        p.Buffs.hasteBonus = 0.0
+        p.Buffs.hasteBonus = 0.0d
         // Restart the attack loop (stopped when health reached 0)
-        schedule [delay: 0.5] DoAttack {
+        schedule [delay: 0.5d] DoAttack {
             source: p
         }
     }
@@ -532,7 +532,7 @@ let character: id = clu.source
         if character.Character.experience >= character.Character.experienceToLevel {
             character.Character.level += 1
             character.Character.experience -= character.Character.experienceToLevel
-            character.Character.experienceToLevel *= 1.5
+            character.Character.experienceToLevel *= 1.5d
             character.Skills.skillPoints += 1
             
             schedule LevelUp {
@@ -596,7 +596,7 @@ let vexarDefeated: list = entities having LordVexarDefeated
                 if entity.GameState.gameOver == false {
                     if entity.GameState.bossSpawned == false {
 let currentTier: id = entity.GameState.currentTier
-                        schedule [delay: 0.1] SpawnEnemy {
+                        schedule [delay: 0.1d] SpawnEnemy {
                             tier: currentTier
                         }
                     }
@@ -643,7 +643,7 @@ rule use_skill_backstab on UseSkill(us: id) {
     if entity has GameState {
 let character: id = us.source
         if character.Skills.skill1 == "backstab" {
-            character.Combat.critChance += 0.25
+            character.Combat.critChance += 0.25d
         }
     }
 }
@@ -724,7 +724,7 @@ let timeSinceFlee: id = entity.RunStats.simulationTime - entity.RunStats.lastFle
                 }
 let gameStateEntities: list = entities having GameState
                 if len(gameStateEntities) > 0 {
-                    schedule [delay: 0.5] SpawnEnemyWave {
+                    schedule [delay: 0.5d] SpawnEnemyWave {
                         target: gameStateEntities[0]
                     }
                 }
@@ -754,7 +754,7 @@ let enemies: list = entities having Enemy
 rule spawn_wave_after_flee on SpawnEnemyWave(sew: id) {
     if entity has GameState {
 let spawner: id = sew.target
-        schedule [delay: 0.1] EnemySpawned {
+        schedule [delay: 0.1d] EnemySpawned {
             wave: spawner.GameState.currentWave
         }
     }
@@ -799,7 +799,7 @@ rule start_global_retargeting on EnemySpawned(es: id) {
         if entity.GameState.currentWave == 1 {
             if entity.GameState.retargetingActive == false {
                 entity.GameState.retargetingActive = true
-                schedule [delay: 2.0] CheckAllTargets {
+                schedule [delay: 2.0d] CheckAllTargets {
                 }
             }
         }
@@ -838,7 +838,7 @@ rule reschedule_retargeting on CheckAllTargets(cat: id) {
     if entity has GameState {
         if entity.GameState.retargetingActive {
             if entity.GameState.gameOver == false {
-                schedule [delay: 2.0] CheckAllTargets {
+                schedule [delay: 2.0d] CheckAllTargets {
                 }
             }
         }
@@ -951,15 +951,15 @@ let runStats: id = runStatsEntities[0]
 
                 // Speed bonus: decays with total time; floor-divide by interval to get whole steps
 let timeBonusPts: integer = entity.ScoringRules.timeBonusPoints
-let interval: float = entity.ScoringRules.timeBonusInterval
-let totalTime: float = runStats.RunStats.totalTime
+let interval: decimal = entity.ScoringRules.timeBonusInterval
+let totalTime: decimal = runStats.RunStats.totalTime
 let decayed: integer = floor(totalTime / interval)
 let speedBonus: integer = max(0, timeBonusPts - decayed)
                 entity.Score.speedBonus = speedBonus
                 entity.Score.total += speedBonus
 
                 // Time-based penalty from death/retreat seconds
-let penaltySeconds: float = runStats.RunStats.deathPenalty + runStats.RunStats.retreatPenalty
+let penaltySeconds: decimal = runStats.RunStats.deathPenalty + runStats.RunStats.retreatPenalty
 let timePenalty: integer = penaltySeconds * entity.ScoringRules.pointsLostPerPenaltySecond
                 entity.Score.timePenaltyTotal = timePenalty
                 entity.Score.total -= timePenalty
@@ -989,7 +989,7 @@ let nextThreshold: integer = (entity.ProgressTracker.checkpointsReached + 1) * e
                 entity.ProgressTracker.checkpointsReached += 1
                 // Look up simulation time from RunStats entity
 let runStatsEntities: list = entities having RunStats
-let simTime: float = 0.0
+let simTime: decimal = 0.0d
                 if len(runStatsEntities) > 0 {
                     simTime = runStatsEntities[0].RunStats.simulationTime
                 }

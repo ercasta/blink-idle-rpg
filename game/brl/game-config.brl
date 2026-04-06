@@ -49,13 +49,13 @@ game_state = new entity {
 
 run_stats = new entity {
     RunStats {
-        simulationTime: 0.0
+        simulationTime: 0.0d
         retreatCount: 0
-        retreatPenalty: 0.0
-        deathPenalty: 0.0
-        totalTime: 0.0
+        retreatPenalty: 0.0d
+        deathPenalty: 0.0d
+        totalTime: 0.0d
         canFlee: true
-        lastFleeTime: -999.0
+        lastFleeTime: -999.0d
     }
 }
 
@@ -66,9 +66,9 @@ run_stats = new entity {
 
 flee_config = new entity {
     FleeConfig {
-        retreatTimePenalty: 10.0
-        deathTimePenaltyMultiplier: 5.0
-        fleeCooldown: 5.0
+        retreatTimePenalty: 10.0d
+        deathTimePenaltyMultiplier: 5.0d
+        fleeCooldown: 5.0d
     }
 }
 

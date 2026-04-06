@@ -94,8 +94,7 @@ choice     let
 
 // Numeric literals
 42          // integer
-3.14        // float
-12.50d      // decimal (fixed precision)
+12.50d      // decimal (fixed precision, requires 'd' suffix)
 
 // Boolean literals
 true
@@ -104,6 +103,8 @@ false
 // Entity reference
 @entity_id
 ```
+
+> **Note**: Floating-point literals (e.g., `3.14`) are not supported. Use decimal literals with the `d` suffix (e.g., `3.14d`).
 
 ---
 
@@ -116,10 +117,13 @@ false
 | `string` | Text value | `"hello"` |
 | `boolean` | True or false | `true` |
 | `integer` | Whole number | `42` |
-| `decimal` | Fixed precision | `10.50d` |
-| `id` | Entity reference | `@player1` |
+| `decimal` | Fixed-precision decimal (stored internally as integer) | `10.50d` |
+| `id` | Untyped entity reference | `@player1` |
+| `id<ComponentName>` | Typed component reference | `let h: id<Health> = ...` |
 | `list` | List of entities (shorthand for `list<id>`) | `[entity1, entity2]` |
 | `list<T>` | List of type T (T can be: id, integer, string, etc.) | `[1, 2, 3]` |
+
+> **Note**: The `float` type has been removed from BRL. Use `decimal` for fractional values.
 
 ### Component Types
 
@@ -140,6 +144,7 @@ BRL requires explicit type annotations on all variable declarations to catch err
 let damage: integer = 10
 let name: string = "warrior"
 let target: id = @player1
+let health: id<Health> = ...   // typed component reference
 let enemies: list = entities having Enemy
 ```
 
@@ -149,6 +154,33 @@ Type annotations are mandatory for:
 - Function return types
 
 Component fields always require type annotations.
+
+### Typed References (`id<ComponentName>`)
+
+References can be typed to specify which component they refer to. This enables compile-time type checking:
+
+```brl
+component Health {
+	current: integer
+	maximum: integer
+}
+
+component Equipment {
+	weapon: id<Weapon>?   // typed optional reference to an entity with a Weapon component
+}
+```
+
+When a variable has a typed reference, the compiler validates that field accesses use the correct component. Additionally, you can retrieve the owning entity from a typed component reference using `.entity`:
+
+```brl
+rule heal on HealEvent(evt: id) {
+	let target: id<Health> = evt.HealEvent.target
+	target.Health.current += 10
+
+	// .entity returns the entity id from a typed component reference
+	let entityId = target.entity
+}
+```
 
 ### Optional Types
 
@@ -187,13 +219,13 @@ component Character {
 component Health {
 	current: integer
 	maximum: integer
-	regeneration: float
+	regeneration: decimal
 }
 
 component Position {
-	x: float
-	y: float
-	z: float
+	x: decimal
+	y: decimal
+	z: decimal
 }
 
 component Inventory {
@@ -209,8 +241,8 @@ An entity can have multiple components of the same type, acting as a list:
 ```brl
 component Buff {
 	name: string
-	duration: float
-	magnitude: float
+	duration: decimal
+	magnitude: decimal
 }
 
 // An entity can have multiple Buff components
@@ -357,19 +389,7 @@ rule CriticalHit on AttackLanded(atk: id) when atk.AttackEvent.is_critical {
 }
 ```
 
-### Priority
-
-Rules can have priority for ordering:
-
-```brl
-rule HighPriority on Event(evt: id) [priority: 100] {
-	// Executes first
-}
-
-rule LowPriority on Event(evt: id) [priority: -100] {
-	// Executes last
-}
-```
+> **Note**: Rules execute in the order they are declared. There is no `priority` mechanism. To control ordering explicitly, use separate event types.
 
 ---
 

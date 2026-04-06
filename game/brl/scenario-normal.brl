@@ -27,9 +27,9 @@ scenario_info = new entity {
 // Standard game configuration (this is the original balance)
 flee_config = new entity {
     FleeConfig {
-        retreatTimePenalty: 10.0          // 10 seconds
-        deathTimePenaltyMultiplier: 5.0   // 5x = 50 seconds
-        fleeCooldown: 5.0                 // 5 seconds between flees
+        retreatTimePenalty: 10.0d          // 10 seconds
+        deathTimePenaltyMultiplier: 5.0d   // 5x = 50 seconds
+        fleeCooldown: 5.0d                 // 5 seconds between flees
     }
 }
 
@@ -66,13 +66,13 @@ game_state = new entity {
 
 run_stats = new entity {
     RunStats {
-        simulationTime: 0.0
+        simulationTime: 0.0d
         retreatCount: 0
-        retreatPenalty: 0.0
-        deathPenalty: 0.0
-        totalTime: 0.0
+        retreatPenalty: 0.0d
+        deathPenalty: 0.0d
+        totalTime: 0.0d
         canFlee: true
-        lastFleeTime: -999.0
+        lastFleeTime: -999.0d
     }
 }
 
@@ -92,7 +92,7 @@ let scoring_entity: id = new entity {
         pointsLostPerRetreat: 50
         pointsLostPerPenaltySecond: 2
         timeBonusPoints: 1000
-        timeBonusInterval: 10.0
+        timeBonusInterval: 10.0d
     }
     Score {
         total: 0
