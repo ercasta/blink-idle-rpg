@@ -504,7 +504,6 @@ export class RustCodeGenerator {
         // Accept both integer and float JSON numbers (JS doesn't distinguish).
         // Bind the field value once to avoid a double map lookup.
         return `{ let _v = &v["${jsonKey}"]; _v.as_i64().or_else(|| _v.as_f64().map(|f| f as i64)).unwrap_or(0) }`;
-      case 'float':
       case 'decimal':
       case 'number':
         return `v["${jsonKey}"].as_f64().unwrap_or(0.0)`;
@@ -534,7 +533,6 @@ export class RustCodeGenerator {
     switch (type.type) {
       case 'integer':
         return rustExpr;
-      case 'float':
       case 'decimal':
       case 'number':
         return rustExpr;
@@ -903,8 +901,6 @@ export class RustCodeGenerator {
         return `string_ids::${this.stringConstName(expr.value.value)}`;
       case 'integer':
         return `${expr.value.value}`;
-      case 'float':
-        return `${expr.value.value}${expr.value.value.toString().includes('.') ? '' : '.0'}`;
       case 'decimal':
         return `${expr.value.value}`;
       case 'boolean':
@@ -996,7 +992,7 @@ export class RustCodeGenerator {
     if (expr.type === 'literal') {
       switch (expr.value.type) {
         case 'integer': return `Value::Integer(${expr.value.value})`;
-        case 'float': return `Value::Number(${expr.value.value}${expr.value.value.toString().includes('.') ? '' : '.0'})`;
+        case 'decimal': return `Value::Number(${expr.value.value}${expr.value.value.toString().includes('.') ? '' : '.0'})`;
         case 'string': return `Value::String(string_ids::${this.stringConstName(expr.value.value)})`;
         case 'boolean': return `Value::Boolean(${expr.value.value})`;
         case 'null': return `Value::None`;
@@ -1023,7 +1019,6 @@ export class RustCodeGenerator {
       case 'string': return 'InternedString';
       case 'boolean': return 'bool';
       case 'integer': return 'i64';
-      case 'float':
       case 'decimal':
       case 'number': return 'f64';
       case 'id': return 'EntityId';

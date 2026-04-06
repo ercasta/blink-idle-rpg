@@ -27,9 +27,9 @@ scenario_info = new entity {
 // Override game configuration for easy scenario
 flee_config = new entity {
     FleeConfig {
-        retreatTimePenalty: 5.0           // 5 seconds (down from 10)
-        deathTimePenaltyMultiplier: 3.0   // 3x = 15 seconds (down from 5x = 50)
-        fleeCooldown: 5.0                 // Same as normal
+        retreatTimePenalty: 5.0d           // 5 seconds (down from 10)
+        deathTimePenaltyMultiplier: 3.0d   // 3x = 15 seconds (down from 5x = 50)
+        fleeCooldown: 5.0d                 // Same as normal
     }
 }
 
@@ -66,13 +66,13 @@ game_state = new entity {
 
 run_stats = new entity {
     RunStats {
-        simulationTime: 0.0
+        simulationTime: 0.0d
         retreatCount: 0
-        retreatPenalty: 0.0
-        deathPenalty: 0.0
-        totalTime: 0.0
+        retreatPenalty: 0.0d
+        deathPenalty: 0.0d
+        totalTime: 0.0d
         canFlee: true
-        lastFleeTime: -999.0
+        lastFleeTime: -999.0d
     }
 }
 

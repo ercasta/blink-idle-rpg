@@ -135,7 +135,7 @@ describe('CodeGenerator', () => {
     it('should generate IR for schedule action', () => {
       const ir = compileToIR(`
         rule test on Test t {
-          schedule [delay: 2.0] DoAttack { source: entity }
+          schedule [delay: 2.0d] DoAttack { source: entity }
         }
       `);
       const action = ir.rules[0].actions[0] as IR.IRScheduleAction;
@@ -209,7 +209,7 @@ describe('CodeGenerator', () => {
       const ir = compileToIR(`
         rule test on Test t {
           let a = 42
-          let b = 3.14
+          let b = 3.14d
           let c = "hello"
           let d = true
           let e = null
@@ -322,7 +322,7 @@ describe('CodeGenerator', () => {
             let damage = source.Combat.damage
             let target = source.Target.entity
             target.Health.current -= damage
-            schedule [delay: 1.0] DoAttack { source: source }
+            schedule [delay: 1.0d] DoAttack { source: source }
           }
         }
 

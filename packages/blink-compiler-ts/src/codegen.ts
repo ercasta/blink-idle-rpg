@@ -137,7 +137,6 @@ export class CodeGenerator {
         return { type: 'boolean' };
       case 'integer':
         return { type: 'integer' };
-      case 'float':
       case 'decimal':
       case 'number':
         return { type: 'number' };
@@ -431,7 +430,6 @@ export class CodeGenerator {
       switch (expr.value.type) {
         case 'string': return expr.value.value;
         case 'integer': return expr.value.value;
-        case 'float': return expr.value.value;
         case 'decimal': return parseFloat(expr.value.value);
         case 'boolean': return expr.value.value;
         case 'null': return null;
@@ -549,8 +547,6 @@ export class CodeGenerator {
       case 'string':
         return { type: 'literal', value: expr.value.value };
       case 'integer':
-        return { type: 'literal', value: expr.value.value };
-      case 'float':
         return { type: 'literal', value: expr.value.value };
       case 'decimal':
         return { type: 'literal', value: parseFloat(expr.value.value) };

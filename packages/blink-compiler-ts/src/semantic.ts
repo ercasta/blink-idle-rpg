@@ -21,6 +21,7 @@ interface ComponentInfo {
 
 interface Scope {
   variables: Set<string>;
+  variableTypes: Map<string, AST.TypeExpr>;  // Track declared types for typed reference checking
   eventAliases?: Set<string>;  // Track event aliases for field access validation
   parent?: Scope;
 }
@@ -108,11 +109,11 @@ export class SemanticAnalyzer {
       case 'string':
       case 'boolean':
       case 'integer':
-      case 'float':
       case 'decimal':
       case 'number':
-      case 'id':
         return type.type;
+      case 'id':
+        return type.component ? `id<${type.component}>` : 'id';
       case 'component':
         return type.name;
       case 'list':
@@ -165,6 +166,7 @@ export class SemanticAnalyzer {
     
     // Add the event parameter to scope and mark it as an event alias
     scope.variables.add(rule.eventParam.name);
+    scope.variableTypes.set(rule.eventParam.name, rule.eventParam.paramType);
     if (!scope.eventAliases) {
       scope.eventAliases = new Set();
     }
@@ -251,6 +253,10 @@ export class SemanticAnalyzer {
         this.validateExpression(stmt.value, scope);
         // Add variable to scope after validation (so it can't reference itself)
         scope.variables.add(stmt.name);
+        // Track the declared type for typed reference checking
+        if (stmt.typeAnnotation) {
+          scope.variableTypes.set(stmt.name, stmt.typeAnnotation);
+        }
         break;
         
       case 'assignment':
@@ -458,6 +464,19 @@ export class SemanticAnalyzer {
           span: expr.span,
         });
       }
+
+      // If accessing a typed reference's component, check it matches the declared type
+      if (baseAccess.base.type === 'identifier') {
+        const varType = this.getVariableType(baseAccess.base.name, scope);
+        if (varType && varType.type === 'id' && varType.component !== null) {
+          if (varType.component !== componentName) {
+            this.errors.push({
+              message: `Type mismatch: variable '${baseAccess.base.name}' has typed reference 'id<${varType.component}>', but is being accessed as '${componentName}'`,
+              span: baseAccess.span,
+            });
+          }
+        }
+      }
       return;
     }
     
@@ -480,6 +499,14 @@ export class SemanticAnalyzer {
         });
         return;
       }
+
+      // Special case: '.entity' field on a typed reference (id<C>) returns the entity id
+      if (expr.field === 'entity') {
+        const varType = this.getVariableType(baseName, scope);
+        if (varType && varType.type === 'id' && varType.component !== null) {
+          return; // Valid: typed reference .entity returns the owning entity id
+        }
+      }
       
       // If it's not an event alias, it should be entity.Component pattern
       // Check if the accessed field is a component name
@@ -495,6 +522,16 @@ export class SemanticAnalyzer {
     
     // For other cases, validate the base expression
     this.validateExpression(expr.base, scope);
+  }
+
+  private getVariableType(name: string, scope: Scope): AST.TypeExpr | null {
+    if (scope.variableTypes.has(name)) {
+      return scope.variableTypes.get(name)!;
+    }
+    if (scope.parent) {
+      return this.getVariableType(name, scope.parent);
+    }
+    return null;
   }
 
   private validateCall(expr: AST.CallExpr, scope: Scope): void {
@@ -513,12 +550,13 @@ export class SemanticAnalyzer {
   }
 
   private createScope(): Scope {
-    return { variables: new Set() };
+    return { variables: new Set(), variableTypes: new Map() };
   }
 
   private createChildScope(parent: Scope): Scope {
     return {
       variables: new Set(),
+      variableTypes: new Map(),
       // Create new Set with parent's event aliases to avoid shared reference mutations
       eventAliases: parent.eventAliases ? new Set(parent.eventAliases) : undefined,
       parent

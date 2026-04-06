@@ -37,9 +37,9 @@ goblin_scout = new entity {
     Combat {
         damage: 8
         defense: 2
-        attackSpeed: 1.0
-        critChance: 0.05
-        critMultiplier: 1.5
+        attackSpeed: 1.0d
+        critChance: 0.05d
+        critMultiplier: 1.5d
     }
     Target {
         entity: null
@@ -96,9 +96,9 @@ orc_raider = new entity {
     Combat {
         damage: 12
         defense: 4
-        attackSpeed: 0.8
-        critChance: 0.05
-        critMultiplier: 1.5
+        attackSpeed: 0.8d
+        critChance: 0.05d
+        critMultiplier: 1.5d
     }
     Target {
         entity: null
@@ -151,9 +151,9 @@ dark_wolf = new entity {
     Combat {
         damage: 14
         defense: 3
-        attackSpeed: 1.2
-        critChance: 0.1
-        critMultiplier: 1.5
+        attackSpeed: 1.2d
+        critChance: 0.1d
+        critMultiplier: 1.5d
     }
     Target {
         entity: null
@@ -210,9 +210,9 @@ skeleton_warrior = new entity {
     Combat {
         damage: 16
         defense: 6
-        attackSpeed: 0.7
-        critChance: 0.1
-        critMultiplier: 1.5
+        attackSpeed: 0.7d
+        critChance: 0.1d
+        critMultiplier: 1.5d
     }
     Target {
         entity: null
@@ -265,9 +265,9 @@ dark_mage = new entity {
     Combat {
         damage: 22
         defense: 4
-        attackSpeed: 0.5
-        critChance: 0.15
-        critMultiplier: 2.0
+        attackSpeed: 0.5d
+        critChance: 0.15d
+        critMultiplier: 2.0d
     }
     Target {
         entity: null
@@ -324,9 +324,9 @@ troll_berserker = new entity {
     Combat {
         damage: 22
         defense: 8
-        attackSpeed: 0.6
-        critChance: 0.15
-        critMultiplier: 1.5
+        attackSpeed: 0.6d
+        critChance: 0.15d
+        critMultiplier: 1.5d
     }
     Target {
         entity: null
@@ -383,9 +383,9 @@ demon_knight = new entity {
     Combat {
         damage: 30
         defense: 10
-        attackSpeed: 0.7
-        critChance: 0.15
-        critMultiplier: 2.0
+        attackSpeed: 0.7d
+        critChance: 0.15d
+        critMultiplier: 2.0d
     }
     Target {
         entity: null
@@ -442,9 +442,9 @@ ancient_dragon = new entity {
     Combat {
         damage: 40
         defense: 12
-        attackSpeed: 0.8
-        critChance: 0.2
-        critMultiplier: 2.0
+        attackSpeed: 0.8d
+        critChance: 0.2d
+        critMultiplier: 2.0d
     }
     Target {
         entity: null
@@ -497,9 +497,9 @@ dragon_lord_vexar = new entity {
     Combat {
         damage: 40
         defense: 15
-        attackSpeed: 0.8
-        critChance: 0.2
-        critMultiplier: 2.5
+        attackSpeed: 0.8d
+        critChance: 0.2d
+        critMultiplier: 2.5d
     }
     Target {
         entity: null

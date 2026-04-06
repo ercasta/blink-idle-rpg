@@ -148,7 +148,7 @@ describe('End-to-End Compiler', () => {
         component Combat {
           damage: integer
           defense: integer
-          attackSpeed: float
+          attackSpeed: decimal
         }
 
         component Target {
@@ -194,7 +194,7 @@ describe('End-to-End Compiler', () => {
         rule spawn_enemies on GameStart gs {
           let indices = [0, 1, 2, 3, 4]
           for i in indices {
-            schedule [delay: 0.5 * i] SpawnEnemy { tier: 1 }
+            schedule [delay: 0.5d * i] SpawnEnemy { tier: 1 }
           }
         }
 
@@ -223,12 +223,12 @@ describe('End-to-End Compiler', () => {
         component Combat {
           damage: integer
           defense: integer
-          attackSpeed: float
+          attackSpeed: decimal
         }
         entity {
           Character { name: "Warrior" class: "Warrior" level: 1 }
           Health { current: 100 max: 100 }
-          Combat { damage: 20 defense: 10 attackSpeed: 1.0 }
+          Combat { damage: 20 defense: 10 attackSpeed: 1.0d }
           
           .selectTarget = choice(enemies: list): id {
             let target = enemies[0]

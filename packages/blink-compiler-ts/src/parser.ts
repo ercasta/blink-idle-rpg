@@ -181,13 +181,24 @@ export class Parser {
       case TokenKind.TypeInteger:
         return { type: 'integer' };
       case TokenKind.TypeFloat:
-        return { type: 'float' };
+        throw new ParseError(
+          token.span.start,
+          `The 'float' type has been removed from BRL. Use 'decimal' instead (e.g., field: decimal, literal: 1.0d)`
+        );
       case TokenKind.TypeDecimal:
         return { type: 'decimal' };
       case TokenKind.TypeNumber:
         return { type: 'number' };
-      case TokenKind.TypeId:
-        return { type: 'id' };
+      case TokenKind.TypeId: {
+        // Support typed references: id<ComponentName>
+        if (this.check(TokenKind.Lt)) {
+          this.advance(); // consume <
+          const componentName = this.consume(TokenKind.Identifier, 'component name').text;
+          this.consume(TokenKind.Gt, '>');
+          return { type: 'id', component: componentName };
+        }
+        return { type: 'id', component: null };
+      }
       case TokenKind.TypeList:
         if (this.check(TokenKind.Lt)) {
           this.advance();
@@ -196,7 +207,7 @@ export class Parser {
           return { type: 'list', element };
         }
         // Shorthand: `list` means `list<id>`
-        return { type: 'list', element: { type: 'id' } };
+        return { type: 'list', element: { type: 'id', component: null } };
       case TokenKind.Identifier:
         return { type: 'component', name: token.text };
       default:
@@ -259,7 +270,7 @@ export class Parser {
     } else {
       // Legacy syntax: bare paramName, type defaults to id
       paramName = this.consume(TokenKind.Identifier, 'event parameter name').text;
-      paramType = { type: 'id' };
+      paramType = { type: 'id', component: null };
     }
 
     const paramEnd = this.tokens[this.pos - 1]?.span.end ?? paramStart;
@@ -277,17 +288,6 @@ export class Parser {
       condition = this.parseExpression();
     }
     
-    // Optional priority
-    let priority: number | null = null;
-    if (this.check(TokenKind.LBracket)) {
-      this.advance();
-      this.consume(TokenKind.Identifier, 'priority');
-      this.consume(TokenKind.Colon, ':');
-      const priorityToken = this.consume(TokenKind.IntegerLiteral, 'priority value');
-      priority = parseInt(priorityToken.text, 10);
-      this.consume(TokenKind.RBracket, ']');
-    }
-    
     const body = this.parseBlock();
     
     return {
@@ -296,7 +296,6 @@ export class Parser {
       triggerEvent,
       eventParam,
       condition,
-      priority,
       body,
       span: { start, end: body.span.end },
     };
@@ -1197,11 +1196,10 @@ export class Parser {
         };
       
       case TokenKind.FloatLiteral:
-        return {
-          type: 'literal',
-          value: { type: 'float', value: parseFloat(token.text) },
-          span: token.span,
-        };
+        throw new ParseError(
+          token.span.start,
+          `Float literals are not supported. Use decimal literals with the 'd' suffix (e.g., ${token.text}d)`
+        );
       
       case TokenKind.DecimalLiteral:
         return {

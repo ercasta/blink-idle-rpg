@@ -56,14 +56,21 @@ describe('Parser', () => {
           str: string
           bool: boolean
           int: integer
-          flt: float
           dec: decimal
           num: number
           eid: id
         }
       `);
       const component = ast.items[0] as AST.ComponentDef;
-      expect(component.fields).toHaveLength(7);
+      expect(component.fields).toHaveLength(6);
+    });
+
+    it('should reject float type with a parse error', () => {
+      expect(() => parseSource(`
+        component Bad {
+          speed: float
+        }
+      `)).toThrow(ParseError);
     });
   });
 
@@ -108,15 +115,23 @@ describe('Parser', () => {
       expect(rule.eventParam.name).toBe('atk');
     });
 
-    it('should parse rule with priority', () => {
-      const ast = parseSource(`
+    it('should reject rule priority with a parse error', () => {
+      expect(() => parseSource(`
         rule attack on DoAttack(atk: id) [priority: 100] {
           let target: id = atk.target
           target.Health.current -= 10
         }
+      `)).toThrow(ParseError);
+    });
+
+    it('should parse rule with typed id reference', () => {
+      const ast = parseSource(`
+        rule attack on DoAttack(atk: id) {
+          let target: id<Health> = atk.target
+          target.Health.current -= 10
+        }
       `);
       const rule = ast.items[0] as AST.RuleDef;
-      expect(rule.priority).toBe(100);
       expect(rule.eventParam.name).toBe('atk');
     });
   });
@@ -339,7 +354,7 @@ describe('Parser', () => {
     it('should parse schedule with delay', () => {
       const ast = parseSource(`
         rule test on Test(t: id) {
-          schedule [delay: 2.0] DoAttack { source: entity }
+          schedule [delay: 2.0d] DoAttack { source: entity }
         }
       `);
       const rule = ast.items[0] as AST.RuleDef;
@@ -350,7 +365,7 @@ describe('Parser', () => {
     it('should parse recurring schedule', () => {
       const ast = parseSource(`
         rule test on Test(t: id) {
-          schedule recurring [interval: 1.0] Tick { }
+          schedule recurring [interval: 1.0d] Tick { }
         }
       `);
       const rule = ast.items[0] as AST.RuleDef;
@@ -620,7 +635,7 @@ describe('Parser', () => {
 
         component Combat {
           damage: integer
-          attackSpeed: float
+          attackSpeed: decimal
         }
 
         rule attack on DoAttack atk {
@@ -629,7 +644,7 @@ describe('Parser', () => {
             let damage = source.Combat.damage
             let target = source.Target.entity
             target.Health.current -= damage
-            schedule [delay: 1.0] DoAttack {
+            schedule [delay: 1.0d] DoAttack {
               source: source
             }
           }

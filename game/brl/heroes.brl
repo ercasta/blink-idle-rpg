@@ -43,8 +43,8 @@ fn select_attack_target(character: id, enemies: list): id {
                 priority = priority + 50
             }
             priority = priority + enemy.Combat.damage
-            let hp_pct: float = enemy.Health.current / enemy.Health.max
-            if hp_pct < 0.3 {
+            let hp_pct: decimal = enemy.Health.current / enemy.Health.max
+            if hp_pct < 0.3d {
                 priority = priority + 100
             }
             if priority > highestPriority {
@@ -55,9 +55,9 @@ fn select_attack_target(character: id, enemies: list): id {
         return target
     }
     if character.Character.class == "Cleric" {
-        let lowestThreat: float = 999999
+        let lowestThreat: decimal = 999999
         for enemy in enemies {
-            let threat: float = enemy.Combat.damage * (enemy.Health.current / enemy.Health.max)
+            let threat: decimal = enemy.Combat.damage * (enemy.Health.current / enemy.Health.max)
             if threat < lowestThreat {
                 target = enemy
                 lowestThreat = threat
@@ -71,8 +71,8 @@ fn select_attack_target(character: id, enemies: list): id {
 // Select the best combat skill based on the character's class and battle state
 fn select_combat_skill(character: id, allies: list, enemies: list): string {
     if character.Character.class == "Warrior" {
-        let hp_pct: float = character.Health.current / character.Health.max
-        if hp_pct < 0.25 {
+        let hp_pct: decimal = character.Health.current / character.Health.max
+        if hp_pct < 0.25d {
             if character.Skills.skill3 == "defensive_stance" {
                 return "defensive_stance"
             }
@@ -82,8 +82,8 @@ fn select_combat_skill(character: id, allies: list, enemies: list): string {
         }
         if character.Skills.skill4 != "" {
             for enemy in enemies {
-                let enemy_hp_pct: float = enemy.Health.current / enemy.Health.max
-                if enemy_hp_pct < 0.2 {
+                let enemy_hp_pct: decimal = enemy.Health.current / enemy.Health.max
+                if enemy_hp_pct < 0.2d {
                     return "execute"
                 }
             }
@@ -99,9 +99,9 @@ fn select_combat_skill(character: id, allies: list, enemies: list): string {
         return "basic_attack"
     }
     if character.Character.class == "Mage" {
-        let hp_pct: float = character.Health.current / character.Health.max
-        let mana_pct: float = character.Mana.current / character.Mana.max
-        if hp_pct < 0.3 && mana_pct > 0.5 {
+        let hp_pct: decimal = character.Health.current / character.Health.max
+        let mana_pct: decimal = character.Mana.current / character.Mana.max
+        if hp_pct < 0.3d && mana_pct > 0.5d {
             if character.Skills.skill3 == "mana_shield" {
                 return "mana_shield"
             }
@@ -116,7 +116,7 @@ fn select_combat_skill(character: id, allies: list, enemies: list): string {
                 return "blizzard"
             }
         }
-        if mana_pct > 0.6 {
+        if mana_pct > 0.6d {
             if character.Mana.current >= 50 && character.Skills.skill3 == "pyroblast" {
                 return "pyroblast"
             }
@@ -124,7 +124,7 @@ fn select_combat_skill(character: id, allies: list, enemies: list): string {
                 return "fireball"
             }
         }
-        if mana_pct > 0.3 && character.Mana.current >= 15 {
+        if mana_pct > 0.3d && character.Mana.current >= 15 {
             if character.Skills.skill2 == "ice_shard" {
                 return "ice_shard"
             }
@@ -135,8 +135,8 @@ fn select_combat_skill(character: id, allies: list, enemies: list): string {
         return "basic_attack"
     }
     if character.Character.class == "Rogue" {
-        let hp_pct: float = character.Health.current / character.Health.max
-        if hp_pct < 0.25 {
+        let hp_pct: decimal = character.Health.current / character.Health.max
+        if hp_pct < 0.25d {
             if character.Skills.skill3 == "evasion" {
                 return "evasion"
             }
@@ -146,8 +146,8 @@ fn select_combat_skill(character: id, allies: list, enemies: list): string {
         }
         if character.Skills.skill4 == "assassinate" {
             for enemy in enemies {
-                let enemy_hp_pct: float = enemy.Health.current / enemy.Health.max
-                if enemy_hp_pct < 0.15 {
+                let enemy_hp_pct: decimal = enemy.Health.current / enemy.Health.max
+                if enemy_hp_pct < 0.15d {
                     return "assassinate"
                 }
             }
@@ -177,8 +177,8 @@ fn select_combat_skill(character: id, allies: list, enemies: list): string {
         return "basic_attack"
     }
     if character.Character.class == "Cleric" {
-        let hp_pct: float = character.Health.current / character.Health.max
-        let mana_pct: float = character.Mana.current / character.Mana.max
+        let hp_pct: decimal = character.Health.current / character.Health.max
+        let mana_pct: decimal = character.Mana.current / character.Mana.max
         for ally in allies {
             if ally.Health.current <= 0 {
                 if character.Mana.current >= 100 && character.Skills.skill4 == "resurrection" {
@@ -186,15 +186,15 @@ fn select_combat_skill(character: id, allies: list, enemies: list): string {
                 }
             }
         }
-        if hp_pct < 0.25 && character.Mana.current >= 15 {
+        if hp_pct < 0.25d && character.Mana.current >= 15 {
             if character.Skills.skill1 == "heal" {
                 return "heal"
             }
         }
         let injuredCount: integer = 0
         for ally in allies {
-            let ally_hp_pct: float = ally.Health.current / ally.Health.max
-            if ally_hp_pct < 0.6 {
+            let ally_hp_pct: decimal = ally.Health.current / ally.Health.max
+            if ally_hp_pct < 0.6d {
                 injuredCount = injuredCount + 1
             }
         }
@@ -204,8 +204,8 @@ fn select_combat_skill(character: id, allies: list, enemies: list): string {
             }
         }
         for ally in allies {
-            let ally_hp_pct: float = ally.Health.current / ally.Health.max
-            if ally_hp_pct < 0.3 && character.Mana.current >= 15 {
+            let ally_hp_pct: decimal = ally.Health.current / ally.Health.max
+            if ally_hp_pct < 0.3d && character.Mana.current >= 15 {
                 if character.Skills.skill1 == "heal" {
                     return "heal"
                 }
@@ -213,8 +213,8 @@ fn select_combat_skill(character: id, allies: list, enemies: list): string {
         }
         for ally in allies {
             if ally.Character.class == "Warrior" {
-                let ally_hp_pct: float = ally.Health.current / ally.Health.max
-                if ally_hp_pct < 0.5 && character.Mana.current >= 25 {
+                let ally_hp_pct: decimal = ally.Health.current / ally.Health.max
+                if ally_hp_pct < 0.5d && character.Mana.current >= 25 {
                     if character.Skills.skill3 == "holy_shield" {
                         return "holy_shield"
                     }
@@ -361,9 +361,9 @@ entity {
     Combat {
         damage: 18
         defense: 10
-        attackSpeed: 0.8
-        critChance: 0.1
-        critMultiplier: 1.5
+        attackSpeed: 0.8d
+        critChance: 0.1d
+        critMultiplier: 1.5d
     }
     Team {
         id: "player"
@@ -421,9 +421,9 @@ entity {
     Combat {
         damage: 15
         defense: 12
-        attackSpeed: 0.7
-        critChance: 0.05
-        critMultiplier: 1.5
+        attackSpeed: 0.7d
+        critChance: 0.05d
+        critMultiplier: 1.5d
     }
     Team {
         id: "player"
@@ -481,9 +481,9 @@ entity {
     Combat {
         damage: 20
         defense: 8
-        attackSpeed: 1.0
-        critChance: 0.1
-        critMultiplier: 1.5
+        attackSpeed: 1.0d
+        critChance: 0.1d
+        critMultiplier: 1.5d
     }
     Team {
         id: "player"
@@ -541,9 +541,9 @@ entity {
     Combat {
         damage: 28
         defense: 11
-        attackSpeed: 0.5
-        critChance: 0.1
-        critMultiplier: 1.5
+        attackSpeed: 0.5d
+        critChance: 0.1d
+        critMultiplier: 1.5d
     }
     Team {
         id: "player"
@@ -601,9 +601,9 @@ entity {
     Combat {
         damage: 24
         defense: 6
-        attackSpeed: 1.3
-        critChance: 0.15
-        critMultiplier: 1.5
+        attackSpeed: 1.3d
+        critChance: 0.15d
+        critMultiplier: 1.5d
     }
     Team {
         id: "player"
@@ -665,9 +665,9 @@ entity {
     Combat {
         damage: 25
         defense: 4
-        attackSpeed: 0.6
-        critChance: 0.1
-        critMultiplier: 2.0
+        attackSpeed: 0.6d
+        critChance: 0.1d
+        critMultiplier: 2.0d
     }
     Team {
         id: "player"
@@ -725,9 +725,9 @@ entity {
     Combat {
         damage: 30
         defense: 3
-        attackSpeed: 0.5
-        critChance: 0.15
-        critMultiplier: 2.0
+        attackSpeed: 0.5d
+        critChance: 0.15d
+        critMultiplier: 2.0d
     }
     Team {
         id: "player"
@@ -785,9 +785,9 @@ entity {
     Combat {
         damage: 22
         defense: 6
-        attackSpeed: 0.7
-        critChance: 0.1
-        critMultiplier: 2.0
+        attackSpeed: 0.7d
+        critChance: 0.1d
+        critMultiplier: 2.0d
     }
     Team {
         id: "player"
@@ -845,9 +845,9 @@ entity {
     Combat {
         damage: 20
         defense: 4
-        attackSpeed: 0.9
-        critChance: 0.1
-        critMultiplier: 2.0
+        attackSpeed: 0.9d
+        critChance: 0.1d
+        critMultiplier: 2.0d
     }
     Team {
         id: "player"
@@ -905,9 +905,9 @@ entity {
     Combat {
         damage: 23
         defense: 5
-        attackSpeed: 0.6
-        critChance: 0.1
-        critMultiplier: 2.0
+        attackSpeed: 0.6d
+        critChance: 0.1d
+        critMultiplier: 2.0d
     }
     Team {
         id: "player"
@@ -969,9 +969,9 @@ entity {
     Combat {
         damage: 22
         defense: 6
-        attackSpeed: 1.4
-        critChance: 0.25
-        critMultiplier: 2.5
+        attackSpeed: 1.4d
+        critChance: 0.25d
+        critMultiplier: 2.5d
     }
     Team {
         id: "player"
@@ -1029,9 +1029,9 @@ entity {
     Combat {
         damage: 19
         defense: 5
-        attackSpeed: 1.3
-        critChance: 0.2
-        critMultiplier: 2.5
+        attackSpeed: 1.3d
+        critChance: 0.2d
+        critMultiplier: 2.5d
     }
     Team {
         id: "player"
@@ -1089,9 +1089,9 @@ entity {
     Combat {
         damage: 21
         defense: 7
-        attackSpeed: 1.2
-        critChance: 0.2
-        critMultiplier: 2.5
+        attackSpeed: 1.2d
+        critChance: 0.2d
+        critMultiplier: 2.5d
     }
     Team {
         id: "player"
@@ -1149,9 +1149,9 @@ entity {
     Combat {
         damage: 25
         defense: 4
-        attackSpeed: 1.6
-        critChance: 0.3
-        critMultiplier: 2.5
+        attackSpeed: 1.6d
+        critChance: 0.3d
+        critMultiplier: 2.5d
     }
     Team {
         id: "player"
@@ -1209,9 +1209,9 @@ entity {
     Combat {
         damage: 26
         defense: 6
-        attackSpeed: 1.0
-        critChance: 0.2
-        critMultiplier: 2.5
+        attackSpeed: 1.0d
+        critChance: 0.2d
+        critMultiplier: 2.5d
     }
     Team {
         id: "player"
@@ -1273,9 +1273,9 @@ entity {
     Combat {
         damage: 12
         defense: 8
-        attackSpeed: 0.7
-        critChance: 0.05
-        critMultiplier: 1.5
+        attackSpeed: 0.7d
+        critChance: 0.05d
+        critMultiplier: 1.5d
     }
     Team {
         id: "player"
@@ -1333,9 +1333,9 @@ entity {
     Combat {
         damage: 10
         defense: 7
-        attackSpeed: 0.6
-        critChance: 0.05
-        critMultiplier: 1.5
+        attackSpeed: 0.6d
+        critChance: 0.05d
+        critMultiplier: 1.5d
     }
     Team {
         id: "player"
@@ -1393,9 +1393,9 @@ entity {
     Combat {
         damage: 18
         defense: 8
-        attackSpeed: 0.8
-        critChance: 0.1
-        critMultiplier: 1.5
+        attackSpeed: 0.8d
+        critChance: 0.1d
+        critMultiplier: 1.5d
     }
     Team {
         id: "player"
@@ -1453,9 +1453,9 @@ entity {
     Combat {
         damage: 11
         defense: 10
-        attackSpeed: 0.7
-        critChance: 0.05
-        critMultiplier: 1.5
+        attackSpeed: 0.7d
+        critChance: 0.05d
+        critMultiplier: 1.5d
     }
     Team {
         id: "player"
@@ -1513,9 +1513,9 @@ entity {
     Combat {
         damage: 12
         defense: 7
-        attackSpeed: 0.7
-        critChance: 0.05
-        critMultiplier: 1.5
+        attackSpeed: 0.7d
+        critChance: 0.05d
+        critMultiplier: 1.5d
     }
     Team {
         id: "player"
@@ -1577,9 +1577,9 @@ entity {
     Combat {
         damage: 20
         defense: 5
-        attackSpeed: 1.2
-        critChance: 0.15
-        critMultiplier: 2.0
+        attackSpeed: 1.2d
+        critChance: 0.15d
+        critMultiplier: 2.0d
     }
     Team {
         id: "player"
@@ -1637,9 +1637,9 @@ entity {
     Combat {
         damage: 22
         defense: 6
-        attackSpeed: 1.1
-        critChance: 0.15
-        critMultiplier: 2.0
+        attackSpeed: 1.1d
+        critChance: 0.15d
+        critMultiplier: 2.0d
     }
     Team {
         id: "player"
@@ -1697,9 +1697,9 @@ entity {
     Combat {
         damage: 18
         defense: 5
-        attackSpeed: 1.5
-        critChance: 0.15
-        critMultiplier: 2.0
+        attackSpeed: 1.5d
+        critChance: 0.15d
+        critMultiplier: 2.0d
     }
     Team {
         id: "player"
@@ -1757,9 +1757,9 @@ entity {
     Combat {
         damage: 28
         defense: 5
-        attackSpeed: 0.8
-        critChance: 0.2
-        critMultiplier: 2.5
+        attackSpeed: 0.8d
+        critChance: 0.2d
+        critMultiplier: 2.5d
     }
     Team {
         id: "player"
@@ -1817,9 +1817,9 @@ entity {
     Combat {
         damage: 19
         defense: 6
-        attackSpeed: 1.0
-        critChance: 0.15
-        critMultiplier: 2.0
+        attackSpeed: 1.0d
+        critChance: 0.15d
+        critMultiplier: 2.0d
     }
     Team {
         id: "player"
@@ -1881,9 +1881,9 @@ entity {
     Combat {
         damage: 16
         defense: 9
-        attackSpeed: 0.9
-        critChance: 0.1
-        critMultiplier: 1.5
+        attackSpeed: 0.9d
+        critChance: 0.1d
+        critMultiplier: 1.5d
     }
     Team {
         id: "player"
@@ -1941,9 +1941,9 @@ entity {
     Combat {
         damage: 20
         defense: 9
-        attackSpeed: 0.9
-        critChance: 0.1
-        critMultiplier: 1.5
+        attackSpeed: 0.9d
+        critChance: 0.1d
+        critMultiplier: 1.5d
     }
     Team {
         id: "player"
@@ -2001,9 +2001,9 @@ entity {
     Combat {
         damage: 14
         defense: 11
-        attackSpeed: 0.8
-        critChance: 0.1
-        critMultiplier: 1.5
+        attackSpeed: 0.8d
+        critChance: 0.1d
+        critMultiplier: 1.5d
     }
     Team {
         id: "player"
@@ -2061,9 +2061,9 @@ entity {
     Combat {
         damage: 22
         defense: 7
-        attackSpeed: 1.0
-        critChance: 0.15
-        critMultiplier: 1.5
+        attackSpeed: 1.0d
+        critChance: 0.15d
+        critMultiplier: 1.5d
     }
     Team {
         id: "player"
@@ -2121,9 +2121,9 @@ entity {
     Combat {
         damage: 17
         defense: 9
-        attackSpeed: 0.9
-        critChance: 0.1
-        critMultiplier: 1.5
+        attackSpeed: 0.9d
+        critChance: 0.1d
+        critMultiplier: 1.5d
     }
     Team {
         id: "player"
