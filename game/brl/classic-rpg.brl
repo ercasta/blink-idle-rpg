@@ -251,21 +251,26 @@ rule initialize_hero_attacks on GameStart(gs: id) {
         let heroes: list = entities having Team
         for hero in heroes {
             if hero.Team.isPlayer && hero.Health.current > 0 {
-                // Stagger attacks by 0.1s per hero to avoid perfect synchronization
-                schedule [delay: 0.1d] DoAttack {
-                    source: hero
-                }
-                // Start mana regeneration for each hero
-                schedule [delay: 1.0d] ManaRegen {
-                    source: hero
-                }
-                // Start periodic skill usage for each hero
-                schedule [delay: 2.0d] TryUseSkill {
-                    source: hero
-                }
-                // Start health regeneration for each hero
-                schedule [delay: 3.0d] HealthRegen {
-                    source: hero
+                // Skip template heroes (from the hero compendium)
+                if hero has HeroTemplate {
+                    // Template heroes are UI-only data, not active combat participants
+                } else {
+                    // Stagger attacks by 0.1s per hero to avoid perfect synchronization
+                    schedule [delay: 0.1d] DoAttack {
+                        source: hero
+                    }
+                    // Start mana regeneration for each hero
+                    schedule [delay: 1.0d] ManaRegen {
+                        source: hero
+                    }
+                    // Start periodic skill usage for each hero
+                    schedule [delay: 2.0d] TryUseSkill {
+                        source: hero
+                    }
+                    // Start health regeneration for each hero
+                    schedule [delay: 3.0d] HealthRegen {
+                        source: hero
+                    }
                 }
             }
         }
@@ -418,10 +423,14 @@ let newBoss: id = clone bossTemplate {
 rule attack_rule on DoAttack(da: id) {
     if entity has GameState {
 let attacker: id = da.source
+        // Guard: attacker might have been despawned or be a template entity
+        if attacker has Health {
+        if attacker has Target {
         if attacker.Health.current > 0 {
             // Only deal damage if we have a living target
             if attacker.Target.entity != null {
 let target: id = attacker.Target.entity
+                if target has Health {
                 if target.Health.current > 0 {
 let rawDamage: integer = attacker.Combat.damage + attacker.Buffs.damageBonus
 let effectiveDefense: integer = target.Combat.defense + target.Buffs.defenseBonus
@@ -446,9 +455,9 @@ let damage: integer = max(1, rawDamage - effectiveDefense)
                         target: target
                     }
                 }
+                }
             }
             // Always schedule the next attack for living attackers
-            // so the loop never depends on FindNewTarget to restart it
 let attackSpeedTotal: decimal = attacker.Combat.attackSpeed + attacker.Buffs.hasteBonus
             if attackSpeedTotal <= 0 {
                 attackSpeedTotal = 0.1d
@@ -458,6 +467,8 @@ let delay: decimal = 1 / attackSpeedTotal
                 source: attacker
             }
         }
+        }
+        }
     }
 }
 
@@ -465,10 +476,12 @@ let delay: decimal = 1 / attackSpeedTotal
 rule death_check on AfterAttack(aa: id) {
     if entity has GameState {
 let target: id = aa.target
+        if target has Health {
         if target.Health.current <= 0 {
             schedule Death {
                 target: target
             }
+        }
         }
     }
 }
@@ -574,14 +587,16 @@ let character: id = clu.source
     }
 }
 
-// Level up stat increases
+// Level up stat increases (generous to keep pace with enemy scaling)
 rule level_up_stats on LevelUp(lu: id) {
     if entity has GameState {
 let character: id = lu.source
-        character.Health.max += 10
-        character.Health.current += 10
-        character.Combat.damage += 2
-        character.Combat.defense += 1
+        character.Health.max += 20
+        character.Health.current += 20
+        character.Combat.damage += 4
+        character.Combat.defense += 2
+        character.Mana.max += 10
+        character.Mana.current += 10
     }
 }
 

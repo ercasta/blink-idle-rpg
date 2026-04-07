@@ -165,14 +165,34 @@ impl World {
     }
 
     /// Get a reference to a component on an entity.
-    /// Panics if the entity doesn't have the component.
-    pub fn get<C: Clone + 'static>(&self, id: EntityId) -> &C {
+    /// Returns a default value if the entity doesn't have the component or is not alive.
+    /// This is safe for BRL-generated code where event references may point to
+    /// despawned entities (e.g. a DoAttack event for a killed enemy).
+    pub fn get<C: Clone + Default + 'static>(&self, id: EntityId) -> &C {
+        static DEFAULT_STORAGE: std::sync::OnceLock<std::sync::Mutex<Vec<Box<dyn std::any::Any + Send + Sync>>>> = std::sync::OnceLock::new();
         let type_id = std::any::TypeId::of::<C>();
-        self.storages
+        if let Some(result) = self.storages
             .get(&type_id)
             .and_then(|s| s.as_any().downcast_ref::<TypedStorage<C>>())
             .and_then(|s| s.get(id))
-            .unwrap_or_else(|| panic!("Entity {} does not have component", id))
+        {
+            return result;
+        }
+        // Entity doesn't have the component - return a thread-local default
+        // This avoids panicking when BRL rules reference despawned entities
+        thread_local! {
+            static DEFAULTS: std::cell::RefCell<std::collections::HashMap<std::any::TypeId, *const u8>> = std::cell::RefCell::new(std::collections::HashMap::new());
+        }
+        // Leak a default value to get a stable &C reference
+        // This is fine since it's per-type and happens at most once per type
+        DEFAULTS.with(|defaults| {
+            let mut map = defaults.borrow_mut();
+            let ptr = map.entry(type_id).or_insert_with(|| {
+                let boxed = Box::new(C::default());
+                Box::into_raw(boxed) as *const u8
+            });
+            unsafe { &*(*ptr as *const C) }
+        })
     }
 
     /// Get a mutable reference to a component on an entity.
@@ -183,7 +203,7 @@ impl World {
             .get_mut(&type_id)
             .and_then(|s| s.as_any_mut().downcast_mut::<TypedStorage<C>>())
             .and_then(|s| s.get_mut(id))
-            .unwrap_or_else(|| panic!("Entity {} does not have component", id))
+            .unwrap_or_else(|| panic!("Entity {} does not have component for mutation", id))
     }
 
     /// Try to get a reference to a component (returns None if not present).

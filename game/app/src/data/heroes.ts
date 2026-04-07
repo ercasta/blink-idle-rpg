@@ -64,8 +64,6 @@ export const HEROES: HeroDefinition[] = [
 
 // ── Random hero generation ──────────────────────────────────────────────────
 
-const HERO_CLASSES: HeroClass[] = ['Warrior', 'Mage', 'Ranger', 'Paladin', 'Rogue', 'Cleric'];
-
 const CLASS_EMOJIS: Record<HeroClass, string> = {
   Warrior: '⚔️', Mage: '🧙', Ranger: '🏹', Paladin: '🛡️', Rogue: '🗡️', Cleric: '🙏',
 };

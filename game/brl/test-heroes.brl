@@ -63,6 +63,12 @@ aldric = new entity {
         shieldAmount: 0
         regenAmount: 0
     }
+    SkillCooldown {
+        skill1Cooldown: 0.0d
+        skill2Cooldown: 0.0d
+        skill3Cooldown: 0.0d
+        skill4Cooldown: 0.0d
+    }
 }
 
 // Mage hero — "Lyra"
@@ -117,5 +123,11 @@ lyra = new entity {
         hasteBonus: 0.0d
         shieldAmount: 0
         regenAmount: 0
+    }
+    SkillCooldown {
+        skill1Cooldown: 0.0d
+        skill2Cooldown: 0.0d
+        skill3Cooldown: 0.0d
+        skill4Cooldown: 0.0d
     }
 }

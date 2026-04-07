@@ -811,11 +811,22 @@ export class RustCodeGenerator {
     code += '    use blink_runtime::interning::InternedString;\n\n';
 
     // Generate a constant for each known string using the already-resolved names.
+    // NOTE: The runtime StringInterner pre-reserves index 0 for "" (empty string).
+    // If "" is in our set, it gets ID 0.  All other strings start at ID 1 and are
+    // assigned in alphabetical order, matching the order they will be interned by
+    // init_string_table (which skips re-interning "" since it already exists).
     const sortedStrings = Array.from(this.allStrings).sort();
+    let nextId = 1; // IDs start at 1 for non-empty strings
     for (let i = 0; i < sortedStrings.length; i++) {
       const s = sortedStrings[i];
       const constName = this.stringConstName(s);
-      code += `    pub static ${constName}: InternedString = InternedString(${i + 1});\n`;
+      if (s === '') {
+        // Empty string is pre-reserved as ID 0 by the runtime interner
+        code += `    pub static ${constName}: InternedString = InternedString(0);\n`;
+      } else {
+        code += `    pub static ${constName}: InternedString = InternedString(${nextId});\n`;
+        nextId++;
+      }
     }
     code += '}\n\n';
 
@@ -833,7 +844,10 @@ export class RustCodeGenerator {
     // Generate the init_string_table function
     code += '/// Initialize the string intern table with all known string literals.\n';
     code += 'pub fn init_string_table(engine: &mut Engine) {\n';
+    code += '    // NOTE: "" (empty string) is pre-reserved at ID 0 by the runtime.\n';
+    code += '    // Re-interning it is harmless (returns 0) but we skip it for clarity.\n';
     for (const s of sortedStrings) {
+      if (s === '') continue; // Skip empty string — already at ID 0
       code += `    engine.interner.intern("${this.escapeRustString(s)}");\n`;
     }
     code += '}\n\n';
@@ -1077,9 +1091,18 @@ export class RustCodeGenerator {
     code += `${pad}    let mut sched_event = blink_runtime::Event::new(string_ids::${eventConstName});\n`;
 
     // Set fields — field names should already be in the string table from collectStrings()
+    // Special handling: "source" and "target" are built-in Event properties.
+    // When they appear as schedule fields, set the built-in property directly so that
+    // rule code can read them via event.source / event.target.
     for (const [fieldName, value] of stmt.fields) {
-      const fieldConst = this.stringConstName(fieldName);
-      code += `${pad}    sched_event.fields.insert(string_ids::${fieldConst}, ${this.exprToValueRust(value)});\n`;
+      if (fieldName === 'source') {
+        code += `${pad}    sched_event.source = ${this.exprToRust(value)} as EntityId;\n`;
+      } else if (fieldName === 'target') {
+        code += `${pad}    sched_event.target = ${this.exprToRust(value)} as EntityId;\n`;
+      } else {
+        const fieldConst = this.stringConstName(fieldName);
+        code += `${pad}    sched_event.fields.insert(string_ids::${fieldConst}, ${this.exprToValueRust(value)});\n`;
+      }
     }
 
     if (stmt.delay) {
