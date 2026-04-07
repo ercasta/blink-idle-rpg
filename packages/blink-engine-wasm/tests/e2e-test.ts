@@ -15,7 +15,8 @@ import { execSync } from 'child_process';
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
 const RUNTIME_PATH = path.join(REPO_ROOT, 'packages', 'blink-runtime');
-const DEMOS_PATH = path.join(REPO_ROOT, 'game', 'demos', 'brl');
+const EXAMPLES_PATH = path.join(REPO_ROOT, 'game', 'brl-tests', 'brl');
+const GAME_BRL_PATH = path.join(REPO_ROOT, 'game', 'brl');
 const GENERATED_DIR = path.join(REPO_ROOT, 'packages', 'blink-engine-wasm', 'generated');
 
 interface TestResult {
@@ -218,8 +219,9 @@ function runTest(testName: string, brlFiles: string[]): TestResult {
 
 function main() {
   console.log('=== WASM Engine End-to-End Tests ===\n');
-  console.log(`Runtime path: ${RUNTIME_PATH}`);
-  console.log(`Demos path: ${DEMOS_PATH}`);
+  console.log(`Runtime path:   ${RUNTIME_PATH}`);
+  console.log(`BRL tests path: ${EXAMPLES_PATH}`);
+  console.log(`Game BRL path:  ${GAME_BRL_PATH}`);
 
   // Clean generated directory
   if (fs.existsSync(GENERATED_DIR)) {
@@ -229,19 +231,42 @@ function main() {
 
   const results: TestResult[] = [];
 
-  // Test 1: Counter demo
+  // ── Engine pipeline validation tests (small standalone BRL programs) ──
+
+  // Test 1: Counter — verifies scheduling and component field updates
   results.push(
-    runTest('counter', [path.join(DEMOS_PATH, 'counter.brl')])
+    runTest('counter', [path.join(EXAMPLES_PATH, 'counter.brl')])
   );
 
-  // Test 2: Combat demo
+  // Test 2: Combat — verifies entity queries, targeting, damage, conditionals
   results.push(
-    runTest('combat', [path.join(DEMOS_PATH, 'combat.brl')])
+    runTest('combat', [path.join(EXAMPLES_PATH, 'combat.brl')])
   );
 
-  // Test 3: Functions demo
+  // Test 3: Functions — verifies user-defined functions and builtins
   results.push(
-    runTest('functions', [path.join(DEMOS_PATH, 'functions.brl')])
+    runTest('functions', [path.join(EXAMPLES_PATH, 'functions.brl')])
+  );
+
+  // ── Full game BRL test ─────────────────────────────────────────────────
+  // Compiles the complete game rule set with a normal-difficulty scenario and
+  // two test heroes (Warrior + Mage).  Validates the entire pipeline from
+  // source BRL through to a working simulation binary.
+  //
+  // Files compiled (in order):
+  //   heroes.brl          — hero AI functions (select_attack_target, etc.)
+  //   enemies.brl         — enemy template entities (Goblin Scout … Dragon Lord Vexar)
+  //   scenario-normal.brl — game state, spawn config, flee config (normal difficulty)
+  //   classic-rpg.brl     — all game rules (combat, levelling, scoring, fleeing …)
+  //   test-heroes.brl     — two hero entities (Aldric/Warrior, Lyra/Mage) for testing
+  results.push(
+    runTest('classic_rpg', [
+      path.join(GAME_BRL_PATH, 'heroes.brl'),
+      path.join(GAME_BRL_PATH, 'enemies.brl'),
+      path.join(GAME_BRL_PATH, 'scenario-normal.brl'),
+      path.join(GAME_BRL_PATH, 'classic-rpg.brl'),
+      path.join(GAME_BRL_PATH, 'test-heroes.brl'),
+    ])
   );
 
   // Print summary

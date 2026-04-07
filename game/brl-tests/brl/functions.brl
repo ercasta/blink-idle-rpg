@@ -1,5 +1,5 @@
 // =============================================================================
-// FUNCTIONS DEMO - Tests user-defined functions and builtins
+// FUNCTIONS - Tests user-defined functions and builtins
 // =============================================================================
 
 component Stats {
@@ -42,7 +42,7 @@ stats_entity = new entity {
 }
 
 rule on GameStart(gs: id) {
-    schedule [delay: 0.0] ComputeDamage {}
+    schedule [delay: 0.0d] ComputeDamage {}
 }
 
 rule on ComputeDamage(cd: id) {
