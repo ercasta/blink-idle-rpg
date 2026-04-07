@@ -119,9 +119,9 @@ component GameState {
 // Progress tracking for the N-step checkpoint system
 // Fires ProgressCheckpoint events at defined intervals so the UI can
 // replay game progress at one update per second.
-// N = 30 checkpoints, one per 10 enemies defeated.
+// N = 30 checkpoints, one per 100 enemies defeated (3000 total encounters).
 component ProgressTracker {
-    checkpointInterval: integer    // enemies defeated per checkpoint (default: 10)
+    checkpointInterval: integer    // enemies defeated per checkpoint (default: 100)
     checkpointsReached: integer    // number of checkpoints fired so far
     totalCheckpoints: integer      // total N checkpoints expected (default: 30)
 }
@@ -245,7 +245,7 @@ fn calculate_exp_for_level(level: decimal): decimal {
 // GAME INITIALIZATION RULES
 // ============================================================================
 
-// Rule 1: Start hero attacks when game begins
+// Rule 1: Start hero attacks, mana regen, and skill usage when game begins
 rule initialize_hero_attacks on GameStart(gs: id) {
     if entity has GameState {
         let heroes: list = entities having Team
@@ -253,6 +253,18 @@ rule initialize_hero_attacks on GameStart(gs: id) {
             if hero.Team.isPlayer && hero.Health.current > 0 {
                 // Stagger attacks by 0.1s per hero to avoid perfect synchronization
                 schedule [delay: 0.1d] DoAttack {
+                    source: hero
+                }
+                // Start mana regeneration for each hero
+                schedule [delay: 1.0d] ManaRegen {
+                    source: hero
+                }
+                // Start periodic skill usage for each hero
+                schedule [delay: 2.0d] TryUseSkill {
+                    source: hero
+                }
+                // Start health regeneration for each hero
+                schedule [delay: 3.0d] HealthRegen {
                     source: hero
                 }
             }
@@ -400,7 +412,7 @@ let newBoss: id = clone bossTemplate {
 // COMBAT RULES
 // ============================================================================
 
-// Main attack rule: apply damage and schedule next attack
+// Main attack rule: apply damage (reduced by target defense) and schedule next attack
 // The attack loop always reschedules while the attacker is alive,
 // so FindNewTarget does NOT need to create an extra DoAttack.
 rule attack_rule on DoAttack(da: id) {
@@ -411,7 +423,23 @@ let attacker: id = da.source
             if attacker.Target.entity != null {
 let target: id = attacker.Target.entity
                 if target.Health.current > 0 {
-let damage: id = attacker.Combat.damage + attacker.Buffs.damageBonus
+let rawDamage: integer = attacker.Combat.damage + attacker.Buffs.damageBonus
+let effectiveDefense: integer = target.Combat.defense + target.Buffs.defenseBonus
+let damage: integer = max(1, rawDamage - effectiveDefense)
+                    // Apply critical hit
+                    if random() < attacker.Combat.critChance {
+                        damage = floor(damage * attacker.Combat.critMultiplier)
+                    }
+                    // Apply shield absorption
+                    if target.Buffs.shieldAmount > 0 {
+                        if target.Buffs.shieldAmount >= damage {
+                            target.Buffs.shieldAmount -= damage
+                            damage = 0
+                        } else {
+                            damage -= target.Buffs.shieldAmount
+                            target.Buffs.shieldAmount = 0
+                        }
+                    }
                     target.Health.current -= damage
                     schedule AfterAttack {
                         attacker: attacker
@@ -477,12 +505,12 @@ let players: list = entities having Team
     }
 }
 
-// When a player is defeated, schedule a respawn after 120 seconds
+// When a player is defeated, schedule a respawn after 10 seconds
 rule respawn_on_player_defeated on PlayerDefeated(pd: id) {
     if entity has GameState {
-        // Schedule respawn for the dead player after 120s unless victory
+        // Schedule respawn for the dead player after 10s unless victory
         if entity.GameState.gameOver == false {
-            schedule [delay: 120.0d] RespawnPlayer {
+            schedule [delay: 10.0d] RespawnPlayer {
                 player: pd.player
             }
         }
@@ -592,7 +620,7 @@ rule spawn_replacement_enemy on EnemyDefeated(ed: id) {
         // Don't spawn new enemies if Lord Vexar has been defeated
 let vexarDefeated: list = entities having LordVexarDefeated
         if len(vexarDefeated) == 0 {
-            if entity.GameState.enemiesDefeated < 1000 {
+            if entity.GameState.enemiesDefeated < 3000 {
                 if entity.GameState.gameOver == false {
                     if entity.GameState.bossSpawned == false {
 let currentTier: integer = entity.GameState.currentTier
@@ -606,44 +634,647 @@ let currentTier: integer = entity.GameState.currentTier
     }
 }
 
-// Power strike skill
+// ============================================================================
+// SKILL SYSTEM — Periodic skill usage and class-specific abilities
+// ============================================================================
+
+// TryUseSkill: periodic skill usage for heroes (every 3–5 seconds)
+// Each hero attempts to use their best available skill based on class and situation.
+rule try_use_skill on TryUseSkill(tus: id) {
+    if entity has GameState {
+let character: id = tus.source
+        if character.Health.current > 0 {
+            // Try each skill slot in priority order (skill1 is highest priority)
+            if character.SkillCooldown.skill1Cooldown <= 0 {
+                schedule UseSkill {
+                    source: character
+                    skillSlot: 1
+                }
+            } else {
+                if character.SkillCooldown.skill2Cooldown <= 0 {
+                    schedule UseSkill {
+                        source: character
+                        skillSlot: 2
+                    }
+                } else {
+                    if character.SkillCooldown.skill3Cooldown <= 0 {
+                        schedule UseSkill {
+                            source: character
+                            skillSlot: 3
+                        }
+                    } else {
+                        if character.SkillCooldown.skill4Cooldown <= 0 {
+                            schedule UseSkill {
+                                source: character
+                                skillSlot: 4
+                            }
+                        }
+                    }
+                }
+            }
+            // Reschedule skill usage check
+            schedule [delay: 3.0d] TryUseSkill {
+                source: character
+            }
+        }
+    }
+}
+
+// Tick down cooldowns over time (approximate via TryUseSkill interval)
+rule tick_cooldowns on TryUseSkill(tus: id) {
+    if entity has GameState {
+let character: id = tus.source
+        if character.SkillCooldown.skill1Cooldown > 0 {
+            character.SkillCooldown.skill1Cooldown -= 3.0d
+        }
+        if character.SkillCooldown.skill2Cooldown > 0 {
+            character.SkillCooldown.skill2Cooldown -= 3.0d
+        }
+        if character.SkillCooldown.skill3Cooldown > 0 {
+            character.SkillCooldown.skill3Cooldown -= 3.0d
+        }
+        if character.SkillCooldown.skill4Cooldown > 0 {
+            character.SkillCooldown.skill4Cooldown -= 3.0d
+        }
+    }
+}
+
+// ── WARRIOR SKILLS ──────────────────────────────────────────────────────────
+
+// Power Strike (Warrior skill1): heavy hit, +50% damage bonus for 6 seconds, 8s cooldown
 rule use_skill_power_strike on UseSkill(us: id) {
     if entity has GameState {
 let character: id = us.source
-        if character.Skills.skill1 == "power_strike" {
-            character.Buffs.damageBonus += 5
+        if character.Skills.skill1 == "power_strike" && us.skillSlot == 1 {
+            character.Buffs.damageBonus += character.Combat.damage / 2
+            character.SkillCooldown.skill1Cooldown = 8.0d
+            schedule [delay: 6.0d] RemoveBuff {
+                source: character
+                buffType: "damageBonus"
+                amount: character.Combat.damage / 2
+            }
         }
     }
 }
 
-// Fireball skill
+// Shield Bash (Warrior skill2): stun-like effect via defense reduction on target, 10s cooldown
+rule use_skill_shield_bash on UseSkill(us: id) {
+    if entity has GameState {
+let character: id = us.source
+        if character.Skills.skill2 == "shield_bash" && us.skillSlot == 2 {
+            if character.Target.entity != null {
+let target: id = character.Target.entity
+                if target.Health.current > 0 {
+                    target.Buffs.defenseBonus -= 3
+                    character.SkillCooldown.skill2Cooldown = 10.0d
+                    schedule [delay: 5.0d] RemoveBuff {
+                        source: target
+                        buffType: "defenseRestore"
+                        amount: 3
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Defensive Stance (Warrior skill3): +5 defense for 8 seconds, 12s cooldown
+rule use_skill_defensive_stance on UseSkill(us: id) {
+    if entity has GameState {
+let character: id = us.source
+        if character.Skills.skill3 == "defensive_stance" && us.skillSlot == 3 {
+            character.Buffs.defenseBonus += 5
+            character.SkillCooldown.skill3Cooldown = 12.0d
+            schedule [delay: 8.0d] RemoveBuff {
+                source: character
+                buffType: "defenseBonus"
+                amount: 5
+            }
+        }
+    }
+}
+
+// Execute (Warrior skill4): massive damage to low-health target, 15s cooldown
+rule use_skill_execute on UseSkill(us: id) {
+    if entity has GameState {
+let character: id = us.source
+        if character.Skills.skill4 == "execute" && us.skillSlot == 4 {
+            if character.Target.entity != null {
+let target: id = character.Target.entity
+                if target.Health.current > 0 && target.Health.current < target.Health.max / 3 {
+                    target.Health.current -= character.Combat.damage * 2
+                    character.SkillCooldown.skill4Cooldown = 15.0d
+                    schedule AfterAttack {
+                        attacker: character
+                        target: target
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ── MAGE SKILLS ─────────────────────────────────────────────────────────────
+
+// Fireball (Mage skill1): high AoE-like damage, costs 20 mana, 6s cooldown
 rule use_skill_fireball on UseSkill(us: id) {
     if entity has GameState {
 let character: id = us.source
-        if character.Skills.skill1 == "fireball" && character.Mana.current >= 20 {
-            character.Mana.current -= 20
-            character.Buffs.damageBonus += 15
+        if character.Skills.skill1 == "fireball" && us.skillSlot == 1 {
+            if character.Mana.current >= 20 {
+                character.Mana.current -= 20
+                if character.Target.entity != null {
+let target: id = character.Target.entity
+                    if target.Health.current > 0 {
+let fireDmg: integer = character.Combat.damage + character.Stats.intelligence * 2
+                        target.Health.current -= fireDmg
+                        character.SkillCooldown.skill1Cooldown = 6.0d
+                        schedule AfterAttack {
+                            attacker: character
+                            target: target
+                        }
+                    }
+                }
+            }
         }
     }
 }
 
-// Heal skill
-rule use_skill_heal on UseSkill(us: id) {
+// Frost Bolt (Mage skill2): damage + slow (reduce attack speed), costs 15 mana, 8s cooldown
+rule use_skill_frost_bolt on UseSkill(us: id) {
     if entity has GameState {
 let character: id = us.source
-        if character.Skills.skill1 == "heal" && character.Mana.current >= 15 {
-            character.Mana.current -= 15
-            character.Health.current += 30
+        if character.Skills.skill2 == "frost_bolt" && us.skillSlot == 2 {
+            if character.Mana.current >= 15 {
+                character.Mana.current -= 15
+                if character.Target.entity != null {
+let target: id = character.Target.entity
+                    if target.Health.current > 0 {
+let frostDmg: integer = character.Combat.damage + character.Stats.intelligence
+                        target.Health.current -= frostDmg
+                        target.Buffs.hasteBonus -= 0.3d
+                        character.SkillCooldown.skill2Cooldown = 8.0d
+                        schedule [delay: 5.0d] RemoveBuff {
+                            source: target
+                            buffType: "hasteRestore"
+                            amount: 0
+                        }
+                        schedule AfterAttack {
+                            attacker: character
+                            target: target
+                        }
+                    }
+                }
+            }
         }
     }
 }
 
-// Backstab skill
+// Arcane Blast (Mage skill3): pure damage burst, costs 25 mana, 10s cooldown
+rule use_skill_arcane_blast on UseSkill(us: id) {
+    if entity has GameState {
+let character: id = us.source
+        if character.Skills.skill3 == "arcane_blast" && us.skillSlot == 3 {
+            if character.Mana.current >= 25 {
+                character.Mana.current -= 25
+                if character.Target.entity != null {
+let target: id = character.Target.entity
+                    if target.Health.current > 0 {
+let blastDmg: integer = character.Combat.damage * 2 + character.Stats.intelligence * 3
+                        target.Health.current -= blastDmg
+                        character.SkillCooldown.skill3Cooldown = 10.0d
+                        schedule AfterAttack {
+                            attacker: character
+                            target: target
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Mana Shield (Mage skill4): absorb damage with mana, 15s cooldown
+rule use_skill_mana_shield on UseSkill(us: id) {
+    if entity has GameState {
+let character: id = us.source
+        if character.Skills.skill4 == "mana_shield" && us.skillSlot == 4 {
+            if character.Mana.current >= 30 {
+                character.Mana.current -= 30
+                character.Buffs.shieldAmount += 40 + character.Stats.intelligence * 2
+                character.SkillCooldown.skill4Cooldown = 15.0d
+            }
+        }
+    }
+}
+
+// ── RANGER SKILLS ───────────────────────────────────────────────────────────
+
+// Arrow Shot (Ranger skill1): precise shot with bonus damage, 5s cooldown
+rule use_skill_arrow_shot on UseSkill(us: id) {
+    if entity has GameState {
+let character: id = us.source
+        if character.Skills.skill1 == "arrow_shot" && us.skillSlot == 1 {
+            if character.Target.entity != null {
+let target: id = character.Target.entity
+                if target.Health.current > 0 {
+let arrowDmg: integer = character.Combat.damage + character.Stats.dexterity
+                    target.Health.current -= arrowDmg
+                    character.SkillCooldown.skill1Cooldown = 5.0d
+                    schedule AfterAttack {
+                        attacker: character
+                        target: target
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Multi Shot (Ranger skill2): hits multiple targets, 10s cooldown
+rule use_skill_multi_shot on UseSkill(us: id) {
+    if entity has GameState {
+let character: id = us.source
+        if character.Skills.skill2 == "multi_shot" && us.skillSlot == 2 {
+let enemies: list = entities having Enemy
+let hitCount: integer = 0
+            for enemy in enemies {
+                if hitCount < 3 {
+                    if enemy.EnemyTemplate.isTemplate == false && enemy.Health.current > 0 {
+let multiDmg: integer = character.Combat.damage / 2 + character.Stats.dexterity
+                        enemy.Health.current -= multiDmg
+                        hitCount += 1
+                        schedule AfterAttack {
+                            attacker: character
+                            target: enemy
+                        }
+                    }
+                }
+            }
+            character.SkillCooldown.skill2Cooldown = 10.0d
+        }
+    }
+}
+
+// Evade (Ranger skill3): gain defense and haste for 6 seconds, 12s cooldown
+rule use_skill_evade on UseSkill(us: id) {
+    if entity has GameState {
+let character: id = us.source
+        if character.Skills.skill3 == "evade" && us.skillSlot == 3 {
+            character.Buffs.defenseBonus += 4
+            character.Buffs.hasteBonus += 0.3d
+            character.SkillCooldown.skill3Cooldown = 12.0d
+            schedule [delay: 6.0d] RemoveBuff {
+                source: character
+                buffType: "evadeEnd"
+                amount: 0
+            }
+        }
+    }
+}
+
+// Trap (Ranger skill4): deals damage over time to target, 15s cooldown
+rule use_skill_trap on UseSkill(us: id) {
+    if entity has GameState {
+let character: id = us.source
+        if character.Skills.skill4 == "trap" && us.skillSlot == 4 {
+            if character.Target.entity != null {
+let target: id = character.Target.entity
+                if target.Health.current > 0 {
+let trapDmg: integer = character.Combat.damage + character.Stats.dexterity * 2
+                    target.Health.current -= trapDmg
+                    character.SkillCooldown.skill4Cooldown = 15.0d
+                    schedule AfterAttack {
+                        attacker: character
+                        target: target
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ── PALADIN SKILLS ──────────────────────────────────────────────────────────
+
+// Holy Strike (Paladin skill1): damage + small self-heal, 6s cooldown
+rule use_skill_holy_strike on UseSkill(us: id) {
+    if entity has GameState {
+let character: id = us.source
+        if character.Skills.skill1 == "holy_strike" && us.skillSlot == 1 {
+            if character.Target.entity != null {
+let target: id = character.Target.entity
+                if target.Health.current > 0 {
+let holyDmg: integer = character.Combat.damage + character.Stats.wisdom
+                    target.Health.current -= holyDmg
+                    // Self-heal from holy power
+let selfHeal: integer = 5 + character.Stats.wisdom
+                    character.Health.current += selfHeal
+                    if character.Health.current > character.Health.max {
+                        character.Health.current = character.Health.max
+                    }
+                    character.SkillCooldown.skill1Cooldown = 6.0d
+                    schedule AfterAttack {
+                        attacker: character
+                        target: target
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Divine Shield (Paladin skill2): large shield absorption, 12s cooldown
+rule use_skill_divine_shield on UseSkill(us: id) {
+    if entity has GameState {
+let character: id = us.source
+        if character.Skills.skill2 == "divine_shield" && us.skillSlot == 2 {
+            character.Buffs.shieldAmount += 30 + character.Stats.wisdom * 3
+            character.SkillCooldown.skill2Cooldown = 12.0d
+        }
+    }
+}
+
+// Consecrate (Paladin skill3): damage all nearby enemies, 10s cooldown
+rule use_skill_consecrate on UseSkill(us: id) {
+    if entity has GameState {
+let character: id = us.source
+        if character.Skills.skill3 == "consecrate" && us.skillSlot == 3 {
+let enemies: list = entities having Enemy
+let hitCount: integer = 0
+            for enemy in enemies {
+                if hitCount < 4 {
+                    if enemy.EnemyTemplate.isTemplate == false && enemy.Health.current > 0 {
+let consecDmg: integer = character.Stats.wisdom * 2
+                        enemy.Health.current -= consecDmg
+                        hitCount += 1
+                        schedule AfterAttack {
+                            attacker: character
+                            target: enemy
+                        }
+                    }
+                }
+            }
+            character.SkillCooldown.skill3Cooldown = 10.0d
+        }
+    }
+}
+
+// Lay on Hands (Paladin skill4): massive heal on self or ally, 20s cooldown
+rule use_skill_lay_on_hands on UseSkill(us: id) {
+    if entity has GameState {
+let character: id = us.source
+        if character.Skills.skill4 == "lay_on_hands" && us.skillSlot == 4 {
+            // Heal the most injured ally
+let players: list = entities having Team
+let lowestHp: integer = 9999
+let healTarget: id = character
+            for player in players {
+                if player.Team.isPlayer && player.Health.current > 0 {
+                    if player.Health.current < lowestHp {
+                        lowestHp = player.Health.current
+                        healTarget = player
+                    }
+                }
+            }
+let healAmount: integer = 50 + character.Stats.wisdom * 4
+            healTarget.Health.current += healAmount
+            if healTarget.Health.current > healTarget.Health.max {
+                healTarget.Health.current = healTarget.Health.max
+            }
+            character.SkillCooldown.skill4Cooldown = 20.0d
+        }
+    }
+}
+
+// ── ROGUE SKILLS ────────────────────────────────────────────────────────────
+
+// Backstab (Rogue skill1): high crit damage, 5s cooldown
 rule use_skill_backstab on UseSkill(us: id) {
     if entity has GameState {
 let character: id = us.source
-        if character.Skills.skill1 == "backstab" {
-            character.Combat.critChance += 0.25d
+        if character.Skills.skill1 == "backstab" && us.skillSlot == 1 {
+            if character.Target.entity != null {
+let target: id = character.Target.entity
+                if target.Health.current > 0 {
+let backstabDmg: integer = character.Combat.damage * 2 + character.Stats.dexterity * 2
+                    target.Health.current -= backstabDmg
+                    character.SkillCooldown.skill1Cooldown = 5.0d
+                    schedule AfterAttack {
+                        attacker: character
+                        target: target
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Smoke Bomb (Rogue skill2): defense boost + haste, 10s cooldown
+rule use_skill_smoke_bomb on UseSkill(us: id) {
+    if entity has GameState {
+let character: id = us.source
+        if character.Skills.skill2 == "smoke_bomb" && us.skillSlot == 2 {
+            character.Buffs.defenseBonus += 6
+            character.Buffs.hasteBonus += 0.4d
+            character.SkillCooldown.skill2Cooldown = 10.0d
+            schedule [delay: 5.0d] RemoveBuff {
+                source: character
+                buffType: "smokeEnd"
+                amount: 0
+            }
+        }
+    }
+}
+
+// Poison Blade (Rogue skill3): ongoing damage bonus, 12s cooldown
+rule use_skill_poison_blade on UseSkill(us: id) {
+    if entity has GameState {
+let character: id = us.source
+        if character.Skills.skill3 == "poison_blade" && us.skillSlot == 3 {
+let poisonBonus: integer = 3 + character.Stats.dexterity / 2
+            character.Buffs.damageBonus += poisonBonus
+            character.SkillCooldown.skill3Cooldown = 12.0d
+            schedule [delay: 8.0d] RemoveBuff {
+                source: character
+                buffType: "damageBonus"
+                amount: poisonBonus
+            }
+        }
+    }
+}
+
+// Shadowstep (Rogue skill4): teleport and deal burst damage, 15s cooldown
+rule use_skill_shadowstep on UseSkill(us: id) {
+    if entity has GameState {
+let character: id = us.source
+        if character.Skills.skill4 == "shadowstep" && us.skillSlot == 4 {
+            if character.Target.entity != null {
+let target: id = character.Target.entity
+                if target.Health.current > 0 {
+let shadowDmg: integer = character.Combat.damage * 3
+                    target.Health.current -= shadowDmg
+                    character.SkillCooldown.skill4Cooldown = 15.0d
+                    schedule AfterAttack {
+                        attacker: character
+                        target: target
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ── CLERIC SKILLS ───────────────────────────────────────────────────────────
+
+// Heal (Cleric skill1): heal the most injured ally, costs 15 mana, 4s cooldown
+rule use_skill_heal on UseSkill(us: id) {
+    if entity has GameState {
+let character: id = us.source
+        if character.Skills.skill1 == "heal" && us.skillSlot == 1 {
+            if character.Mana.current >= 15 {
+                character.Mana.current -= 15
+                // Find most injured ally
+let players: list = entities having Team
+let lowestRatio: decimal = 1.0d
+let healTarget: id = character
+                for player in players {
+                    if player.Team.isPlayer && player.Health.current > 0 {
+let ratio: decimal = player.Health.current / player.Health.max
+                        if ratio < lowestRatio {
+                            lowestRatio = ratio
+                            healTarget = player
+                        }
+                    }
+                }
+let healAmount: integer = 20 + character.Stats.wisdom * 3
+                healTarget.Health.current += healAmount
+                if healTarget.Health.current > healTarget.Health.max {
+                    healTarget.Health.current = healTarget.Health.max
+                }
+                character.SkillCooldown.skill1Cooldown = 4.0d
+            }
+        }
+    }
+}
+
+// Smite (Cleric skill2): holy damage, costs 10 mana, 6s cooldown
+rule use_skill_smite on UseSkill(us: id) {
+    if entity has GameState {
+let character: id = us.source
+        if character.Skills.skill2 == "smite" && us.skillSlot == 2 {
+            if character.Mana.current >= 10 {
+                character.Mana.current -= 10
+                if character.Target.entity != null {
+let target: id = character.Target.entity
+                    if target.Health.current > 0 {
+let smiteDmg: integer = character.Combat.damage + character.Stats.wisdom * 2
+                        target.Health.current -= smiteDmg
+                        character.SkillCooldown.skill2Cooldown = 6.0d
+                        schedule AfterAttack {
+                            attacker: character
+                            target: target
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Divine Favor (Cleric skill3): buff all allies with regen, costs 20 mana, 15s cooldown
+rule use_skill_divine_favor on UseSkill(us: id) {
+    if entity has GameState {
+let character: id = us.source
+        if character.Skills.skill3 == "divine_favor" && us.skillSlot == 3 {
+            if character.Mana.current >= 20 {
+                character.Mana.current -= 20
+let players: list = entities having Team
+                for player in players {
+                    if player.Team.isPlayer && player.Health.current > 0 {
+                        player.Buffs.regenAmount += 3
+                    }
+                }
+                character.SkillCooldown.skill3Cooldown = 15.0d
+            }
+        }
+    }
+}
+
+// Holy Word (Cleric skill4): massive group heal, costs 35 mana, 20s cooldown
+rule use_skill_holy_word on UseSkill(us: id) {
+    if entity has GameState {
+let character: id = us.source
+        if character.Skills.skill4 == "holy_word" && us.skillSlot == 4 {
+            if character.Mana.current >= 35 {
+                character.Mana.current -= 35
+let players: list = entities having Team
+                for player in players {
+                    if player.Team.isPlayer && player.Health.current > 0 {
+let groupHeal: integer = 30 + character.Stats.wisdom * 2
+                        player.Health.current += groupHeal
+                        if player.Health.current > player.Health.max {
+                            player.Health.current = player.Health.max
+                        }
+                    }
+                }
+                character.SkillCooldown.skill4Cooldown = 20.0d
+            }
+        }
+    }
+}
+
+// ── BUFF REMOVAL ────────────────────────────────────────────────────────────
+
+// Generic buff removal handler (removes temporary buffs after duration expires)
+rule remove_buff_handler on RemoveBuff(rb: id) {
+    if entity has GameState {
+let target: id = rb.source
+        if target.Health.current > 0 {
+            if rb.buffType == "damageBonus" {
+                target.Buffs.damageBonus -= rb.amount
+                if target.Buffs.damageBonus < 0 {
+                    target.Buffs.damageBonus = 0
+                }
+            }
+            if rb.buffType == "defenseBonus" {
+                target.Buffs.defenseBonus -= rb.amount
+                if target.Buffs.defenseBonus < 0 {
+                    target.Buffs.defenseBonus = 0
+                }
+            }
+            if rb.buffType == "defenseRestore" {
+                target.Buffs.defenseBonus += rb.amount
+            }
+            if rb.buffType == "hasteRestore" {
+                target.Buffs.hasteBonus += 0.3d
+            }
+            if rb.buffType == "evadeEnd" {
+                target.Buffs.defenseBonus -= 4
+                target.Buffs.hasteBonus -= 0.3d
+            }
+            if rb.buffType == "smokeEnd" {
+                target.Buffs.defenseBonus -= 6
+                target.Buffs.hasteBonus -= 0.4d
+            }
+        }
+    }
+}
+
+// ── HEALTH REGENERATION ─────────────────────────────────────────────────────
+
+// Passive health regen for heroes (slow but steady)
+rule health_regen on HealthRegen(hr: id) {
+    if entity has GameState {
+let character: id = hr.source
+        if character.Health.current > 0 {
+let regenAmount: integer = 2 + character.Buffs.regenAmount
+            character.Health.current += regenAmount
+            if character.Health.current > character.Health.max {
+                character.Health.current = character.Health.max
+            }
+            schedule [delay: 3.0d] HealthRegen {
+                source: character
+            }
         }
     }
 }

@@ -1,18 +1,17 @@
 /**
- * WASM engine — sole simulation entry point for the Blink RPG.
+ * WASM engine — simulation entry point for the Blink RPG.
  *
  * Uses the pre-compiled WASM module produced by `npm run build:wasm`.
- * The module is served from `public/wasm/blink_rpg_wasm.js` and the
- * associated `.wasm` binary.
+ * Falls back to a pure-JS simulation when WASM is not available.
  *
- * The WASM engine:
- *   • Runs the full simulation in a single synchronous call (~300 ms)
- *   • Produces exactly 30 checkpoints (one per 10 kills up to 300)
+ * The simulation:
+ *   • Produces exactly 30 checkpoints (one per 100 kills up to 3000)
  *   • Does not require an IR file — game rules are baked into the binary
  *   • Accepts runtime data (heroes, enemies, config) via create_entity/add_component
  */
 
 import type { GameSnapshot, HeroDefinition, GameMode } from '../types';
+import { runJsSimulation } from './JsSimEngine';
 
 // ── Hero stats per class ────────────────────────────────────────────────────
 
@@ -157,13 +156,12 @@ async function loadWasmModule(): Promise<WasmModule | null> {
 // ── Public API ──────────────────────────────────────────────────────────────
 
 /**
- * Run the simulation using the WASM engine.
+ * Run the simulation using the WASM engine, falling back to JS if unavailable.
  *
  * Loads the pre-built WASM binary, creates all entities (heroes, enemies,
  * config), runs the full simulation, and returns an array of GameSnapshots.
  *
- * Throws if the WASM module is not available.
- * Build it with: npm run build:wasm && npm run install:wasm
+ * If WASM is not available, falls back to a pure-JS simulation.
  */
 export async function runSimulation(
   selectedHeroes: HeroDefinition[],
@@ -171,10 +169,9 @@ export async function runSimulation(
 ): Promise<GameSnapshot[]> {
   const mod = await loadWasmModule();
   if (!mod) {
-    throw new Error(
-      'WASM engine is not available. ' +
-      'Run `npm run build:wasm && npm run install:wasm` to build and install it.'
-    );
+    // Fall back to pure-JS simulation
+    console.info('[SimEngine] WASM not available, using JS fallback simulation');
+    return runJsSimulation(selectedHeroes, mode);
   }
 
   const game = new mod.BlinkWasmGame();
@@ -292,12 +289,11 @@ function _runWithWasm(
     damageScaleRate: cfg.damageScaleRate,
     initialEnemyCount: cfg.initialEnemyCount,
   }));
-  // N=30 checkpoints, one per 10 kills.  The WASM engine is fast enough to
-  // run the full 300-kill simulation in one synchronous call, so we set the
-  // interval to 10 (unlike the JS engine which uses 1 to maximise the number
-  // of snapshots within its 5-second wall-clock budget).
+  // N=30 checkpoints, one per 100 kills (3000 total encounters).
+  // The WASM engine is fast enough to run the full 3000-kill simulation
+  // in one synchronous call.
   game.add_component(99, 'ProgressTracker', JSON.stringify({
-    checkpointInterval: 10,
+    checkpointInterval: 100,
     checkpointsReached: 0,
     totalCheckpoints: 30,
   }));
