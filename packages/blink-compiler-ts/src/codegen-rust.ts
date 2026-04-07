@@ -338,6 +338,10 @@ export class RustCodeGenerator {
         if (t === 'id' || t === 'component') return 'id';
       }
     }
+    // Parenthesized expression — delegate to the inner expression
+    if (expr.type === 'paren') {
+      return this.inferExprType(expr.inner);
+    }
     // Call expression: infer return type from function name
     if (expr.type === 'call') {
       switch (expr.name) {
@@ -1314,12 +1318,12 @@ export class RustCodeGenerator {
 
     // Built-in functions
     switch (expr.name) {
-      case 'min': return `brl_min(${args[0]} as f64, ${args[1]} as f64)`;
-      case 'max': return `brl_max(${args[0]} as f64, ${args[1]} as f64)`;
-      case 'floor': return `brl_floor(${args[0]} as f64)`;
-      case 'ceil': return `brl_ceil(${args[0]} as f64)`;
-      case 'round': return `brl_round(${args[0]} as f64)`;
-      case 'abs': return `brl_abs(${args[0]} as f64)`;
+      case 'min': return `brl_min((${args[0]}) as f64, (${args[1]}) as f64)`;
+      case 'max': return `brl_max((${args[0]}) as f64, (${args[1]}) as f64)`;
+      case 'floor': return `brl_floor((${args[0]}) as f64)`;
+      case 'ceil': return `brl_ceil((${args[0]}) as f64)`;
+      case 'round': return `brl_round((${args[0]}) as f64)`;
+      case 'abs': return `brl_abs((${args[0]}) as f64)`;
       case 'random': return `engine.rng.random()`;
       case 'random_range': return `engine.rng.random_range(${args[0]} as f64, ${args[1]} as f64)`;
       case 'len': return `(${args[0]}).len() as i64`;

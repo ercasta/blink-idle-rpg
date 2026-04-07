@@ -61,7 +61,13 @@ jobs:
       - name: Install WASM into React app
         run: node scripts/install-wasm.js
 
+      - name: Setup Pages
+        id: pages
+        uses: actions/configure-pages@v4
+
       - name: Build React web app
+        env:
+          VITE_BASE_URL: ${{ steps.pages.outputs.base_path }}/
         run: |
           cd game/app
           npm install
@@ -73,9 +79,6 @@ jobs:
           mkdir -p _site
           touch _site/.nojekyll
           cp -r game/app/dist/* _site/
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

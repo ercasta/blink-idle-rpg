@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Build script to create browser bundle from TypeScript source
- * This replaces the direct esbuild command to ensure the bundle is copied to game/demos
+ * Build script to create browser bundle from TypeScript source.
+ * Copies the bundle to game/brl-tests/ for use in the in-browser test page.
  */
 
 const esbuild = require('esbuild');
@@ -9,7 +9,7 @@ const fs = require('fs');
 const path = require('path');
 
 const srcDir = path.join(__dirname, '../src');
-const outFile = path.join(__dirname, '../../../game/demos/blink-compiler.bundle.js');
+const outFile = path.join(__dirname, '../../../game/brl-tests/blink-compiler.bundle.js');
 
 // Banner to add at the top of the bundle
 const banner = `/**

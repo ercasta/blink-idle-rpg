@@ -595,7 +595,7 @@ let vexarDefeated: list = entities having LordVexarDefeated
             if entity.GameState.enemiesDefeated < 1000 {
                 if entity.GameState.gameOver == false {
                     if entity.GameState.bossSpawned == false {
-let currentTier: id = entity.GameState.currentTier
+let currentTier: integer = entity.GameState.currentTier
                         schedule [delay: 0.1d] SpawnEnemy {
                             tier: currentTier
                         }

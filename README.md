@@ -106,7 +106,7 @@ game/
   app/        React web app (Vite + Tailwind) — the game
   brl/        BRL source files (game rules + data — edit these!)
   bcl/        BCL configuration files (heroes, skills)
-  examples/   Small standalone BRL programs for engine pipeline testing
+  brl-tests/   Small standalone BRL programs for engine pipeline testing
   data/       JSON mirrors of game data (for documentation and UI)
 packages/
   blink-compiler-ts/   TypeScript BRL compiler
@@ -135,7 +135,7 @@ scripts/
 | [WASM Integration](doc/engine/wasm-integration-design.md) | WASM engine design |
 | [Game Design](doc/game-design/README.md) | Combat, characters, scoring |
 | [BRL Source Files](game/brl/README.md) | Where game data is stored and how it loads |
-| [Engine Examples](game/examples/README.md) | Standalone BRL programs for pipeline testing |
+| [Engine BRL Tests](game/brl-tests/README.md) | Standalone BRL programs for pipeline testing |
 | [Docker Guide](DOCKER.md) | Docker-based development |
 
 ---

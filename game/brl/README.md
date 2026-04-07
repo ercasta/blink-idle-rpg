@@ -129,7 +129,7 @@ mirror the values in `game/brl/enemies.brl` and `game/data/enemies.json`.
 ## Compiling
 
 ```bash
-npm run compile-brl    # compile BRL to IR (for React app + examples)
+npm run compile-brl    # compile BRL to IR (for React app)
 npm run test:harness   # compile BRL to Rust native binary and run tests
 npm run build:wasm     # compile BRL to WASM for the browser
 ```

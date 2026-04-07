@@ -4,7 +4,7 @@
  *
  * Outputs:
  *   game/app/public/ir/classic-rpg.ir.json  — rules only (entities set at runtime)
- *   game/examples/ir/classic-rpg-full.ir.json — full game with initial entities
+ *   game/brl-tests/ir/classic-rpg-full.ir.json — full game with initial entities
  *
  * The React app uses classic-rpg.ir.json.  Entity data (heroes, enemies, game
  * state) is injected at runtime by WasmSimEngine.ts so the player's party
@@ -78,11 +78,11 @@ fs.writeFileSync(classicOut, JSON.stringify(classicIR, null, 2));
 console.log(`  → ${classicOut}  (${(fs.statSync(classicOut).size / 1024).toFixed(1)} KB)`);
 
 // ─── Compile standalone IR (all BRL files, WITH entities) ────────────────
-// Used by the GitHub Pages deploy and `game/examples/ir/` for reference.
+// Used by the GitHub Pages deploy and `game/brl-tests/ir/` for reference.
 // Includes scenario-normal.brl (NOT game-config.brl — they share entity names
 // and are mutually exclusive; scenario files override the defaults).
-const EXAMPLES_OUTPUT_DIR = path.join(ROOT, 'game/examples/ir');
-fs.mkdirSync(EXAMPLES_OUTPUT_DIR, { recursive: true });
+const BRL_TESTS_OUTPUT_DIR = path.join(ROOT, 'game/brl-tests/ir');
+fs.mkdirSync(BRL_TESTS_OUTPUT_DIR, { recursive: true });
 
 console.log('Compiling classic-rpg-full.ir.json (full game with entities) …');
 const fullIR = compileBrlFiles(
@@ -96,7 +96,7 @@ const fullIR = compileBrlFiles(
 );
 
 // Keep initial_state entities — this IR includes the full game setup
-const fullOut = path.join(EXAMPLES_OUTPUT_DIR, 'classic-rpg-full.ir.json');
+const fullOut = path.join(BRL_TESTS_OUTPUT_DIR, 'classic-rpg-full.ir.json');
 fs.writeFileSync(fullOut, JSON.stringify(fullIR, null, 2));
 console.log(`  → ${fullOut}  (${(fs.statSync(fullOut).size / 1024).toFixed(1)} KB)`);
 

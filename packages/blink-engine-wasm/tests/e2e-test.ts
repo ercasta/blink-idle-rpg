@@ -15,7 +15,7 @@ import { execSync } from 'child_process';
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
 const RUNTIME_PATH = path.join(REPO_ROOT, 'packages', 'blink-runtime');
-const EXAMPLES_PATH = path.join(REPO_ROOT, 'game', 'examples', 'brl');
+const EXAMPLES_PATH = path.join(REPO_ROOT, 'game', 'brl-tests', 'brl');
 const GAME_BRL_PATH = path.join(REPO_ROOT, 'game', 'brl');
 const GENERATED_DIR = path.join(REPO_ROOT, 'packages', 'blink-engine-wasm', 'generated');
 
@@ -220,7 +220,7 @@ function runTest(testName: string, brlFiles: string[]): TestResult {
 function main() {
   console.log('=== WASM Engine End-to-End Tests ===\n');
   console.log(`Runtime path:   ${RUNTIME_PATH}`);
-  console.log(`Examples path:  ${EXAMPLES_PATH}`);
+  console.log(`BRL tests path: ${EXAMPLES_PATH}`);
   console.log(`Game BRL path:  ${GAME_BRL_PATH}`);
 
   // Clean generated directory
