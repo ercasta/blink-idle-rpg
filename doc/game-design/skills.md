@@ -460,10 +460,10 @@ RN_S6 → RN_S11
 #### Passive Skills (RN_A1–RN_A12)
 
 ```
-RN_A1 ──┬── RN_A3 ── RN_A6 ── RN_A9
+RN_A1 ──┬── RN_A3 ──┬── RN_A6 ── RN_A9
+         │          └── RN_A8
          └── RN_A4 ── RN_A7
-RN_A2 ──┬── RN_A5
-         └── (standalone)
+RN_A2 ── RN_A5
 RN_A6, RN_A7 → RN_A10
 RN_A7, RN_A5 → RN_A11
 RN_A9, RN_A10 → RN_A12
@@ -666,9 +666,10 @@ Archetypes: **Assassin** (single-target burst), **Scout** (mobility/utility), **
 ```
 R_P1 ──┬── R_P3 ── R_P6 ── R_P9
         ├── R_P4
-        └── R_P10 (via R_P7)
+        └──(R_P3, R_P1 → R_P7 → R_P10)
 R_P2 ── R_P5 ── R_P8
 R_P3, R_P1 → R_P7
+R_P7 → R_P10
 R_P4, R_P6 → R_P11
 R_P9, R_P10 → R_P12
 ```
@@ -823,17 +824,14 @@ C_P7, C_P9 → C_P12
 #### Secondary Skills (C_S1–C_S12)
 
 ```
-C_S1 ──┬── C_S3
+C_S1 ──┬── C_S3 ── C_S6
         ├── C_S4
         ├── C_S5
-        └── C_S7
+        └── C_S7 ── C_S10
 C_S2 ── C_S8
-C_S3 → C_S6
 C_S6, C_S7 → C_S9
-C_S4 → C_S11 (via C_S6)
-C_S7 → C_S10
-C_S8, C_S9 → C_S12
 C_S4, C_S6 → C_S11
+C_S8, C_S9 → C_S12
 ```
 
 | ID | Name | Type | Prereqs | Effect (L1 → L5 bonus) | Trait Orientation |
@@ -1033,8 +1031,8 @@ Attached to: a transient effect entity created when a skill is cast.
 | `skillLevel` | integer | Level of the skill when cast (1–5) — determines effect magnitude |
 | `casterId` | id | The entity that cast the skill |
 | `targetId` | id? | Single-target (null for AoE) |
-| `magnitude` | integer | Numeric strength of the effect (scaled by skill level) |
-| `duration` | float | Seconds the effect lasts (scaled by skill level) |
+| `magnitude` | integer | Final scaled strength of the effect: `baseMagnitude × (1 + (skillLevel − 1) × 0.20)`. This is the post-scaling value computed at cast time. |
+| `duration` | float | Final scaled duration in seconds: `baseDuration × (1 + (skillLevel − 1) × 0.15)`. Computed at cast time. |
 
 ### `PassiveSkill`
 Attached to: entities that have one or more passive skills active.
