@@ -188,6 +188,7 @@ export function RosterScreen({ roster, onRosterChange, onBack, sharedHero }: Ros
           })}
           doneLabel="Save"
           doneDisabled={!editingHero.name.trim()}
+          liveDescription={generateHeroDescription(editingHero.heroClass, editingHero.traits)}
         />
       </div>
     );
@@ -366,12 +367,22 @@ export function RosterScreen({ roster, onRosterChange, onBack, sharedHero }: Ros
         </div>
       )}
 
+      {/* Add hero button */}
+      <div className="mb-4">
+        <button
+          onClick={openCreate}
+          className="w-full py-4 rounded-xl font-bold text-lg transition-colors bg-amber-700 hover:bg-amber-600 text-stone-100"
+        >
+          + Create New Hero
+        </button>
+      </div>
+
       {/* Hero list */}
       <div className="flex flex-col gap-3 flex-1">
         {roster.length === 0 && (
           <div className="flex-1 flex flex-col items-center justify-center gap-3 text-stone-500 py-12">
             <div className="text-5xl">🧑‍🤝‍🧑</div>
-            <p className="text-sm text-center">No heroes yet.<br />Tap below to create your first hero.</p>
+            <p className="text-sm text-center">No heroes yet.<br />Tap above to create your first hero.</p>
           </div>
         )}
         {roster.length > 0 && filteredRoster.length === 0 && (
@@ -438,16 +449,6 @@ export function RosterScreen({ roster, onRosterChange, onBack, sharedHero }: Ros
           </div>
         ))}
       </div>
-
-      {/* Add hero button */}
-      <div className="pt-4 mt-4 border-t border-stone-800">
-        <button
-          onClick={openCreate}
-          className="w-full py-4 rounded-xl font-bold text-lg transition-colors bg-amber-700 hover:bg-amber-600 text-stone-100"
-        >
-          + Create New Hero
-        </button>
-      </div>
     </div>
   );
 }
@@ -463,9 +464,10 @@ interface TraitEditorProps {
   doneLabel?: string;
   hideFoot?: boolean;
   doneDisabled?: boolean;
+  liveDescription?: string;
 }
 
-export function TraitEditor({ hero, traits, onChangeTrait, onReset, onDone, doneLabel = 'Done', hideFoot = false, doneDisabled = false }: TraitEditorProps) {
+export function TraitEditor({ hero, traits, onChangeTrait, onReset, onDone, doneLabel = 'Done', hideFoot = false, doneDisabled = false, liveDescription }: TraitEditorProps) {
   return (
     <div className="flex-1 overflow-y-auto">
       <div className="flex items-center gap-3 mb-4">
@@ -476,10 +478,18 @@ export function TraitEditor({ hero, traits, onChangeTrait, onReset, onDone, done
         </div>
       </div>
 
-      <p className="text-xs text-stone-500 mb-4">
-        Traits shape stat growth, skill selection, and combat AI.
-        Drag sliders to customize this hero's personality.
-      </p>
+      {liveDescription ? (
+        <div className="bg-stone-800 border border-stone-700 rounded-xl p-4 mb-4">
+          {liveDescription.split('\n\n').map((para, i) => (
+            <p key={i} className={`text-xs text-stone-400 leading-relaxed ${i > 0 ? 'mt-2' : ''}`}>{para}</p>
+          ))}
+        </div>
+      ) : (
+        <p className="text-xs text-stone-500 mb-4">
+          Traits shape stat growth, skill selection, and combat AI.
+          Drag sliders to customize this hero's personality.
+        </p>
+      )}
 
       <div className="flex flex-col gap-3">
         {TRAIT_AXES.map(axis => {
