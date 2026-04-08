@@ -187,6 +187,7 @@ export function RosterScreen({ roster, onRosterChange, onBack, sharedHero }: Ros
             description: generateHeroDescription(editingHero.heroClass, editingHero.traits),
           })}
           doneLabel="Save"
+          doneDisabled={!editingHero.name.trim()}
         />
       </div>
     );
@@ -244,7 +245,7 @@ export function RosterScreen({ roster, onRosterChange, onBack, sharedHero }: Ros
           <div className="flex items-center gap-3 mb-3">
             <span className="text-3xl">{draftHero.emoji}</span>
             <div>
-              <div className="font-bold text-lg">{draftHero.name || '—'}</div>
+              <div className="font-bold text-lg">{draftHero.name || 'Unnamed Hero'}</div>
               <div className="text-xs text-stone-400">{draftHero.heroClass} · {draftHero.role}</div>
             </div>
           </div>
@@ -413,9 +414,10 @@ interface TraitEditorProps {
   onDone: () => void;
   doneLabel?: string;
   hideFoot?: boolean;
+  doneDisabled?: boolean;
 }
 
-export function TraitEditor({ hero, traits, onChangeTrait, onReset, onDone, doneLabel = 'Done', hideFoot = false }: TraitEditorProps) {
+export function TraitEditor({ hero, traits, onChangeTrait, onReset, onDone, doneLabel = 'Done', hideFoot = false, doneDisabled = false }: TraitEditorProps) {
   return (
     <div className="flex-1 overflow-y-auto">
       <div className="flex items-center gap-3 mb-4">
@@ -464,7 +466,8 @@ export function TraitEditor({ hero, traits, onChangeTrait, onReset, onDone, done
           </button>
           <button
             onClick={onDone}
-            className="flex-1 py-3 rounded-xl bg-amber-700 hover:bg-amber-600 text-stone-100 font-bold text-sm transition-colors"
+            disabled={doneDisabled}
+            className="flex-1 py-3 rounded-xl bg-amber-700 hover:bg-amber-600 text-stone-100 font-bold text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {doneLabel}
           </button>
