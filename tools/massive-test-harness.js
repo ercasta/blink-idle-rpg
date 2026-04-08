@@ -46,6 +46,13 @@ const fs   = require('fs');
 const ROOT             = path.join(__dirname, '..');
 const DEFAULT_DATA_DIR = path.join(ROOT, 'game', 'data');
 
+// Match the e2e test step limit (packages/blink-engine-wasm/tests/e2e-test.ts)
+const DEFAULT_MAX_STEPS = 2500000;
+
+// Seed offset per retry — keeps each attempt's seed range non-overlapping
+// (scenario.runs is at most ~20, so 10 000 is a safe margin)
+const SEED_OFFSET_STEP = 10000;
+
 const {
   ensureBinary,
   runOneSimulation,
@@ -90,7 +97,7 @@ function runScenario(binaryPath, scenario, gameData, seedOffset, verbose) {
     const seed = scenario.seedStart + seedOffset + i;
     const config = {
       seed,
-      maxSteps: 2500000,
+      maxSteps: DEFAULT_MAX_STEPS,
       heroes: scenario.party.map(cls => buildHeroJson(cls, gameData.heroes)),
       enemies: gameData.enemies.map(e => buildEnemyJson(e)),
       configEntities: buildConfigEntities(mode),
@@ -184,7 +191,7 @@ function checkDeterminism(check, allResults, binaryPath, gameData, seedOffset) {
     const seed = scenario.seedStart + seedOffset + i;
     const config = {
       seed,
-      maxSteps: 2500000,
+      maxSteps: DEFAULT_MAX_STEPS,
       heroes: scenario.party.map(cls => buildHeroJson(cls, gameData.heroes)),
       enemies: gameData.enemies.map(e => buildEnemyJson(e)),
       configEntities: buildConfigEntities(mode),
@@ -482,7 +489,6 @@ function runHarness(options = {}) {
   let pendingChecks = checks.map(c => ({ ...c }));
   const passedChecks = [];
   const failedChecks = [];
-  const SEED_OFFSET_STEP = 10000;
 
   for (let attempt = 0; attempt <= retries && pendingChecks.length > 0; attempt++) {
     const seedOffset = attempt * SEED_OFFSET_STEP;
