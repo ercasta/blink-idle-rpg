@@ -31,9 +31,9 @@ export function ResultsScreen({ result, onPlayAgain, onRerun, onHome }: ResultsS
     <div className="flex flex-col min-h-screen bg-stone-900 text-stone-100 px-4 py-8">
       {/* Outcome */}
       <div className="text-center mb-8">
-        <div className="text-5xl mb-3">{victory ? '🏆' : '⚔️'}</div>
+        <div className="text-5xl mb-3">⚔️</div>
         <h1 className="text-2xl font-bold mb-1">
-          {victory ? 'Victory!' : 'Run Complete'}
+          Run Complete
         </h1>
         <p className="text-4xl font-extrabold text-amber-400">
           {finalScore.toLocaleString()}

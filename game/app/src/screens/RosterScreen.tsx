@@ -5,8 +5,6 @@ import { generateRandomHero } from '../data/heroes';
 import { generateHeroDescription, encodeHeroToParams } from '../data/heroDescription';
 import type { SharedHeroData } from '../data/heroDescription';
 
-const MAX_ROSTER = 20;
-
 const ALL_CLASSES: HeroClass[] = ['Warrior', 'Mage', 'Ranger', 'Paladin', 'Rogue', 'Cleric'];
 
 const CLASS_EMOJIS: Record<HeroClass, string> = {
@@ -30,6 +28,8 @@ type RosterView = 'list' | 'edit-traits' | 'create';
 
 export function RosterScreen({ roster, onRosterChange, onBack, sharedHero }: RosterScreenProps) {
   const [view, setView] = useState<RosterView>(() => (sharedHero ? 'create' : 'list'));
+  const [filterName, setFilterName] = useState('');
+  const [filterClass, setFilterClass] = useState<HeroClass | ''>('');
   const [editingHero, setEditingHero] = useState<HeroDefinition | null>(null);
   // For create: a new hero being configured before adding
   const [draftHero, setDraftHero] = useState<HeroDefinition | null>(() => {
@@ -103,7 +103,7 @@ export function RosterScreen({ roster, onRosterChange, onBack, sharedHero }: Ros
   }
 
   function confirmCreate() {
-    if (!draftHero || roster.length >= MAX_ROSTER) return;
+    if (!draftHero) return;
     const finalHero: HeroDefinition = {
       ...draftHero,
       description: generateHeroDescription(draftHero.heroClass, draftHero.traits),
@@ -287,16 +287,16 @@ export function RosterScreen({ roster, onRosterChange, onBack, sharedHero }: Ros
           onChangeTrait={setDraftTrait}
           onReset={resetDraftTraits}
           onDone={confirmCreate}
-          doneLabel={`Add to Roster (${roster.length}/${MAX_ROSTER})`}
+          doneLabel={`Add to Roster (${roster.length})`}
           hideFoot
         />
         <div className="pt-4 mt-2 border-t border-stone-800">
           <button
             onClick={confirmCreate}
-            disabled={roster.length >= MAX_ROSTER || !draftHero.name.trim()}
+            disabled={!draftHero.name.trim()}
             className="w-full py-4 rounded-xl font-bold text-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed bg-amber-700 hover:bg-amber-600 text-stone-100"
           >
-            ✓ Add to Roster ({roster.length}/{MAX_ROSTER})
+            ✓ Add to Roster ({roster.length})
           </button>
         </div>
       </div>
@@ -304,6 +304,12 @@ export function RosterScreen({ roster, onRosterChange, onBack, sharedHero }: Ros
   }
 
   // ── Hero list ────────────────────────────────────────────────────────────
+
+  const filteredRoster = roster.filter(hero => {
+    const nameMatch = hero.name.toLowerCase().includes(filterName.toLowerCase());
+    const classMatch = filterClass === '' || hero.heroClass === filterClass;
+    return nameMatch && classMatch;
+  });
 
   return (
     <div className="flex flex-col min-h-screen bg-stone-900 text-stone-100 px-4 py-6">
@@ -316,11 +322,49 @@ export function RosterScreen({ roster, onRosterChange, onBack, sharedHero }: Ros
         </button>
         <h1 className="text-xl font-bold">Hero Roster</h1>
       </div>
-      <p className="text-stone-400 text-sm mb-5">
+      <p className="text-stone-400 text-sm mb-4">
         {roster.length === 0
           ? 'Your roster is empty. Generate heroes to start a run!'
-          : `${roster.length} hero${roster.length !== 1 ? 'es' : ''} · up to ${MAX_ROSTER}`}
+          : `${roster.length} hero${roster.length !== 1 ? 'es' : ''}`}
       </p>
+
+      {/* Filters */}
+      {roster.length > 0 && (
+        <div className="flex flex-col gap-2 mb-4">
+          <input
+            type="text"
+            placeholder="Search by name…"
+            value={filterName}
+            onChange={e => setFilterName(e.target.value)}
+            className="w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-100 text-sm placeholder-stone-500 focus:outline-none focus:border-amber-500"
+          />
+          <div className="flex flex-wrap gap-1">
+            <button
+              onClick={() => setFilterClass('')}
+              className={`px-2 py-1 rounded-lg text-xs font-medium border transition-colors ${
+                filterClass === ''
+                  ? 'bg-amber-700 border-amber-500 text-stone-100'
+                  : 'bg-stone-800 border-stone-600 text-stone-400 hover:border-stone-400'
+              }`}
+            >
+              All
+            </button>
+            {ALL_CLASSES.map(hc => (
+              <button
+                key={hc}
+                onClick={() => setFilterClass(prev => prev === hc ? '' : hc)}
+                className={`px-2 py-1 rounded-lg text-xs font-medium border transition-colors ${
+                  filterClass === hc
+                    ? 'bg-amber-700 border-amber-500 text-stone-100'
+                    : 'bg-stone-800 border-stone-600 text-stone-400 hover:border-stone-400'
+                }`}
+              >
+                {CLASS_EMOJIS[hc]} {hc}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Hero list */}
       <div className="flex flex-col gap-3 flex-1">
@@ -330,7 +374,12 @@ export function RosterScreen({ roster, onRosterChange, onBack, sharedHero }: Ros
             <p className="text-sm text-center">No heroes yet.<br />Tap below to create your first hero.</p>
           </div>
         )}
-        {roster.map((hero) => (
+        {roster.length > 0 && filteredRoster.length === 0 && (
+          <div className="flex-1 flex flex-col items-center justify-center gap-3 text-stone-500 py-12">
+            <p className="text-sm text-center">No heroes match your filters.</p>
+          </div>
+        )}
+        {filteredRoster.map((hero) => (
           <div key={hero.id} className="flex gap-2">
             <div className="flex-1 bg-stone-800 border border-stone-700 rounded-xl p-4">
               <div className="flex items-center gap-3">
@@ -394,8 +443,7 @@ export function RosterScreen({ roster, onRosterChange, onBack, sharedHero }: Ros
       <div className="pt-4 mt-4 border-t border-stone-800">
         <button
           onClick={openCreate}
-          disabled={roster.length >= MAX_ROSTER}
-          className="w-full py-4 rounded-xl font-bold text-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed bg-amber-700 hover:bg-amber-600 text-stone-100"
+          className="w-full py-4 rounded-xl font-bold text-lg transition-colors bg-amber-700 hover:bg-amber-600 text-stone-100"
         >
           + Create New Hero
         </button>
