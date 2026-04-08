@@ -30,6 +30,12 @@ export interface RunResult {
   deepestTier: number;
   deepestWave: number;
   heroPaths: HeroPath[];
+  /** Persistence metadata – present once the run has been saved or loaded */
+  id?: string;
+  timestamp?: number;
+  favorited?: boolean;
+  heroes?: HeroDefinition[];
+  mode?: GameMode;
 }
 
 export type HeroClass = 'Warrior' | 'Mage' | 'Ranger' | 'Paladin' | 'Rogue' | 'Cleric';
@@ -105,4 +111,5 @@ export type AppScreen =
   | 'mode-select'
   | 'party-select'
   | 'battle'
-  | 'results';
+  | 'results'
+  | 'run-history';

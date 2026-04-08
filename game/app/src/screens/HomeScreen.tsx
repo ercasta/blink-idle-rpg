@@ -5,9 +5,19 @@ interface HomeScreenProps {
   onStart: () => void;
   onQuickPlay: () => void;
   onManageRoster: () => void;
+  onViewHistory: () => void;
+  onReplayRun: (run: RunResult) => void;
 }
 
-export function HomeScreen({ recentRuns, onStart, onQuickPlay, onManageRoster }: HomeScreenProps) {
+function formatDate(timestamp: number | undefined): string {
+  if (!timestamp) return '';
+  return new Date(timestamp).toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
+export function HomeScreen({ recentRuns, onStart, onQuickPlay, onManageRoster, onViewHistory, onReplayRun }: HomeScreenProps) {
   return (
     <div className="flex flex-col items-center min-h-screen bg-stone-900 text-stone-100 px-4 py-8">
       {/* Title */}
@@ -50,6 +60,12 @@ export function HomeScreen({ recentRuns, onStart, onQuickPlay, onManageRoster }:
         >
           ⚡ Quick Play (Random Party)
         </button>
+        <button
+          onClick={onViewHistory}
+          className="w-full py-3 rounded-xl bg-stone-700 hover:bg-stone-600 text-stone-300 font-bold text-base transition-colors shadow-lg border border-stone-600"
+        >
+          📋 Run History
+        </button>
       </div>
 
       {/* Recent Runs */}
@@ -61,15 +77,28 @@ export function HomeScreen({ recentRuns, onStart, onQuickPlay, onManageRoster }:
           <div className="flex flex-col gap-2">
             {recentRuns.slice(0, 3).map((run, i) => (
               <div
-                key={i}
+                key={run.id ?? i}
                 className="bg-stone-800 rounded-lg px-4 py-3 flex justify-between items-center border border-stone-700"
               >
-                <span className="text-sm text-stone-300">
-                  ⚔️ · Tier {run.deepestTier}
-                </span>
-                <span className="text-sm font-bold text-amber-400">
-                  {run.finalScore.toLocaleString()} pts
-                </span>
+                <div className="flex flex-col">
+                  <span className="text-sm text-stone-300">
+                    ⚔️ · Tier {run.deepestTier}
+                  </span>
+                  {run.timestamp && (
+                    <span className="text-xs text-stone-500">{formatDate(run.timestamp)}</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold text-amber-400">
+                    {run.finalScore.toLocaleString()} pts
+                  </span>
+                  <button
+                    onClick={() => onReplayRun(run)}
+                    className="py-1 px-2 rounded-lg bg-amber-700 hover:bg-amber-600 text-stone-100 text-xs font-bold transition-colors"
+                  >
+                    ▶
+                  </button>
+                </div>
               </div>
             ))}
           </div>
