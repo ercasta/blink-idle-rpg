@@ -107,7 +107,10 @@ interface BlinkWasmGame {
 
 interface WasmModule {
   default: (input?: RequestInfo | URL) => Promise<unknown>;
-  BlinkWasmGame: new () => BlinkWasmGame;
+  BlinkWasmGame: (new () => BlinkWasmGame) & {
+    /** Create an engine with an explicit seed (for reproducibility or testing). */
+    with_seed(seed: bigint): BlinkWasmGame;
+  };
 }
 
 let cachedModule: WasmModule | null | 'loading' | 'unavailable' = null;
@@ -176,7 +179,11 @@ export async function runSimulation(
     );
   }
 
-  const game = new mod.BlinkWasmGame();
+  // Use a cryptographically random seed so each run produces different outcomes.
+  const seedBytes = new Uint32Array(2);
+  crypto.getRandomValues(seedBytes);
+  const seed = (BigInt(seedBytes[0]) << 32n) | BigInt(seedBytes[1]);
+  const game = mod.BlinkWasmGame.with_seed(seed);
   try {
     const snapshots = _runWithWasm(game, selectedHeroes, mode);
 
