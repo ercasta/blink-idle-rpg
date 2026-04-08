@@ -90,7 +90,7 @@ function runScenario(binaryPath, scenario, gameData, seedOffset, verbose) {
     const seed = scenario.seedStart + seedOffset + i;
     const config = {
       seed,
-      maxSteps: 500000,
+      maxSteps: 2500000,
       heroes: scenario.party.map(cls => buildHeroJson(cls, gameData.heroes)),
       enemies: gameData.enemies.map(e => buildEnemyJson(e)),
       configEntities: buildConfigEntities(mode),
@@ -184,7 +184,7 @@ function checkDeterminism(check, allResults, binaryPath, gameData, seedOffset) {
     const seed = scenario.seedStart + seedOffset + i;
     const config = {
       seed,
-      maxSteps: 500000,
+      maxSteps: 2500000,
       heroes: scenario.party.map(cls => buildHeroJson(cls, gameData.heroes)),
       enemies: gameData.enemies.map(e => buildEnemyJson(e)),
       configEntities: buildConfigEntities(mode),
