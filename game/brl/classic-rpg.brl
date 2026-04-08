@@ -456,6 +456,7 @@ let attacker: id = da.source
         if attacker has Target {
         if attacker.Health.current > 0 {
             // Only deal damage if we have a living target
+let needsRetarget: boolean = false
             if attacker.Target.entity != null {
 let target: id = attacker.Target.entity
                 if target has Health {
@@ -482,7 +483,19 @@ let damage: integer = max(1, rawDamage - effectiveDefense)
                         attacker: attacker
                         target: target
                     }
+                } else {
+                    needsRetarget = true
                 }
+                } else {
+                    needsRetarget = true
+                }
+            } else {
+                needsRetarget = true
+            }
+            // If target was invalid, immediately try to find a new one
+            if needsRetarget {
+                schedule FindNewTarget {
+                    seeker: attacker
                 }
             }
             // Always schedule the next attack for living attackers
@@ -526,6 +539,7 @@ let enemies: list = entities having Enemy
                     expReward: enemy.Enemy.expReward
                     isBoss: enemy.Enemy.isBoss
                 }
+                delete enemy
             }
         }
     }
@@ -707,7 +721,7 @@ rule encounter_tracking on EnemyDefeated(ed: id) {
             if entity.GameState.enemiesDefeated < 3000 {
                 if entity.GameState.gameOver == false {
                     entity.GameState.encounterCount += 1
-                    schedule [delay: 0.5d] SpawnEncounter {
+                    schedule [delay: 0.1d] SpawnEncounter {
                     }
                 }
             }

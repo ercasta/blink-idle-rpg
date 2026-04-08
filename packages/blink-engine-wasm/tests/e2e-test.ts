@@ -237,7 +237,7 @@ fn run_game(seed: u64, max_steps: u32) -> serde_json::Value {
 
 fn main() {
     let seeds: Vec<u64> = vec![42, 123, 777, 2024, 31337];
-    let max_steps = 1_500_000u32;
+    let max_steps = 2_500_000u32;
     let mut results = Vec::new();
 
     for &seed in &seeds {
