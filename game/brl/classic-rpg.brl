@@ -122,9 +122,9 @@ component GameState {
 // Progress tracking for the N-step checkpoint system
 // Fires ProgressCheckpoint events at defined intervals so the UI can
 // replay game progress at one update per second.
-// N = 30 checkpoints, one per 100 enemies defeated (3000 total encounters).
+// N = 30 checkpoints, one per 100 encounters completed (3000 total encounters).
 component ProgressTracker {
-    checkpointInterval: integer    // enemies defeated per checkpoint (default: 100)
+    checkpointInterval: integer    // encounters completed per checkpoint (default: 100)
     checkpointsReached: integer    // number of checkpoints fired so far
     totalCheckpoints: integer      // total N checkpoints expected (default: 30)
 }
@@ -312,14 +312,25 @@ rule spawn_initial_enemies on GameStart(gs: id) {
         entity.GameState.currentWave = 1
         entity.GameState.bossSpawned = false
 
-        // Initialize encounter tracking
-        entity.GameState.encounterCount = 1
+        // Initialize encounter tracking (encounterCount counts completed encounters)
+        entity.GameState.encounterCount = 0
         entity.GameState.nextBossThreshold = entity.SpawnConfig.bossEveryKills
 
-        // Spawn initial encounter (variable size based on initialEnemyCount)
-let baseCount: integer = entity.SpawnConfig.initialEnemyCount
+        // Spawn initial encounter — size equals number of active player heroes (±1)
+let heroCount: integer = 0
+let heroList: list = entities having Team
+        for h in heroList {
+            if h.Team.isPlayer {
+                if h has HeroTemplate {
+                    // skip template heroes
+                } else {
+                    heroCount += 1
+                }
+            }
+        }
+let baseCount: integer = max(1, heroCount)
 let minCount: integer = max(1, baseCount - 1)
-let maxCount: integer = baseCount + 2
+let maxCount: integer = baseCount + 1
 let maxRange: integer = maxCount + 1
 let count: integer = floor(random_range(minCount, maxRange))
         entity.GameState.enemiesAlive = count
@@ -621,11 +632,11 @@ let p: id = rp.player
 // Grant experience to players when enemy defeated
 rule grant_experience on EnemyDefeated(ed: id) {
     if entity has GameState {
-        // Find all player entities and grant them XP
+        // Find all player entities and grant them XP equal to the enemy's reward
 let players: list = entities having Team
         for player in players {
             if player.Team.isPlayer {
-                player.Character.experience += 75
+                player.Character.experience += ed.expReward
                 schedule CheckLevelUp {
                     source: player
                 }
@@ -673,19 +684,6 @@ rule boss_defeated_victory on EnemyDefeated(ed: id) {
     if entity has GameState {
         entity.GameState.enemiesDefeated += 1
         
-        // Advance tier based on kills (tierProgressionKills enemies per tier)
-        if entity has SpawnConfig {
-            if entity.SpawnConfig.tierProgressionKills > 0 {
-let newTier: integer = (entity.GameState.enemiesDefeated / entity.SpawnConfig.tierProgressionKills) + 1
-                if newTier > entity.SpawnConfig.maxTier {
-                    newTier = entity.SpawnConfig.maxTier
-                }
-                if newTier > entity.GameState.currentTier {
-                    entity.GameState.currentTier = newTier
-                }
-            }
-        }
-        
         // If this was the named final boss, record the achievement but keep playing
         // The game continues until 3000 encounters are reached
         if ed.isBoss {
@@ -707,31 +705,54 @@ let defeated: id = ed.enemy
     }
 }
 
-// End the game after 3000 encounters (campaign completion)
-rule end_at_max_encounters on EnemyDefeated(ed: id) {
-    if entity has GameState {
-        if entity.GameState.enemiesDefeated >= 3000 {
-            if entity.GameState.gameOver == false {
-                entity.GameState.gameOver = true
-                schedule GameOver {
-                    victory: entity.GameState.victory
-                }
-            }
-        }
-    }
-}
-
-// Track enemy deaths and spawn new encounters when all enemies in current encounter are dead
+// Track enemy deaths; when all enemies in the current encounter are dead:
+// heal the party to full, advance the encounter counter, progress the tier,
+// then either end the campaign (after 3000 encounters) or start the next one.
 rule encounter_tracking on EnemyDefeated(ed: id) {
     if entity has GameState {
         // Decrement the living enemy counter
         entity.GameState.enemiesAlive -= 1
 
-        // When all enemies in the current encounter are dead, spawn a new encounter
+        // When all enemies in the current encounter are dead
         if entity.GameState.enemiesAlive <= 0 {
-            if entity.GameState.enemiesDefeated < 3000 {
-                if entity.GameState.gameOver == false {
-                    entity.GameState.encounterCount += 1
+            if entity.GameState.gameOver == false {
+
+                // --- Heal the full party between encounters ---
+let healList: list = entities having Team
+                for hero in healList {
+                    if hero.Team.isPlayer {
+                        if hero has HeroTemplate {
+                            // skip template heroes
+                        } else {
+                            hero.Health.current = hero.Health.max
+                            hero.Mana.current = hero.Mana.max
+                        }
+                    }
+                }
+
+                // --- Advance encounter counter ---
+                entity.GameState.encounterCount += 1
+
+                // --- Tier progression based on encounters completed ---
+                if entity has SpawnConfig {
+                    if entity.SpawnConfig.tierProgressionKills > 0 {
+let newTier: integer = (entity.GameState.encounterCount / entity.SpawnConfig.tierProgressionKills) + 1
+                        if newTier > entity.SpawnConfig.maxTier {
+                            newTier = entity.SpawnConfig.maxTier
+                        }
+                        if newTier > entity.GameState.currentTier {
+                            entity.GameState.currentTier = newTier
+                        }
+                    }
+                }
+
+                // --- End campaign after 3000 encounters, otherwise spawn next ---
+                if entity.GameState.encounterCount >= 3000 {
+                    entity.GameState.gameOver = true
+                    schedule GameOver {
+                        victory: entity.GameState.victory
+                    }
+                } else {
                     schedule [delay: 0.1d] SpawnEncounter {
                     }
                 }
@@ -740,24 +761,36 @@ rule encounter_tracking on EnemyDefeated(ed: id) {
     }
 }
 
-// Spawn a new encounter: a group of enemies with variable size
+// Spawn a new encounter: enemy count matches party size (±1), with optional mini-boss
 rule spawn_encounter on SpawnEncounter(enc: id) {
     if entity has GameState {
         if entity.GameState.gameOver == false {
 let tier: integer = entity.GameState.currentTier
-let baseCount: integer = entity.SpawnConfig.initialEnemyCount
 
-            // Variable encounter size: baseCount ± variation, minimum 1
+            // Encounter size = number of active player heroes ± 1
+let partySize: integer = 0
+let partyHeroes: list = entities having Team
+            for h in partyHeroes {
+                if h.Team.isPlayer {
+                    if h has HeroTemplate {
+                        // skip template heroes
+                    } else {
+                        partySize += 1
+                    }
+                }
+            }
+let baseCount: integer = max(1, partySize)
 let minCount: integer = max(1, baseCount - 1)
-let maxCount: integer = baseCount + 2
+let maxCount: integer = baseCount + 1
 let maxRange: integer = maxCount + 1
 let count: integer = floor(random_range(minCount, maxRange))
 
-            // Check if this should be a boss encounter
+            // Check if this should be a boss encounter (every bossEveryKills encounters)
 let isBossEncounter: boolean = false
 let bossThreshold: integer = entity.GameState.nextBossThreshold
             if bossThreshold > 0 {
-                if entity.GameState.enemiesDefeated >= bossThreshold {
+let nextEncounterNum: integer = entity.GameState.encounterCount + 1
+                if nextEncounterNum >= bossThreshold {
                     isBossEncounter = true
                     entity.GameState.nextBossThreshold = bossThreshold + entity.SpawnConfig.bossEveryKills
                 }
@@ -1804,18 +1837,21 @@ let retreatPenalty: integer = retreatCount * entity.ScoringRules.pointsLostPerRe
 
 // ============================================================================
 // PROGRESS CHECKPOINT RULES (N-step UI replay system)
-// Fires ProgressCheckpoint every checkpointInterval enemies defeated.
-// Default: N=30 checkpoints, one per 100 enemies (3000 total encounters).
+// Fires ProgressCheckpoint every checkpointInterval encounters completed.
+// Default: N=30 checkpoints, one per 100 encounters (3000 total encounters).
 // ============================================================================
 
-// Check and fire a progress checkpoint after each enemy is defeated
+// Check and fire a progress checkpoint after each enemy is defeated.
+// Since encounter_tracking runs before this rule and has already incremented
+// encounterCount when the last enemy of an encounter dies, the updated
+// encounterCount is visible here.
 rule check_progress_checkpoint on EnemyDefeated(ed: id) {
     if entity has ProgressTracker {
         if entity has GameState {
             // Cap at totalCheckpoints
             if entity.ProgressTracker.checkpointsReached < entity.ProgressTracker.totalCheckpoints {
 let nextThreshold: integer = (entity.ProgressTracker.checkpointsReached + 1) * entity.ProgressTracker.checkpointInterval
-                if entity.GameState.enemiesDefeated >= nextThreshold {
+                if entity.GameState.encounterCount >= nextThreshold {
                     entity.ProgressTracker.checkpointsReached += 1
                     // Look up simulation time from RunStats entity
 let runStatsEntities: list = entities having RunStats

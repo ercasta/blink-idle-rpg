@@ -3,10 +3,10 @@
 // =============================================================================
 // This scenario is designed for casual players and new players.
 // Features:
-// - Lower enemy spawn rate (3 enemies per wave vs 5 normal)
-// - Easier enemy progression (50% slower scaling)
-// - Lower retreat/death penalties (5s retreat, 3x death penalty)
-// - Bosses appear less frequently (every 150 kills vs 100)
+// - Encounter enemies = party size (±1) per encounter
+// - Easier enemy progression (50% slower scaling, tier every 750 encounters)
+// - Lower retreat/death penalties
+// - Bosses appear less frequently (every 150 encounters)
 // =============================================================================
 
 // Scenario metadata component (will be added to BRL)
@@ -19,8 +19,8 @@ scenario_info = new entity {
         difficulty: "Easy"
         respawnTime: "5 seconds"
         deathPenalty: "3x (15 seconds)"
-        enemiesPerWave: "3"
-        bossFrequency: "Every 150 enemies"
+        enemiesPerWave: "equals party size"
+        bossFrequency: "Every 150 encounters"
     }
 }
 
@@ -52,16 +52,16 @@ game_state = new entity {
         nextBossThreshold: 0
     }
     SpawnConfig {
-        bossEveryKills: 150               // Bosses every 150 kills (up from 100)
-        tierProgressionKills: 750         // Tier progression every 750 kills
+        bossEveryKills: 150               // Bosses every 150 encounters (up from 100)
+        tierProgressionKills: 750         // Tier progression every 750 encounters
         maxTier: 6                        // Same max tier
         wavesPerTier: 300                 // Same waves per tier
         healthScaleRate: 100              // 50% slower health scaling (down from 200)
         damageScaleRate: 150              // 50% slower damage scaling (down from 300)
-        initialEnemyCount: 3              // 3 enemies per wave (down from 5)
+        initialEnemyCount: 3              // Fallback enemy count (overridden by party size at runtime)
     }
     ProgressTracker {
-        checkpointInterval: 100           // one checkpoint per 100 enemies
+        checkpointInterval: 100           // one checkpoint per 100 encounters completed
         checkpointsReached: 0
         totalCheckpoints: 30              // N = 30 checkpoints
     }

@@ -3,10 +3,10 @@
 // =============================================================================
 // This is the standard balanced scenario.
 // Features:
-// - Standard enemy spawn rate (5 enemies per wave)
-// - Balanced enemy progression
-// - Standard retreat/death penalties (10s retreat, 5x death penalty)
-// - Bosses appear every 100 kills
+// - Encounter enemies = party size (±1) per encounter
+// - Balanced enemy progression (tier advances every 500 encounters)
+// - Standard retreat/death penalties
+// - Bosses appear every 100 encounters
 // =============================================================================
 
 // Scenario metadata component
@@ -19,8 +19,8 @@ scenario_info = new entity {
         difficulty: "Normal"
         respawnTime: "5 seconds"
         deathPenalty: "3x (15 seconds)"
-        enemiesPerWave: "5"
-        bossFrequency: "Every 100 enemies"
+        enemiesPerWave: "equals party size"
+        bossFrequency: "Every 100 encounters"
     }
 }
 
@@ -52,16 +52,16 @@ game_state = new entity {
         nextBossThreshold: 0
     }
     SpawnConfig {
-        bossEveryKills: 100               // Bosses every 100 kills
-        tierProgressionKills: 500         // Tier progression every 500 kills (tier 6 at 2500)
+        bossEveryKills: 100               // Bosses every 100 encounters
+        tierProgressionKills: 500         // Tier progression every 500 encounters (tier 6 at encounter 2500)
         maxTier: 6                        // Maximum tier
         wavesPerTier: 300                 // Waves per tier
         healthScaleRate: 200              // Health scaling rate
         damageScaleRate: 300              // Damage scaling rate
-        initialEnemyCount: 5              // 5 enemies per wave
+        initialEnemyCount: 5              // Fallback enemy count (overridden by party size at runtime)
     }
     ProgressTracker {
-        checkpointInterval: 100           // one checkpoint per 100 enemies
+        checkpointInterval: 100           // one checkpoint per 100 encounters completed
         checkpointsReached: 0
         totalCheckpoints: 30              // N = 30 checkpoints (3000 / 100 = 30)
     }
