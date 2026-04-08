@@ -6,6 +6,7 @@ interface ResultsScreenProps {
   onPlayAgain: () => void;
   onRerun: () => void;
   onHome: () => void;
+  onToggleFavorite?: (id: string) => void;
 }
 
 function Row({ label, value }: { label: string; value: string | number }) {
@@ -23,9 +24,20 @@ function formatTime(seconds: number) {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
-export function ResultsScreen({ result, onPlayAgain, onRerun, onHome }: ResultsScreenProps) {
+export function ResultsScreen({ result, onPlayAgain, onRerun, onHome, onToggleFavorite }: ResultsScreenProps) {
   const { finalScore, enemiesDefeated, playerDeaths, bossesDefeated, totalTime, deepestTier, deepestWave, heroPaths } = result;
   const [expandedHero, setExpandedHero] = useState<string | null>(null);
+
+  function handleDownload() {
+    const json = JSON.stringify(result, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `blink-run-${result.id ?? Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-stone-900 text-stone-100 px-4 py-8">
@@ -86,6 +98,29 @@ export function ResultsScreen({ result, onPlayAgain, onRerun, onHome }: ResultsS
         >
           ▶ Play Again (new setup)
         </button>
+        {/* Favorite + Download row */}
+        {result.id && (
+          <div className="flex gap-3">
+            {onToggleFavorite && (
+              <button
+                onClick={() => result.id && onToggleFavorite(result.id)}
+                className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-colors border ${
+                  result.favorited
+                    ? 'bg-amber-500/20 border-amber-500 text-amber-400 hover:bg-amber-500/30'
+                    : 'bg-stone-700 border-stone-600 text-stone-300 hover:bg-stone-600'
+                }`}
+              >
+                {result.favorited ? '★ Favorited' : '☆ Add to Favorites'}
+              </button>
+            )}
+            <button
+              onClick={handleDownload}
+              className="flex-1 py-2.5 rounded-xl bg-stone-700 hover:bg-stone-600 text-stone-300 font-bold text-sm transition-colors border border-stone-600"
+            >
+              ⬇ Download Run
+            </button>
+          </div>
+        )}
         <button
           onClick={onHome}
           className="w-full py-3 rounded-xl border border-stone-600 text-stone-300 hover:text-stone-100 hover:border-stone-400 transition-colors"
