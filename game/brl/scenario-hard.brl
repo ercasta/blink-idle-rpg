@@ -3,10 +3,10 @@
 // =============================================================================
 // This scenario is for experienced players seeking a challenge.
 // Features:
-// - Higher enemy spawn rate (7 enemies per wave vs 5 normal)
-// - Faster enemy progression (50% faster scaling)
-// - Higher retreat/death penalties (15s retreat, 7x death penalty)
-// - Bosses appear more frequently (every 75 kills vs 100)
+// - Encounter enemies = party size (±1) per encounter
+// - Faster enemy progression (50% faster scaling, tier every 400 encounters)
+// - Higher retreat/death penalties
+// - Bosses appear more frequently (every 75 encounters)
 // =============================================================================
 
 // Scenario metadata component
@@ -19,8 +19,8 @@ scenario_info = new entity {
         difficulty: "Hard"
         respawnTime: "15 seconds"
         deathPenalty: "7x (105 seconds)"
-        enemiesPerWave: "7"
-        bossFrequency: "Every 75 enemies"
+        enemiesPerWave: "equals party size"
+        bossFrequency: "Every 75 encounters"
     }
 }
 
@@ -52,16 +52,16 @@ game_state = new entity {
         nextBossThreshold: 0
     }
     SpawnConfig {
-        bossEveryKills: 75                // Bosses every 75 kills (down from 100)
-        tierProgressionKills: 400         // Tier progression every 400 kills
+        bossEveryKills: 75                // Bosses every 75 encounters (down from 100)
+        tierProgressionKills: 400         // Tier progression every 400 encounters
         maxTier: 6                        // Same max tier
         wavesPerTier: 300                 // Same waves per tier
         healthScaleRate: 300              // 50% faster health scaling (up from 200)
         damageScaleRate: 450              // 50% faster damage scaling (up from 300)
-        initialEnemyCount: 7              // 7 enemies per wave (up from 5)
+        initialEnemyCount: 7              // Fallback enemy count (overridden by party size at runtime)
     }
     ProgressTracker {
-        checkpointInterval: 100           // one checkpoint per 100 enemies
+        checkpointInterval: 100           // one checkpoint per 100 encounters completed
         checkpointsReached: 0
         totalCheckpoints: 30              // N = 30 checkpoints
     }
