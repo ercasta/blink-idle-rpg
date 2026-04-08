@@ -1,0 +1,26 @@
+# character traits
+
+character progression is defined by its traits.
+
+the traits are 12 values ranging from -16 to 15 that control how the character will level up and which actions to choose
+
+traits:
+
+- physical / magical
+- offensive / defensive
+- supportive / attacker
+- risky / cautious
+- fire / water
+- wind / earth
+- light / darkness
+- chaos / order
+- sly / honorable
+- range / melee
+- absorb / inflict
+- area / focus
+
+stats and skills are automatically selected based on these bits
+
+at the end of the run, the player can also explore the actual progression ("path") chosen by the hero
+
+
