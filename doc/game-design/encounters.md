@@ -5,68 +5,91 @@ This document covers how encounters are structured, how the party progresses thr
 ## Design Goals
 
 - The game is a **series of encounters** of increasing difficulty; there is no open world.
-- Each encounter is a fight against a fixed wave of enemies.
+- Each encounter is a fight against a random group of enemies from the current tier.
 - The party may **retreat** from an encounter at the cost of a score penalty.
-- Encounter difficulty scales via enemy tier, count, and stat multipliers.
-- Boss encounters are special and use different selection logic.
+- Encounter difficulty scales via enemy tier and random group size.
+- **Boss encounters** occur every N kills and include a mini-boss alongside regular enemies.
+- A **final boss** (Lord Vexar) is spawned once when the party reaches the maximum tier.
 
 ---
 
 ## Encounter Structure
 
 An **encounter** consists of:
-1. A **set of enemies** determined by the current tier and wave number.
-2. A **difficulty multiplier** applied to enemy HP and damage.
-3. A **time budget**: completing the encounter quickly rewards bonus score.
-4. A **boss flag**: if this is a boss encounter, the standard wave enemies are replaced by a single boss entity.
+1. A **random group of enemies** (size varies by `initialEnemyCount ± random`) from the current tier.
+2. Optionally a **mini-boss** when `enemiesDefeated` reaches a multiple of `bossEveryKills`.
+3. Enemies spawn with a small stagger delay (0.1 s each) and attack immediately.
+
+After all enemies in the group are defeated, the next encounter spawns automatically after a 0.1 s delay.
 
 ---
 
-## Wave Progression
+## Progression
 
 ```
-Wave 1..wavesPerTier        → Tier 1 enemies
-Wave (wavesPerTier+1)..2*wavesPerTier → Tier 2 enemies
+enemiesDefeated 0–499     → Tier 1 enemies
+enemiesDefeated 500–999   → Tier 2 enemies
 ...
-Wave N (every bossEveryKills kills) → Boss encounter
+enemiesDefeated 2500+     → Tier 6 enemies (max)
+
+Every bossEveryKills enemies → Boss encounter (mini-boss added to group)
 ```
 
-The exact thresholds are controlled by `SpawnConfig` and can differ per game mode.
+The exact thresholds are controlled by `SpawnConfig` (`tierProgressionKills` and `bossEveryKills`) and can differ per game mode.
 
 ### Default Progression (Normal Mode)
-| Phase | Waves | Enemy Tier | Special |
-|-------|-------|-----------|---------|
-| Early Game | 1–3 | 1 | — |
-| Early-Mid | 4–6 | 2 | — |
-| Mid Game | 7–9 | 3 | — |
-| Late Game | 10–12 | 4 | — |
-| End Game | 13–15 | 5 | — |
-| Boss | Every ~100 kills | 6 | Boss entity replaces wave |
+
+| Enemies Defeated | Enemy Tier | Enemy Pool |
+|-----------------|-----------|------------|
+| 0–499 | 1 | Goblin, Skeleton |
+| 500–999 | 2 | Orc, Zombie |
+| 1000–1499 | 3 | Troll, Vampire |
+| 1500–1999 | 4 | Ogre, Werewolf |
+| 2000–2499 | 5 | Dragon, Demon Lord |
+| 2500+ | 6 | Ancient Dragon, Lich King |
+| Special | — | Lord Vexar (final boss, once) |
 
 ---
 
-## Encounter Selection Logic
+## Encounter Spawning Logic
 
-The spawning system uses the following priority order:
+The spawning system (in BRL `spawn_encounter` rule) works as follows:
 
-1. **Boss Encounter**: if `enemiesDefeated % bossEveryKills == 0` and `!bossSpawned`, spawn the tier boss.
-2. **Tier Advance**: if `enemiesDefeated % tierProgressionKills == 0`, increment `currentTier` (up to `maxTier`).
-3. **Normal Wave**: spawn `initialEnemyCount` enemies from the current tier pool.
+1. **Determine encounter type**: if `enemiesDefeated >= nextBossThreshold`, it is a boss encounter. `nextBossThreshold` advances by `bossEveryKills` after each boss encounter.
+2. **Determine enemy count**: `floor(random_range(max(1, initialEnemyCount-1), initialEnemyCount+3))`.
+3. **Spawn regular enemies**: for each slot, a random non-boss template matching `currentTier` is cloned via `SpawnEnemy` events (staggered 0.1 s apart).
+4. **Spawn mini-boss** (boss encounters only): one additional buffed enemy (2.5× HP, 1.5× damage) is appended via `SpawnMiniBoss`.
+5. **Track `enemiesAlive`**: set to the total spawned count. Decremented by `encounter_tracking` on each `EnemyDefeated` event. When it reaches 0, the next encounter spawns.
 
-Enemy selection from a tier pool is random (seeded for reproducibility). Each tier pool contains all enemy templates registered for that tier in the `EnemyCompendium`.
+Enemy selection from a tier pool is deterministic per-seed (uses the seeded PRNG). The component storage iterates entity IDs in sorted order to ensure full reproducibility.
 
 ---
 
-## Difficulty Scaling
+## Boss Encounters
 
-Enemy stats scale with the wave number:
+A **boss encounter** occurs every `bossEveryKills` enemies defeated (default: 100).
 
+- A normal group of enemies is spawned **minus one**, then a **mini-boss** is added.
+- The mini-boss is a clone of a random tier-appropriate template, buffed with 2.5× HP and 1.5× damage, and marked `isBoss = true`.
+- Mini-boss kills award `bossScore` bonus points.
+
+The **final boss (Lord Vexar)** is a separate entity spawned once when `currentTier` reaches `maxTier`. Lord Vexar is the true win condition of the run.
+
+---
+
+## Tier Advancement
+
+Tier advances every `tierProgressionKills` enemies (default: 500). Rules:
+
+```brl
+if entity.GameState.enemiesDefeated >= entity.SpawnConfig.tierProgressionKills * entity.GameState.currentTier {
+    if entity.GameState.currentTier < entity.SpawnConfig.maxTier {
+        entity.GameState.currentTier += 1
+    }
+}
 ```
-scaledHP     = baseHP    * (1 + healthScaleRate / 1000 * currentWave)
-scaledDamage = baseDamage * (1 + damageScaleRate / 1000 * currentWave)
-```
 
-Additionally, `initialEnemyCount` may increase by one for every N waves (configurable in `SpawnConfig`).
+Each encounter spawns enemies from `currentTier`, so the party faces progressively tougher foes as the kill count increases.
 
 ---
 
@@ -74,37 +97,32 @@ Additionally, `initialEnemyCount` may increase by one for every N waves (configu
 
 - The party can **flee** between attacks (not mid-attack) if `canFlee == true`.
 - On flee, `retreatPenalty` is increased and a `fleeCooldown` prevents immediate re-use.
-- On hero death, `deathPenalty` is accumulated.
+- On hero death, the hero respawns after a brief delay and `playerDeaths` is incremented.
 
 ---
 
 ## Components
 
-### `EncounterState`
-Attached to: the game-state entity for the duration of an encounter.
+### `GameState` (encounter-related fields)
+
+Attached to: the `game_state` entity.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `encounterId` | integer | Monotonically increasing encounter counter |
-| `startTime` | float | Simulation time when the encounter started |
-| `enemyCount` | integer | Total enemies in this encounter |
-| `enemiesRemaining` | integer | Live enemies still in this encounter |
-| `isBossEncounter` | boolean | Whether this is a boss encounter |
-| `difficultyMultiplier` | float | Stat scaling applied to enemies in this encounter |
-
-### `EncounterResult`
-Attached to: the game-state entity after an encounter resolves (win or flee).
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `encounterId` | integer | Which encounter this result belongs to |
-| `won` | boolean | `true` if all enemies were defeated |
-| `timeElapsed` | float | Seconds taken to resolve the encounter |
-| `heroDeaths` | integer | Hero deaths during this encounter |
-| `retreated` | boolean | `true` if the party fled |
+| `encounterCount` | integer | Total encounters started |
+| `enemiesAlive` | integer | Live enemies in the current encounter |
+| `enemiesDefeated` | integer | Total enemies defeated across all encounters |
+| `nextBossThreshold` | integer | Kill count that triggers the next boss encounter |
+| `currentTier` | integer | Current enemy tier (1–6) |
 
 ### `SpawnConfig`
-(Defined in [combat.md](combat.md).) Controls wave composition and scaling rates.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `initialEnemyCount` | integer | Base group size per encounter |
+| `bossEveryKills` | integer | Kills between boss encounters |
+| `tierProgressionKills` | integer | Kills per tier (must equal `bossEveryKills * N` for correct alignment) |
+| `maxTier` | integer | Maximum enemy tier |
 
 ---
 
@@ -112,18 +130,22 @@ Attached to: the game-state entity after an encounter resolves (win or flee).
 
 | Event | Fields | Description |
 |-------|--------|-------------|
-| `EncounterStart` | `encounterId`, `isBoss` | A new encounter begins; enemies are spawned |
-| `EncounterEnd` | `encounterId`, `won`, `timeElapsed` | All enemies defeated or party fled |
-| `SpawnEnemy` | `tier`, `waveNumber` | Requests creation of one enemy from the tier pool |
-| `EnemySpawned` | `enemyId`, `tier` | Enemy entity is live and ready to fight |
-| `NextWave` | `waveNumber` | Schedules the next wave |
+| `SpawnEncounter` | — | Triggers a new encounter to spawn |
+| `SpawnEnemy` | `tier` | Spawns one random enemy from the tier pool |
+| `SpawnMiniBoss` | — | Spawns a buffed enemy as a mini-boss |
+| `SpawnLordVexar` | — | Spawns the final boss (once per run) |
+| `EnemyDefeated` | `enemy`, `expReward`, `isBoss` | An enemy was killed; triggers scoring and encounter tracking |
+| `GameOver` | `victory` | The run ends (all 3000 enemies defeated or Lord Vexar slain) |
 | `Flee` | — | Party retreats; `retreatPenalty` is applied |
 
 ---
 
 ## Design Notes
 
-- The encounter system is intentionally simple — "a series of fights" with no branching narrative.
-- Game modes may modify the encounter loop by changing `SpawnConfig` values or overriding the boss spawn threshold.
-- Future extension: **optional encounters** with higher difficulty but score multipliers, selectable by the player at run start. These would be represented as extra entries in a choice list before the next `EncounterStart`.
+- Encounter progression is intentionally simple: a continuous series of fights with no branching.
+- The random group size (±2 from `initialEnemyCount`) creates natural variation in encounter difficulty.
+- Boss encounters every 100 kills provide rhythm and reward checkpoints.
+- All randomness is seeded per game; the same seed always produces the same run.
+- Game modes may modify the encounter loop by changing `SpawnConfig` values (e.g., larger groups, more frequent bosses).
 - Future extension: **elite encounters** (mid-boss mini-bosses) inserted between regular boss encounters.
+- Future extension: **optional encounters** with higher difficulty but score multipliers, selectable by the player.

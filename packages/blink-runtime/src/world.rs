@@ -7,7 +7,7 @@
 /// The World provides a type-erased storage interface via `ComponentStorageMap` that
 /// generated code implements for each game's specific set of components.
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use crate::value::EntityId;
 
 /// Trait for component storage - implemented by generated code for each component type.
@@ -22,14 +22,18 @@ pub trait ComponentStorage: std::any::Any {
 }
 
 /// Typed component storage for a specific component type.
+/// Uses BTreeMap for deterministic iteration order (sorted by EntityId).
+/// This is critical for reproducible game simulation: rules that iterate
+/// `entities having X` must always see entities in the same order for
+/// the same seed, regardless of insertion history or process runs.
 pub struct TypedStorage<C: Clone + 'static> {
-    pub data: HashMap<EntityId, C>,
+    pub data: BTreeMap<EntityId, C>,
 }
 
 impl<C: Clone + 'static> TypedStorage<C> {
     pub fn new() -> Self {
         TypedStorage {
-            data: HashMap::new(),
+            data: BTreeMap::new(),
         }
     }
 
@@ -84,7 +88,7 @@ impl<C: Clone + 'static> ComponentStorage for TypedStorage<C> {
 /// Component storages are registered by generated code at initialization.
 pub struct World {
     next_entity_id: EntityId,
-    alive: std::collections::HashSet<EntityId>,
+    alive: std::collections::BTreeSet<EntityId>,
     storages: HashMap<std::any::TypeId, Box<dyn ComponentStorage>>,
     /// Maps entity IDs to their variable names (from BRL entity definitions).
     entity_variables: HashMap<EntityId, String>,
@@ -94,7 +98,7 @@ impl World {
     pub fn new() -> Self {
         World {
             next_entity_id: 1, // 0 is reserved for NO_ENTITY
-            alive: std::collections::HashSet::new(),
+            alive: std::collections::BTreeSet::new(),
             storages: HashMap::new(),
             entity_variables: HashMap::new(),
         }
