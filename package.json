@@ -23,6 +23,8 @@
     "install:wasm": "node scripts/install-wasm.js",
     "_comment_batch": "── Batch simulation (game designer balancing tool) ───────",
     "simulate": "npm run build:wasm && node tools/simulate.js",
+    "_comment_harness": "── Massive test harness (design validation tool) ────────",
+    "test:massive": "npm run build:compiler:ts && node tools/massive-test-harness.js",
     "_comment_full": "── Full production build ──────────────────────────────────",
     "build": "npm run build:compiler && npm run build:wasm && npm run install:wasm && npm run build:app"
   },

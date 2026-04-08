@@ -544,4 +544,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { runOneSimulation, aggregateKPIs, loadGameData, buildHeroJson, buildEnemyJson, buildConfigEntities };
+module.exports = { ensureBinary, runOneSimulation, aggregateKPIs, loadGameData, buildHeroJson, buildEnemyJson, buildConfigEntities };
