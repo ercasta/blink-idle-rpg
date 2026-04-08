@@ -1530,7 +1530,7 @@ rule flee_battle on FleeFromBattle(fb: id) {
 let fleeConfigs: list = entities having FleeConfig
         if len(fleeConfigs) > 0 {
 let fleeConfig: id = fleeConfigs[0]
-let timeSinceFlee: id = entity.RunStats.simulationTime - entity.RunStats.lastFleeTime
+let timeSinceFlee: decimal = entity.RunStats.simulationTime - entity.RunStats.lastFleeTime
             if timeSinceFlee >= fleeConfig.FleeConfig.fleeCooldown {
                 entity.RunStats.retreatCount += 1
                 entity.RunStats.retreatPenalty += fleeConfig.FleeConfig.retreatTimePenalty
@@ -1583,7 +1583,7 @@ rule update_flee_cooldown on UpdateRunStats(urs: id) {
 let fleeConfigs: list = entities having FleeConfig
         if len(fleeConfigs) > 0 {
 let fleeConfig: id = fleeConfigs[0]
-let timeSinceFlee: id = entity.RunStats.simulationTime - entity.RunStats.lastFleeTime
+let timeSinceFlee: decimal = entity.RunStats.simulationTime - entity.RunStats.lastFleeTime
             if timeSinceFlee >= fleeConfig.FleeConfig.fleeCooldown {
                 entity.RunStats.canFlee = true
             }
