@@ -169,7 +169,6 @@ impl World {
     /// This is safe for BRL-generated code where event references may point to
     /// despawned entities (e.g. a DoAttack event for a killed enemy).
     pub fn get<C: Clone + Default + 'static>(&self, id: EntityId) -> &C {
-        static DEFAULT_STORAGE: std::sync::OnceLock<std::sync::Mutex<Vec<Box<dyn std::any::Any + Send + Sync>>>> = std::sync::OnceLock::new();
         let type_id = std::any::TypeId::of::<C>();
         if let Some(result) = self.storages
             .get(&type_id)
