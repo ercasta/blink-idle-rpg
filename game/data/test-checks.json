@@ -1,0 +1,135 @@
+[
+  {
+    "id": "determinism_solo_warrior",
+    "name": "Determinism: solo warrior same seed yields identical results",
+    "description": "Running the solo warrior scenario twice with the same seeds must produce identical scores and game state, confirming engine determinism. If this fails, there is a non-deterministic bug in the engine.",
+    "type": "determinism",
+    "params": { "scenario": "solo_warrior" }
+  },
+  {
+    "id": "determinism_full_balanced",
+    "name": "Determinism: full balanced party same seed yields identical results",
+    "description": "Running the full balanced party twice with the same seeds must produce identical results. Tests determinism with multiple hero interactions.",
+    "type": "determinism",
+    "params": { "scenario": "full_balanced" }
+  },
+  {
+    "id": "score_nonnegative_all",
+    "name": "All scenarios produce non-negative mean scores",
+    "description": "Every scenario's runs should have a non-negative total score on average. Negative scores suggest death/retreat penalties are too harsh or scoring rewards are too low.",
+    "type": "score_nonnegative",
+    "params": {
+      "scenarios": [
+        "solo_warrior", "solo_mage", "solo_rogue",
+        "duo_warrior_mage", "trio_mixed", "full_balanced",
+        "all_warriors", "all_mages", "glass_cannon", "tank_heavy",
+        "full_balanced_hard", "full_balanced_easy"
+      ]
+    }
+  },
+  {
+    "id": "score_consistent_all",
+    "name": "Score total equals sum of sub-components for all scenarios",
+    "description": "For every run, score.total must equal killScore + bossScore + waveScore + speedBonus - deathPenaltyTotal - retreatPenaltyTotal - timePenaltyTotal. A mismatch indicates a scoring rule bug.",
+    "type": "score_consistent",
+    "params": {
+      "scenarios": [
+        "solo_warrior", "solo_mage", "solo_rogue",
+        "duo_warrior_mage", "trio_mixed", "full_balanced",
+        "all_warriors", "all_mages", "glass_cannon", "tank_heavy",
+        "full_balanced_hard", "full_balanced_easy"
+      ]
+    }
+  },
+  {
+    "id": "kills_positive_all",
+    "name": "All scenarios defeat at least one enemy per run",
+    "description": "Every run should defeat at least one enemy. If a run ends with zero kills, the combat system or spawn logic may be broken.",
+    "type": "kills_positive",
+    "params": {
+      "scenarios": [
+        "solo_warrior", "solo_mage", "solo_rogue",
+        "duo_warrior_mage", "trio_mixed", "full_balanced",
+        "all_warriors", "all_mages", "glass_cannon", "tank_heavy",
+        "full_balanced_hard", "full_balanced_easy"
+      ]
+    }
+  },
+  {
+    "id": "victory_implies_boss_all",
+    "name": "Victory always implies boss was defeated",
+    "description": "Whenever a run ends in victory, the bossDefeated flag must be true. If victory occurs without boss defeat, the victory condition logic has a bug.",
+    "type": "victory_implies_boss",
+    "params": {
+      "scenarios": [
+        "solo_warrior", "solo_mage", "solo_rogue",
+        "duo_warrior_mage", "trio_mixed", "full_balanced",
+        "all_warriors", "all_mages", "glass_cannon", "tank_heavy",
+        "full_balanced_hard", "full_balanced_easy"
+      ]
+    }
+  },
+  {
+    "id": "duo_beats_solo",
+    "name": "Duo party scores higher than solo warrior",
+    "description": "A warrior+mage duo should outperform a solo warrior on average. If not, adding a second hero provides no meaningful benefit — check party synergy mechanics.",
+    "type": "mean_score_greater",
+    "params": { "scenarioA": "duo_warrior_mage", "scenarioB": "solo_warrior" }
+  },
+  {
+    "id": "trio_beats_duo",
+    "name": "Trio party scores higher than duo",
+    "description": "A 3-hero party (warrior+mage+cleric) should outperform a 2-hero party on average. Validates that adding a healer/third member provides value.",
+    "type": "mean_score_greater",
+    "params": { "scenarioA": "trio_mixed", "scenarioB": "duo_warrior_mage" }
+  },
+  {
+    "id": "full_beats_trio",
+    "name": "Full balanced party scores higher than trio",
+    "description": "A 6-hero balanced party should outperform a 3-hero party. Validates that party size continues to provide advantage at larger sizes.",
+    "type": "mean_score_greater",
+    "params": { "scenarioA": "full_balanced", "scenarioB": "trio_mixed" }
+  },
+  {
+    "id": "full_beats_solo_kills",
+    "name": "Full party defeats more enemies than solo warrior",
+    "description": "A 6-hero party should kill more enemies than a solo warrior on average. If not, extra heroes are not contributing to combat effectiveness.",
+    "type": "mean_kills_greater",
+    "params": { "scenarioA": "full_balanced", "scenarioB": "solo_warrior" }
+  },
+  {
+    "id": "easy_higher_winrate_than_normal",
+    "name": "Easy mode has higher or equal win rate than normal mode",
+    "description": "The same party on easy difficulty should win at least as often as on normal. If easy has a lower win rate, the difficulty tuning is inverted.",
+    "type": "win_rate_greater_or_equal",
+    "params": { "scenarioA": "full_balanced_easy", "scenarioB": "full_balanced" }
+  },
+  {
+    "id": "normal_higher_winrate_than_hard",
+    "name": "Normal mode has higher or equal win rate than hard mode",
+    "description": "The same party on normal should win at least as often as on hard. If hard has a higher win rate, difficulty scaling is inverted.",
+    "type": "win_rate_greater_or_equal",
+    "params": { "scenarioA": "full_balanced", "scenarioB": "full_balanced_hard" }
+  },
+  {
+    "id": "balanced_viable",
+    "name": "Balanced party achieves at least 20% victory rate",
+    "description": "The balanced 6-hero party should be able to win at least 20% of the time on normal difficulty. A lower rate suggests the game is too punishing for a well-composed party.",
+    "type": "victory_rate_min",
+    "params": { "scenario": "full_balanced", "minRate": 20 }
+  },
+  {
+    "id": "solo_warrior_viable",
+    "name": "Solo warrior achieves at least some kills",
+    "description": "A solo warrior should be able to kill enemies even without a party. Zero kills would indicate the solo experience is completely broken.",
+    "type": "kills_positive",
+    "params": { "scenarios": ["solo_warrior"] }
+  },
+  {
+    "id": "mono_class_vs_balanced_kills",
+    "name": "Balanced party defeats at least as many enemies as mono-warrior party",
+    "description": "Class diversity should provide at least as much combat effectiveness as stacking the same class. If 4x warriors consistently kill more than a 6-hero balanced team, class balance needs work.",
+    "type": "mean_kills_greater",
+    "params": { "scenarioA": "full_balanced", "scenarioB": "all_warriors" }
+  }
+]

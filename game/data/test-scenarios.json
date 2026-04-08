@@ -1,0 +1,110 @@
+[
+  {
+    "id": "solo_warrior",
+    "name": "Solo Warrior (Normal)",
+    "description": "Single warrior hero in normal difficulty",
+    "party": ["Warrior"],
+    "mode": "normal",
+    "runs": 5,
+    "seedStart": 100
+  },
+  {
+    "id": "solo_mage",
+    "name": "Solo Mage (Normal)",
+    "description": "Single mage hero in normal difficulty",
+    "party": ["Mage"],
+    "mode": "normal",
+    "runs": 5,
+    "seedStart": 200
+  },
+  {
+    "id": "solo_rogue",
+    "name": "Solo Rogue (Normal)",
+    "description": "Single rogue hero in normal difficulty",
+    "party": ["Rogue"],
+    "mode": "normal",
+    "runs": 5,
+    "seedStart": 300
+  },
+  {
+    "id": "duo_warrior_mage",
+    "name": "Duo Warrior + Mage (Normal)",
+    "description": "Two-hero party with warrior and mage",
+    "party": ["Warrior", "Mage"],
+    "mode": "normal",
+    "runs": 5,
+    "seedStart": 400
+  },
+  {
+    "id": "trio_mixed",
+    "name": "Trio Warrior + Mage + Cleric (Normal)",
+    "description": "Three-hero party with tank, DPS, and healer",
+    "party": ["Warrior", "Mage", "Cleric"],
+    "mode": "normal",
+    "runs": 5,
+    "seedStart": 500
+  },
+  {
+    "id": "full_balanced",
+    "name": "Balanced 6-Hero Party (Normal)",
+    "description": "Full party with one of each class",
+    "party": ["Warrior", "Mage", "Cleric", "Ranger", "Paladin", "Rogue"],
+    "mode": "normal",
+    "runs": 5,
+    "seedStart": 600
+  },
+  {
+    "id": "all_warriors",
+    "name": "4x Warriors (Normal)",
+    "description": "Mono-class party of four warriors",
+    "party": ["Warrior", "Warrior", "Warrior", "Warrior"],
+    "mode": "normal",
+    "runs": 5,
+    "seedStart": 700
+  },
+  {
+    "id": "all_mages",
+    "name": "4x Mages (Normal)",
+    "description": "Mono-class party of four mages",
+    "party": ["Mage", "Mage", "Mage", "Mage"],
+    "mode": "normal",
+    "runs": 5,
+    "seedStart": 800
+  },
+  {
+    "id": "glass_cannon",
+    "name": "Glass Cannon (Normal)",
+    "description": "High damage, low survivability party",
+    "party": ["Mage", "Mage", "Rogue", "Ranger"],
+    "mode": "normal",
+    "runs": 5,
+    "seedStart": 900
+  },
+  {
+    "id": "tank_heavy",
+    "name": "Tank Heavy (Normal)",
+    "description": "High survivability party with tanks and healer",
+    "party": ["Warrior", "Paladin", "Cleric", "Warrior"],
+    "mode": "normal",
+    "runs": 5,
+    "seedStart": 1000
+  },
+  {
+    "id": "full_balanced_hard",
+    "name": "Balanced 6-Hero Party (Hard)",
+    "description": "Full balanced party in hard difficulty",
+    "party": ["Warrior", "Mage", "Cleric", "Ranger", "Paladin", "Rogue"],
+    "mode": "hard",
+    "runs": 5,
+    "seedStart": 1100
+  },
+  {
+    "id": "full_balanced_easy",
+    "name": "Balanced 6-Hero Party (Easy)",
+    "description": "Full balanced party in easy difficulty",
+    "party": ["Warrior", "Mage", "Cleric", "Ranger", "Paladin", "Rogue"],
+    "mode": "easy",
+    "runs": 5,
+    "seedStart": 1200
+  }
+]

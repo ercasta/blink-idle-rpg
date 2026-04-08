@@ -178,6 +178,7 @@ const MAIN_RS = `// Auto-generated simulation harness.
 #![allow(dead_code, unused_imports, unused_variables)]
 
 use blink_game::*;
+use blink_game::json_bridge::{add_component_from_json, get_component_json};
 
 fn main() {
     let input: String = {
@@ -200,10 +201,11 @@ fn main() {
     if let Some(heroes) = config["heroes"].as_array() {
         for (i, hero) in heroes.iter().enumerate() {
             let entity_id = (i + 1) as u32;
-            engine.world.create_entity(entity_id);
+            engine.world.spawn_with_id(entity_id);
             if let Some(obj) = hero.as_object() {
                 for (comp_name, fields) in obj {
-                    add_component_from_json(&mut engine, entity_id, comp_name, fields);
+                    let fields_str = serde_json::to_string(fields).unwrap_or_default();
+                    add_component_from_json(&mut engine, entity_id, comp_name, &fields_str);
                 }
             }
         }
@@ -213,11 +215,12 @@ fn main() {
     if let Some(enemies) = config["enemies"].as_array() {
         for enemy_entry in enemies {
             let entity_id = enemy_entry["_entityId"].as_u64().unwrap_or(100) as u32;
-            engine.world.create_entity(entity_id);
+            engine.world.spawn_with_id(entity_id);
             if let Some(obj) = enemy_entry.as_object() {
                 for (comp_name, fields) in obj {
                     if comp_name.starts_with('_') { continue; }
-                    add_component_from_json(&mut engine, entity_id, comp_name, fields);
+                    let fields_str = serde_json::to_string(fields).unwrap_or_default();
+                    add_component_from_json(&mut engine, entity_id, comp_name, &fields_str);
                 }
             }
         }
@@ -227,11 +230,12 @@ fn main() {
     if let Some(config_entities) = config["configEntities"].as_array() {
         for entry in config_entities {
             let entity_id = entry["_entityId"].as_u64().unwrap_or(99) as u32;
-            engine.world.create_entity(entity_id);
+            engine.world.spawn_with_id(entity_id);
             if let Some(obj) = entry.as_object() {
                 for (comp_name, fields) in obj {
                     if comp_name.starts_with('_') { continue; }
-                    add_component_from_json(&mut engine, entity_id, comp_name, fields);
+                    let fields_str = serde_json::to_string(fields).unwrap_or_default();
+                    add_component_from_json(&mut engine, entity_id, comp_name, &fields_str);
                 }
             }
         }
@@ -397,7 +401,7 @@ function runOneSimulation(binaryPath, config) {
     const output = execSync(binaryPath, {
       input: input,
       encoding: 'utf-8',
-      timeout: 30_000,
+      timeout: 120_000,
       maxBuffer: 10 * 1024 * 1024,
     });
     return JSON.parse(output.trim());
@@ -544,4 +548,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { runOneSimulation, aggregateKPIs, loadGameData, buildHeroJson, buildEnemyJson, buildConfigEntities };
+module.exports = { ensureBinary, runOneSimulation, aggregateKPIs, loadGameData, buildHeroJson, buildEnemyJson, buildConfigEntities };
