@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { TRAIT_AXES, TRAIT_MIN, TRAIT_MAX, defaultTraits, randomTraits, simulateHeroPath, getSkillName } from '../data/traits';
 import type { HeroDefinition, HeroClass, HeroTraits } from '../types';
 import { generateRandomHero } from '../data/heroes';
@@ -478,8 +478,12 @@ export function TraitEditor({ hero, traits, onChangeTrait, onReset, onDone, done
     loadSkillCatalog().then(setSkillCatalog);
   }, []);
 
-  // Recompute path whenever traits or heroClass changes (only when panel is open)
-  const pathEntries = showPath ? simulateHeroPath(hero.heroClass, traits, 25) : [];
+  // Recompute path only when panel is open and when traits or heroClass changes
+  const pathEntries = useMemo(
+    () => (showPath ? simulateHeroPath(hero.heroClass, traits, 25) : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [showPath, hero.heroClass, JSON.stringify(traits)],
+  );
   // Collect unique skills acquired (in order of acquisition)
   const acquiredSkillIds: string[] = [];
   for (const entry of pathEntries) {

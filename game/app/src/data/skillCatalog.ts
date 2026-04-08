@@ -89,8 +89,9 @@ export async function loadSkillCatalog(): Promise<Map<string, SkillEntry>> {
       const map = new Map<string, SkillEntry>(entries.map(e => [e.id, e]));
       catalogCache = map;
       return map;
-    } catch {
-      // Return an empty map on failure — UI will degrade gracefully
+    } catch (err) {
+      // Log for debugging; return empty map so the UI degrades gracefully
+      console.error('Failed to load skill catalog:', err);
       catalogCache = new Map();
       return catalogCache;
     }
