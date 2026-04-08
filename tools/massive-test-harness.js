@@ -449,24 +449,33 @@ function runHarness(options = {}) {
     retries       = 3,
     showPassed    = false,
     verbose       = false,
+    jsonOutput    = false,
     dataDir       = DEFAULT_DATA_DIR,
     scenariosFile = path.join(dataDir, 'test-scenarios.json'),
     checksFile    = path.join(dataDir, 'test-checks.json'),
     rebuild       = false,
   } = options;
 
+  // When --json is used, progress goes to stderr so stdout is clean JSON
+  const origConsoleLog = console.log;
+  if (jsonOutput) {
+    console.log = (...args) => process.stderr.write(args.join(' ') + '\n');
+  }
+  const log  = jsonOutput ? (...a) => process.stderr.write(a.join(' ') + '\n') : origConsoleLog;
+  const logw = jsonOutput ? (...a) => process.stderr.write(a.join(' ') + '\n') : (...a) => process.stdout.write(a.join(' '));
+
   // 1. Load config
   const scenarios = loadJsonConfig(scenariosFile, 'Scenarios');
   const checks    = loadJsonConfig(checksFile, 'Checks');
 
-  console.log(`Loaded ${scenarios.length} scenarios and ${checks.length} checks`);
-  console.log(`Max retries: ${retries}\n`);
+  log(`Loaded ${scenarios.length} scenarios and ${checks.length} checks`);
+  log(`Max retries: ${retries}\n`);
 
   // 2. Load game data and compile binary
-  console.log(`Loading game data from ${dataDir}...`);
+  log(`Loading game data from ${dataDir}...`);
   const gameData = loadGameData(dataDir);
 
-  console.log('Ensuring native simulation binary...');
+  log('Ensuring native simulation binary...');
   const binaryPath = ensureBinary(rebuild);
 
   // 3. Run with retry loop
@@ -479,20 +488,20 @@ function runHarness(options = {}) {
     const seedOffset = attempt * SEED_OFFSET_STEP;
 
     if (attempt > 0) {
-      console.log(`\n${'═'.repeat(72)}`);
-      console.log(`RETRY ${attempt}/${retries} — re-running all simulations (seed offset: +${seedOffset})`);
-      console.log(`  ${pendingChecks.length} check(s) still pending`);
-      console.log('═'.repeat(72));
+      log(`\n${'═'.repeat(72)}`);
+      log(`RETRY ${attempt}/${retries} — re-running all simulations (seed offset: +${seedOffset})`);
+      log(`  ${pendingChecks.length} check(s) still pending`);
+      log('═'.repeat(72));
     }
 
     // 3a. Run all scenarios
-    console.log(`\n── Running ${scenarios.length} scenarios ──`);
+    log(`\n── Running ${scenarios.length} scenarios ──`);
     const allResults = {};
     for (const scenario of scenarios) {
       if (!verbose) {
-        process.stdout.write(`  ${scenario.id.padEnd(25)} `);
+        logw(`  ${scenario.id.padEnd(25)} `);
       } else {
-        console.log(`\n  ${scenario.name} (${scenario.id}):`);
+        log(`\n  ${scenario.name} (${scenario.id}):`);
       }
 
       const result = runScenario(binaryPath, scenario, gameData, seedOffset, verbose);
@@ -500,7 +509,7 @@ function runHarness(options = {}) {
 
       if (!verbose) {
         const k = result.kpis;
-        console.log(
+        log(
           `${result.results.length} runs | ` +
           `mean score: ${String(k.meanScore ?? 'N/A').padStart(7)} | ` +
           `win rate: ${String((k.winRate ?? 0) + '%').padStart(6)} | ` +
@@ -510,7 +519,7 @@ function runHarness(options = {}) {
     }
 
     // 3b. Evaluate pending checks
-    console.log(`\n── Evaluating ${pendingChecks.length} check(s) (attempt ${attempt + 1}) ──`);
+    log(`\n── Evaluating ${pendingChecks.length} check(s) (attempt ${attempt + 1}) ──`);
     const stillFailing = [];
 
     for (const check of pendingChecks) {
@@ -524,11 +533,11 @@ function runHarness(options = {}) {
           message: result.message,
           passedOnAttempt: attempt + 1,
         });
-        console.log(`  ✓ ${check.id}: ${result.message}`);
+        log(`  ✓ ${check.id}: ${result.message}`);
       } else {
         if (attempt < retries) {
           stillFailing.push(check);
-          console.log(`  ✗ ${check.id}: ${result.message} (will retry)`);
+          log(`  ✗ ${check.id}: ${result.message} (will retry)`);
         } else {
           failedChecks.push({
             id: check.id,
@@ -537,7 +546,7 @@ function runHarness(options = {}) {
             message: result.message,
             attemptsUsed: attempt + 1,
           });
-          console.log(`  ✗ ${check.id}: ${result.message} (FINAL FAILURE)`);
+          log(`  ✗ ${check.id}: ${result.message} (FINAL FAILURE)`);
         }
       }
     }
@@ -545,7 +554,7 @@ function runHarness(options = {}) {
     pendingChecks = stillFailing;
 
     if (pendingChecks.length === 0) {
-      console.log(`\n  All checks passed on attempt ${attempt + 1}`);
+      log(`\n  All checks passed on attempt ${attempt + 1}`);
       break;
     }
   }
@@ -557,6 +566,11 @@ function runHarness(options = {}) {
     failed: failedChecks.length,
     allPassed: failedChecks.length === 0,
   };
+
+  // Restore console.log if overridden
+  if (jsonOutput) {
+    console.log = origConsoleLog;
+  }
 
   return { passed: passedChecks, failed: failedChecks, summary };
 }
@@ -621,6 +635,7 @@ if (require.main === module) {
       retries,
       showPassed,
       verbose,
+      jsonOutput,
       dataDir,
       rebuild,
       ...(scenariosFile ? { scenariosFile } : {}),
