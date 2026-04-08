@@ -133,12 +133,12 @@ export function RunHistoryScreen({
           !Array.isArray(run.snapshots) ||
           typeof run.finalScore !== 'number'
         ) {
-          alert('Invalid run file – missing required fields.');
+          alert('Invalid run file: missing required fields (id, snapshots, or finalScore).');
           return;
         }
         onImportRun(run);
       } catch {
-        alert('Failed to read the run file. Make sure it is a valid JSON export.');
+        alert('Failed to parse run file. Please ensure it is a valid JSON file exported from Blink Idle RPG.');
       }
     };
     reader.readAsText(file);

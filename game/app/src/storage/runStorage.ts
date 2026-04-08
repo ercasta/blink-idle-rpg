@@ -84,7 +84,7 @@ export async function deleteRun(id: string): Promise<void> {
 /** Import a run from an external file; overwrites any existing run with the same id. */
 export async function importRun(run: RunResult): Promise<void> {
   if (!run.id) {
-    throw new Error('Imported run is missing an id field.');
+    throw new Error('Cannot import run: missing required id field. Please check the exported file format.');
   }
   return saveRun(run);
 }
