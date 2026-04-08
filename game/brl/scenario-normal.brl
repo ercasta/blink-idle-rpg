@@ -47,6 +47,9 @@ game_state = new entity {
         currentTier: 1
         waveInTier: 1
         bossSpawned: false
+        encounterCount: 0
+        enemiesAlive: 0
+        nextBossThreshold: 0
     }
     SpawnConfig {
         bossEveryKills: 100               // Bosses every 100 kills

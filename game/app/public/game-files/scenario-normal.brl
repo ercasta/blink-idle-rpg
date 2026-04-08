@@ -17,8 +17,8 @@ scenario_info = new entity {
         name: "Classic Campaign"
         description: "The standard Blink RPG experience with balanced difficulty and progression. Recommended for most players."
         difficulty: "Normal"
-        respawnTime: "10 seconds"
-        deathPenalty: "5x (50 seconds)"
+        respawnTime: "5 seconds"
+        deathPenalty: "3x (15 seconds)"
         enemiesPerWave: "5"
         bossFrequency: "Every 100 enemies"
     }
@@ -27,9 +27,9 @@ scenario_info = new entity {
 // Standard game configuration (this is the original balance)
 flee_config = new entity {
     FleeConfig {
-        retreatTimePenalty: 10.0          // 10 seconds
-        deathTimePenaltyMultiplier: 5.0   // 5x = 50 seconds
-        fleeCooldown: 5.0                 // 5 seconds between flees
+        retreatTimePenalty: 5.0d              // 5 seconds
+        deathTimePenaltyMultiplier: 1.0d      // 1x = 5 seconds per death
+        fleeCooldown: 3.0d                    // 3 seconds between flees
     }
 }
 
@@ -47,32 +47,73 @@ game_state = new entity {
         currentTier: 1
         waveInTier: 1
         bossSpawned: false
+        encounterCount: 0
+        enemiesAlive: 0
+        nextBossThreshold: 0
     }
     SpawnConfig {
         bossEveryKills: 100               // Bosses every 100 kills
-        tierProgressionKills: 50          // Tier progression every 50 kills
+        tierProgressionKills: 500         // Tier progression every 500 kills (tier 6 at 2500)
         maxTier: 6                        // Maximum tier
         wavesPerTier: 300                 // Waves per tier
         healthScaleRate: 200              // Health scaling rate
         damageScaleRate: 300              // Damage scaling rate
         initialEnemyCount: 5              // 5 enemies per wave
     }
+    ProgressTracker {
+        checkpointInterval: 100           // one checkpoint per 100 enemies
+        checkpointsReached: 0
+        totalCheckpoints: 30              // N = 30 checkpoints (3000 / 100 = 30)
+    }
 }
 
 run_stats = new entity {
     RunStats {
-        simulationTime: 0.0
+        simulationTime: 0.0d
         retreatCount: 0
-        retreatPenalty: 0.0
-        deathPenalty: 0.0
-        totalTime: 0.0
+        retreatPenalty: 0.0d
+        deathPenalty: 0.0d
+        totalTime: 0.0d
         canFlee: true
-        lastFleeTime: -999.0
+        lastFleeTime: -999.0d
     }
 }
 
 enemy_compendium = new entity {
     EnemyCompendium {
         entries: []
+    }
+}
+
+// Scoring rules for Normal mode (see doc/game-design/game-modes.md)
+let scoring_entity: id = new entity {
+    ScoringRules {
+        pointsPerKill: 15
+        pointsPerWave: 50
+        pointsPerBoss: 500
+        pointsLostPerDeath: 5
+        pointsLostPerRetreat: 10
+        pointsLostPerPenaltySecond: 0
+        timeBonusPoints: 3000
+        timeBonusInterval: 30.0d
+    }
+    Score {
+        total: 0
+        killScore: 0
+        waveScore: 0
+        bossScore: 0
+        speedBonus: 0
+        deathPenaltyTotal: 0
+        retreatPenaltyTotal: 0
+        timePenaltyTotal: 0
+        bossesDefeated: 0
+        wavesCompleted: 0
+    }
+    GameMode {
+        id: "normal"
+        name: "Classic Campaign"
+        description: "The standard Blink RPG experience with balanced difficulty and progression."
+        difficulty: "Normal"
+        hasVictoryCondition: true
     }
 }

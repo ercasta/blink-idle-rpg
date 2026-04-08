@@ -20,26 +20,26 @@ goblin_scout = new entity {
         experienceToLevel: 999
     }
     Health {
-        current: 60
-        max: 60
+        current: 45
+        max: 45
     }
     Mana {
         current: 0
         max: 0
     }
     Stats {
-        strength: 8
-        dexterity: 12
-        intelligence: 4
-        constitution: 8
-        wisdom: 4
+        strength: 6
+        dexterity: 10
+        intelligence: 3
+        constitution: 6
+        wisdom: 3
     }
     Combat {
-        damage: 8
+        damage: 6
         defense: 2
-        attackSpeed: 1.0
-        critChance: 0.05
-        critMultiplier: 1.5
+        attackSpeed: 0.8d
+        critChance: 0.05d
+        critMultiplier: 1.5d
     }
     Target {
         entity: null
@@ -79,26 +79,26 @@ orc_raider = new entity {
         experienceToLevel: 999
     }
     Health {
-        current: 90
-        max: 90
+        current: 70
+        max: 70
     }
     Mana {
         current: 0
         max: 0
     }
     Stats {
-        strength: 12
-        dexterity: 8
-        intelligence: 4
-        constitution: 12
-        wisdom: 4
+        strength: 10
+        dexterity: 7
+        intelligence: 3
+        constitution: 10
+        wisdom: 3
     }
     Combat {
-        damage: 12
-        defense: 4
-        attackSpeed: 0.8
-        critChance: 0.05
-        critMultiplier: 1.5
+        damage: 10
+        defense: 3
+        attackSpeed: 0.7d
+        critChance: 0.05d
+        critMultiplier: 1.5d
     }
     Target {
         entity: null
@@ -134,26 +134,26 @@ dark_wolf = new entity {
         experienceToLevel: 999
     }
     Health {
-        current: 75
-        max: 75
+        current: 55
+        max: 55
     }
     Mana {
         current: 0
         max: 0
     }
     Stats {
-        strength: 10
-        dexterity: 16
-        intelligence: 4
-        constitution: 8
-        wisdom: 6
+        strength: 8
+        dexterity: 14
+        intelligence: 3
+        constitution: 6
+        wisdom: 4
     }
     Combat {
-        damage: 14
-        defense: 3
-        attackSpeed: 1.2
-        critChance: 0.1
-        critMultiplier: 1.5
+        damage: 11
+        defense: 2
+        attackSpeed: 1.0d
+        critChance: 0.08d
+        critMultiplier: 1.5d
     }
     Target {
         entity: null
@@ -193,26 +193,26 @@ skeleton_warrior = new entity {
         experienceToLevel: 999
     }
     Health {
-        current: 110
-        max: 110
+        current: 85
+        max: 85
     }
     Mana {
         current: 0
         max: 0
     }
     Stats {
-        strength: 14
-        dexterity: 10
-        intelligence: 4
-        constitution: 12
-        wisdom: 4
+        strength: 12
+        dexterity: 8
+        intelligence: 3
+        constitution: 10
+        wisdom: 3
     }
     Combat {
-        damage: 16
-        defense: 6
-        attackSpeed: 0.7
-        critChance: 0.1
-        critMultiplier: 1.5
+        damage: 13
+        defense: 5
+        attackSpeed: 0.6d
+        critChance: 0.08d
+        critMultiplier: 1.5d
     }
     Target {
         entity: null
@@ -248,26 +248,26 @@ dark_mage = new entity {
         experienceToLevel: 999
     }
     Health {
-        current: 80
-        max: 80
+        current: 60
+        max: 60
     }
     Mana {
         current: 100
         max: 100
     }
     Stats {
-        strength: 6
-        dexterity: 10
-        intelligence: 16
-        constitution: 8
-        wisdom: 12
+        strength: 5
+        dexterity: 8
+        intelligence: 14
+        constitution: 6
+        wisdom: 10
     }
     Combat {
-        damage: 22
-        defense: 4
-        attackSpeed: 0.5
-        critChance: 0.15
-        critMultiplier: 2.0
+        damage: 18
+        defense: 3
+        attackSpeed: 0.5d
+        critChance: 0.12d
+        critMultiplier: 1.8d
     }
     Target {
         entity: null
@@ -307,26 +307,26 @@ troll_berserker = new entity {
         experienceToLevel: 999
     }
     Health {
-        current: 180
-        max: 180
+        current: 140
+        max: 140
     }
     Mana {
         current: 0
         max: 0
     }
     Stats {
-        strength: 18
-        dexterity: 8
-        intelligence: 4
-        constitution: 18
-        wisdom: 4
+        strength: 15
+        dexterity: 6
+        intelligence: 3
+        constitution: 15
+        wisdom: 3
     }
     Combat {
-        damage: 22
-        defense: 8
-        attackSpeed: 0.6
-        critChance: 0.15
-        critMultiplier: 1.5
+        damage: 18
+        defense: 6
+        attackSpeed: 0.5d
+        critChance: 0.10d
+        critMultiplier: 1.5d
     }
     Target {
         entity: null
@@ -366,26 +366,26 @@ demon_knight = new entity {
         experienceToLevel: 999
     }
     Health {
-        current: 250
-        max: 250
+        current: 200
+        max: 200
     }
     Mana {
         current: 50
         max: 50
     }
     Stats {
-        strength: 18
-        dexterity: 12
-        intelligence: 10
-        constitution: 16
-        wisdom: 8
+        strength: 15
+        dexterity: 10
+        intelligence: 8
+        constitution: 14
+        wisdom: 6
     }
     Combat {
-        damage: 30
-        defense: 10
-        attackSpeed: 0.7
-        critChance: 0.15
-        critMultiplier: 2.0
+        damage: 24
+        defense: 8
+        attackSpeed: 0.6d
+        critChance: 0.12d
+        critMultiplier: 1.8d
     }
     Target {
         entity: null
@@ -425,26 +425,26 @@ ancient_dragon = new entity {
         experienceToLevel: 999
     }
     Health {
-        current: 400
-        max: 400
+        current: 300
+        max: 300
     }
     Mana {
         current: 150
         max: 150
     }
     Stats {
-        strength: 22
-        dexterity: 14
-        intelligence: 16
-        constitution: 22
-        wisdom: 14
+        strength: 18
+        dexterity: 12
+        intelligence: 14
+        constitution: 18
+        wisdom: 12
     }
     Combat {
-        damage: 40
-        defense: 12
-        attackSpeed: 0.8
-        critChance: 0.2
-        critMultiplier: 2.0
+        damage: 30
+        defense: 10
+        attackSpeed: 0.7d
+        critChance: 0.15d
+        critMultiplier: 1.8d
     }
     Target {
         entity: null
@@ -480,26 +480,26 @@ dragon_lord_vexar = new entity {
         experienceToLevel: 999
     }
     Health {
-        current: 500
-        max: 500
+        current: 400
+        max: 400
     }
     Mana {
         current: 200
         max: 200
     }
     Stats {
-        strength: 25
-        dexterity: 15
-        intelligence: 20
-        constitution: 25
-        wisdom: 15
+        strength: 20
+        dexterity: 12
+        intelligence: 16
+        constitution: 20
+        wisdom: 12
     }
     Combat {
-        damage: 40
-        defense: 15
-        attackSpeed: 0.8
-        critChance: 0.2
-        critMultiplier: 2.5
+        damage: 35
+        defense: 12
+        attackSpeed: 0.7d
+        critChance: 0.15d
+        critMultiplier: 2.0d
     }
     Target {
         entity: null

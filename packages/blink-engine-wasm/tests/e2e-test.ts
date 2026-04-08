@@ -218,12 +218,14 @@ fn run_game(seed: u64, max_steps: u32) -> serde_json::Value {
         "gameOver": gs.game_over,
         "victory": gs.victory,
         "bossDefeated": gs.boss_defeated,
+        "encounterCount": gs.encounter_count,
         "checkpointsReached": pt.checkpoints_reached,
         "totalCheckpoints": pt.total_checkpoints,
         "score": {
             "total": score.total,
             "killScore": score.kill_score,
             "bossScore": score.boss_score,
+            "bossesDefeated": score.bosses_defeated,
             "speedBonus": score.speed_bonus,
             "deathPenaltyTotal": score.death_penalty_total,
             "retreatPenaltyTotal": score.retreat_penalty_total,
@@ -245,14 +247,16 @@ fn main() {
 
     // Print summary table to stderr for human readability
     eprintln!("\\n=== Multi-Game Batch Results ({} games, max {} steps) ===", seeds.len(), max_steps);
-    eprintln!("{:<8} {:>8} {:>8} {:>6} {:>6} {:>6} {:>8} {:>8}",
-        "Seed", "Steps", "Enemies", "Deaths", "Tier", "Chkpts", "Score", "Victory");
-    eprintln!("{}", "-".repeat(72));
+    eprintln!("{:<8} {:>8} {:>8} {:>6} {:>6} {:>6} {:>6} {:>6} {:>8} {:>8}",
+        "Seed", "Steps", "Enemies", "Deaths", "Tier", "Chkpts", "Enctrs", "Bosses", "Score", "Victory");
+    eprintln!("{}", "-".repeat(92));
 
     let mut total_score: i64 = 0;
     let mut total_enemies: i64 = 0;
     let mut total_deaths: i64 = 0;
     let mut total_checkpoints: i64 = 0;
+    let mut total_encounters: i64 = 0;
+    let mut total_bosses: i64 = 0;
     let mut all_positive = true;
     let mut all_30_checkpoints = true;
 
@@ -262,6 +266,8 @@ fn main() {
         let d = r["playerDeaths"].as_i64().unwrap_or(0);
         let t = r["currentTier"].as_i64().unwrap_or(0);
         let c = r["checkpointsReached"].as_i64().unwrap_or(0);
+        let enc = r["encounterCount"].as_i64().unwrap_or(0);
+        let b = r["score"]["bossesDefeated"].as_i64().unwrap_or(0);
         let v = r["victory"].as_bool().unwrap_or(false);
         let steps = r["steps_run"].as_u64().unwrap_or(0);
 
@@ -269,19 +275,23 @@ fn main() {
         total_enemies += e;
         total_deaths += d;
         total_checkpoints += c;
+        total_encounters += enc;
+        total_bosses += b;
         if s < 0 { all_positive = false; }
         if c < 30 { all_30_checkpoints = false; }
 
-        eprintln!("{:<8} {:>8} {:>8} {:>6} {:>6} {:>6} {:>8} {:>8}",
-            r["seed"], steps, e, d, t, c, s, if v { "YES" } else { "no" });
+        eprintln!("{:<8} {:>8} {:>8} {:>6} {:>6} {:>6} {:>6} {:>6} {:>8} {:>8}",
+            r["seed"], steps, e, d, t, c, enc, b, s, if v { "YES" } else { "no" });
     }
 
     let n = seeds.len() as i64;
-    eprintln!("{}", "-".repeat(72));
-    eprintln!("Average: enemies={:.0}, deaths={:.0}, checkpoints={:.0}, score={:.0}",
+    eprintln!("{}", "-".repeat(92));
+    eprintln!("Average: enemies={:.0}, deaths={:.0}, checkpoints={:.0}, encounters={:.0}, bosses={:.0}, score={:.0}",
         total_enemies as f64 / n as f64,
         total_deaths as f64 / n as f64,
         total_checkpoints as f64 / n as f64,
+        total_encounters as f64 / n as f64,
+        total_bosses as f64 / n as f64,
         total_score as f64 / n as f64);
     eprintln!("All scores positive: {}", all_positive);
     eprintln!("All reached 30 checkpoints: {}", all_30_checkpoints);
@@ -298,6 +308,8 @@ fn main() {
             "averageEnemies": total_enemies as f64 / n as f64,
             "averageDeaths": total_deaths as f64 / n as f64,
             "averageCheckpoints": total_checkpoints as f64 / n as f64,
+            "averageEncounters": total_encounters as f64 / n as f64,
+            "averageBosses": total_bosses as f64 / n as f64,
         },
         "steps_run": results.iter().map(|r| r["steps_run"].as_u64().unwrap_or(0)).max().unwrap_or(0),
         "final_time": results.last().map(|r| r["final_time"].as_f64().unwrap_or(0.0)).unwrap_or(0.0),
@@ -315,10 +327,10 @@ fn main() {
  */
 function buildCrate(crateDir: string): string {
   try {
-    const output = execSync('cargo build 2>&1', {
+    const output = execSync('cargo build --release 2>&1', {
       cwd: crateDir,
       encoding: 'utf-8',
-      timeout: 120_000,
+      timeout: 180_000,
     });
     return output;
   } catch (e: any) {
@@ -332,9 +344,9 @@ function buildCrate(crateDir: string): string {
 function runBinary(crateDir: string, testName?: string): string {
   try {
     // Classic RPG multi-game test needs much longer timeout
-    const timeout = testName === 'classic_rpg' ? 300_000 : 30_000;
+    const timeout = testName === 'classic_rpg' ? 600_000 : 30_000;
     const output = execSync(
-      './target/debug/test_game',
+      './target/release/test_game',
       {
         cwd: crateDir,
         encoding: 'utf-8',

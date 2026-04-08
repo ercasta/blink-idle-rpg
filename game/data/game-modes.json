@@ -1,7 +1,7 @@
 {
   "normal": {
     "bossEveryKills": 100,
-    "tierProgressionKills": 50,
+    "tierProgressionKills": 500,
     "healthScaleRate": 200,
     "damageScaleRate": 300,
     "initialEnemyCount": 5,
@@ -19,7 +19,7 @@
   },
   "easy": {
     "bossEveryKills": 150,
-    "tierProgressionKills": 75,
+    "tierProgressionKills": 750,
     "healthScaleRate": 100,
     "damageScaleRate": 150,
     "initialEnemyCount": 3,
@@ -37,7 +37,7 @@
   },
   "hard": {
     "bossEveryKills": 75,
-    "tierProgressionKills": 40,
+    "tierProgressionKills": 400,
     "healthScaleRate": 300,
     "damageScaleRate": 450,
     "initialEnemyCount": 7,
