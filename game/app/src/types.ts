@@ -29,9 +29,29 @@ export interface RunResult {
   totalTime: number;        // in-game seconds
   deepestTier: number;
   deepestWave: number;
+  heroPaths: HeroPath[];
 }
 
 export type HeroClass = 'Warrior' | 'Mage' | 'Ranger' | 'Paladin' | 'Rogue' | 'Cleric';
+
+/**
+ * 12 character traits, each in [−16, 15].
+ * See doc/game-design/character-traits.md for axis definitions.
+ */
+export interface HeroTraits {
+  pm: number;   // physical ↔ magical
+  od: number;   // offensive ↔ defensive
+  sa: number;   // supportive ↔ attacker
+  rc: number;   // risky ↔ cautious
+  fw: number;   // fire ↔ water
+  we: number;   // wind ↔ earth
+  ld: number;   // light ↔ darkness
+  co: number;   // chaos ↔ order
+  sh: number;   // sly ↔ honorable
+  rm: number;   // range ↔ melee
+  ai: number;   // absorb ↔ inflict
+  af: number;   // area ↔ focus
+}
 
 export interface HeroDefinition {
   id: string;
@@ -47,6 +67,22 @@ export interface HeroDefinition {
     constitution: number;
     wisdom: number;
   };
+  traits: HeroTraits;
+}
+
+/** A single entry in a hero's progression path log. */
+export interface HeroPathEntry {
+  level: number;
+  statsGained: { str: number; dex: number; int: number; con: number; wis: number };
+  skillChosen: string | null;
+}
+
+/** Full progression path for one hero across the run. */
+export interface HeroPath {
+  heroName: string;
+  heroClass: HeroClass;
+  entries: HeroPathEntry[];
+  finalStats: { str: number; dex: number; int: number; con: number; wis: number };
 }
 
 export type GameMode = 'normal' | 'easy' | 'hard';

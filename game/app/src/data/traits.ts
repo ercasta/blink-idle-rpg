@@ -1,0 +1,347 @@
+/**
+ * Character Traits System — implements doc/game-design/character-traits.md.
+ *
+ * Traits are 12 signed integers in [−16, 15] that drive stat growth,
+ * skill selection, and AI decision weights.
+ */
+
+import type { HeroClass, HeroTraits, HeroPathEntry } from '../types';
+
+// ── Trait axis metadata (for UI) ────────────────────────────────────────────
+
+export interface TraitAxis {
+  key: keyof HeroTraits;
+  negativePole: string;
+  positivePole: string;
+}
+
+export const TRAIT_AXES: TraitAxis[] = [
+  { key: 'pm', negativePole: 'Physical', positivePole: 'Magical' },
+  { key: 'od', negativePole: 'Offensive', positivePole: 'Defensive' },
+  { key: 'sa', negativePole: 'Supportive', positivePole: 'Attacker' },
+  { key: 'rc', negativePole: 'Risky', positivePole: 'Cautious' },
+  { key: 'fw', negativePole: 'Fire', positivePole: 'Water' },
+  { key: 'we', negativePole: 'Wind', positivePole: 'Earth' },
+  { key: 'ld', negativePole: 'Light', positivePole: 'Darkness' },
+  { key: 'co', negativePole: 'Chaos', positivePole: 'Order' },
+  { key: 'sh', negativePole: 'Sly', positivePole: 'Honorable' },
+  { key: 'rm', negativePole: 'Range', positivePole: 'Melee' },
+  { key: 'ai', negativePole: 'Absorb', positivePole: 'Inflict' },
+  { key: 'af', negativePole: 'Area', positivePole: 'Focus' },
+];
+
+export const TRAIT_MIN = -16;
+export const TRAIT_MAX = 15;
+
+export function defaultTraits(): HeroTraits {
+  return { pm: 0, od: 0, sa: 0, rc: 0, fw: 0, we: 0, ld: 0, co: 0, sh: 0, rm: 0, ai: 0, af: 0 };
+}
+
+export function randomTraits(): HeroTraits {
+  const t = defaultTraits();
+  for (const axis of TRAIT_AXES) {
+    t[axis.key] = Math.floor(Math.random() * 32) - 16; // [−16, 15]
+  }
+  return t;
+}
+
+// ── Normalisation ───────────────────────────────────────────────────────────
+
+function clamp(v: number, lo: number, hi: number): number {
+  return Math.max(lo, Math.min(hi, v));
+}
+
+function norm(t: number): number {
+  return clamp(t, -16, 15) / 16.0;
+}
+
+// ── Gaussian random (Box-Muller) ────────────────────────────────────────────
+
+function gaussian(mean: number, sigma: number): number {
+  const u1 = Math.random() || 1e-10;
+  const u2 = Math.random();
+  return mean + sigma * Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+}
+
+// ── Class base-growth vectors ───────────────────────────────────────────────
+
+const CLASS_BASE_GROWTH: Record<HeroClass, [number, number, number, number, number]> = {
+  // [STR, DEX, INT, CON, WIS]
+  Warrior: [0.60, 0.25, 0.05, 0.55, 0.15],
+  Mage:    [0.05, 0.20, 0.70, 0.10, 0.55],
+  Ranger:  [0.20, 0.70, 0.10, 0.25, 0.15],
+  Paladin: [0.40, 0.15, 0.10, 0.40, 0.55],
+  Rogue:   [0.35, 0.65, 0.05, 0.25, 0.10],
+  Cleric:  [0.10, 0.15, 0.35, 0.30, 0.70],
+};
+
+// ── Stat growth per level-up ────────────────────────────────────────────────
+
+/**
+ * Compute stat points gained on a single level-up, driven by traits.
+ * Returns [str, dex, int, con, wis] gains.
+ */
+export function computeLevelUpGains(
+  heroClass: HeroClass,
+  traits: HeroTraits,
+): [number, number, number, number, number] {
+  const w_pm = norm(traits.pm);
+  const w_od = norm(traits.od);
+  const w_sa = norm(traits.sa);
+  const w_rc = norm(traits.rc);
+  const w_fw = norm(traits.fw);
+  const w_we = norm(traits.we);
+  const w_ld = norm(traits.ld);
+  const w_co = norm(traits.co);
+  const w_sh = norm(traits.sh);
+  const w_rm = norm(traits.rm);
+  const w_ai = norm(traits.ai);
+  // w_af not used in stat growth formulas
+
+  // Step 1: Trait affinity scores
+  const affinity_STR = -w_pm + w_rm - w_od + w_sa;
+  const affinity_DEX = -w_rm - w_rc - w_sh - w_we;
+  const affinity_INT =  w_pm - w_fw - w_co;
+  const affinity_CON =  w_od - w_ai + w_rc + w_we;
+  const affinity_WIS = -w_sa + w_sh + w_co - w_ld;
+
+  const baseGrowth = CLASS_BASE_GROWTH[heroClass];
+  const affinities = [affinity_STR, affinity_DEX, affinity_INT, affinity_CON, affinity_WIS];
+
+  // Step 2: Combine with class base growth
+  const weights: number[] = [];
+  for (let i = 0; i < 5; i++) {
+    let w = baseGrowth[i] + affinities[i] * 0.35;
+    // Step 3: Random jitter
+    w += gaussian(0, 0.08);
+    w = Math.max(0.05, w);
+    weights.push(w);
+  }
+
+  // Step 4: Allocate points
+  const pool = 8 + Math.floor(Math.random() * 3); // 8, 9, or 10
+  const totalWeight = weights.reduce((a, b) => a + b, 0);
+
+  const raw = weights.map(w => (w / totalWeight) * pool);
+  const gains = raw.map(r => Math.floor(r)) as [number, number, number, number, number];
+
+  // Distribute remaining fractional points
+  let allocated = gains.reduce((a, b) => a + b, 0);
+  const remainders = raw.map((r, i) => ({ i, frac: r - gains[i] }));
+  remainders.sort((a, b) => b.frac - a.frac);
+  for (const { i } of remainders) {
+    if (allocated >= pool) break;
+    gains[i]++;
+    allocated++;
+  }
+
+  return gains;
+}
+
+// ── Simplified skill selection ──────────────────────────────────────────────
+//
+// Since the WASM engine handles actual combat skills, we simulate a simplified
+// "skill path" here for display purposes. Each class has a simplified skill
+// list with trait affinity profiles. At each level, the hero picks the
+// highest-scoring available skill.
+
+interface SkillDef {
+  id: string;
+  name: string;
+  /** Sparse trait affinity: { traitKey: coefficient } */
+  affinity: Partial<Record<keyof HeroTraits, number>>;
+  prereqs: string[];
+}
+
+const WARRIOR_SKILLS: SkillDef[] = [
+  { id: 'W_P1',  name: 'Power Strike',      affinity: { pm: -0.8, sa: 0.6, od: -0.5, rm: 0.5 }, prereqs: [] },
+  { id: 'W_P3',  name: 'Taunt',             affinity: { od: 0.8, rm: 0.4, sh: 0.5 }, prereqs: ['W_P1'] },
+  { id: 'W_P5',  name: 'Cleaving Blow',     affinity: { af: -0.7, pm: -0.5, od: -0.4, sa: 0.4 }, prereqs: ['W_P1'] },
+  { id: 'W_P4',  name: 'Defensive Stance',  affinity: { od: 0.9, ai: -0.6, rc: 0.5 }, prereqs: ['W_P3'] },
+  { id: 'W_P6',  name: 'Rampage',           affinity: { rc: -0.8, sa: 0.7, od: -0.6, pm: -0.5 }, prereqs: ['W_P5'] },
+  { id: 'W_P11', name: 'War Cry',           affinity: { sa: -0.6, af: -0.5, sh: 0.5 }, prereqs: ['W_P3'] },
+  { id: 'W_P9',  name: 'Last Stand',        affinity: { od: 0.8, rc: 0.6, ai: -0.5 }, prereqs: ['W_P4'] },
+  { id: 'W_P10', name: 'Execute',           affinity: { sa: 0.8, od: -0.6, af: 0.5, pm: -0.4 }, prereqs: ['W_P6'] },
+  { id: 'W_A1',  name: 'Heavy Armor',       affinity: { od: 0.7, ai: -0.5, we: 0.4 }, prereqs: [] },
+  { id: 'W_A5',  name: 'Brutal Strikes',    affinity: { pm: -0.6, sa: 0.6, ai: 0.5 }, prereqs: [] },
+  { id: 'W_P12', name: 'Shield Wall',       affinity: { od: 0.9, ai: -0.7, sa: -0.5, rc: 0.5 }, prereqs: ['W_P4', 'W_P11'] },
+  { id: 'W_P16', name: "Warlord's Command", affinity: { sa: -0.7, co: 0.6, sh: 0.6, af: -0.4 }, prereqs: ['W_P11', 'W_P12'] },
+];
+
+const MAGE_SKILLS: SkillDef[] = [
+  { id: 'M_P1',  name: 'Magic Missile',     affinity: { pm: 0.8, af: 0.4, sa: 0.3 }, prereqs: [] },
+  { id: 'M_P2',  name: 'Fireball',          affinity: { pm: 0.7, fw: -0.8, af: -0.6, sa: 0.4 }, prereqs: ['M_P1'] },
+  { id: 'M_P3',  name: 'Frost Bolt',        affinity: { pm: 0.7, fw: 0.8, af: 0.5, rc: 0.4 }, prereqs: ['M_P1'] },
+  { id: 'M_P4',  name: 'Arcane Missiles',   affinity: { pm: 0.8, sa: 0.4, af: 0.4 }, prereqs: ['M_P1'] },
+  { id: 'M_P5',  name: 'Meteor',            affinity: { pm: 0.7, fw: -0.7, af: -0.6, rc: -0.5 }, prereqs: ['M_P2'] },
+  { id: 'M_P7',  name: 'Mana Shield',       affinity: { pm: 0.6, ai: -0.7, od: 0.6, rc: 0.4 }, prereqs: ['M_P4'] },
+  { id: 'M_P6',  name: 'Blizzard',          affinity: { pm: 0.6, fw: 0.7, af: -0.6, rc: 0.4 }, prereqs: ['M_P3'] },
+  { id: 'M_A1',  name: 'Scholar',           affinity: { pm: 0.6, rc: 0.4 }, prereqs: [] },
+  { id: 'M_A3',  name: 'Elemental Affinity',affinity: { pm: 0.7, fw: -0.3 }, prereqs: ['M_A1'] },
+  { id: 'M_P11', name: 'Combustion',        affinity: { pm: 0.6, fw: -0.8, sa: 0.5, co: -0.4 }, prereqs: ['M_P2'] },
+  { id: 'M_P15', name: 'Cataclysm',         affinity: { pm: 0.7, fw: -0.7, af: -0.7, rc: -0.5 }, prereqs: ['M_P5', 'M_P11'] },
+  { id: 'M_P16', name: 'Mana Overflow',     affinity: { pm: 0.8, co: -0.5, sa: 0.4 }, prereqs: ['M_P7'] },
+];
+
+const RANGER_SKILLS: SkillDef[] = [
+  { id: 'RN_P1', name: 'Aimed Shot',        affinity: { rm: -0.7, sa: 0.5, af: 0.6 }, prereqs: [] },
+  { id: 'RN_P2', name: 'Multi Shot',        affinity: { rm: -0.6, af: -0.7, sa: 0.4 }, prereqs: ['RN_P1'] },
+  { id: 'RN_P3', name: 'Poison Arrow',      affinity: { rm: -0.5, sh: -0.5, ai: 0.5 }, prereqs: ['RN_P1'] },
+  { id: 'RN_P4', name: 'Evade',             affinity: { rc: -0.5, od: 0.4, we: -0.4 }, prereqs: [] },
+  { id: 'RN_P5', name: 'Rapid Fire',        affinity: { rm: -0.6, sa: 0.6, rc: -0.4 }, prereqs: ['RN_P1'] },
+  { id: 'RN_P6', name: 'Eagle Eye',         affinity: { rm: -0.5, rc: -0.3, af: 0.5 }, prereqs: [] },
+  { id: 'RN_P7', name: 'Volley',            affinity: { rm: -0.6, af: -0.8, sa: 0.5 }, prereqs: ['RN_P2'] },
+  { id: 'RN_P8', name: 'Sniper Shot',       affinity: { rm: -0.8, af: 0.8, sa: 0.6 }, prereqs: ['RN_P5'] },
+  { id: 'RN_A1', name: 'Survival Training', affinity: { od: 0.4, rc: 0.3, we: 0.3 }, prereqs: [] },
+  { id: 'RN_A2', name: 'Marksman',          affinity: { rm: -0.5, af: 0.5, sa: 0.3 }, prereqs: ['RN_P6'] },
+  { id: 'RN_P9', name: 'Barrage',           affinity: { rm: -0.6, af: -0.7, rc: -0.4 }, prereqs: ['RN_P7'] },
+  { id: 'RN_P10',name: 'Kill Shot',         affinity: { rm: -0.7, af: 0.7, sa: 0.7 }, prereqs: ['RN_P8'] },
+];
+
+const PALADIN_SKILLS: SkillDef[] = [
+  { id: 'PA_P1', name: 'Holy Strike',       affinity: { ld: -0.7, sh: 0.5, sa: 0.3 }, prereqs: [] },
+  { id: 'PA_P2', name: 'Lay on Hands',      affinity: { sa: -0.8, ld: -0.6, rc: 0.5 }, prereqs: [] },
+  { id: 'PA_P3', name: 'Divine Shield',     affinity: { od: 0.8, ai: -0.7, ld: -0.5 }, prereqs: ['PA_P2'] },
+  { id: 'PA_P4', name: 'Consecrate',        affinity: { ld: -0.6, af: -0.5, sh: 0.4 }, prereqs: ['PA_P1'] },
+  { id: 'PA_P5', name: 'Smite',             affinity: { ld: -0.7, sa: 0.5, sh: 0.4 }, prereqs: ['PA_P1'] },
+  { id: 'PA_P6', name: 'Aura of Protection',affinity: { od: 0.7, sa: -0.5, co: 0.5, sh: 0.4 }, prereqs: ['PA_P3'] },
+  { id: 'PA_P7', name: 'Resurrection',      affinity: { sa: -0.7, ld: -0.7, sh: 0.5, rc: 0.5 }, prereqs: ['PA_P2', 'PA_P3'] },
+  { id: 'PA_A1', name: 'Devotion',          affinity: { sa: -0.5, ld: -0.4, sh: 0.4 }, prereqs: [] },
+  { id: 'PA_A2', name: 'Shield Mastery',    affinity: { od: 0.6, ai: -0.5, rc: 0.4 }, prereqs: ['PA_A1'] },
+  { id: 'PA_P8', name: 'Hammer of Wrath',   affinity: { ld: -0.6, sa: 0.6, pm: -0.4 }, prereqs: ['PA_P5'] },
+  { id: 'PA_P9', name: 'Guardian Angel',    affinity: { ai: -0.7, od: 0.7, rc: 0.5, ld: -0.5 }, prereqs: ['PA_P3'] },
+  { id: 'PA_P10',name: 'Sacred Beacon',     affinity: { sa: -0.7, ld: -0.6, co: 0.5, sh: 0.5 }, prereqs: ['PA_P6', 'PA_P7'] },
+];
+
+const ROGUE_SKILLS: SkillDef[] = [
+  { id: 'R_P1',  name: 'Backstab',          affinity: { pm: -0.6, sh: -0.7, sa: 0.5, af: 0.5 }, prereqs: [] },
+  { id: 'R_P2',  name: 'Shadowstep',        affinity: { sh: -0.6, rm: -0.4, rc: -0.4, sa: 0.4 }, prereqs: ['R_P1'] },
+  { id: 'R_P3',  name: 'Eviscerate',        affinity: { pm: -0.5, ai: 0.6, sa: 0.5 }, prereqs: ['R_P1'] },
+  { id: 'R_P5',  name: 'Fan of Knives',     affinity: { pm: -0.4, af: -0.7, sa: 0.5 }, prereqs: ['R_P1'] },
+  { id: 'R_P6',  name: 'Shadow Cloak',      affinity: { sh: -0.7, rc: 0.5, od: 0.4 }, prereqs: ['R_P2'] },
+  { id: 'R_P4',  name: 'Poisoned Blade',    affinity: { sh: -0.5, ai: 0.6, pm: -0.3 }, prereqs: ['R_P3'] },
+  { id: 'R_P11', name: 'Critical Focus',    affinity: { pm: -0.4, sa: 0.6, af: 0.5, rc: -0.4 }, prereqs: ['R_P1'] },
+  { id: 'R_A1',  name: 'Nimble',            affinity: { rc: -0.4, rm: -0.3, we: -0.3 }, prereqs: [] },
+  { id: 'R_A2',  name: 'Lethality',         affinity: { pm: -0.4, sa: 0.5, rc: -0.3 }, prereqs: ['R_A1'] },
+  { id: 'R_P7',  name: 'Ambush',            affinity: { sh: -0.8, rc: -0.5, af: 0.5, sa: 0.6 }, prereqs: ['R_P6', 'R_P1'] },
+  { id: 'R_P14', name: 'Lethal Precision',  affinity: { pm: -0.5, sa: 0.7, af: 0.6, ai: 0.5 }, prereqs: ['R_P11'] },
+  { id: 'R_P16', name: 'Shadow Master',     affinity: { sh: -0.8, ld: 0.6, rc: 0.4 }, prereqs: ['R_P6'] },
+];
+
+const CLERIC_SKILLS: SkillDef[] = [
+  { id: 'C_P1',  name: 'Heal',              affinity: { sa: -0.8, ld: -0.7, sh: 0.5 }, prereqs: [] },
+  { id: 'C_P2',  name: 'Smite',             affinity: { pm: 0.5, ld: -0.6, sh: 0.4, sa: 0.3 }, prereqs: [] },
+  { id: 'C_P3',  name: 'Mass Heal',         affinity: { sa: -0.7, af: -0.6, ld: -0.5 }, prereqs: ['C_P1'] },
+  { id: 'C_P4',  name: 'Purify',            affinity: { sa: -0.5, ld: -0.5, co: 0.5, sh: 0.4 }, prereqs: ['C_P1'] },
+  { id: 'C_P5',  name: 'Divine Shield',     affinity: { ai: -0.6, od: 0.6, ld: -0.5, rc: 0.4 }, prereqs: ['C_P3'] },
+  { id: 'C_P7',  name: 'Beacon of Hope',    affinity: { sa: -0.6, ld: -0.5, co: 0.5, sh: 0.4 }, prereqs: ['C_P3'] },
+  { id: 'C_P6',  name: 'Judgement',         affinity: { ld: -0.6, sa: 0.5, sh: 0.4, od: -0.3 }, prereqs: ['C_P2'] },
+  { id: 'C_A1',  name: 'Devotion',          affinity: { sa: -0.5, ld: -0.4, sh: 0.4 }, prereqs: [] },
+  { id: 'C_A3',  name: 'Efficient Healer',  affinity: { sa: -0.5, co: 0.4, rc: 0.3 }, prereqs: ['C_A1'] },
+  { id: 'C_P9',  name: 'Resurrection',      affinity: { sa: -0.7, ld: -0.7, sh: 0.5, rc: 0.5 }, prereqs: ['C_P3', 'C_P5'] },
+  { id: 'C_P15', name: 'Channel Divinity',  affinity: { sa: -0.7, ld: -0.6, co: 0.5, rc: 0.4 }, prereqs: ['C_P7', 'C_P4'] },
+  { id: 'C_P16', name: 'Sacred Beacon',     affinity: { sa: -0.7, ld: -0.6, co: 0.5, sh: 0.5 }, prereqs: ['C_P7'] },
+];
+
+const CLASS_SKILL_TREES: Record<HeroClass, SkillDef[]> = {
+  Warrior: WARRIOR_SKILLS,
+  Mage:    MAGE_SKILLS,
+  Ranger:  RANGER_SKILLS,
+  Paladin: PALADIN_SKILLS,
+  Rogue:   ROGUE_SKILLS,
+  Cleric:  CLERIC_SKILLS,
+};
+
+/**
+ * Score a skill against the hero's traits.
+ * Returns the sum of (coefficient × normalised trait) + small random noise.
+ */
+function scoreSkill(skill: SkillDef, traits: HeroTraits): number {
+  let score = 0;
+  for (const [key, coeff] of Object.entries(skill.affinity)) {
+    score += (coeff as number) * norm(traits[key as keyof HeroTraits]);
+  }
+  // Add small Gaussian noise (σ = 0.15)
+  score += gaussian(0, 0.15);
+  return score;
+}
+
+/**
+ * Pick the best available skill the hero hasn't already acquired.
+ */
+function pickSkill(
+  heroClass: HeroClass,
+  traits: HeroTraits,
+  acquiredSkills: Set<string>,
+): string | null {
+  const tree = CLASS_SKILL_TREES[heroClass];
+  const candidates = tree.filter(s =>
+    !acquiredSkills.has(s.id) &&
+    s.prereqs.every(p => acquiredSkills.has(p))
+  );
+  if (candidates.length === 0) return null;
+
+  let best = candidates[0];
+  let bestScore = scoreSkill(best, traits);
+  for (let i = 1; i < candidates.length; i++) {
+    const s = scoreSkill(candidates[i], traits);
+    if (s > bestScore) {
+      bestScore = s;
+      best = candidates[i];
+    }
+  }
+  return best.id;
+}
+
+/**
+ * Get the display name of a skill by its ID.
+ */
+export function getSkillName(skillId: string, heroClass: HeroClass): string {
+  const tree = CLASS_SKILL_TREES[heroClass];
+  return tree.find(s => s.id === skillId)?.name ?? skillId;
+}
+
+// ── Full hero path simulation ───────────────────────────────────────────────
+
+/**
+ * Simulate the full progression path for a hero from level 1 to maxLevel.
+ * Returns a list of path entries (one per level-up) capturing stat gains
+ * and skill choices.
+ */
+export function simulateHeroPath(
+  heroClass: HeroClass,
+  traits: HeroTraits,
+  maxLevel: number = 50,
+): HeroPathEntry[] {
+  const entries: HeroPathEntry[] = [];
+  const acquiredSkills = new Set<string>();
+  const cumulativeStats = { str: 0, dex: 0, int: 0, con: 0, wis: 0 };
+
+  for (let level = 2; level <= maxLevel; level++) {
+    const gains = computeLevelUpGains(heroClass, traits);
+    const [str, dex, int, con, wis] = gains;
+    cumulativeStats.str += str;
+    cumulativeStats.dex += dex;
+    cumulativeStats.int += int;
+    cumulativeStats.con += con;
+    cumulativeStats.wis += wis;
+
+    // Pick a skill every 2nd level, starting at 2
+    let skillChosen: string | null = null;
+    if (level % 2 === 0) {
+      const chosen = pickSkill(heroClass, traits, acquiredSkills);
+      if (chosen) {
+        acquiredSkills.add(chosen);
+        skillChosen = chosen;
+      }
+    }
+
+    entries.push({
+      level,
+      statsGained: { str, dex, int, con, wis },
+      skillChosen,
+    });
+  }
+
+  return entries;
+}

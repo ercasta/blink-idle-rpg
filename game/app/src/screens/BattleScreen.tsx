@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { GameSnapshot, HeroDefinition, RunResult } from '../types';
+import type { GameSnapshot, HeroDefinition, RunResult, HeroPath } from '../types';
 
 const STEP_INTERVAL_MS = 1000; // 1 second per checkpoint step
 
@@ -7,10 +7,11 @@ interface BattleScreenProps {
   snapshots: GameSnapshot[];
   prevSnapshots?: GameSnapshot[];
   heroes: HeroDefinition[];
+  heroPaths: HeroPath[];
   onComplete: (result: RunResult) => void;
 }
 
-function buildResult(snapshots: GameSnapshot[]): RunResult {
+function buildResult(snapshots: GameSnapshot[], heroPaths: HeroPath[]): RunResult {
   const final = snapshots[snapshots.length - 1];
   const maxTier = Math.max(...snapshots.map(s => s.currentTier));
   const maxWave = Math.max(...snapshots.map(s => s.currentWave));
@@ -24,6 +25,7 @@ function buildResult(snapshots: GameSnapshot[]): RunResult {
     totalTime: final.simulationTime,
     deepestTier: maxTier,
     deepestWave: maxWave,
+    heroPaths,
   };
 }
 
@@ -51,7 +53,7 @@ function ProgressBar({ value, max }: { value: number; max: number }) {
   );
 }
 
-export function BattleScreen({ snapshots, prevSnapshots = [], heroes, onComplete }: BattleScreenProps) {
+export function BattleScreen({ snapshots, prevSnapshots = [], heroes, heroPaths, onComplete }: BattleScreenProps) {
   const [stepIndex, setStepIndex] = useState(0);
   const [done, setDone] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -84,14 +86,14 @@ export function BattleScreen({ snapshots, prevSnapshots = [], heroes, onComplete
   useEffect(() => {
     if (!done) return;
     const t = setTimeout(() => {
-      onComplete(buildResult(snapshots));
+      onComplete(buildResult(snapshots, heroPaths));
     }, 1500);
     return () => clearTimeout(t);
-  }, [done, onComplete, snapshots]);
+  }, [done, onComplete, snapshots, heroPaths]);
 
   function handleSkip() {
     if (timerRef.current) clearInterval(timerRef.current);
-    onComplete(buildResult(snapshots));
+    onComplete(buildResult(snapshots, heroPaths));
   }
 
   return (

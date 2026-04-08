@@ -121,27 +121,40 @@ Show the class skill tree as a scrollable DAG. Each node is a skill card (name, 
 DECISION: each class starts with the same stats point distribution, and with 1 skill point which is part of the hero definition.
 
 
-#### Step 5 — Early Game Behaviour
+#### Step 5 — Early Game Traits
 
-24 behaviour byte sliders + 3 skill slot pickers (Primary, Secondary, Passive).
+12 character trait sliders + 3 skill slot pickers (Primary, Secondary, Passive).
 
-Each behaviour slider row:
+Each trait slider row covers one axis from its first pole (−16) to its second pole (+15):
+
 ```
-Fight/Flight   [◀──────●──────▶]   +12
-              (Flee early)  (Fight on)
+physical ◀──────●──────▶ magical     [−12]
+offensive◀──────●──────▶ defensive   [ +4]
+supportive◀─────●──────▶ attacker    [ +8]
+risky    ◀──────●──────▶ cautious    [ −6]
+fire     ◀──────●──────▶ water       [−10]
+wind     ◀──────●──────▶ earth       [  0]
+light    ◀──────●──────▶ darkness    [ −8]
+chaos    ◀──────●──────▶ order       [ +6]
+sly      ◀──────●──────▶ honorable   [ −4]
+range    ◀──────●──────▶ melee       [ +8]
+absorb   ◀──────●──────▶ inflict     [ +6]
+area     ◀──────●──────▶ focus       [ +4]
 ```
 
-The 24 behaviour bytes map to the named decision values defined in `doc/game-design/characters.md` (12 named decision fields, each -32 to +31). The remaining 12 bytes are reserved for future use and hidden from the player UI (displayed as "Advanced" toggle collapsed by default).
+The 12 trait values (each −16 to +15) map directly to the character trait fields defined in `doc/game-design/character-traits.md`. Traits drive stat growth, skill selection, and AI behaviour weights (see the derivation table in that document). Each trait value is stored as one `int8` in the QR payload.
+
+A short tooltip beneath the slider block shows the two or three most-influenced AI behaviours: e.g., "physical + attacker → STR growth, aggressive targeting".
 
 
-#### Step 6 — Mid Game Behaviour
+#### Step 6 — Mid Game Traits
 
 Same as Step 5, plus:
-- **Level trigger** input (level 2–49): the level at which the hero switches to mid-game behaviour.
+- **Level trigger** input (level 2–49): the level at which the hero switches to mid-game traits.
 
 Display a toggle "Use same as Early Game" to copy values.
 
-#### Step 7 — End Game Behaviour
+#### Step 7 — End Game Traits
 
 Same as Step 6, with an "End Game" label. Level trigger must be > mid-game trigger.
 
@@ -150,7 +163,7 @@ Same as Step 6, with an "End Game" label. Level trigger must be > mid-game trigg
 Summary card showing:
 - Hero name, class, stats (level 1 and level 50 projection)
 - Skill list in unlock order
-- Behaviour summary (per phase: 3 key behaviour sliders, skill slots)
+- Behaviour summary (per phase: 3 key trait sliders — e.g., physical/magical, offensive/defensive, risky/cautious — plus skill slots)
 
 Actions:
 - **[ Save to Roster ]** — saves to `localStorage`
@@ -415,13 +428,13 @@ packages/blink-qr/
 
 ### Hero Binary Layout (byte-aligned first pass)
 
-Based on `doc/figurine-qr-design.md` Section 2.1, adapted to align with `characters.md`:
+Based on `doc/figurine-qr-design.md` Section 2.1, adapted to align with `doc/game-design/character-traits.md`:
 
 ```
 Offset  Size    Field
 ──────  ──────  ─────────────────────────────────────────────────────
 0       2B      magic: 0x42 0x51  ("BQ" — Blink QR)
-2       1B      version: 0x01
+2       1B      version: 0x02
 3       1B      flags: bit 0 = compressed, bits 1-7 = reserved
 4       2B      payload_len (LE uint16)
 6       2B      crc16 (CRC-16/CCITT-FALSE of bytes 0..payload_len+5)
@@ -430,29 +443,33 @@ Offset  Size    Field
 9       ≤24B    name (ASCII, 1 byte per char)
 ?       1B      class_id  (0=Warrior, 1=Mage, 2=Ranger, 3=Paladin,
                            4=Rogue, 5=Cleric)
-?       5B      base_stats  (STR, DEX, INT, CON, WIS; each 0–15, 4 bits)
+?       3B      base_stats  (STR, DEX, INT, CON, WIS; each 0–15, 4 bits)
                             packed 2 stats per byte (5 stats → 3 bytes, 4 bits unused)
-?       3B      growth_rates (STR, DEX, INT, CON, WIS; each 0–7, 3 bits)
+?       2B      growth_rates (STR, DEX, INT, CON, WIS; each 0–7, 3 bits)
                              packed (5 × 3 = 15 bits → 2 bytes)
 ?       1B      skills_count (0–10)
 ?       ≤10B    skill_ids  (each 0–255, 1 byte per skill ID)
 ?       1B      section_flags (bit 0 = mid present, bit 1 = end present)
-──── early game behaviour (27B) ──────────────────────────────────────
-?       24B     early_behaviour_bytes (signed, -128 to +127)
+──── early game traits (15B) ─────────────────────────────────────────
+?       12B     early_traits[0..11]  (int8 each, −16 to +15)
+                  [0]=pm [1]=od [2]=sa [3]=rc [4]=fw [5]=we
+                  [6]=ld [7]=co [8]=sh [9]=rm [10]=ai [11]=af
 ?       1B      early_primary_skill_id
 ?       1B      early_secondary_skill_id
 ?       1B      early_passive_skill_id
-──── mid game behaviour (28B, if section_flags bit 0) ────────────────
+──── mid game traits (16B, if section_flags bit 0) ───────────────────
 ?       1B      mid_level_trigger (2–48)
-?       24B     mid_behaviour_bytes
+?       12B     mid_traits[0..11]
 ?       3B      mid skill IDs
-──── end game behaviour (28B, if section_flags bit 1) ────────────────
+──── end game traits (16B, if section_flags bit 1) ───────────────────
 ?       1B      end_level_trigger (3–49, > mid trigger)
-?       24B     end_behaviour_bytes
+?       12B     end_traits[0..11]
 ?       3B      end skill IDs
 ──── footer ──────────────────────────────────────────────────────────
 (CRC is in header; no separate footer needed)
 ```
+
+Trait byte order follows the axis table in `doc/game-design/character-traits.md` (pm=0, od=1, sa=2, rc=3, fw=4, we=5, ld=6, co=7, sh=8, rm=9, ai=10, af=11). Each byte is clamped to [−16, 15] on decode. The 24-byte behaviour block from v0.01 is replaced by the 12-byte trait block; payload is ~12 bytes smaller per phase (up to ~36 bytes total saving).
 
 ---
 

@@ -19,6 +19,7 @@ Blink Idle RPG is an **idle simulation RPG** in which:
 | File | Description |
 |------|-------------|
 | [characters.md](characters.md) | Hero classes, base stats, progression, and components |
+| [character-traits.md](character-traits.md) | Trait axes, stat-growth formulas, skill-selection scoring, AI derivation, QR encoding |
 | [enemies.md](enemies.md) | Enemy types, tiers, boss mechanics, and components |
 | [combat.md](combat.md) | Combat loop, damage formulas, targeting, and components |
 | [skills.md](skills.md) | Hero and enemy skills (active, passive, triggered) and components |

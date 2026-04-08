@@ -9,7 +9,8 @@
  *   • Accepts runtime data (heroes, enemies, config) via create_entity/add_component
  */
 
-import type { GameSnapshot, HeroDefinition, GameMode } from '../types';
+import type { GameSnapshot, HeroDefinition, GameMode, HeroPath } from '../types';
+import { simulateHeroPath, getSkillName } from '../data/traits';
 
 // ── Hero stats per class ────────────────────────────────────────────────────
 
@@ -157,7 +158,8 @@ async function loadWasmModule(): Promise<WasmModule | null> {
  * Run the simulation using the WASM engine.
  *
  * Loads the pre-built WASM binary, creates all entities (heroes, enemies,
- * config), runs the full simulation, and returns an array of GameSnapshots.
+ * config), runs the full simulation, and returns an array of GameSnapshots
+ * plus hero progression paths.
  *
  * Throws if the WASM module is not available.
  * Build it with: npm run build:wasm && npm run install:wasm
@@ -165,7 +167,7 @@ async function loadWasmModule(): Promise<WasmModule | null> {
 export async function runSimulation(
   selectedHeroes: HeroDefinition[],
   mode: GameMode,
-): Promise<GameSnapshot[]> {
+): Promise<{ snapshots: GameSnapshot[]; heroPaths: HeroPath[] }> {
   const mod = await loadWasmModule();
   if (!mod) {
     throw new Error(
@@ -176,7 +178,41 @@ export async function runSimulation(
 
   const game = new mod.BlinkWasmGame();
   try {
-    return _runWithWasm(game, selectedHeroes, mode);
+    const snapshots = _runWithWasm(game, selectedHeroes, mode);
+
+    // Simulate hero progression paths using the trait system
+    const heroPaths: HeroPath[] = selectedHeroes.map(hero => {
+      const maxLevel = snapshots.length > 0
+        ? (snapshots[snapshots.length - 1].heroLevels[hero.name] ?? 10)
+        : 10;
+      const entries = simulateHeroPath(hero.heroClass, hero.traits, Math.max(maxLevel, 5));
+
+      // Compute final stats (base + cumulative gains)
+      const finalStats = { str: hero.stats.strength, dex: hero.stats.dexterity, int: hero.stats.intelligence, con: hero.stats.constitution, wis: hero.stats.wisdom };
+      for (const entry of entries) {
+        finalStats.str += entry.statsGained.str;
+        finalStats.dex += entry.statsGained.dex;
+        finalStats.int += entry.statsGained.int;
+        finalStats.con += entry.statsGained.con;
+        finalStats.wis += entry.statsGained.wis;
+      }
+
+      // Annotate skill names for display
+      for (const entry of entries) {
+        if (entry.skillChosen) {
+          entry.skillChosen = `${entry.skillChosen} (${getSkillName(entry.skillChosen, hero.heroClass)})`;
+        }
+      }
+
+      return {
+        heroName: hero.name,
+        heroClass: hero.heroClass,
+        entries,
+        finalStats,
+      };
+    });
+
+    return { snapshots, heroPaths };
   } finally {
     game.free();
   }

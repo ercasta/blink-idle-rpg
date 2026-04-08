@@ -4,6 +4,7 @@
  */
 
 import type { HeroDefinition, HeroClass } from '../types';
+import { randomTraits } from './traits';
 
 export const HEROES: HeroDefinition[] = [
   {
@@ -14,6 +15,7 @@ export const HEROES: HeroDefinition[] = [
     role: 'Tank / DPS',
     emoji: '⚔️',
     stats: { strength: 14, dexterity: 8, intelligence: 4, constitution: 16, wisdom: 4 },
+    traits: { pm: -8, od: -4, sa: 4, rc: -2, fw: 0, we: 2, ld: 0, co: 0, sh: 4, rm: 8, ai: 2, af: 2 },
   },
   {
     id: 'lyra',
@@ -23,6 +25,7 @@ export const HEROES: HeroDefinition[] = [
     role: 'Burst DPS',
     emoji: '🧙',
     stats: { strength: 4, dexterity: 7, intelligence: 18, constitution: 7, wisdom: 14 },
+    traits: { pm: 12, od: -6, sa: 4, rc: -4, fw: -10, we: 0, ld: 0, co: -4, sh: -2, rm: -8, ai: 4, af: -4 },
   },
   {
     id: 'sasha',
@@ -32,6 +35,7 @@ export const HEROES: HeroDefinition[] = [
     role: 'Control / DPS',
     emoji: '🏹',
     stats: { strength: 6, dexterity: 13, intelligence: 7, constitution: 7, wisdom: 7 },
+    traits: { pm: -4, od: -2, sa: 4, rc: -4, fw: 0, we: -4, ld: 0, co: 0, sh: -4, rm: -10, ai: 2, af: 4 },
   },
   {
     id: 'theron',
@@ -41,6 +45,7 @@ export const HEROES: HeroDefinition[] = [
     role: 'Support / Tank',
     emoji: '🛡️',
     stats: { strength: 10, dexterity: 6, intelligence: 7, constitution: 14, wisdom: 10 },
+    traits: { pm: 2, od: 8, sa: -6, rc: 6, fw: 0, we: 4, ld: -10, co: 8, sh: 10, rm: 4, ai: -8, af: -2 },
   },
   {
     id: 'kira',
@@ -50,6 +55,7 @@ export const HEROES: HeroDefinition[] = [
     role: 'Finisher / DPS',
     emoji: '🗡️',
     stats: { strength: 8, dexterity: 14, intelligence: 6, constitution: 6, wisdom: 6 },
+    traits: { pm: -6, od: -8, sa: 6, rc: -6, fw: 0, we: 0, ld: 4, co: -2, sh: -12, rm: -2, ai: 8, af: 8 },
   },
   {
     id: 'elara',
@@ -59,6 +65,7 @@ export const HEROES: HeroDefinition[] = [
     role: 'Healer / Support',
     emoji: '🙏',
     stats: { strength: 6, dexterity: 7, intelligence: 10, constitution: 11, wisdom: 14 },
+    traits: { pm: 6, od: 4, sa: -10, rc: 4, fw: 0, we: 0, ld: -12, co: 6, sh: 8, rm: 2, ai: -6, af: -4 },
   },
 ];
 
@@ -102,14 +109,14 @@ function rollStats(heroClass: HeroClass): HeroDefinition['stats'] {
   const statNames = ['strength', 'dexterity', 'intelligence', 'constitution', 'wisdom'] as const;
   const stats: Record<string, number> = {};
 
-  // Start each stat at 4, allocate remaining 20 points weighted by class
-  let remaining = 20;
+  // Start each stat at 4, allocate totalPoints weighted by class
+  const totalPoints = 20;
   for (let i = 0; i < 5; i++) {
     stats[statNames[i]] = 4;
   }
 
   // Distribute remaining points with randomness
-  for (let p = 0; p < remaining; p++) {
+  for (let p = 0; p < totalPoints; p++) {
     let roll = Math.random() * totalWeight;
     for (let i = 0; i < 5; i++) {
       roll -= w[i];
@@ -170,6 +177,7 @@ export function generateRandomParty(): HeroDefinition[] {
       role: CLASS_ROLES[hc],
       emoji: CLASS_EMOJIS[hc],
       stats: rollStats(hc),
+      traits: randomTraits(),
     };
   });
 }
