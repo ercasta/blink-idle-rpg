@@ -481,7 +481,7 @@ export function TraitEditor({ hero, traits, onChangeTrait, onReset, onDone, done
       {liveDescription ? (
         <div className="bg-stone-800 border border-stone-700 rounded-xl p-4 mb-4">
           {liveDescription.split('\n\n').map((para, i) => (
-            <p key={i} className={`text-xs text-stone-400 leading-relaxed${i > 0 ? ' mt-2' : ''}`}>{para}</p>
+            <p key={i} className={`text-xs text-stone-400 leading-relaxed ${i > 0 ? 'mt-2' : ''}`}>{para}</p>
           ))}
         </div>
       ) : (
