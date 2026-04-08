@@ -4,6 +4,7 @@ import type { RunResult, HeroPath } from '../types';
 interface ResultsScreenProps {
   result: RunResult;
   onPlayAgain: () => void;
+  onRerun: () => void;
   onHome: () => void;
 }
 
@@ -22,7 +23,7 @@ function formatTime(seconds: number) {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
-export function ResultsScreen({ result, onPlayAgain, onHome }: ResultsScreenProps) {
+export function ResultsScreen({ result, onPlayAgain, onRerun, onHome }: ResultsScreenProps) {
   const { finalScore, victory, enemiesDefeated, playerDeaths, bossesDefeated, totalTime, deepestTier, deepestWave, heroPaths } = result;
   const [expandedHero, setExpandedHero] = useState<string | null>(null);
 
@@ -74,10 +75,16 @@ export function ResultsScreen({ result, onPlayAgain, onHome }: ResultsScreenProp
       {/* Actions */}
       <div className="flex flex-col gap-3">
         <button
-          onClick={onPlayAgain}
+          onClick={onRerun}
           className="w-full py-4 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-lg transition-colors"
         >
-          ▶ Play Again
+          🔁 Rerun (same heroes)
+        </button>
+        <button
+          onClick={onPlayAgain}
+          className="w-full py-3 rounded-xl bg-slate-700 hover:bg-slate-600 text-white font-bold transition-colors"
+        >
+          ▶ Play Again (new setup)
         </button>
         <button
           onClick={onHome}

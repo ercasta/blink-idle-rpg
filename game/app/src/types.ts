@@ -101,6 +101,7 @@ export interface RunConfig {
 
 export type AppScreen =
   | 'home'
+  | 'roster'
   | 'mode-select'
   | 'party-select'
   | 'battle'

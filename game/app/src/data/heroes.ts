@@ -142,6 +142,26 @@ function rollStats(heroClass: HeroClass): HeroDefinition['stats'] {
 }
 
 /**
+ * Generate a single random hero of a random class.
+ */
+export function generateRandomHero(): HeroDefinition {
+  const allClasses: HeroClass[] = ['Warrior', 'Mage', 'Ranger', 'Paladin', 'Rogue', 'Cleric'];
+  const hc = allClasses[Math.floor(Math.random() * allClasses.length)];
+  const names = FIRST_NAMES[hc];
+  const name = names[Math.floor(Math.random() * names.length)];
+  return {
+    id: `hero-${crypto.randomUUID()}`,
+    name,
+    heroClass: hc,
+    description: `A ${hc.toLowerCase()} ready for adventure.`,
+    role: CLASS_ROLES[hc],
+    emoji: CLASS_EMOJIS[hc],
+    stats: rollStats(hc),
+    traits: randomTraits(),
+  };
+}
+
+/**
  * Generate a random party of 4 heroes with diverse classes.
  * Ensures at least one healer-type (Cleric or Paladin) and one DPS.
  */

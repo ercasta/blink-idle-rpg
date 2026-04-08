@@ -4,9 +4,10 @@ interface HomeScreenProps {
   recentRuns: RunResult[];
   onStart: () => void;
   onQuickPlay: () => void;
+  onManageRoster: () => void;
 }
 
-export function HomeScreen({ recentRuns, onStart, onQuickPlay }: HomeScreenProps) {
+export function HomeScreen({ recentRuns, onStart, onQuickPlay, onManageRoster }: HomeScreenProps) {
   return (
     <div className="flex flex-col items-center min-h-screen bg-slate-900 text-white px-4 py-8">
       {/* Title */}
@@ -23,6 +24,12 @@ export function HomeScreen({ recentRuns, onStart, onQuickPlay }: HomeScreenProps
           className="w-full py-4 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-lg transition-colors shadow-lg"
         >
           ▶ Start a Run
+        </button>
+        <button
+          onClick={onManageRoster}
+          className="w-full py-3 rounded-xl bg-slate-700 hover:bg-slate-600 text-white font-bold text-base transition-colors shadow-lg"
+        >
+          🧑‍🤝‍🧑 Manage Hero Roster
         </button>
         <button
           onClick={onQuickPlay}
