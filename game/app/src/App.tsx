@@ -19,7 +19,7 @@ import { runSimulation } from './engine/WasmSimEngine';
 import { generateRandomParty } from './data/heroes';
 import { GAME_MODES } from './data/gameModes';
 import { loadRecentRuns, saveRun } from './storage/runStorage';
-import type { AppScreen, GameMode, HeroDefinition, GameSnapshot, RunResult } from './types';
+import type { AppScreen, GameMode, HeroDefinition, GameSnapshot, RunResult, HeroPath } from './types';
 
 export default function App() {
   const [screen, setScreen] = useState<AppScreen | 'loading' | 'error'>('home');
@@ -29,6 +29,7 @@ export default function App() {
   const [prevSnapshots, setPrevSnapshots] = useState<GameSnapshot[]>([]);
   const [runResult, setRunResult] = useState<RunResult | null>(null);
   const [recentRuns, setRecentRuns] = useState<RunResult[]>([]);
+  const [heroPaths, setHeroPaths] = useState<HeroPath[]>([]);
   const [loadingMessage] = useState('Running simulation…');
   const [error, setError] = useState<string | null>(null);
 
@@ -58,8 +59,9 @@ export default function App() {
     try {
       const runs = await loadRecentRuns();
       setPrevSnapshots(runs[0]?.snapshots ?? []);
-      const snaps = await runSimulation(randomHeroes, 'normal');
-      setSnapshots(snaps);
+      const result = await runSimulation(randomHeroes, 'normal');
+      setSnapshots(result.snapshots);
+      setHeroPaths(result.heroPaths);
       setScreen('battle');
     } catch (e) {
       console.error('[App] Quick play simulation error:', e);
@@ -84,8 +86,9 @@ export default function App() {
 
       const runs = await loadRecentRuns();
       setPrevSnapshots(runs[0]?.snapshots ?? []);
-      const snaps = await runSimulation(heroes, selectedMode);
-      setSnapshots(snaps);
+      const result = await runSimulation(heroes, selectedMode);
+      setSnapshots(result.snapshots);
+      setHeroPaths(result.heroPaths);
       setScreen('battle');
     } catch (e) {
       console.error('[App] Simulation error:', e);
@@ -134,6 +137,7 @@ export default function App() {
         snapshots={snapshots}
         prevSnapshots={prevSnapshots}
         heroes={selectedHeroes}
+        heroPaths={heroPaths}
         onComplete={onBattleComplete}
       />
     );

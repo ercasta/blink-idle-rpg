@@ -45,7 +45,7 @@ export function HomeScreen({ recentRuns, onStart, onQuickPlay }: HomeScreenProps
                 className="bg-slate-800 rounded-lg px-4 py-3 flex justify-between items-center"
               >
                 <span className="text-sm text-slate-300">
-                  {run.victory ? '🏆 Victory' : '💀 Defeat'} · Tier {run.deepestTier}
+                  {run.victory ? '🏆 Victory' : '⚔️ Defeat'} · Tier {run.deepestTier}
                 </span>
                 <span className="text-sm font-bold text-amber-400">
                   {run.finalScore.toLocaleString()} pts
