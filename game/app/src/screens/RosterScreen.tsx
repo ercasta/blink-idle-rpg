@@ -1,9 +1,11 @@
-import { useState } from 'react';
-import { TRAIT_AXES, TRAIT_MIN, TRAIT_MAX, defaultTraits, randomTraits } from '../data/traits';
+import { useState, useEffect, useMemo } from 'react';
+import { TRAIT_AXES, TRAIT_MIN, TRAIT_MAX, defaultTraits, randomTraits, simulateHeroPath, getSkillName } from '../data/traits';
 import type { HeroDefinition, HeroClass, HeroTraits } from '../types';
 import { generateRandomHero } from '../data/heroes';
 import { generateHeroDescription, encodeHeroToParams } from '../data/heroDescription';
 import type { SharedHeroData } from '../data/heroDescription';
+import { loadSkillCatalog } from '../data/skillCatalog';
+import type { SkillEntry } from '../data/skillCatalog';
 
 const ALL_CLASSES: HeroClass[] = ['Warrior', 'Mage', 'Ranger', 'Paladin', 'Rogue', 'Cleric'];
 
@@ -468,6 +470,28 @@ interface TraitEditorProps {
 }
 
 export function TraitEditor({ hero, traits, onChangeTrait, onReset, onDone, doneLabel = 'Done', hideFoot = false, doneDisabled = false, liveDescription }: TraitEditorProps) {
+  const [showPath, setShowPath] = useState(false);
+  const [skillCatalog, setSkillCatalog] = useState<Map<string, SkillEntry>>(new Map());
+  const [selectedSkill, setSelectedSkill] = useState<SkillEntry | null>(null);
+
+  useEffect(() => {
+    loadSkillCatalog().then(setSkillCatalog);
+  }, []);
+
+  // Recompute path only when panel is open and when traits or heroClass changes
+  const pathEntries = useMemo(
+    () => (showPath ? simulateHeroPath(hero.heroClass, traits, 25) : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [showPath, hero.heroClass, JSON.stringify(traits)],
+  );
+  // Collect unique skills acquired (in order of acquisition)
+  const acquiredSkillIds: string[] = [];
+  for (const entry of pathEntries) {
+    if (entry.skillChosen && !acquiredSkillIds.includes(entry.skillChosen)) {
+      acquiredSkillIds.push(entry.skillChosen);
+    }
+  }
+
   return (
     <div className="flex-1 overflow-y-auto">
       <div className="flex items-center gap-3 mb-4">
@@ -497,9 +521,9 @@ export function TraitEditor({ hero, traits, onChangeTrait, onReset, onDone, done
           return (
             <div key={axis.key} className="bg-stone-800 border border-stone-700 rounded-lg p-3">
               <div className="flex justify-between text-xs mb-1">
-                <span className="text-sky-400">{axis.negativePole}</span>
+                <span className="text-stone-400">{axis.negativePole}</span>
                 <span className="text-stone-500 font-mono">{value > 0 ? '+' : ''}{value}</span>
-                <span className="text-amber-400">{axis.positivePole}</span>
+                <span className="text-stone-400">{axis.positivePole}</span>
               </div>
               <input
                 type="range"
@@ -507,11 +531,99 @@ export function TraitEditor({ hero, traits, onChangeTrait, onReset, onDone, done
                 max={TRAIT_MAX}
                 value={value}
                 onChange={e => onChangeTrait(axis.key, parseInt(e.target.value, 10))}
-                className="w-full h-2 bg-stone-700 rounded-lg appearance-none cursor-pointer accent-amber-600"
+                className="w-full h-2 bg-stone-700 rounded-lg appearance-none cursor-pointer accent-stone-400"
               />
             </div>
           );
         })}
+      </div>
+
+      {/* Predict Hero Path */}
+      <div className="mt-5">
+        <button
+          onClick={() => { setShowPath(p => !p); setSelectedSkill(null); }}
+          className="w-full py-3 rounded-xl border border-stone-600 text-stone-300 hover:text-stone-100 hover:border-stone-400 text-sm font-medium transition-colors"
+        >
+          🔮 {showPath ? 'Hide Hero Path' : 'Predict Hero Path'}
+        </button>
+
+        {showPath && (
+          <div className="mt-3 bg-stone-800 border border-stone-700 rounded-xl p-4">
+            <p className="text-xs text-stone-500 mb-3 leading-relaxed">
+              Simulated skill acquisitions to level 25, based on current traits.
+              Tap a skill to read its description.
+            </p>
+
+            {/* Skill list */}
+            <div className="flex flex-wrap gap-2 mb-3">
+              {acquiredSkillIds.map(skillId => {
+                const entry = skillCatalog.get(skillId);
+                const label = entry?.name ?? getSkillName(skillId, hero.heroClass);
+                const isSelected = selectedSkill?.id === skillId;
+                return (
+                  <button
+                    key={skillId}
+                    onClick={() => setSelectedSkill(isSelected ? null : (entry ?? { id: skillId, name: label, description: '', skillType: '', prerequisites: [] }))}
+                    className={`px-2 py-1 rounded-lg text-xs font-medium border transition-colors ${
+                      isSelected
+                        ? 'bg-stone-600 border-stone-400 text-stone-100'
+                        : 'bg-stone-700 border-stone-600 text-stone-300 hover:border-stone-400 hover:text-stone-100'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+              {acquiredSkillIds.length === 0 && (
+                <p className="text-xs text-stone-600 italic">No skills predicted for current traits.</p>
+              )}
+            </div>
+
+            {/* Selected skill description */}
+            {selectedSkill && (
+              <div className="bg-stone-700/60 border border-stone-600 rounded-lg p-3 text-xs">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="font-semibold text-stone-200">{selectedSkill.name}</span>
+                  {selectedSkill.skillType && (
+                    <span className="text-stone-400 text-[0.65rem] uppercase tracking-wide border border-stone-600 rounded px-1.5 py-0.5">
+                      {selectedSkill.skillType}
+                    </span>
+                  )}
+                </div>
+                {selectedSkill.description ? (
+                  <p className="text-stone-400 leading-relaxed">{selectedSkill.description}</p>
+                ) : (
+                  <p className="text-stone-600 italic">No description available.</p>
+                )}
+                {selectedSkill.prerequisites.length > 0 && (
+                  <p className="text-stone-500 mt-1.5">
+                    <span className="text-stone-600">Requires: </span>
+                    {selectedSkill.prerequisites.join(', ')}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Level-by-level breakdown */}
+            <details className="mt-3">
+              <summary className="text-xs text-stone-500 cursor-pointer hover:text-stone-400 select-none">
+                Show level-by-level breakdown
+              </summary>
+              <div className="mt-2 flex flex-col gap-1 max-h-48 overflow-y-auto">
+                {pathEntries.filter(e => e.skillChosen).map(entry => {
+                  const catalogEntry = skillCatalog.get(entry.skillChosen!);
+                  const name = catalogEntry?.name ?? getSkillName(entry.skillChosen!, hero.heroClass);
+                  return (
+                    <div key={entry.level} className="flex items-center gap-2 text-xs">
+                      <span className="text-stone-600 w-14 shrink-0">Lv {entry.level}</span>
+                      <span className="text-stone-300">→ {name}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </details>
+          </div>
+        )}
       </div>
 
       {!hideFoot && (

@@ -171,6 +171,17 @@ component HeroInfo {
     playstyle: string
 }
 
+// Skill catalog entry — embedded descriptions for UI display.
+// Entities carrying this component are parsed at runtime by the UI
+// to populate the hero creation and editing skill reference panel.
+component SkillInfo {
+    id: string
+    name: string
+    description: string
+    skillType: string
+    prerequisites: string
+}
+
 // Marks an entity as a hero template (not a spawned hero)
 component HeroTemplate {
     isTemplate: boolean
