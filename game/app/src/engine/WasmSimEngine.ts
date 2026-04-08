@@ -14,15 +14,15 @@ import type { GameSnapshot, HeroDefinition, GameMode } from '../types';
 // ── Hero stats per class ────────────────────────────────────────────────────
 
 const CLASS_BASE_HP: Record<string, number> = {
-  Warrior: 160, Mage: 90, Ranger: 110, Paladin: 140, Rogue: 105, Cleric: 120,
+  Warrior: 250, Mage: 150, Ranger: 140, Paladin: 220, Rogue: 130, Cleric: 180,
 };
 
 const CLASS_BASE_DAMAGE: Record<string, number> = {
-  Warrior: 22, Mage: 30, Ranger: 18, Paladin: 16, Rogue: 20, Cleric: 13,
+  Warrior: 28, Mage: 35, Ranger: 22, Paladin: 20, Rogue: 24, Cleric: 16,
 };
 
 const CLASS_BASE_DEFENSE: Record<string, number> = {
-  Warrior: 8, Mage: 2, Ranger: 5, Paladin: 9, Rogue: 4, Cleric: 6,
+  Warrior: 12, Mage: 5, Ranger: 7, Paladin: 14, Rogue: 6, Cleric: 8,
 };
 
 const CLASS_SKILLS: Record<string, [string, string, string, string]> = {
