@@ -24,7 +24,7 @@ function formatTime(seconds: number) {
 }
 
 export function ResultsScreen({ result, onPlayAgain, onRerun, onHome }: ResultsScreenProps) {
-  const { finalScore, victory, enemiesDefeated, playerDeaths, bossesDefeated, totalTime, deepestTier, deepestWave, heroPaths } = result;
+  const { finalScore, enemiesDefeated, playerDeaths, bossesDefeated, totalTime, deepestTier, deepestWave, heroPaths } = result;
   const [expandedHero, setExpandedHero] = useState<string | null>(null);
 
   return (
