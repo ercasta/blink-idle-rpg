@@ -1,8 +1,13 @@
 import { useState } from 'react';
-import type { HeroDefinition } from '../types';
+import type { HeroDefinition, HeroClass } from '../types';
 
 const MAX_PARTY = 6;
 const MIN_PARTY = 1;
+
+const ALL_CLASSES: HeroClass[] = ['Warrior', 'Mage', 'Ranger', 'Paladin', 'Rogue', 'Cleric'];
+const CLASS_EMOJIS: Record<HeroClass, string> = {
+  Warrior: '⚔️', Mage: '🧙', Ranger: '🏹', Paladin: '🛡️', Rogue: '🗡️', Cleric: '🙏',
+};
 
 interface PartySelectScreenProps {
   roster: HeroDefinition[];
@@ -13,6 +18,8 @@ interface PartySelectScreenProps {
 
 export function PartySelectScreen({ roster, onStart, onBack, onManageRoster }: PartySelectScreenProps) {
   const [selected, setSelected] = useState<string[]>([]);
+  const [filterName, setFilterName] = useState('');
+  const [filterClass, setFilterClass] = useState<HeroClass | ''>('');
 
   function toggle(id: string) {
     setSelected(prev => {
@@ -29,6 +36,12 @@ export function PartySelectScreen({ roster, onStart, onBack, onManageRoster }: P
       .filter((h): h is HeroDefinition => Boolean(h));
     onStart(heroes);
   }
+
+  const filteredRoster = roster.filter(hero => {
+    const nameMatch = hero.name.toLowerCase().includes(filterName.toLowerCase());
+    const classMatch = filterClass === '' || hero.heroClass === filterClass;
+    return nameMatch && classMatch;
+  });
 
   return (
     <div className="flex flex-col min-h-screen bg-stone-900 text-stone-100 px-4 py-6">
@@ -66,9 +79,50 @@ export function PartySelectScreen({ roster, onStart, onBack, onManageRoster }: P
             ← Manage Roster
           </button>
 
+          {/* Filters */}
+          <div className="flex flex-col gap-2 mb-4">
+            <input
+              type="text"
+              placeholder="Search by name…"
+              value={filterName}
+              onChange={e => setFilterName(e.target.value)}
+              className="w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-100 text-sm placeholder-stone-500 focus:outline-none focus:border-amber-500"
+            />
+            <div className="flex flex-wrap gap-1">
+              <button
+                onClick={() => setFilterClass('')}
+                className={`px-2 py-1 rounded-lg text-xs font-medium border transition-colors ${
+                  filterClass === ''
+                    ? 'bg-amber-700 border-amber-500 text-stone-100'
+                    : 'bg-stone-800 border-stone-600 text-stone-400 hover:border-stone-400'
+                }`}
+              >
+                All
+              </button>
+              {ALL_CLASSES.map(hc => (
+                <button
+                  key={hc}
+                  onClick={() => setFilterClass(prev => prev === hc ? '' : hc)}
+                  className={`px-2 py-1 rounded-lg text-xs font-medium border transition-colors ${
+                    filterClass === hc
+                      ? 'bg-amber-700 border-amber-500 text-stone-100'
+                      : 'bg-stone-800 border-stone-600 text-stone-400 hover:border-stone-400'
+                  }`}
+                >
+                  {CLASS_EMOJIS[hc]} {hc}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Hero grid */}
           <div className="flex flex-col gap-3 flex-1">
-            {roster.map((hero) => {
+            {filteredRoster.length === 0 && (
+              <div className="flex-1 flex flex-col items-center justify-center gap-3 text-stone-500 py-12">
+                <p className="text-sm text-center">No heroes match your filters.</p>
+              </div>
+            )}
+            {filteredRoster.map((hero) => {
               const isSelected = selected.includes(hero.id);
               return (
                 <button
