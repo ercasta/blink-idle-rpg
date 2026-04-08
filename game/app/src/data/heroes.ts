@@ -109,14 +109,14 @@ function rollStats(heroClass: HeroClass): HeroDefinition['stats'] {
   const statNames = ['strength', 'dexterity', 'intelligence', 'constitution', 'wisdom'] as const;
   const stats: Record<string, number> = {};
 
-  // Start each stat at 4, allocate remaining 20 points weighted by class
-  const remaining = 20;
+  // Start each stat at 4, allocate totalPoints weighted by class
+  const totalPoints = 20;
   for (let i = 0; i < 5; i++) {
     stats[statNames[i]] = 4;
   }
 
   // Distribute remaining points with randomness
-  for (let p = 0; p < remaining; p++) {
+  for (let p = 0; p < totalPoints; p++) {
     let roll = Math.random() * totalWeight;
     for (let i = 0; i < 5; i++) {
       roll -= w[i];

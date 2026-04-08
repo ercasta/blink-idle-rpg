@@ -86,7 +86,7 @@ export function PartySelectScreen({ onStart, onBack }: PartySelectScreenProps) {
       ) : (
         <>
           <p className="text-slate-400 text-sm mb-5">
-            Choose 1–{MAX_PARTY} heroes. Tap ⚙️ to customize traits. Selected: {selected.length}
+            Choose 1–{MAX_PARTY} heroes. Click ⚙️ to customize traits. Selected: {selected.length}
           </p>
 
           {/* Hero grid */}
