@@ -42,55 +42,85 @@ This document covers hero character design: classes, base stats, progression, an
 
 - Heroes gain **1 skill point** at each character level. Skill points are used to learn or upgrade skills (see `skills.md`).
 
-## Decision Values (Hero AI)
+## Character Traits (Hero Personality & AI)
 
-Each hero template includes a set of 12 signed integer "decision values" that parameterise AI behaviour and influence the simulation. Values range from **-32 to 31** and are encoded in the hero QR payload as named fields (see QR example below). In-simulation the raw integer is normalised by dividing by 32 to produce a signed weight in approximately [-1, 0.96875]. Use `clamp(v, -32, 31) / 32.0` when reading values.
+Each hero is defined by **12 character traits** — signed integer values in the range **−16 to 15** — that collectively describe the hero's personality. Traits drive three things:
 
-Decision values (names and short intent):
+1. **Stat growth** — which stats increase most at each level-up.
+2. **Skill selection** — which skills the hero gravitates toward in the class DAG.
+3. **AI decision weights** — how the hero chooses actions and targets in combat.
 
-- `decision_attack_support` : balance between dealing damage (positive) and supporting/healing allies (negative).
-- `decision_fight_flight` : aggression/risk tolerance — positive = fight on, negative = fall back earlier.
-- `decision_target_aggression` : prefer high-threat targets (positive) vs low-HP/soft targets (negative).
-- `decision_focus_fire` : bias toward targets already attacked by allies (positive) vs spreading damage (negative).
-- `decision_resource_conservation` : conserve mana/energy (positive) vs spend freely (negative).
-- `decision_aoe_single` : preference for AOE effects (positive) vs single-target (negative).
-- `decision_cc_priority` : priority to use crowd-control abilities (positive) vs ignore CC (negative).
-- `decision_healing_priority` : how strongly to heal low-HP allies (positive) vs delaying/healing less (negative).
-- `decision_skill_timing` : prefer early/immediate skill use (positive) vs hold for conditions (negative).
-- `decision_positioning_aggression` : frontline positioning (positive) vs stay safe/backline (negative).
-- `decision_target_preference` : numeric bias applied to target sorting (maps to closest/weakest/strongest choices).
-- `decision_defensive_focus` : favour defensive actions (shields, blocks) when positive; offensive focus when negative.
+The full specification (trait axes, normalisation, stat-growth formulas, skill-selection scoring, and QR encoding) is in [`character-traits.md`](character-traits.md).
 
-How the simulation uses the values (implementation rules):
+### Trait axes summary
 
-- Normalisation: for any decision field `d` use `w = clamp(d, -32, 31) / 32.0`.
-- Action scoring: each candidate action `a` is scored by combining base heuristic scores with weighted decision modifiers. Example:
+| # | Field      | Negative pole | Positive pole |
+|---|------------|---------------|---------------|
+| 0 | `trait_pm` | physical      | magical       |
+| 1 | `trait_od` | offensive     | defensive     |
+| 2 | `trait_sa` | supportive    | attacker      |
+| 3 | `trait_rc` | risky         | cautious      |
+| 4 | `trait_fw` | fire          | water         |
+| 5 | `trait_we` | wind          | earth         |
+| 6 | `trait_ld` | light         | darkness      |
+| 7 | `trait_co` | chaos         | order         |
+| 8 | `trait_sh` | sly           | honorable     |
+| 9 | `trait_rm` | range         | melee         |
+|10 | `trait_ai` | absorb        | inflict       |
+|11 | `trait_af` | area          | focus         |
 
-	score(a) = baseScore(a) + sum_i{ w_i * modifier_i(a) }
+Normalise any raw trait value `t` before use: `w = clamp(t, −16, 15) / 16.0`.
 
-	where `w_i` is the normalised weight for decision `i` and `modifier_i(a)` returns an action-specific scalar (e.g., expected damage, expected healing, threat reduction).
+### AI action scoring
 
-- Target selection: compute targetScore(t) = baseTargetScore(t) + w_target_aggression * threat(t) + w_target_preference * preferenceBias(t) + w_focus_fire * allyEngagement(t).
+Trait weights are derived into named AI decision weights at entity-spawn time (see [`character-traits.md`](character-traits.md) for the derivation table). These derived weights are then used in action scoring:
 
-- Attack vs Support: when deciding between an offensive action and a support action, compute both action scores with `decision_attack_support` applied positively to offensive action modifiers and negatively to support/heal modifiers.
+```
+score(action) = baseScore(action) + sum_i{ w_i × modifier_i(action) }
+```
 
-- Fight or Flight: compute a retreatThreshold = baseRetreat + w_fight_flight * retreatDelta. If currentHPPercent < retreatThreshold then fallback behaviour is triggered.
+where each `w_i` is a derived decision weight and `modifier_i(action)` is an action-specific scalar (expected damage, healing value, threat reduction, etc.).
 
-- Resource conservation: when w_resource_conservation > 0.0, multiply the cost-sensitivity term by (1 + w_resource_conservation) to penalise high-cost skills; when negative reduce the penalty.
+Key derived weights and their use:
 
-- AoE vs Single-target: when evaluating an AoE skill, multiply its score by (1 + w_aoe_single * crowdFactor) where crowdFactor estimates the number of valid targets.
+- **`w_attack_support`** (`= w_sa`): positive → prefer offensive actions; negative → prefer heals/buffs.
+- **`w_fight_flight`** (`= −w_rc`): positive (risky) → fight on at low HP; negative (cautious) → retreat sooner.
+- **`w_target_aggression`** (`= (−w_od + w_sa)/2`): positive → target highest-threat enemy; negative → target softest enemy.
+- **`w_focus_fire`** (`= w_af`): positive (focus) → target already engaged by allies; negative (area) → spread attacks.
+- **`w_resource_conservation`** (`= (w_rc − w_od)/2`): positive → penalise high-mana skills; negative → spend freely.
+- **`w_aoe_single`** (`= −w_af`): positive (area) → prefer AoE; negative (focus) → prefer single-target.
+- **`w_cc_priority`** (`= (−w_co − w_sh)/2`): positive (chaos+sly) → prioritise crowd-control abilities.
+- **`w_healing_priority`** (`= (−w_sa − w_ld)/2`): positive (supportive+light) → heal low-HP allies urgently.
+- **`w_skill_timing`** (`= −w_rc`): positive (risky) → use skills immediately; negative → hold for better conditions.
+- **`w_positioning_aggression`** (`= (w_rm − w_od)/2`): positive (melee+offensive) → frontline positioning.
+- **`w_target_preference`** (`= (−w_sh − w_od)/2`): positive (sly+offensive) → bias toward weakest/softest targets.
+- **`w_defensive_focus`** (`= (w_od − w_ai)/2`): positive (defensive) → prioritise shields and blocks.
 
-- Skill timing and CC priority: `decision_skill_timing` and `decision_cc_priority` add to the urgency term when evaluating whether to cast immediately or hold.
+Target selection formula:
+```
+targetScore(t) = baseTargetScore(t)
+              + w_target_aggression  × threat(t)
+              + w_target_preference  × preferenceBias(t)
+              + w_focus_fire         × allyEngagement(t)
+```
 
-- Positioning and defensive focus: `decision_positioning_aggression` biases movement and targeting toward ally or enemy positions; `decision_defensive_focus` increases the priority of defensive actions when positive.
+Fight-or-flight threshold:
+```
+retreatThreshold = baseRetreat + w_fight_flight × retreatDelta
+```
+If `currentHPPercent < retreatThreshold`, fall-back behaviour is triggered.
+
+AoE score multiplier:
+```
+aoeScore(skill) = baseScore(skill) × (1 + w_aoe_single × crowdFactor)
+```
 
 Notes for designers:
-
-- Keep decision values small in magnitude when authoring QR templates for predictable behaviour — values near zero mean neutral/default AI.
-- The system is additive and deterministic; combine with small random noise for varied behaviour if desired.
-```
+- Trait values near zero produce neutral/default AI — safe starting points for new templates.
+- Trait influence is additive and bounded; extreme values shift behaviour but never fully override class heuristics.
+- Use the archetype profiles in `character-traits.md` as starting points for pre-built heroes.
 
 ## Design Notes
 
-- Stat scaling on level-up uses class-specific **growth tables** (to be defined per class in BRL).
+- Stat scaling on level-up is trait-driven per the formulas in [`character-traits.md`](character-traits.md).
 - Revival mechanics (Paladin passive, Cleric skill) are handled via skill components — see [skills.md](skills.md).

@@ -69,53 +69,55 @@ Each entity has 4 skill slots. Skills are assigned at entity creation (BRL) or o
 
 ## Hero Skills (by Class)
 
+Trait orientation columns list the poles that push a character toward each skill. Full affinity tables (covering all 48 skills per class in the DAG) follow each DAG class section. See [`character-traits.md`](character-traits.md) for the scoring formula.
+
 ### Warrior
-| Skill | Type | Effect |
-|-------|------|--------|
-| Power Strike | Active | Deal 150% damage to one target |
-| Shield Bash | Active | Deal damage + apply Stunned (1 turn) |
-| Defensive Stance | Active | Gain +20 defence for 5s |
-| Execute | Active | Deal 200% damage to target below 20% HP |
+| Skill | Type | Effect | Orienting traits |
+|-------|------|--------|-----------------|
+| Power Strike | Active | Deal 150% damage to one target | physical, attacker, offensive, melee |
+| Shield Bash | Active | Deal damage + apply Stunned (1 turn) | physical, melee, attacker, focus |
+| Defensive Stance | Active | Gain +20 defence for 5s | defensive, absorb, cautious |
+| Execute | Active | Deal 200% damage to target below 20% HP | attacker, offensive, focus |
 
 ### Mage
-| Skill | Type | Effect |
-|-------|------|--------|
-| Frost Bolt | Active | Deal magic damage + apply Frozen (2s) |
-| Fireball | Active | Deal AoE damage to all enemies (Burning) |
-| Arcane Shield | Active | Absorb-shield for 30 damage |
-| Mana Surge | Passive | +20% spell damage when Mana > 80% |
+| Skill | Type | Effect | Orienting traits |
+|-------|------|--------|-----------------|
+| Frost Bolt | Active | Deal magic damage + apply Frozen (2s) | magical, water, focus, cautious |
+| Fireball | Active | Deal AoE damage to all enemies (Burning) | magical, fire, area, attacker |
+| Arcane Shield | Active | Absorb-shield for 30 damage | magical, absorb, defensive |
+| Mana Surge | Passive | +20% spell damage when Mana > 80% | magical, cautious, attacker |
 
 ### Ranger
-| Skill | Type | Effect |
-|-------|------|--------|
-| Aimed Shot | Active | 2× damage to single target |
-| Multishot | Active | Hits all enemies for 60% damage |
-| Poison Arrow | Active | Deal damage + apply Poisoned (3 stacks) |
-| Eagle Eye | Passive | +15% crit chance |
+| Skill | Type | Effect | Orienting traits |
+|-------|------|--------|-----------------|
+| Aimed Shot | Active | 2× damage to single target | range, attacker, focus |
+| Multishot | Active | Hits all enemies for 60% damage | range, area, attacker |
+| Poison Arrow | Active | Deal damage + apply Poisoned (3 stacks) | range, sly, inflict |
+| Eagle Eye | Passive | +15% crit chance | range, risky, focus |
 
 ### Paladin
-| Skill | Type | Effect |
-|-------|------|--------|
-| Holy Strike | Active | Deal damage + apply Blessed to self |
-| Lay on Hands | Active | Fully heal one ally |
-| Divine Shield | Active | Party-wide absorb shield for 20 damage |
-| Resurrection | Triggered | Revives one dead ally at 50% HP (once per encounter) |
+| Skill | Type | Effect | Orienting traits |
+|-------|------|--------|-----------------|
+| Holy Strike | Active | Deal damage + apply Blessed to self | light, honorable, attacker |
+| Lay on Hands | Active | Fully heal one ally | supportive, light, cautious |
+| Divine Shield | Active | Party-wide absorb shield for 20 damage | defensive, absorb, light, area |
+| Resurrection | Triggered | Revives one dead ally at 50% HP (once per encounter) | supportive, light, honorable, cautious |
 
 ### Rogue
-| Skill | Type | Effect |
-|-------|------|--------|
-| Backstab | Active | 175% damage, priority to low-defence targets |
-| Shadowstep | Active | Deal damage + apply Blinded to target |
-| Eviscerate | Active | Apply Bleeding (5 stacks, high damage) |
-| Shadow Cloak | Triggered | On near-death: become Untargetable for 2s |
+| Skill | Type | Effect | Orienting traits |
+|-------|------|--------|-----------------|
+| Backstab | Active | 175% damage, priority to low-defence targets | physical, sly, attacker, focus |
+| Shadowstep | Active | Deal damage + apply Blinded to target | sly, range, risky, attacker |
+| Eviscerate | Active | Apply Bleeding (5 stacks, high damage) | physical, inflict, attacker |
+| Shadow Cloak | Triggered | On near-death: become Untargetable for 2s | sly, cautious, defensive |
 
 ### Cleric
-| Skill | Type | Effect |
-|-------|------|--------|
-| Heal | Active | Restore HP to lowest-HP ally |
-| Mass Heal | Active | Restore HP to all allies |
-| Smite | Active | Deal magic damage to one enemy |
-| Purify | Active | Remove all negative status effects from one ally |
+| Skill | Type | Effect | Orienting traits |
+|-------|------|--------|-----------------|
+| Heal | Active | Restore HP to lowest-HP ally | supportive, light, honorable |
+| Mass Heal | Active | Restore HP to all allies | supportive, area, light |
+| Smite | Active | Deal magic damage to one enemy | magical, light, attacker |
+| Purify | Active | Remove all negative status effects from one ally | supportive, order, light |
 
 ---
 
@@ -265,6 +267,61 @@ Passive Skills (W_A1..W_A16)
 - W_A15 — Indomitable: Reduce duration of debuffs. Prereqs: [W_A12]
 - W_A16 — Battle Leader: Increase party XP/skill gain slightly. Prereqs: [W_A13,W_P16]
 
+#### Warrior — Trait Orientation
+
+The table below maps each skill to the character trait poles that most strongly push a hero toward selecting it. Poles are listed in decreasing order of influence. See [`character-traits.md`](character-traits.md) for axis definitions and the scoring formula.
+
+| Skill | Orienting trait poles |
+|-------|-----------------------|
+| W_P1  Power Strike         | physical, attacker, offensive, melee |
+| W_P2  Shield Bash          | physical, melee, attacker, focus |
+| W_P3  Taunt                | defensive, melee, honorable |
+| W_P4  Defensive Stance     | defensive, absorb, cautious, melee |
+| W_P5  Cleaving Blow        | area, physical, offensive, attacker |
+| W_P6  Rampage              | risky, attacker, offensive, physical |
+| W_P7  Furious Charge       | risky, melee, attacker, offensive |
+| W_P8  Overwatch            | defensive, cautious, melee, absorb |
+| W_P9  Last Stand           | defensive, cautious, absorb |
+| W_P10 Execute              | attacker, offensive, focus, physical |
+| W_P11 War Cry              | supportive, area, honorable |
+| W_P12 Shield Wall          | defensive, absorb, supportive, cautious |
+| W_P13 Cleaving Mastery     | area, physical, offensive, attacker |
+| W_P14 Berserker Momentum   | risky, attacker, offensive, chaos |
+| W_P15 Ground Slam          | area, physical, offensive, melee |
+| W_P16 Warlord's Command    | supportive, order, honorable, area |
+| W_S1  Shield Throw         | defensive, range |
+| W_S2  Riposte              | defensive, cautious, melee, absorb |
+| W_S3  Body Slam            | melee, attacker, offensive |
+| W_S4  Fortify Armor        | defensive, absorb, cautious |
+| W_S5  Rally                | supportive, honorable |
+| W_S6  Knockback Shield     | defensive, absorb |
+| W_S7  Disarm               | sly, chaos, offensive |
+| W_S8  Momentum Strike      | risky, attacker, offensive, physical |
+| W_S9  Focused Defense      | defensive, absorb, cautious, earth |
+| W_S10 Shield Focus         | defensive, absorb, cautious |
+| W_S11 Marching Orders      | supportive, order, area |
+| W_S12 Unstoppable          | risky, melee, attacker |
+| W_S13 Crushing Blows       | physical, attacker, focus |
+| W_S14 Guarded Assault      | defensive, absorb, attacker |
+| W_S15 Intimidate           | defensive, honorable |
+| W_S16 Earthshaker          | area, physical, earth |
+| W_A1  Heavy Armor Training | defensive, absorb, earth |
+| W_A2  Shield Mastery       | defensive, absorb, cautious |
+| W_A3  Toughness            | defensive, cautious, earth |
+| W_A4  Fortitude            | defensive, cautious, order |
+| W_A5  Brutal Strikes       | physical, attacker, inflict |
+| W_A6  Stamina              | risky, attacker |
+| W_A7  Hardened             | defensive, cautious, absorb |
+| W_A8  Momentum             | risky, attacker, physical |
+| W_A9  Bulwark              | defensive, absorb, melee |
+| W_A10 Veteran's Grit       | cautious, order, defensive |
+| W_A11 Crushing Weight      | physical, attacker, inflict |
+| W_A12 Iron Will            | defensive, order, cautious |
+| W_A13 War Drills           | supportive, honorable, order |
+| W_A14 Second Wind          | defensive, cautious, absorb |
+| W_A15 Indomitable          | defensive, cautious, order |
+| W_A16 Battle Leader        | supportive, honorable, order |
+
 ---
 
 ### Mage
@@ -323,6 +380,59 @@ Passive Skills (M_A1..M_A16)
 - M_A14 — Temporal Focus: Slightly lengthen effect durations of control spells. Prereqs: [M_A2,M_P12]
 - M_A15 — Leyline Mastery: Increased effect radius for AoE spells. Prereqs: [M_A3,M_P5]
 - M_A16 — Spellweaver: Small party-wide spell power buff while alive. Prereqs: [M_A11,M_P16]
+
+#### Mage — Trait Orientation
+
+| Skill | Orienting trait poles |
+|-------|-----------------------|
+| M_P1  Magic Missile     | magical, focus, attacker |
+| M_P2  Fireball          | magical, fire, area, attacker |
+| M_P3  Frost Bolt        | magical, water, focus, cautious |
+| M_P4  Arcane Missiles   | magical, attacker, focus |
+| M_P5  Meteor            | magical, fire, area, risky |
+| M_P6  Blizzard          | magical, water, area, cautious |
+| M_P7  Mana Shield       | magical, absorb, defensive, cautious |
+| M_P8  Arcane Explosion  | magical, chaos, area, attacker |
+| M_P9  Flame Burst       | magical, fire, inflict, risky |
+| M_P10 Ice Prison        | magical, water, focus, order, cautious |
+| M_P11 Combustion        | magical, fire, attacker, chaos |
+| M_P12 Temporal Shift    | magical, cautious, order |
+| M_P13 Arcane Beam       | magical, focus, attacker |
+| M_P14 Elemental Mastery | magical, order, cautious |
+| M_P15 Cataclysm         | magical, fire, area, risky |
+| M_P16 Mana Overflow     | magical, chaos, attacker |
+| M_S1  Mana Bolt         | magical, focus, attacker |
+| M_S2  Frost Nova        | magical, water, area, cautious |
+| M_S3  Ignite            | magical, fire, inflict |
+| M_S4  Blink             | sly, risky, range, magical |
+| M_S5  Silence           | magical, order, cautious, focus |
+| M_S6  Spell Ward        | magical, absorb, cautious |
+| M_S7  Arcane Echo       | magical, chaos, attacker |
+| M_S8  Frostbite         | magical, water, focus, inflict |
+| M_S9  Heat Wave         | magical, fire, area, chaos |
+| M_S10 Mana Beacon       | supportive, magical, light |
+| M_S11 Glyph of Binding  | magical, water, order, focus |
+| M_S12 Precision Channel | magical, focus, cautious |
+| M_S13 Arcane Sight      | magical, order, focus |
+| M_S14 Elemental Swap    | magical, order |
+| M_S15 Spark Chain       | magical, wind, area |
+| M_S16 Slowfield         | magical, water, area, cautious |
+| M_A1  Scholar           | magical, cautious |
+| M_A2  Quick Cast        | magical, risky, attacker |
+| M_A3  Elemental Affinity| magical, fire (or water) |
+| M_A4  Mana Regen        | magical, cautious |
+| M_A5  Pyromania         | magical, fire, inflict, risky |
+| M_A6  Cryostasis        | magical, water, order, cautious |
+| M_A7  Arcane Reservoir  | magical, cautious |
+| M_A8  Spell Precision   | magical, focus, attacker |
+| M_A9  Runic Inscription | magical, order, focus |
+| M_A10 Mana Efficiency   | magical, cautious |
+| M_A11 Conduit           | magical, chaos, attacker |
+| M_A12 Elemental Surge   | magical, chaos, inflict |
+| M_A13 Arcane Armor      | magical, absorb, defensive |
+| M_A14 Temporal Focus    | magical, order, cautious |
+| M_A15 Leyline Mastery   | magical, area, attacker |
+| M_A16 Spellweaver       | supportive, magical, order, honorable |
 
 ---
 
@@ -383,6 +493,59 @@ Passive Skills (R_A1..R_A16)
 - R_A15 — Agile Fury: Increase attack speed after dodge. Prereqs: [R_A11]
 - R_A16 — Rogue's Bounty: Slight increase to loot find and gold. Prereqs: [R_A10,R_S15]
 
+#### Rogue — Trait Orientation
+
+| Skill | Orienting trait poles |
+|-------|-----------------------|
+| R_P1  Backstab          | physical, sly, attacker, focus |
+| R_P2  Shadowstep        | sly, range, risky, attacker |
+| R_P3  Eviscerate        | physical, inflict, attacker |
+| R_P4  Poisoned Blade    | sly, inflict, physical |
+| R_P5  Fan of Knives     | physical, area, attacker |
+| R_P6  Shadow Cloak      | sly, cautious, defensive |
+| R_P7  Ambush            | sly, risky, focus, attacker |
+| R_P8  Throwing Dagger   | range, physical, focus, attacker |
+| R_P9  Garrote           | sly, inflict, focus |
+| R_P10 Vanish            | sly, cautious |
+| R_P11 Critical Focus    | physical, attacker, focus, risky |
+| R_P12 Chain of Shadows  | sly, area, attacker, risky |
+| R_P13 Weakening Strike  | sly, offensive, attacker |
+| R_P14 Lethal Precision  | physical, attacker, focus, inflict |
+| R_P15 Smoke Bomb        | sly, area, cautious |
+| R_P16 Shadow Master     | sly, darkness, cautious |
+| R_S1  Pickpocket        | sly, chaos |
+| R_S2  Trap              | sly, cautious, focus |
+| R_S3  Quickstep         | range, risky, wind |
+| R_S4  Poison Cloud      | sly, inflict, area |
+| R_S5  Shadow Mirror     | sly, chaos, cautious |
+| R_S6  Blade Dance       | physical, attacker, focus |
+| R_S7  Disable           | sly, chaos, order |
+| R_S8  Mark for Death    | sly, inflict, area |
+| R_S9  Silent Takedown   | sly, focus, attacker, risky |
+| R_S10 Shadowy Escape    | sly, cautious, risky |
+| R_S11 Bleeder's Legacy  | inflict, area, physical |
+| R_S12 Poison Mastery    | sly, inflict, physical |
+| R_S13 Focused Strike    | physical, focus, attacker |
+| R_S14 Pressure Point    | physical, attacker, offensive |
+| R_S15 Gang Up           | area, attacker |
+| R_S16 Infiltrate        | sly |
+| R_A1  Nimble            | risky, range, wind |
+| R_A2  Lethality         | physical, attacker, risky |
+| R_A3  Venom Training    | sly, inflict, physical |
+| R_A4  Shadow's Grace    | sly, cautious |
+| R_A5  Cold Blooded      | sly, attacker, risky, focus |
+| R_A6  Opportunist       | sly, offensive, attacker |
+| R_A7  Silent Steps      | sly, wind, cautious |
+| R_A8  Backstabber's Focus | physical, focus, sly, attacker |
+| R_A9  Assassinate Edge  | physical, focus, attacker, risky |
+| R_A10 Trap Specialist   | sly, cautious, order |
+| R_A11 Evasion           | risky, cautious |
+| R_A12 Toxic Residue     | sly, inflict, physical |
+| R_A13 Shadow Networking | sly, cautious, risky |
+| R_A14 Pressure Tactics  | sly, inflict, order |
+| R_A15 Agile Fury        | risky, wind, attacker |
+| R_A16 Rogue's Bounty    | sly, chaos |
+
 ---
 
 ### Cleric
@@ -441,6 +604,59 @@ Passive Skills (C_A1..C_A16)
 - C_A14 — Purging Light: Passive small periodic purge to allies. Prereqs: [C_A8]
 - C_A15 — Divine Focus: Slight reduction to skill cooldowns. Prereqs: [C_A3]
 - C_A16 — Shepherd: Slightly increase ally XP gain and resource find. Prereqs: [C_A10]
+
+#### Cleric — Trait Orientation
+
+| Skill | Orienting trait poles |
+|-------|-----------------------|
+| C_P1  Heal               | supportive, light, honorable |
+| C_P2  Smite              | magical, light, honorable, attacker |
+| C_P3  Mass Heal          | supportive, area, light |
+| C_P4  Purify             | supportive, light, order, honorable |
+| C_P5  Divine Shield      | absorb, defensive, light, cautious |
+| C_P6  Judgement          | light, attacker, honorable, offensive |
+| C_P7  Beacon of Hope     | supportive, light, order, honorable |
+| C_P8  Turn Undead        | light, honorable, order, attacker |
+| C_P9  Resurrection       | supportive, light, honorable, cautious |
+| C_P10 Holy Nova          | light, area, supportive, attacker |
+| C_P11 Aegis Ward         | absorb, supportive, light, cautious |
+| C_P12 Consecration       | light, area, honorable |
+| C_P13 Hammer of Light    | light, attacker, honorable, focus |
+| C_P14 Guardian Angel     | absorb, defensive, cautious, light |
+| C_P15 Channel Divinity   | supportive, light, order, cautious |
+| C_P16 Sacred Beacon      | supportive, light, order, honorable |
+| C_S1  Minor Blessing     | supportive, light, honorable |
+| C_S2  Antidote           | supportive, order, light |
+| C_S3  Sanctify Weapon    | light, honorable, order |
+| C_S4  Steady Hands       | supportive, order, light |
+| C_S5  Light's Beacon     | light, order, honorable |
+| C_S6  Protective Chant   | defensive, absorb, area, honorable |
+| C_S7  Mend Wounds        | supportive, light, area |
+| C_S8  Blessing of Speed  | supportive, light, cautious |
+| C_S9  Retribution        | light, honorable, inflict |
+| C_S10 Divine Intervention| supportive, order, light |
+| C_S11 Sacred Ground      | light, area, order |
+| C_S12 Beacon Swap        | supportive, light, cautious |
+| C_S13 Anti-Magic Zone    | order, light, defensive, area |
+| C_S14 Blessing of Clarity| supportive, order, light |
+| C_S15 Spirit Ward        | absorb, defensive, light, order |
+| C_S16 Serenity           | supportive, honorable, light |
+| C_A1  Devotion           | supportive, light, honorable |
+| C_A2  Calm Mind          | supportive, light, cautious |
+| C_A3  Efficient Healer   | supportive, order, cautious |
+| C_A4  Blessing Aura      | supportive, light, honorable, area |
+| C_A5  Light's Embrace    | supportive, light, attacker |
+| C_A6  Guardian's Resolve | defensive, absorb, order |
+| C_A7  Martyr's Grace     | absorb, supportive, light |
+| C_A8  Purist             | supportive, order, light |
+| C_A9  Sanctuary          | absorb, defensive, cautious, light |
+| C_A10 Blessed Bonds      | supportive, light, focus |
+| C_A11 Reverent           | supportive, light, honorable, order |
+| C_A12 Channeler          | supportive, magical, order |
+| C_A13 Anti-Undead Training | light, honorable, order, attacker |
+| C_A14 Purging Light      | supportive, light, order |
+| C_A15 Divine Focus       | supportive, light, order, cautious |
+| C_A16 Shepherd           | supportive, honorable, order, light |
 
 ---
 
