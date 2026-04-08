@@ -7,19 +7,19 @@ interface ModeSelectScreenProps {
 }
 
 const DIFFICULTY_COLOR: Record<string, string> = {
-  Easy: 'bg-green-700 text-green-100',
-  Normal: 'bg-blue-700 text-blue-100',
-  Hard: 'bg-red-700 text-red-100',
+  Easy: 'bg-green-800 text-green-200',
+  Normal: 'bg-amber-800 text-amber-200',
+  Hard: 'bg-red-900 text-red-200',
 };
 
 export function ModeSelectScreen({ onSelect, onBack }: ModeSelectScreenProps) {
   return (
-    <div className="flex flex-col min-h-screen bg-slate-900 text-white px-4 py-6">
+    <div className="flex flex-col min-h-screen bg-stone-900 text-stone-100 px-4 py-6">
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <button
           onClick={onBack}
-          className="text-slate-400 hover:text-white text-2xl leading-none"
+          className="text-stone-400 hover:text-stone-100 text-2xl leading-none"
         >
           ←
         </button>
@@ -32,7 +32,7 @@ export function ModeSelectScreen({ onSelect, onBack }: ModeSelectScreenProps) {
           <button
             key={mode.id}
             onClick={() => onSelect(mode.id)}
-            className="w-full text-left bg-slate-800 hover:bg-slate-700 rounded-xl p-4 transition-colors border border-slate-700 hover:border-slate-500"
+            className="w-full text-left bg-stone-800 hover:bg-stone-700 rounded-xl p-4 transition-colors border border-stone-700 hover:border-stone-500"
           >
             <div className="flex items-center justify-between mb-2">
               <span className="font-bold text-lg">{mode.name}</span>
@@ -40,13 +40,13 @@ export function ModeSelectScreen({ onSelect, onBack }: ModeSelectScreenProps) {
                 {mode.difficulty}
               </span>
             </div>
-            <p className="text-slate-400 text-sm leading-relaxed">{mode.description}</p>
+            <p className="text-stone-400 text-sm leading-relaxed">{mode.description}</p>
           </button>
         ))}
       </div>
 
       {/* Footer */}
-      <p className="text-center text-slate-600 text-xs mt-4 pt-4">
+      <p className="text-center text-stone-600 text-xs mt-4 pt-4">
         Choose a mode, then pick your party.
       </p>
     </div>

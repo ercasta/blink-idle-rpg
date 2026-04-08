@@ -5,6 +5,7 @@
 
 import type { HeroDefinition, HeroClass } from '../types';
 import { randomTraits } from './traits';
+import { generateHeroDescription } from './heroDescription';
 
 export const HEROES: HeroDefinition[] = [
   {
@@ -149,15 +150,16 @@ export function generateRandomHero(): HeroDefinition {
   const hc = allClasses[Math.floor(Math.random() * allClasses.length)];
   const names = FIRST_NAMES[hc];
   const name = names[Math.floor(Math.random() * names.length)];
+  const traits = randomTraits();
   return {
     id: `hero-${crypto.randomUUID()}`,
     name,
     heroClass: hc,
-    description: `A ${hc.toLowerCase()} ready for adventure.`,
+    description: generateHeroDescription(hc, traits),
     role: CLASS_ROLES[hc],
     emoji: CLASS_EMOJIS[hc],
     stats: rollStats(hc),
-    traits: randomTraits(),
+    traits,
   };
 }
 
@@ -189,15 +191,16 @@ export function generateRandomParty(): HeroDefinition[] {
   return shuffle(pickedClasses).map((hc, i) => {
     const names = FIRST_NAMES[hc];
     const name = names[Math.floor(Math.random() * names.length)];
+    const traits = randomTraits();
     return {
       id: `random-${i}-${Date.now()}`,
       name,
       heroClass: hc,
-      description: `A ${hc.toLowerCase()} ready for adventure.`,
+      description: generateHeroDescription(hc, traits),
       role: CLASS_ROLES[hc],
       emoji: CLASS_EMOJIS[hc],
       stats: rollStats(hc),
-      traits: randomTraits(),
+      traits,
     };
   });
 }

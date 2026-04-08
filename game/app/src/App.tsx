@@ -8,6 +8,8 @@
  *   home → mode-select → party-select → (simulation) → battle → results
  *   home → (quick play: random party + normal mode) → battle → results
  *   results → rerun (same heroes + same mode, skip selection)
+ *
+ *   ?heroName=…&heroClass=…&pm=…  → roster (create with shared hero pre-loaded)
  */
 
 import { useState, useCallback, useEffect } from 'react';
@@ -23,10 +25,17 @@ import { generateRandomParty } from './data/heroes';
 import { GAME_MODES } from './data/gameModes';
 import { loadRecentRuns, saveRun } from './storage/runStorage';
 import { loadRoster, saveRoster } from './storage/rosterStorage';
+import { decodeHeroFromParams } from './data/heroDescription';
+import type { SharedHeroData } from './data/heroDescription';
 import type { AppScreen, GameMode, HeroDefinition, GameSnapshot, RunResult, HeroPath } from './types';
 
 export default function App() {
-  const [screen, setScreen] = useState<AppScreen | 'loading' | 'error'>('home');
+  const [screen, setScreen] = useState<AppScreen | 'loading' | 'error'>(() => {
+    // If URL has a shared hero, start directly on roster
+    const params = new URLSearchParams(window.location.search);
+    if (decodeHeroFromParams(params)) return 'roster';
+    return 'home';
+  });
   const [selectedMode, setSelectedMode] = useState<GameMode>('normal');
   const [selectedHeroes, setSelectedHeroes] = useState<HeroDefinition[]>([]);
   const [roster, setRoster] = useState<HeroDefinition[]>([]);
@@ -37,12 +46,22 @@ export default function App() {
   const [heroPaths, setHeroPaths] = useState<HeroPath[]>([]);
   const [loadingMessage] = useState('Running simulation…');
   const [error, setError] = useState<string | null>(null);
+  // Shared hero decoded from URL params (consumed once roster opens)
+  const [sharedHero] = useState<SharedHeroData | null>(() => {
+    const params = new URLSearchParams(window.location.search);
+    return decodeHeroFromParams(params);
+  });
 
   // Load recent runs and roster from IndexedDB on first mount
   useEffect(() => {
     loadRecentRuns().then(setRecentRuns);
     loadRoster().then(setRoster);
-  }, []);
+    // Clear the share params from the URL without reloading
+    if (sharedHero) {
+      const url = window.location.origin + window.location.pathname;
+      window.history.replaceState({}, '', url);
+    }
+  }, [sharedHero]);
 
   // ── Roster helpers ──────────────────────────────────────────────────────
 
@@ -162,6 +181,7 @@ export default function App() {
         roster={roster}
         onRosterChange={handleRosterChange}
         onBack={goHome}
+        sharedHero={sharedHero}
       />
     );
   }
@@ -210,13 +230,13 @@ export default function App() {
 
   if (screen === 'error') {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-slate-900 text-white gap-4 px-6">
+      <div className="flex flex-col items-center justify-center min-h-screen bg-stone-900 text-stone-100 gap-4 px-6">
         <div className="text-5xl">⚠️</div>
-        <h1 className="text-xl font-bold text-red-400">Simulation Error</h1>
-        <p className="text-slate-400 text-sm text-center">{error ?? 'An unknown error occurred.'}</p>
+        <h1 className="text-xl font-bold text-amber-500">Simulation Error</h1>
+        <p className="text-stone-400 text-sm text-center">{error ?? 'An unknown error occurred.'}</p>
         <button
           onClick={goHome}
-          className="px-6 py-3 bg-red-600 hover:bg-red-500 rounded-xl font-bold mt-2"
+          className="px-6 py-3 bg-amber-700 hover:bg-amber-600 rounded-xl font-bold mt-2 text-stone-100"
         >
           Back to Home
         </button>
