@@ -336,7 +336,7 @@ function _runWithWasm(
 
   const snapshots: GameSnapshot[] = [];
   let prevCheckpoints = 0;
-  const MAX_STEPS = 500_000;
+  const MAX_STEPS = 2_000_000;
   let totalSteps = 0;
 
   while (game.has_events() && totalSteps < MAX_STEPS) {
@@ -357,11 +357,13 @@ function _runWithWasm(
       prevCheckpoints = tracker.checkpointsReached;
     }
 
-    // Stop if game is over
+    // Stop only when gameOver is set (after 3000 encounters).
+    // Do NOT stop on victory alone — victory marks Lord Vexar's defeat
+    // but the game must continue until all 3000 encounters are complete.
     const gs = JSON.parse(game.get_component(99, 'GameState')) as {
       gameOver: boolean; victory: boolean;
     };
-    if (gs.gameOver || gs.victory) break;
+    if (gs.gameOver) break;
   }
 
   // Final snapshot (captures end state)

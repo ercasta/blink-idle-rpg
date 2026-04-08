@@ -521,6 +521,8 @@ rule respawn_on_player_defeated on PlayerDefeated(pd: id) {
 rule respawn_player on RespawnPlayer(rp: id) {
     if entity has GameState {
 let p: id = rp.player
+        // Guard: only respawn if still dead (avoid double-respawn)
+        if p.Health.current <= 0 {
         // Restore health and mana
         p.Health.current = p.Health.max
         p.Mana.current = p.Mana.max
@@ -530,9 +532,22 @@ let p: id = rp.player
         p.Buffs.damageBonus = 0
         p.Buffs.defenseBonus = 0
         p.Buffs.hasteBonus = 0.0d
-        // Restart the attack loop (stopped when health reached 0)
+        // Restart all combat loops (they stop when health reaches 0)
         schedule [delay: 0.5d] DoAttack {
             source: p
+        }
+        // Restart health regeneration loop
+        schedule [delay: 3.0d] HealthRegen {
+            source: p
+        }
+        // Restart mana regeneration loop
+        schedule [delay: 1.0d] ManaRegen {
+            source: p
+        }
+        // Restart skill usage loop
+        schedule [delay: 2.0d] TryUseSkill {
+            source: p
+        }
         }
     }
 }
