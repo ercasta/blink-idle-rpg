@@ -33,7 +33,7 @@ export function ResultsScreen({ result, onPlayAgain, onRerun, onHome }: ResultsS
       <div className="text-center mb-8">
         <div className="text-5xl mb-3">⚔️</div>
         <h1 className="text-2xl font-bold mb-1">
-          {'Run Completed!}
+          {'Run Completed!'}
         </h1>
         <p className="text-4xl font-extrabold text-amber-400">
           {finalScore.toLocaleString()}
