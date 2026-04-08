@@ -4,14 +4,17 @@
  * Simple state-machine router: no URL routing needed for v1.
  *
  * Flow:
+ *   home → roster (hero management)
  *   home → mode-select → party-select → (simulation) → battle → results
  *   home → (quick play: random party + normal mode) → battle → results
+ *   results → rerun (same heroes + same mode, skip selection)
  */
 
 import { useState, useCallback, useEffect } from 'react';
 import { HomeScreen } from './screens/HomeScreen';
 import { ModeSelectScreen } from './screens/ModeSelectScreen';
 import { PartySelectScreen } from './screens/PartySelectScreen';
+import { RosterScreen } from './screens/RosterScreen';
 import { BattleScreen } from './screens/BattleScreen';
 import { ResultsScreen } from './screens/ResultsScreen';
 import { LoadingScreen } from './screens/LoadingScreen';
@@ -19,12 +22,14 @@ import { runSimulation } from './engine/WasmSimEngine';
 import { generateRandomParty } from './data/heroes';
 import { GAME_MODES } from './data/gameModes';
 import { loadRecentRuns, saveRun } from './storage/runStorage';
+import { loadRoster, saveRoster } from './storage/rosterStorage';
 import type { AppScreen, GameMode, HeroDefinition, GameSnapshot, RunResult, HeroPath } from './types';
 
 export default function App() {
   const [screen, setScreen] = useState<AppScreen | 'loading' | 'error'>('home');
   const [selectedMode, setSelectedMode] = useState<GameMode>('normal');
   const [selectedHeroes, setSelectedHeroes] = useState<HeroDefinition[]>([]);
+  const [roster, setRoster] = useState<HeroDefinition[]>([]);
   const [snapshots, setSnapshots] = useState<GameSnapshot[]>([]);
   const [prevSnapshots, setPrevSnapshots] = useState<GameSnapshot[]>([]);
   const [runResult, setRunResult] = useState<RunResult | null>(null);
@@ -33,10 +38,18 @@ export default function App() {
   const [loadingMessage] = useState('Running simulation…');
   const [error, setError] = useState<string | null>(null);
 
-  // Load recent runs from IndexedDB on first mount
+  // Load recent runs and roster from IndexedDB on first mount
   useEffect(() => {
     loadRecentRuns().then(setRecentRuns);
+    loadRoster().then(setRoster);
   }, []);
+
+  // ── Roster helpers ──────────────────────────────────────────────────────
+
+  function handleRosterChange(newRoster: HeroDefinition[]) {
+    setRoster(newRoster);
+    saveRoster(newRoster);
+  }
 
   // ── Navigation helpers ──────────────────────────────────────────────────
 
@@ -108,10 +121,49 @@ export default function App() {
     setScreen('mode-select');
   }
 
+  const rerun = useCallback(async () => {
+    if (selectedHeroes.length === 0) {
+      setScreen('mode-select');
+      return;
+    }
+    setScreen('loading');
+    setError(null);
+
+    try {
+      const runs = await loadRecentRuns();
+      setPrevSnapshots(runs[0]?.snapshots ?? []);
+      const result = await runSimulation(selectedHeroes, selectedMode);
+      setSnapshots(result.snapshots);
+      setHeroPaths(result.heroPaths);
+      setScreen('battle');
+    } catch (e) {
+      console.error('[App] Rerun simulation error:', e);
+      setError(e instanceof Error ? e.message : String(e));
+      setScreen('error');
+    }
+  }, [selectedHeroes, selectedMode]);
+
   // ── Render ──────────────────────────────────────────────────────────────
 
   if (screen === 'home') {
-    return <HomeScreen recentRuns={recentRuns} onStart={startRun} onQuickPlay={quickPlay} />;
+    return (
+      <HomeScreen
+        recentRuns={recentRuns}
+        onStart={startRun}
+        onQuickPlay={quickPlay}
+        onManageRoster={() => setScreen('roster')}
+      />
+    );
+  }
+
+  if (screen === 'roster') {
+    return (
+      <RosterScreen
+        roster={roster}
+        onRosterChange={handleRosterChange}
+        onBack={goHome}
+      />
+    );
   }
 
   if (screen === 'mode-select') {
@@ -121,8 +173,10 @@ export default function App() {
   if (screen === 'party-select') {
     return (
       <PartySelectScreen
+        roster={roster}
         onStart={onPartySelected}
         onBack={() => setScreen('mode-select')}
+        onManageRoster={() => setScreen('roster')}
       />
     );
   }
@@ -148,6 +202,7 @@ export default function App() {
       <ResultsScreen
         result={runResult}
         onPlayAgain={playAgain}
+        onRerun={rerun}
         onHome={goHome}
       />
     );
