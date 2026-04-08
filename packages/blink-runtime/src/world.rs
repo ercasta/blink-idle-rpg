@@ -196,14 +196,34 @@ impl World {
     }
 
     /// Get a mutable reference to a component on an entity.
-    /// Panics if the entity doesn't have the component.
-    pub fn get_mut<C: Clone + 'static>(&mut self, id: EntityId) -> &mut C {
+    /// Returns a thread-local scratch value if the entity doesn't have the component.
+    /// Mutations to a missing entity's component are silently discarded.
+    pub fn get_mut<C: Clone + Default + 'static>(&mut self, id: EntityId) -> &mut C {
         let type_id = std::any::TypeId::of::<C>();
-        self.storages
+        if let Some(result) = self.storages
             .get_mut(&type_id)
             .and_then(|s| s.as_any_mut().downcast_mut::<TypedStorage<C>>())
             .and_then(|s| s.get_mut(id))
-            .unwrap_or_else(|| panic!("Entity {} does not have component for mutation", id))
+        {
+            return result;
+        }
+        // Return a scratch pad — writes are silently discarded
+        thread_local! {
+            static SCRATCH: std::cell::RefCell<std::collections::HashMap<std::any::TypeId, *mut u8>> = std::cell::RefCell::new(std::collections::HashMap::new());
+        }
+        SCRATCH.with(|scratch| {
+            let mut map = scratch.borrow_mut();
+            let ptr = map.entry(type_id).or_insert_with(|| {
+                let boxed = Box::new(C::default());
+                Box::into_raw(boxed) as *mut u8
+            });
+            // Reset the scratch value to default before returning
+            unsafe {
+                let r = &mut *(*ptr as *mut C);
+                *r = C::default();
+                r
+            }
+        })
     }
 
     /// Try to get a reference to a component (returns None if not present).

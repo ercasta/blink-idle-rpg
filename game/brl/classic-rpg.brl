@@ -316,11 +316,12 @@ rule spawn_initial_enemies on GameStart(gs: id) {
 // Handle a wave starting: spawn its enemies and schedule the next wave
 rule handle_enemy_spawned on EnemySpawned(es: id) {
     if entity has GameState {
+        if entity.GameState.gameOver == false {
         // Determine current tier and wave index
 let tier: integer = entity.GameState.currentTier
 let waveIndex: integer = entity.GameState.waveInTier
 
-        // Spawn enemies for this wave
+        // Spawn enemies for this wave (staggered by 0.5s each)
 let indices: list = [0, 1, 2, 3, 4]
         for i in indices {
             schedule [delay: 0.5d * (i + 1)] SpawnEnemy {
@@ -337,19 +338,16 @@ let indices: list = [0, 1, 2, 3, 4]
             }
         } else {
             // Not final tier - schedule the next wave
-            let nextWaveIndex: integer = waveIndex + 1
-            if nextWaveIndex > entity.SpawnConfig.wavesPerTier {
-                entity.GameState.currentTier = tier + 1
-                entity.GameState.waveInTier = 1
-            } else {
-                entity.GameState.waveInTier = nextWaveIndex
-            }
+            // Tier is now driven by kills (boss_defeated_victory rule),
+            // so we don't modify currentTier here.
             entity.GameState.currentWave += 1
 
-            // Schedule next EnemySpawned event for the next wave
-            schedule [delay: 2.0d] EnemySpawned {
+            // Schedule next wave — 15s gap so waves don't pile up
+            // (individual enemy replacement already keeps the fight going)
+            schedule [delay: 15.0d] EnemySpawned {
                 wave: entity.GameState.currentWave
             }
+        }
         }
     }
 }
@@ -604,25 +602,49 @@ let character: id = lu.source
 rule boss_defeated_victory on EnemyDefeated(ed: id) {
     if entity has GameState {
         entity.GameState.enemiesDefeated += 1
-        // If this was the named final boss, finish the run with victory.
+        
+        // Advance tier based on kills (tierProgressionKills enemies per tier)
+        if entity has SpawnConfig {
+            if entity.SpawnConfig.tierProgressionKills > 0 {
+let newTier: integer = (entity.GameState.enemiesDefeated / entity.SpawnConfig.tierProgressionKills) + 1
+                if newTier > entity.SpawnConfig.maxTier {
+                    newTier = entity.SpawnConfig.maxTier
+                }
+                if newTier > entity.GameState.currentTier {
+                    entity.GameState.currentTier = newTier
+                }
+            }
+        }
+        
+        // If this was the named final boss, record the achievement but keep playing
+        // The game continues until 3000 encounters are reached
         if ed.isBoss {
 let defeated: id = ed.enemy
             if defeated.Enemy.name == "Lord Vexar" {
                 entity.GameState.bossDefeated = true
                 entity.GameState.victory = true
-                entity.GameState.gameOver = true
+                // Don't set gameOver — let the game run to 3000 encounters
                 
-                // Add LordVexarDefeated component to track this specific victory
+                // Record when Vexar was defeated
                 entity.LordVexarDefeated.defeatedAt = entity.RunStats.simulationTime
                 entity.LordVexarDefeated.defeatedByHeroCount = 4
                 
-                // Emit dedicated LordVexarDefeated event
                 schedule LordVexarDefeated {
                     boss: defeated
                 }
-                
+            }
+        }
+    }
+}
+
+// End the game after 3000 encounters (campaign completion)
+rule end_at_max_encounters on EnemyDefeated(ed: id) {
+    if entity has GameState {
+        if entity.GameState.enemiesDefeated >= 3000 {
+            if entity.GameState.gameOver == false {
+                entity.GameState.gameOver = true
                 schedule GameOver {
-                    victory: true
+                    victory: entity.GameState.victory
                 }
             }
         }
@@ -632,17 +654,12 @@ let defeated: id = ed.enemy
 // Spawn a replacement enemy when one is defeated
 rule spawn_replacement_enemy on EnemyDefeated(ed: id) {
     if entity has GameState {
-        // Don't spawn new enemies if Lord Vexar has been defeated
-let vexarDefeated: list = entities having LordVexarDefeated
-        if len(vexarDefeated) == 0 {
-            if entity.GameState.enemiesDefeated < 3000 {
-                if entity.GameState.gameOver == false {
-                    if entity.GameState.bossSpawned == false {
+        // Keep spawning enemies until 3000 are defeated
+        if entity.GameState.enemiesDefeated < 3000 {
+            if entity.GameState.gameOver == false {
 let currentTier: integer = entity.GameState.currentTier
-                        schedule [delay: 0.1d] SpawnEnemy {
-                            tier: currentTier
-                        }
-                    }
+                schedule [delay: 0.1d] SpawnEnemy {
+                    tier: currentTier
                 }
             }
         }
@@ -1623,28 +1640,31 @@ let retreatPenalty: integer = retreatCount * entity.ScoringRules.pointsLostPerRe
 // ============================================================================
 // PROGRESS CHECKPOINT RULES (N-step UI replay system)
 // Fires ProgressCheckpoint every checkpointInterval enemies defeated.
-// Default: N=30 checkpoints, one per 10 enemies.
+// Default: N=30 checkpoints, one per 100 enemies (3000 total encounters).
 // ============================================================================
 
 // Check and fire a progress checkpoint after each enemy is defeated
 rule check_progress_checkpoint on EnemyDefeated(ed: id) {
     if entity has ProgressTracker {
         if entity has GameState {
+            // Cap at totalCheckpoints
+            if entity.ProgressTracker.checkpointsReached < entity.ProgressTracker.totalCheckpoints {
 let nextThreshold: integer = (entity.ProgressTracker.checkpointsReached + 1) * entity.ProgressTracker.checkpointInterval
-            if entity.GameState.enemiesDefeated >= nextThreshold {
-                entity.ProgressTracker.checkpointsReached += 1
-                // Look up simulation time from RunStats entity
+                if entity.GameState.enemiesDefeated >= nextThreshold {
+                    entity.ProgressTracker.checkpointsReached += 1
+                    // Look up simulation time from RunStats entity
 let runStatsEntities: list = entities having RunStats
 let simTime: decimal = 0.0d
-                if len(runStatsEntities) > 0 {
-                    simTime = runStatsEntities[0].RunStats.simulationTime
-                }
-                schedule ProgressCheckpoint {
-                    step: entity.ProgressTracker.checkpointsReached
-                    enemiesDefeated: entity.GameState.enemiesDefeated
-                    simulationTime: simTime
-                    currentTier: entity.GameState.currentTier
-                    currentWave: entity.GameState.currentWave
+                    if len(runStatsEntities) > 0 {
+                        simTime = runStatsEntities[0].RunStats.simulationTime
+                    }
+                    schedule ProgressCheckpoint {
+                        step: entity.ProgressTracker.checkpointsReached
+                        enemiesDefeated: entity.GameState.enemiesDefeated
+                        simulationTime: simTime
+                        currentTier: entity.GameState.currentTier
+                        currentWave: entity.GameState.currentWave
+                    }
                 }
             }
         }
