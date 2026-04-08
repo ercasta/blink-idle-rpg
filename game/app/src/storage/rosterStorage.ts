@@ -41,11 +41,11 @@ export async function loadRoster(): Promise<HeroDefinition[]> {
 export async function saveRoster(roster: HeroDefinition[]): Promise<void> {
   try {
     const db = await openDB();
-    await new Promise<void>((resolve) => {
+    await new Promise<void>((resolve, reject) => {
       const tx = db.transaction(STORE_NAME, 'readwrite');
       tx.objectStore(STORE_NAME).put(roster, ROSTER_KEY);
       tx.oncomplete = () => resolve();
-      tx.onerror = () => resolve();
+      tx.onerror = () => reject(tx.error);
     });
   } catch (err) {
     console.error('[rosterStorage] saveRoster failed:', err);

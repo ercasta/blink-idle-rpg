@@ -150,7 +150,7 @@ export function generateRandomHero(): HeroDefinition {
   const names = FIRST_NAMES[hc];
   const name = names[Math.floor(Math.random() * names.length)];
   return {
-    id: `hero-${Date.now()}-${Math.floor(Math.random() * 1e6)}`,
+    id: `hero-${crypto.randomUUID()}`,
     name,
     heroClass: hc,
     description: `A ${hc.toLowerCase()} ready for adventure.`,
