@@ -44,9 +44,9 @@ function ScoreDelta({ current, previous }: { current: number; previous: number |
 function ProgressBar({ value, max }: { value: number; max: number }) {
   const pct = max > 0 ? Math.min(100, (value / max) * 100) : 0;
   return (
-    <div className="w-full bg-slate-700 rounded-full h-2">
+    <div className="w-full bg-stone-700 rounded-full h-2">
       <div
-        className="bg-red-500 h-2 rounded-full transition-all duration-700"
+        className="bg-amber-600 h-2 rounded-full transition-all duration-700"
         style={{ width: `${pct}%` }}
       />
     </div>
@@ -97,7 +97,7 @@ export function BattleScreen({ snapshots, prevSnapshots = [], heroes, heroPaths,
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-900 text-white px-4 py-6">
+    <div className="flex flex-col min-h-screen bg-stone-900 text-stone-100 px-4 py-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-bold">
@@ -105,14 +105,14 @@ export function BattleScreen({ snapshots, prevSnapshots = [], heroes, heroPaths,
             ? current.victory ? '🏆 Victory!' : '⚔️ Run Completed'
             : '⚔️ Battle in Progress'}
         </h1>
-        <span className="text-slate-400 text-sm">
+        <span className="text-stone-400 text-sm">
           Step {Math.min(stepIndex + 1, totalSteps)} / {totalSteps}
         </span>
       </div>
 
       {/* Progress bar */}
       <ProgressBar value={stepIndex + 1} max={totalSteps} />
-      <p className="text-xs text-slate-500 mt-1 mb-5 text-right">
+      <p className="text-xs text-stone-500 mt-1 mb-5 text-right">
         {Math.round(((stepIndex + 1) / totalSteps) * 100)}% complete
       </p>
 
@@ -136,8 +136,8 @@ export function BattleScreen({ snapshots, prevSnapshots = [], heroes, heroPaths,
       </div>
 
       {/* Hero levels */}
-      <div className="bg-slate-800 rounded-xl p-4 mb-5">
-        <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-widest mb-3">
+      <div className="bg-stone-800 border border-stone-700 rounded-xl p-4 mb-5">
+        <h2 className="text-sm font-semibold text-stone-400 uppercase tracking-widest mb-3">
           Hero Levels
         </h2>
         <div className="flex flex-col gap-2">
@@ -147,7 +147,7 @@ export function BattleScreen({ snapshots, prevSnapshots = [], heroes, heroPaths,
               <div key={hero.id} className="flex items-center justify-between">
                 <span className="text-sm">
                   {hero.emoji} {hero.name}
-                  <span className="text-slate-500 ml-1 text-xs">{hero.heroClass}</span>
+                  <span className="text-stone-500 ml-1 text-xs">{hero.heroClass}</span>
                 </span>
                 <span className="text-sm font-bold text-amber-400">Lv {level}</span>
               </div>
@@ -160,14 +160,14 @@ export function BattleScreen({ snapshots, prevSnapshots = [], heroes, heroPaths,
       {!done && (
         <button
           onClick={handleSkip}
-          className="w-full py-3 rounded-xl border border-slate-600 text-slate-400 hover:text-white hover:border-slate-400 text-sm transition-colors"
+          className="w-full py-3 rounded-xl border border-stone-600 text-stone-400 hover:text-stone-100 hover:border-stone-400 text-sm transition-colors"
         >
           ⏭ Skip to Results
         </button>
       )}
 
       {done && (
-        <div className="text-center text-slate-500 text-sm animate-pulse">
+        <div className="text-center text-stone-500 text-sm animate-pulse">
           Loading results…
         </div>
       )}
@@ -185,9 +185,9 @@ function KpiCard({
   accent?: boolean;
 }) {
   return (
-    <div className="bg-slate-800 rounded-xl p-3">
-      <p className="text-slate-400 text-xs mb-1">{label}</p>
-      <p className={`text-lg font-bold ${accent ? 'text-amber-400' : 'text-white'}`}>
+    <div className="bg-stone-800 border border-stone-700 rounded-xl p-3">
+      <p className="text-stone-400 text-xs mb-1">{label}</p>
+      <p className={`text-lg font-bold ${accent ? 'text-amber-400' : 'text-stone-100'}`}>
         {value}
       </p>
     </div>
