@@ -50,7 +50,7 @@ game_state = new entity {
     }
     SpawnConfig {
         bossEveryKills: 150               // Bosses every 150 kills (up from 100)
-        tierProgressionKills: 75          // Tier progression every 75 kills (up from 50)
+        tierProgressionKills: 750         // Tier progression every 750 kills
         maxTier: 6                        // Same max tier
         wavesPerTier: 300                 // Same waves per tier
         healthScaleRate: 100              // 50% slower health scaling (down from 200)
@@ -58,7 +58,7 @@ game_state = new entity {
         initialEnemyCount: 3              // 3 enemies per wave (down from 5)
     }
     ProgressTracker {
-        checkpointInterval: 10            // one checkpoint per 10 enemies
+        checkpointInterval: 100           // one checkpoint per 100 enemies
         checkpointsReached: 0
         totalCheckpoints: 30              // N = 30 checkpoints
     }

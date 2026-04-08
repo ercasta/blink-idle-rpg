@@ -149,9 +149,11 @@ order: skill1 → skill4). Skills have cooldowns and some cost mana.
 ### Tier Progression
 
 Heroes advance through tiers based on total enemies defeated:
-- Every `tierProgressionKills` (50 in normal mode), the tier increases by 1
-- Maximum tier is 6
+- Every `tierProgressionKills` (500 in normal mode) enemies killed, the tier increases by 1
+- Tier 1: 0–499 kills, Tier 2: 500–999, Tier 3: 1000–1499, etc.
+- Maximum tier is 6 (reached at 2500 kills)
 - New enemies spawn at the current tier
+- Lord Vexar spawns once at tier 6; defeating him earns "Victory" but the game continues to 3000
 
 ### Enemy Scaling
 
@@ -195,7 +197,7 @@ Score decays with deaths and time penalties. Final score is computed at game end
 |---------|------|--------|------|
 | Initial enemies per wave | 3 | 5 | 7 |
 | Boss every N kills | 150 | 100 | 75 |
-| Tier progression kills | 75 | 50 | 40 |
+| Tier progression kills | 750 | 500 | 400 |
 | Points per kill | 5 | 10 | 15 |
 | Death penalty | -50 | -100 | -200 |
 
@@ -259,12 +261,11 @@ Home Screen
 
 ### Simulation Engines
 
-1. **WASM Engine** (primary): BRL rules compiled to Rust → WASM via `wasm-pack`.
-   Runs 3000 encounters in ~300ms synchronously.
-2. **JS Engine** (fallback): Pure TypeScript implementation of the same combat logic.
-   Used when WASM binary is not available. Runs in ~130ms.
-
-Both engines produce identical `GameSnapshot[]` output consumed by the React UI.
+The game uses a compiled **WASM Engine**: BRL rules are compiled to Rust → WASM via `wasm-pack`.
+The full 3000-encounter simulation runs in a single synchronous call (typically <1s).
+WASM binary is built at deploy time with `npm run build:wasm && npm run install:wasm`.
+The React UI loads the pre-built WASM binary from `public/wasm/` and creates
+all game entities (heroes, enemies, config) at runtime through the JS↔WASM bridge.
 
 ### BRL Rule Files
 

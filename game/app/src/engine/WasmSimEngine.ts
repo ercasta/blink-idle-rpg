@@ -49,7 +49,7 @@ const MODE_CONFIGS: Record<GameMode, {
   timeBonusPoints: number; timeBonusInterval: number;
 }> = {
   normal: {
-    bossEveryKills: 100, tierProgressionKills: 50,
+    bossEveryKills: 100, tierProgressionKills: 500,
     healthScaleRate: 200, damageScaleRate: 300, initialEnemyCount: 5,
     retreatTimePenalty: 10.0, deathTimePenaltyMultiplier: 5.0, fleeCooldown: 5.0,
     pointsPerKill: 10, pointsPerWave: 50, pointsPerBoss: 500,
@@ -57,7 +57,7 @@ const MODE_CONFIGS: Record<GameMode, {
     timeBonusPoints: 1000, timeBonusInterval: 10.0,
   },
   easy: {
-    bossEveryKills: 150, tierProgressionKills: 75,
+    bossEveryKills: 150, tierProgressionKills: 750,
     healthScaleRate: 100, damageScaleRate: 150, initialEnemyCount: 3,
     retreatTimePenalty: 5.0, deathTimePenaltyMultiplier: 3.0, fleeCooldown: 5.0,
     pointsPerKill: 5, pointsPerWave: 25, pointsPerBoss: 250,
@@ -65,7 +65,7 @@ const MODE_CONFIGS: Record<GameMode, {
     timeBonusPoints: 500, timeBonusInterval: 15.0,
   },
   hard: {
-    bossEveryKills: 75, tierProgressionKills: 40,
+    bossEveryKills: 75, tierProgressionKills: 400,
     healthScaleRate: 300, damageScaleRate: 450, initialEnemyCount: 7,
     retreatTimePenalty: 15.0, deathTimePenaltyMultiplier: 7.0, fleeCooldown: 5.0,
     pointsPerKill: 15, pointsPerWave: 75, pointsPerBoss: 1000,
