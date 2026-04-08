@@ -5,6 +5,7 @@ const STEP_INTERVAL_MS = 1000; // 1 second per checkpoint step
 
 interface BattleScreenProps {
   snapshots: GameSnapshot[];
+  prevSnapshots?: GameSnapshot[];
   heroes: HeroDefinition[];
   onComplete: (result: RunResult) => void;
 }
@@ -26,29 +27,16 @@ function buildResult(snapshots: GameSnapshot[]): RunResult {
   };
 }
 
-function ScoreCounter({ value }: { value: number }) {
-  const [display, setDisplay] = useState(value);
-  const prev = useRef(value);
-
-  useEffect(() => {
-    if (value === prev.current) return;
-    const diff = value - prev.current;
-    const steps = 20;
-    const stepSize = diff / steps;
-    let count = 0;
-    const id = setInterval(() => {
-      count++;
-      setDisplay(Math.round(prev.current + stepSize * count));
-      if (count >= steps) {
-        clearInterval(id);
-        setDisplay(value);
-        prev.current = value;
-      }
-    }, STEP_INTERVAL_MS / steps);
-    return () => clearInterval(id);
-  }, [value]);
-
-  return <>{display.toLocaleString()}</>;
+function ScoreDelta({ current, previous }: { current: number; previous: number | undefined }) {
+  if (previous === undefined) return null;
+  const delta = current - previous;
+  if (delta === 0) return <span className="text-slate-500 text-xs ml-2">↔ same as prev</span>;
+  const positive = delta > 0;
+  return (
+    <span className={`text-xs ml-2 ${positive ? 'text-green-400' : 'text-red-400'}`}>
+      {positive ? '▲' : '▼'} {Math.abs(delta).toLocaleString()}
+    </span>
+  );
 }
 
 function ProgressBar({ value, max }: { value: number; max: number }) {
@@ -63,13 +51,14 @@ function ProgressBar({ value, max }: { value: number; max: number }) {
   );
 }
 
-export function BattleScreen({ snapshots, heroes, onComplete }: BattleScreenProps) {
+export function BattleScreen({ snapshots, prevSnapshots = [], heroes, onComplete }: BattleScreenProps) {
   const [stepIndex, setStepIndex] = useState(0);
   const [done, setDone] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const totalSteps = snapshots.length;
   const current = snapshots[stepIndex] ?? snapshots[0];
+  const prevSnap = prevSnapshots[stepIndex];
 
   useEffect(() => {
     if (snapshots.length === 0) return;
@@ -111,7 +100,7 @@ export function BattleScreen({ snapshots, heroes, onComplete }: BattleScreenProp
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-bold">
           {done
-            ? current.victory ? '🏆 Victory!' : '💀 Defeated'
+            ? current.victory ? '🏆 Victory!' : '⚔️ Run Completed'
             : '⚔️ Battle in Progress'}
         </h1>
         <span className="text-slate-400 text-sm">
@@ -127,7 +116,16 @@ export function BattleScreen({ snapshots, heroes, onComplete }: BattleScreenProp
 
       {/* KPI cards */}
       <div className="grid grid-cols-2 gap-3 mb-5">
-        <KpiCard label="Score" value={<ScoreCounter value={current.score} />} accent />
+        <KpiCard
+          label="Score"
+          value={
+            <>
+              {current.score.toLocaleString()}
+              <ScoreDelta current={current.score} previous={prevSnap?.score} />
+            </>
+          }
+          accent
+        />
         <KpiCard label="Tier · Wave" value={`${current.currentTier} · ${current.currentWave}`} />
         <KpiCard label="Enemies Defeated" value={current.enemiesDefeated} />
         <KpiCard label="Bosses Defeated" value={current.bossesDefeated} />
