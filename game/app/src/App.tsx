@@ -18,44 +18,23 @@ import { LoadingScreen } from './screens/LoadingScreen';
 import { runSimulation } from './engine/WasmSimEngine';
 import { generateRandomParty } from './data/heroes';
 import { GAME_MODES } from './data/gameModes';
+import { loadRecentRuns, saveRun } from './storage/runStorage';
 import type { AppScreen, GameMode, HeroDefinition, GameSnapshot, RunResult } from './types';
-
-const SCORES_KEY = 'blink-rpg-scores';
-const MAX_SAVED_RUNS = 10;
-
-function loadRecentRuns(): RunResult[] {
-  try {
-    const raw = localStorage.getItem(SCORES_KEY);
-    return raw ? (JSON.parse(raw) as RunResult[]) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveRun(result: RunResult): RunResult[] {
-  const runs = loadRecentRuns();
-  const updated = [result, ...runs].slice(0, MAX_SAVED_RUNS);
-  try {
-    localStorage.setItem(SCORES_KEY, JSON.stringify(updated));
-  } catch {
-    /* ignore quota errors */
-  }
-  return updated;
-}
 
 export default function App() {
   const [screen, setScreen] = useState<AppScreen | 'loading' | 'error'>('home');
   const [selectedMode, setSelectedMode] = useState<GameMode>('normal');
   const [selectedHeroes, setSelectedHeroes] = useState<HeroDefinition[]>([]);
   const [snapshots, setSnapshots] = useState<GameSnapshot[]>([]);
+  const [prevSnapshots, setPrevSnapshots] = useState<GameSnapshot[]>([]);
   const [runResult, setRunResult] = useState<RunResult | null>(null);
   const [recentRuns, setRecentRuns] = useState<RunResult[]>([]);
   const [loadingMessage] = useState('Running simulation…');
   const [error, setError] = useState<string | null>(null);
 
-  // Load recent runs from localStorage on first mount
+  // Load recent runs from IndexedDB on first mount
   useEffect(() => {
-    setRecentRuns(loadRecentRuns());
+    loadRecentRuns().then(setRecentRuns);
   }, []);
 
   // ── Navigation helpers ──────────────────────────────────────────────────
@@ -77,6 +56,8 @@ export default function App() {
     setError(null);
 
     try {
+      const runs = await loadRecentRuns();
+      setPrevSnapshots(runs[0]?.snapshots ?? []);
       const snaps = await runSimulation(randomHeroes, 'normal');
       setSnapshots(snaps);
       setScreen('battle');
@@ -101,6 +82,8 @@ export default function App() {
       const modeDef = GAME_MODES.find(m => m.id === selectedMode);
       if (!modeDef) throw new Error(`Unknown mode: ${selectedMode}`);
 
+      const runs = await loadRecentRuns();
+      setPrevSnapshots(runs[0]?.snapshots ?? []);
       const snaps = await runSimulation(heroes, selectedMode);
       setSnapshots(snaps);
       setScreen('battle');
@@ -111,9 +94,9 @@ export default function App() {
     }
   }, [selectedMode]);
 
-  const onBattleComplete = useCallback((result: RunResult) => {
+  const onBattleComplete = useCallback(async (result: RunResult) => {
     setRunResult(result);
-    const updated = saveRun(result);
+    const updated = await saveRun(result);
     setRecentRuns(updated);
     setScreen('results');
   }, []);
@@ -149,6 +132,7 @@ export default function App() {
     return (
       <BattleScreen
         snapshots={snapshots}
+        prevSnapshots={prevSnapshots}
         heroes={selectedHeroes}
         onComplete={onBattleComplete}
       />
