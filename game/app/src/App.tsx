@@ -5,6 +5,7 @@
  *
  * Flow:
  *   home → mode-select → party-select → (simulation) → battle → results
+ *   home → (quick play: random party + normal mode) → battle → results
  */
 
 import { useState, useCallback, useEffect } from 'react';
@@ -15,6 +16,7 @@ import { BattleScreen } from './screens/BattleScreen';
 import { ResultsScreen } from './screens/ResultsScreen';
 import { LoadingScreen } from './screens/LoadingScreen';
 import { runSimulation } from './engine/WasmSimEngine';
+import { generateRandomParty } from './data/heroes';
 import { GAME_MODES } from './data/gameModes';
 import type { AppScreen, GameMode, HeroDefinition, GameSnapshot, RunResult } from './types';
 
@@ -67,6 +69,24 @@ export default function App() {
     setScreen('mode-select');
   }
 
+  const quickPlay = useCallback(async () => {
+    const randomHeroes = generateRandomParty();
+    setSelectedHeroes(randomHeroes);
+    setSelectedMode('normal');
+    setScreen('loading');
+    setError(null);
+
+    try {
+      const snaps = await runSimulation(randomHeroes, 'normal');
+      setSnapshots(snaps);
+      setScreen('battle');
+    } catch (e) {
+      console.error('[App] Quick play simulation error:', e);
+      setError(e instanceof Error ? e.message : String(e));
+      setScreen('error');
+    }
+  }, []);
+
   function onModeSelected(mode: GameMode) {
     setSelectedMode(mode);
     setScreen('party-select');
@@ -105,7 +125,7 @@ export default function App() {
   // ── Render ──────────────────────────────────────────────────────────────
 
   if (screen === 'home') {
-    return <HomeScreen recentRuns={recentRuns} onStart={startRun} />;
+    return <HomeScreen recentRuns={recentRuns} onStart={startRun} onQuickPlay={quickPlay} />;
   }
 
   if (screen === 'mode-select') {

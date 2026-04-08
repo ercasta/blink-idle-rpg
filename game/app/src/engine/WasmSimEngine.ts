@@ -2,12 +2,9 @@
  * WASM engine — sole simulation entry point for the Blink RPG.
  *
  * Uses the pre-compiled WASM module produced by `npm run build:wasm`.
- * The module is served from `public/wasm/blink_rpg_wasm.js` and the
- * associated `.wasm` binary.
  *
- * The WASM engine:
- *   • Runs the full simulation in a single synchronous call (~300 ms)
- *   • Produces exactly 30 checkpoints (one per 10 kills up to 300)
+ * The simulation:
+ *   • Produces exactly 30 checkpoints (one per 100 kills up to 3000)
  *   • Does not require an IR file — game rules are baked into the binary
  *   • Accepts runtime data (heroes, enemies, config) via create_entity/add_component
  */
@@ -52,7 +49,7 @@ const MODE_CONFIGS: Record<GameMode, {
   timeBonusPoints: number; timeBonusInterval: number;
 }> = {
   normal: {
-    bossEveryKills: 100, tierProgressionKills: 50,
+    bossEveryKills: 100, tierProgressionKills: 500,
     healthScaleRate: 200, damageScaleRate: 300, initialEnemyCount: 5,
     retreatTimePenalty: 10.0, deathTimePenaltyMultiplier: 5.0, fleeCooldown: 5.0,
     pointsPerKill: 10, pointsPerWave: 50, pointsPerBoss: 500,
@@ -60,7 +57,7 @@ const MODE_CONFIGS: Record<GameMode, {
     timeBonusPoints: 1000, timeBonusInterval: 10.0,
   },
   easy: {
-    bossEveryKills: 150, tierProgressionKills: 75,
+    bossEveryKills: 150, tierProgressionKills: 750,
     healthScaleRate: 100, damageScaleRate: 150, initialEnemyCount: 3,
     retreatTimePenalty: 5.0, deathTimePenaltyMultiplier: 3.0, fleeCooldown: 5.0,
     pointsPerKill: 5, pointsPerWave: 25, pointsPerBoss: 250,
@@ -68,7 +65,7 @@ const MODE_CONFIGS: Record<GameMode, {
     timeBonusPoints: 500, timeBonusInterval: 15.0,
   },
   hard: {
-    bossEveryKills: 75, tierProgressionKills: 40,
+    bossEveryKills: 75, tierProgressionKills: 400,
     healthScaleRate: 300, damageScaleRate: 450, initialEnemyCount: 7,
     retreatTimePenalty: 15.0, deathTimePenaltyMultiplier: 7.0, fleeCooldown: 5.0,
     pointsPerKill: 15, pointsPerWave: 75, pointsPerBoss: 1000,
@@ -292,12 +289,11 @@ function _runWithWasm(
     damageScaleRate: cfg.damageScaleRate,
     initialEnemyCount: cfg.initialEnemyCount,
   }));
-  // N=30 checkpoints, one per 10 kills.  The WASM engine is fast enough to
-  // run the full 300-kill simulation in one synchronous call, so we set the
-  // interval to 10 (unlike the JS engine which uses 1 to maximise the number
-  // of snapshots within its 5-second wall-clock budget).
+  // N=30 checkpoints, one per 100 kills (3000 total encounters).
+  // The WASM engine is fast enough to run the full 3000-kill simulation
+  // in one synchronous call.
   game.add_component(99, 'ProgressTracker', JSON.stringify({
-    checkpointInterval: 10,
+    checkpointInterval: 100,
     checkpointsReached: 0,
     totalCheckpoints: 30,
   }));

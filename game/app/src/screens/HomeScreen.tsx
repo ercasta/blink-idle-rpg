@@ -3,9 +3,10 @@ import type { RunResult } from '../types';
 interface HomeScreenProps {
   recentRuns: RunResult[];
   onStart: () => void;
+  onQuickPlay: () => void;
 }
 
-export function HomeScreen({ recentRuns, onStart }: HomeScreenProps) {
+export function HomeScreen({ recentRuns, onStart, onQuickPlay }: HomeScreenProps) {
   return (
     <div className="flex flex-col items-center min-h-screen bg-slate-900 text-white px-4 py-8">
       {/* Title */}
@@ -22,6 +23,12 @@ export function HomeScreen({ recentRuns, onStart }: HomeScreenProps) {
           className="w-full py-4 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-lg transition-colors shadow-lg"
         >
           ▶ Start a Run
+        </button>
+        <button
+          onClick={onQuickPlay}
+          className="w-full py-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-base transition-colors shadow-lg"
+        >
+          ⚡ Quick Play (Random Party)
         </button>
       </div>
 
@@ -51,7 +58,7 @@ export function HomeScreen({ recentRuns, onStart }: HomeScreenProps) {
 
       {/* Footer */}
       <div className="mt-auto pt-8 text-center text-slate-600 text-xs">
-        <p>BRL-powered simulation engine</p>
+        <p>BRL-powered simulation engine · 3000 encounters</p>
       </div>
     </div>
   );
