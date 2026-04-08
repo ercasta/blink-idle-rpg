@@ -26,60 +26,70 @@ This document covers enemy design: tiers, types, boss mechanics, and the compone
 
 ## Enemy Types (by Tier)
 
+The BRL source defines enemy templates as entities in `game/brl/classic-rpg.brl`. Each template has `EnemyTemplate.isTemplate = true` and is cloned at runtime when enemies spawn.
+
 ### Tier 1
-| Name | HP | Damage | Speed | Notes |
-|------|-----|--------|-------|-------|
-| Goblin Scout | 60 | 8 | 1.0 | Pure melee, no skills |
+| Name | HP | Damage | Defense | Speed | Notes |
+|------|-----|--------|---------|-------|-------|
+| Goblin | 45 | 8 | 2 | 1.0 | Weak, fast to kill |
+| Skeleton | 55 | 10 | 3 | 0.9 | Slightly tougher |
 
 ### Tier 2
-| Name | HP | Damage | Speed | Notes |
-|------|-----|--------|-------|-------|
-| Orc Raider | 90 | 12 | 0.8 | High STR, slow |
-| Dark Wolf | 75 | 14 | 1.2 | High DEX, fast |
+| Name | HP | Damage | Defense | Speed | Notes |
+|------|-----|--------|---------|-------|-------|
+| Orc | 70 | 14 | 4 | 0.8 | Balanced |
+| Zombie | 85 | 12 | 5 | 0.7 | High HP, low speed |
 
 ### Tier 3
-| Name | HP | Damage | Speed | Notes |
-|------|-----|--------|-------|-------|
-| Skeleton Warrior | 110 | 16 | 0.7 | Bone Shield passive |
-| Dark Mage | 80 | 22 | 0.5 | Casts Frost Bolt (applies Frozen) |
+| Name | HP | Damage | Defense | Speed | Notes |
+|------|-----|--------|---------|-------|-------|
+| Troll | 120 | 18 | 6 | 0.6 | High HP |
+| Vampire | 90 | 20 | 5 | 1.0 | High damage |
 
 ### Tier 4
-| Name | HP | Damage | Speed | Notes |
-|------|-----|--------|-------|-------|
-| Troll Berserker | 180 | 22 | 0.6 | Enrage below 50% HP |
-| Stone Golem | 220 | 18 | 0.4 | Applies Petrified on hit (chance) |
+| Name | HP | Damage | Defense | Speed | Notes |
+|------|-----|--------|---------|-------|-------|
+| Ogre | 160 | 22 | 8 | 0.5 | Tank |
+| Werewolf | 130 | 25 | 6 | 1.1 | Fast and damaging |
 
 ### Tier 5
-| Name | HP | Damage | Speed | Notes |
-|------|-----|--------|-------|-------|
-| Demon Knight | 250 | 30 | 0.7 | Hellfire AoE; fire resistance |
-| Venomspitter | 160 | 20 | 1.0 | Poisons all heroes on attack |
+| Name | HP | Damage | Defense | Speed | Notes |
+|------|-----|--------|---------|-------|-------|
+| Dragon | 240 | 30 | 10 | 0.7 | High HP |
+| Demon Lord | 200 | 35 | 8 | 0.8 | High damage |
 
-### Tier 6 (Bosses)
-| Name | HP | Damage | Speed | Notes |
-|------|-----|--------|-------|-------|
-| Ancient Dragon | 400 | 40 | 0.8 | Dragon Breath (AoE Burning) |
-| Dragon Lord Vexar | 500 | 40 | 0.8 | Phase 2 at 50% HP; final boss |
+### Tier 6
+| Name | HP | Damage | Defense | Speed | Notes |
+|------|-----|--------|---------|-------|-------|
+| Ancient Dragon | 400 | 40 | 12 | 0.8 | Hardest regular enemy |
+| Lich King | 300 | 45 | 10 | 0.9 | Fast and deadly |
+
+### Final Boss
+| Name | HP | Damage | Defense | Speed | Notes |
+|------|-----|--------|---------|-------|-------|
+| Dragon Lord Vexar | 2000 | 50 | 20 | 1.0 | Spawns once at tier 6; true win condition |
 
 ---
 
 ## Boss Mechanics
 
-Bosses are special enemies distinguished by the `Enemy.isBoss` flag. They may additionally carry:
+Bosses are special enemies distinguished by the `Enemy.isBoss` flag.
 
-- **Phase transitions**: at certain HP thresholds the boss gains new skills or stat changes. Implemented via a `BossPhase` component and triggered by a `BossPhaseChange` event.
-- **Unique skills**: bosses have a full skill set (see [skills.md](skills.md)).
-- **Scripted abilities**: abilities that fire on a timer regardless of targeting, implemented via `ScheduledAbility` component.
+**Mini-bosses** appear in regular boss encounters (every `bossEveryKills` defeats). They are buffed clones of tier-appropriate templates:
+- 2.5× base HP
+- 1.5× base damage
+- `isBoss = true` (awards boss kill score)
+
+**Lord Vexar** is the unique final boss:
+- Spawns once when `currentTier` reaches `maxTier` (tier 6)
+- Has 2000 HP, 50 damage, 20 defense
+- Defeating Lord Vexar sets `victory = true` and ends the run
 
 ---
 
 ## Enemy AI
 
-Enemy targeting uses the same bound choice function system as heroes. Default behaviours:
-
-- **Melee enemies**: target the hero with the highest current HP (maximize damage absorbed).
-- **Caster enemies**: target the hero with the lowest defence (maximize damage output).
-- **Bosses**: may switch targets mid-combat based on phase and thresholds.
+Enemies target the first available living hero (determined by the `find_new_target` rule, which iterates hero entities in entity-ID order for reproducibility). Enemies retarget automatically when their current target dies.
 
 ---
 
@@ -90,71 +100,40 @@ Attached to: all enemy entities (templates and spawned copies).
 
 | Field | Type | Description |
 |-------|------|-------------|
+| `name` | string | Display name |
 | `tier` | integer | Enemy tier (1–6) |
-| `isBoss` | boolean | Whether this enemy is a boss |
+| `isBoss` | boolean | Whether this enemy is a boss (mini-boss or Lord Vexar) |
 | `expReward` | integer | Base XP granted on defeat |
-| `wave` | integer | Wave number on which this enemy type first appears |
 
 ### `EnemyTemplate`
-Marker component, attached to: enemy template entities in the compendium.
+Attached to: all enemy entities (templates and live copies).
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `isTemplate` | boolean | Always `true`; prevents template entities from being targeted |
+| `isTemplate` | boolean | `true` for template entities (never targeted or killed); `false` for live spawned copies |
+
+Live enemies are created by cloning a template entity with `isTemplate` set to `false`. The template entity itself is never modified or deleted.
 
 ### `FinalBoss`
-Attached to: the final boss entity.
+Marker component attached to: the Lord Vexar template only.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `isFinalBoss` | boolean | Triggers game-end sequence on defeat |
-
-### `EnemyCompendium`
-Attached to: a single global compendium entity.
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `entries` | list\<id\> | References to all enemy template entities |
-
-### `BossPhase`
-Attached to: boss entities that have phase transitions.
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `currentPhase` | integer | Current phase index (1 = initial) |
-| `maxPhase` | integer | Total number of phases |
-| `phaseThresholds` | list\<float\> | HP ratios that trigger each phase change (e.g., `[0.5, 0.25]`) |
-
-### `ScheduledAbility`
-Attached to: enemies or bosses with timed abilities.
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `abilityId` | string | Identifier for the ability to fire |
-| `interval` | float | Seconds between ability uses |
-| `lastUsed` | float | Simulation time of last use |
+| `isFinalBoss` | boolean | Marks this template as the final boss |
 
 ---
 
 ## Events (Enemy-related)
 
-| Event | Description |
-|-------|-------------|
-| `SpawnEnemy` | Requests spawning of one enemy entity of a given tier |
-| `EnemySpawned` | Fired after an enemy entity is created and ready |
-| `EnemyDefeated` | Fired when an enemy's HP reaches 0; awards XP |
-| `BossPhaseChange` | Fired when a boss crosses a phase-change HP threshold |
-| `SpawnLordVexar` | Fires to spawn the final boss (game-mode configurable) |
+| Event | Fields | Description |
+|-------|--------|-------------|
+| `SpawnEnemy` | `tier` | Spawns one random non-boss enemy of the given tier |
+| `SpawnMiniBoss` | — | Spawns a buffed enemy as a mini-boss |
+| `SpawnLordVexar` | — | Spawns the final boss entity |
+| `EnemyDefeated` | `enemy`, `expReward`, `isBoss` | Fired after an enemy is killed and deleted; awards XP and score |
 
 ---
 
 ## Scaling Formula
 
-Enemy HP and damage scale with tier and wave using configurable rates (defined in `SpawnConfig`):
-
-```
-scaledHP    = baseHP    * (1 + healthScaleRate / 1000 * currentWave)
-scaledDamage = baseDamage * (1 + damageScaleRate / 1000 * currentWave)
-```
-
-These rates are adjusted per game mode to control difficulty pacing (see [game-modes.md](game-modes.md)).
+Enemy HP and damage are defined per tier as static template stats. There is no wave-based scaling formula — the templates have fixed stats and difficulty increases come from higher-tier enemies replacing lower-tier ones as `enemiesDefeated` accumulates. Mini-boss multipliers (2.5× HP, 1.5× damage) provide the within-tier scaling.

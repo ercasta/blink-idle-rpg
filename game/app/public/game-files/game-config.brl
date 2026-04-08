@@ -25,6 +25,9 @@ game_state = new entity {
         currentTier: 1
         waveInTier: 1
         bossSpawned: false
+        encounterCount: 0
+        enemiesAlive: 0
+        nextBossThreshold: 0
     }
     SpawnConfig {
         bossEveryKills: 100
@@ -35,6 +38,11 @@ game_state = new entity {
         damageScaleRate: 300
         initialEnemyCount: 5
     }
+    ProgressTracker {
+        checkpointInterval: 10
+        checkpointsReached: 0
+        totalCheckpoints: 30
+    }
 }
 
 // -----------------------------------------------------------------------------
@@ -44,13 +52,13 @@ game_state = new entity {
 
 run_stats = new entity {
     RunStats {
-        simulationTime: 0.0
+        simulationTime: 0.0d
         retreatCount: 0
-        retreatPenalty: 0.0
-        deathPenalty: 0.0
-        totalTime: 0.0
+        retreatPenalty: 0.0d
+        deathPenalty: 0.0d
+        totalTime: 0.0d
         canFlee: true
-        lastFleeTime: -999.0
+        lastFleeTime: -999.0d
     }
 }
 
@@ -61,9 +69,9 @@ run_stats = new entity {
 
 flee_config = new entity {
     FleeConfig {
-        retreatTimePenalty: 10.0
-        deathTimePenaltyMultiplier: 5.0
-        fleeCooldown: 5.0
+        retreatTimePenalty: 5.0d
+        deathTimePenaltyMultiplier: 1.0d
+        fleeCooldown: 3.0d
     }
 }
 

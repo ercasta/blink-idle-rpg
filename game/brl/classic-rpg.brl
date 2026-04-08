@@ -114,6 +114,9 @@ component GameState {
     currentTier: integer
     waveInTier: integer
     bossSpawned: boolean
+    encounterCount: integer
+    enemiesAlive: integer
+    nextBossThreshold: integer
 }
 
 // Progress tracking for the N-step checkpoint system
@@ -298,11 +301,24 @@ rule spawn_initial_enemies on GameStart(gs: id) {
         entity.GameState.currentWave = 1
         entity.GameState.bossSpawned = false
 
-        // Spawn initial wave enemies (spread by small delays)
-        let indices: list = [0, 1, 2, 3, 4]
+        // Initialize encounter tracking
+        entity.GameState.encounterCount = 1
+        entity.GameState.nextBossThreshold = entity.SpawnConfig.bossEveryKills
+
+        // Spawn initial encounter (variable size based on initialEnemyCount)
+let baseCount: integer = entity.SpawnConfig.initialEnemyCount
+let minCount: integer = max(1, baseCount - 1)
+let maxCount: integer = baseCount + 2
+let maxRange: integer = maxCount + 1
+let count: integer = floor(random_range(minCount, maxRange))
+        entity.GameState.enemiesAlive = count
+
+        let indices: list = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
         for i in indices {
-            schedule [delay: 0.5d * (i + 1)] SpawnEnemy {
-                tier: 1
+            if i < count {
+                schedule [delay: 0.5d * (i + 1)] SpawnEnemy {
+                    tier: 1
+                }
             }
         }
 
@@ -348,15 +364,36 @@ let tier: integer = entity.GameState.currentTier
 // Spawn a single enemy by cloning a template
 rule spawn_enemy_from_template on SpawnEnemy(se: id) {
     if entity has GameState {
-        // Find enemy templates matching the requested tier
+        // Find enemy templates matching the requested tier (excluding bosses)
 let templates: list = entities having EnemyTemplate
 
-        // Try to find a template matching the requested tier (fallback to first)
-let templateId: id = templates[0]
+        // Count non-boss templates matching the requested tier
+let matchCount: integer = 0
         for t in templates {
             if t.EnemyTemplate.isTemplate {
                 if t.Enemy.tier == se.tier {
-                    templateId = t
+                    if t.Enemy.isBoss == false {
+                        matchCount += 1
+                    }
+                }
+            }
+        }
+
+        // Pick a random matching template (or fallback to first template)
+let templateId: id = templates[0]
+        if matchCount > 0 {
+let pick: integer = floor(random_range(0, matchCount))
+let current: integer = 0
+            for t in templates {
+                if t.EnemyTemplate.isTemplate {
+                    if t.Enemy.tier == se.tier {
+                        if t.Enemy.isBoss == false {
+                            if current == pick {
+                                templateId = t
+                            }
+                            current += 1
+                        }
+                    }
                 }
             }
         }
@@ -394,6 +431,10 @@ let newBoss: id = clone bossTemplate {
 
         // Target will be assigned by the retargeting system
         newBoss.Target.entity = null
+
+        // Track the additional enemy
+        entity.GameState.enemiesAlive += 1
+
         schedule [delay: 0.5d] DoAttack {
             source: newBoss
         }
@@ -415,6 +456,7 @@ let attacker: id = da.source
         if attacker has Target {
         if attacker.Health.current > 0 {
             // Only deal damage if we have a living target
+let needsRetarget: boolean = false
             if attacker.Target.entity != null {
 let target: id = attacker.Target.entity
                 if target has Health {
@@ -441,7 +483,19 @@ let damage: integer = max(1, rawDamage - effectiveDefense)
                         attacker: attacker
                         target: target
                     }
+                } else {
+                    needsRetarget = true
                 }
+                } else {
+                    needsRetarget = true
+                }
+            } else {
+                needsRetarget = true
+            }
+            // If target was invalid, immediately try to find a new one
+            if needsRetarget {
+                schedule FindNewTarget {
+                    seeker: attacker
                 }
             }
             // Always schedule the next attack for living attackers
@@ -485,6 +539,7 @@ let enemies: list = entities having Enemy
                     expReward: enemy.Enemy.expReward
                     isBoss: enemy.Enemy.isBoss
                 }
+                delete enemy
             }
         }
     }
@@ -655,17 +710,112 @@ rule end_at_max_encounters on EnemyDefeated(ed: id) {
     }
 }
 
-// Spawn a replacement enemy when one is defeated
-rule spawn_replacement_enemy on EnemyDefeated(ed: id) {
+// Track enemy deaths and spawn new encounters when all enemies in current encounter are dead
+rule encounter_tracking on EnemyDefeated(ed: id) {
     if entity has GameState {
-        // Keep spawning enemies until 3000 are defeated
-        if entity.GameState.enemiesDefeated < 3000 {
-            if entity.GameState.gameOver == false {
-let currentTier: integer = entity.GameState.currentTier
-                schedule [delay: 0.1d] SpawnEnemy {
-                    tier: currentTier
+        // Decrement the living enemy counter
+        entity.GameState.enemiesAlive -= 1
+
+        // When all enemies in the current encounter are dead, spawn a new encounter
+        if entity.GameState.enemiesAlive <= 0 {
+            if entity.GameState.enemiesDefeated < 3000 {
+                if entity.GameState.gameOver == false {
+                    entity.GameState.encounterCount += 1
+                    schedule [delay: 0.1d] SpawnEncounter {
+                    }
                 }
             }
+        }
+    }
+}
+
+// Spawn a new encounter: a group of enemies with variable size
+rule spawn_encounter on SpawnEncounter(enc: id) {
+    if entity has GameState {
+        if entity.GameState.gameOver == false {
+let tier: integer = entity.GameState.currentTier
+let baseCount: integer = entity.SpawnConfig.initialEnemyCount
+
+            // Variable encounter size: baseCount ± variation, minimum 1
+let minCount: integer = max(1, baseCount - 1)
+let maxCount: integer = baseCount + 2
+let maxRange: integer = maxCount + 1
+let count: integer = floor(random_range(minCount, maxRange))
+
+            // Check if this should be a boss encounter
+let isBossEncounter: boolean = false
+let bossThreshold: integer = entity.GameState.nextBossThreshold
+            if bossThreshold > 0 {
+                if entity.GameState.enemiesDefeated >= bossThreshold {
+                    isBossEncounter = true
+                    entity.GameState.nextBossThreshold = bossThreshold + entity.SpawnConfig.bossEveryKills
+                }
+            }
+
+            // Determine regular enemy count (boss replaces one slot if boss encounter)
+let regularCount: integer = count
+            if isBossEncounter {
+                if count > 1 {
+                    regularCount = count - 1
+                }
+            }
+
+            // Set enemies alive to the total count
+            entity.GameState.enemiesAlive = count
+
+            // Spawn regular enemies with staggered delays
+            let indices: list = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+            for i in indices {
+                if i < regularCount {
+                    schedule [delay: 0.1d * (i + 1)] SpawnEnemy {
+                        tier: tier
+                    }
+                }
+            }
+
+            // Spawn a mini-boss if this is a boss encounter
+            if isBossEncounter {
+                schedule [delay: 0.1d * (regularCount + 1)] SpawnMiniBoss {
+                }
+            }
+        }
+    }
+}
+
+// Spawn a mini-boss: a buffed version of a tier-appropriate enemy
+rule spawn_mini_boss on SpawnMiniBoss(smb: id) {
+    if entity has GameState {
+let templates: list = entities having EnemyTemplate
+let tier: integer = entity.GameState.currentTier
+
+        // Find a non-boss template matching the tier
+let templateId: id = templates[0]
+        for t in templates {
+            if t.EnemyTemplate.isTemplate {
+                if t.Enemy.tier == tier {
+                    if t.Enemy.isBoss == false {
+                        templateId = t
+                    }
+                }
+            }
+        }
+
+        // Clone the template and buff it
+let boss: id = clone templateId {
+            EnemyTemplate {
+                isTemplate: false
+            }
+        }
+
+        // Mini-boss buffs: 2.5x HP, 1.5x damage
+        boss.Health.current = floor(boss.Health.current * 2.5d)
+        boss.Health.max = floor(boss.Health.max * 2.5d)
+        boss.Combat.damage = floor(boss.Combat.damage * 1.5d)
+        boss.Enemy.isBoss = true
+        boss.Target.entity = null
+
+        schedule [delay: 0.1d] DoAttack {
+            source: boss
         }
     }
 }
@@ -1380,7 +1530,7 @@ rule flee_battle on FleeFromBattle(fb: id) {
 let fleeConfigs: list = entities having FleeConfig
         if len(fleeConfigs) > 0 {
 let fleeConfig: id = fleeConfigs[0]
-let timeSinceFlee: id = entity.RunStats.simulationTime - entity.RunStats.lastFleeTime
+let timeSinceFlee: decimal = entity.RunStats.simulationTime - entity.RunStats.lastFleeTime
             if timeSinceFlee >= fleeConfig.FleeConfig.fleeCooldown {
                 entity.RunStats.retreatCount += 1
                 entity.RunStats.retreatPenalty += fleeConfig.FleeConfig.retreatTimePenalty
@@ -1433,7 +1583,7 @@ rule update_flee_cooldown on UpdateRunStats(urs: id) {
 let fleeConfigs: list = entities having FleeConfig
         if len(fleeConfigs) > 0 {
 let fleeConfig: id = fleeConfigs[0]
-let timeSinceFlee: id = entity.RunStats.simulationTime - entity.RunStats.lastFleeTime
+let timeSinceFlee: decimal = entity.RunStats.simulationTime - entity.RunStats.lastFleeTime
             if timeSinceFlee >= fleeConfig.FleeConfig.fleeCooldown {
                 entity.RunStats.canFlee = true
             }

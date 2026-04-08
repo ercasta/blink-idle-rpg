@@ -316,6 +316,7 @@ function _runWithWasm(
     currentWave: 1, enemiesDefeated: 0, playerDeaths: 0,
     bossDefeated: false, gameOver: false, victory: false,
     retargetingActive: false, currentTier: 1, waveInTier: 1, bossSpawned: false,
+    encounterCount: 0, enemiesAlive: 0, nextBossThreshold: 0,
   }));
   game.add_component(99, 'SpawnConfig', JSON.stringify({
     bossEveryKills: cfg.bossEveryKills,
