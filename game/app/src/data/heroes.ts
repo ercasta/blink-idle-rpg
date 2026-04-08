@@ -13,7 +13,7 @@ export const HEROES: HeroDefinition[] = [
     description: 'A battle-hardened warrior who charges at the strongest foes.',
     role: 'Tank / DPS',
     emoji: '⚔️',
-    stats: { strength: 12, dexterity: 7, intelligence: 4, constitution: 14, wisdom: 3 },
+    stats: { strength: 14, dexterity: 8, intelligence: 4, constitution: 16, wisdom: 4 },
   },
   {
     id: 'lyra',
@@ -22,7 +22,7 @@ export const HEROES: HeroDefinition[] = [
     description: 'A brilliant mage who obliterates the weakest enemy first.',
     role: 'Burst DPS',
     emoji: '🧙',
-    stats: { strength: 3, dexterity: 6, intelligence: 15, constitution: 5, wisdom: 11 },
+    stats: { strength: 4, dexterity: 7, intelligence: 18, constitution: 7, wisdom: 14 },
   },
   {
     id: 'sasha',
@@ -40,7 +40,7 @@ export const HEROES: HeroDefinition[] = [
     description: 'A holy paladin who endures the longest and protects allies.',
     role: 'Support / Tank',
     emoji: '🛡️',
-    stats: { strength: 9, dexterity: 5, intelligence: 6, constitution: 12, wisdom: 8 },
+    stats: { strength: 10, dexterity: 6, intelligence: 7, constitution: 14, wisdom: 10 },
   },
   {
     id: 'kira',
@@ -58,7 +58,7 @@ export const HEROES: HeroDefinition[] = [
     description: 'A devoted cleric who targets the least threatening enemy.',
     role: 'Healer / Support',
     emoji: '🙏',
-    stats: { strength: 5, dexterity: 6, intelligence: 8, constitution: 9, wisdom: 12 },
+    stats: { strength: 6, dexterity: 7, intelligence: 10, constitution: 11, wisdom: 14 },
   },
 ];
 

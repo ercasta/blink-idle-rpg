@@ -11,7 +11,7 @@
 // =============================================================================
 
 // Warrior hero — "Aldric"
-// Class base stats: HP 160, DMG 22, DEF 8, SPEED 0.9
+// Class base stats: HP 250, DMG 28, DEF 12, SPEED 1.0
 aldric = new entity {
     Character {
         name: "Aldric"
@@ -21,26 +21,26 @@ aldric = new entity {
         experienceToLevel: 100
     }
     Health {
-        current: 160
-        max: 160
+        current: 250
+        max: 250
     }
     Mana {
         current: 50
         max: 50
     }
     Stats {
-        strength: 12
-        dexterity: 7
+        strength: 14
+        dexterity: 8
         intelligence: 4
-        constitution: 14
-        wisdom: 3
+        constitution: 16
+        wisdom: 4
     }
     Combat {
-        damage: 22
-        defense: 8
-        attackSpeed: 0.9d
-        critChance: 0.05d
-        critMultiplier: 1.5d
+        damage: 28
+        defense: 12
+        attackSpeed: 1.0d
+        critChance: 0.08d
+        critMultiplier: 1.8d
     }
     Target {
         entity: null
@@ -72,7 +72,7 @@ aldric = new entity {
 }
 
 // Mage hero — "Lyra"
-// Class base stats: HP 90, DMG 30, DEF 2, SPEED 0.6
+// Class base stats: HP 150, DMG 35, DEF 5, SPEED 0.7
 lyra = new entity {
     Character {
         name: "Lyra"
@@ -82,25 +82,25 @@ lyra = new entity {
         experienceToLevel: 100
     }
     Health {
-        current: 90
-        max: 90
+        current: 150
+        max: 150
     }
     Mana {
-        current: 100
-        max: 100
+        current: 120
+        max: 120
     }
     Stats {
-        strength: 3
-        dexterity: 6
-        intelligence: 15
-        constitution: 5
-        wisdom: 11
+        strength: 4
+        dexterity: 7
+        intelligence: 18
+        constitution: 7
+        wisdom: 14
     }
     Combat {
-        damage: 30
-        defense: 2
-        attackSpeed: 0.6d
-        critChance: 0.08d
+        damage: 35
+        defense: 5
+        attackSpeed: 0.7d
+        critChance: 0.10d
         critMultiplier: 2.0d
     }
     Target {
@@ -133,7 +133,7 @@ lyra = new entity {
 }
 
 // Paladin hero — "Theron"
-// Class base stats: HP 140, DMG 16, DEF 9, SPEED 0.7
+// Class base stats: HP 220, DMG 20, DEF 14, SPEED 0.8
 theron = new entity {
     Character {
         name: "Theron"
@@ -143,26 +143,26 @@ theron = new entity {
         experienceToLevel: 100
     }
     Health {
-        current: 140
-        max: 140
+        current: 220
+        max: 220
     }
     Mana {
-        current: 80
-        max: 80
+        current: 90
+        max: 90
     }
     Stats {
-        strength: 9
-        dexterity: 5
-        intelligence: 6
-        constitution: 12
-        wisdom: 8
+        strength: 10
+        dexterity: 6
+        intelligence: 7
+        constitution: 14
+        wisdom: 10
     }
     Combat {
-        damage: 16
-        defense: 9
-        attackSpeed: 0.7d
-        critChance: 0.05d
-        critMultiplier: 1.5d
+        damage: 20
+        defense: 14
+        attackSpeed: 0.8d
+        critChance: 0.06d
+        critMultiplier: 1.6d
     }
     Target {
         entity: null
@@ -194,7 +194,7 @@ theron = new entity {
 }
 
 // Cleric hero — "Elara"
-// Class base stats: HP 120, DMG 13, DEF 6, SPEED 0.6
+// Class base stats: HP 180, DMG 16, DEF 8, SPEED 0.7
 elara = new entity {
     Character {
         name: "Elara"
@@ -204,26 +204,26 @@ elara = new entity {
         experienceToLevel: 100
     }
     Health {
-        current: 120
-        max: 120
+        current: 180
+        max: 180
     }
     Mana {
-        current: 110
-        max: 110
+        current: 130
+        max: 130
     }
     Stats {
-        strength: 5
-        dexterity: 6
-        intelligence: 8
-        constitution: 9
-        wisdom: 12
+        strength: 6
+        dexterity: 7
+        intelligence: 10
+        constitution: 11
+        wisdom: 14
     }
     Combat {
-        damage: 13
-        defense: 6
-        attackSpeed: 0.6d
-        critChance: 0.05d
-        critMultiplier: 1.5d
+        damage: 16
+        defense: 8
+        attackSpeed: 0.7d
+        critChance: 0.06d
+        critMultiplier: 1.6d
     }
     Target {
         entity: null

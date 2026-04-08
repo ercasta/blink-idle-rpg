@@ -66,9 +66,9 @@ run_stats = new entity {
 
 flee_config = new entity {
     FleeConfig {
-        retreatTimePenalty: 10.0d
-        deathTimePenaltyMultiplier: 5.0d
-        fleeCooldown: 5.0d
+        retreatTimePenalty: 5.0d
+        deathTimePenaltyMultiplier: 1.0d
+        fleeCooldown: 3.0d
     }
 }
 

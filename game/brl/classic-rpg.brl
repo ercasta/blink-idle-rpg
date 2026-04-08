@@ -313,21 +313,13 @@ rule spawn_initial_enemies on GameStart(gs: id) {
     }
 }
 
-// Handle a wave starting: spawn its enemies and schedule the next wave
+// Handle a wave starting: advance wave counter and spawn Lord Vexar at final tier.
+// Regular enemy count is maintained by spawn_replacement_enemy (1-for-1 replacement).
 rule handle_enemy_spawned on EnemySpawned(es: id) {
     if entity has GameState {
         if entity.GameState.gameOver == false {
-        // Determine current tier and wave index
+        // Determine current tier
 let tier: integer = entity.GameState.currentTier
-let waveIndex: integer = entity.GameState.waveInTier
-
-        // Spawn enemies for this wave (staggered by 0.5s each)
-let indices: list = [0, 1, 2, 3, 4]
-        for i in indices {
-            schedule [delay: 0.5d * (i + 1)] SpawnEnemy {
-                tier: tier
-            }
-        }
 
         // If this is the final tier, spawn the named final boss once
         if tier == entity.SpawnConfig.maxTier {
@@ -336,17 +328,14 @@ let indices: list = [0, 1, 2, 3, 4]
                 }
                 entity.GameState.bossSpawned = true
             }
-        } else {
-            // Not final tier - schedule the next wave
-            // Tier is now driven by kills (boss_defeated_victory rule),
-            // so we don't modify currentTier here.
-            entity.GameState.currentWave += 1
+        }
 
-            // Schedule next wave — 15s gap so waves don't pile up
-            // (individual enemy replacement already keeps the fight going)
-            schedule [delay: 15.0d] EnemySpawned {
-                wave: entity.GameState.currentWave
-            }
+        // Advance wave counter
+        entity.GameState.currentWave += 1
+
+        // Schedule next wave check (for Lord Vexar spawn at tier 6)
+        schedule [delay: 15.0d] EnemySpawned {
+            wave: entity.GameState.currentWave
         }
         }
     }
@@ -516,12 +505,12 @@ let players: list = entities having Team
     }
 }
 
-// When a player is defeated, schedule a respawn after 10 seconds
+// When a player is defeated, schedule a respawn after 5 seconds
 rule respawn_on_player_defeated on PlayerDefeated(pd: id) {
     if entity has GameState {
-        // Schedule respawn for the dead player after 10s unless victory
+        // Schedule respawn for the dead player after 5s unless victory
         if entity.GameState.gameOver == false {
-            schedule [delay: 10.0d] RespawnPlayer {
+            schedule [delay: 5.0d] RespawnPlayer {
                 player: pd.player
             }
         }
@@ -555,7 +544,7 @@ rule grant_experience on EnemyDefeated(ed: id) {
 let players: list = entities having Team
         for player in players {
             if player.Team.isPlayer {
-                player.Character.experience += 50
+                player.Character.experience += 75
                 schedule CheckLevelUp {
                     source: player
                 }
@@ -589,12 +578,12 @@ let character: id = clu.source
 rule level_up_stats on LevelUp(lu: id) {
     if entity has GameState {
 let character: id = lu.source
-        character.Health.max += 20
-        character.Health.current += 20
-        character.Combat.damage += 4
-        character.Combat.defense += 2
-        character.Mana.max += 10
-        character.Mana.current += 10
+        character.Health.max += 30
+        character.Health.current += 30
+        character.Combat.damage += 5
+        character.Combat.defense += 3
+        character.Mana.max += 15
+        character.Mana.current += 15
     }
 }
 
@@ -1294,17 +1283,17 @@ let target: id = rb.source
 
 // ── HEALTH REGENERATION ─────────────────────────────────────────────────────
 
-// Passive health regen for heroes (slow but steady)
+// Passive health regen for heroes (moderate and steady)
 rule health_regen on HealthRegen(hr: id) {
     if entity has GameState {
 let character: id = hr.source
         if character.Health.current > 0 {
-let regenAmount: integer = 2 + character.Buffs.regenAmount
+let regenAmount: integer = 5 + character.Buffs.regenAmount
             character.Health.current += regenAmount
             if character.Health.current > character.Health.max {
                 character.Health.current = character.Health.max
             }
-            schedule [delay: 3.0d] HealthRegen {
+            schedule [delay: 2.0d] HealthRegen {
                 source: character
             }
         }
