@@ -230,8 +230,9 @@ function getEnvironmentSentence(env?: EnvironmentSettings): string {
 // ── Public entry point ────────────────────────────────────────────────────────
 
 /**
- * Generate a dynamic 2-4 paragraph description for an adventure.
+ * Generate a dynamic 3-4 paragraph description for an adventure.
  * Uses the adventure's settings to produce evocative, varied prose.
+ * Includes an optional environment paragraph when noteworthy settings are detected.
  */
 export function generateAdventureDescription(
   adventure: Pick<AdventureDefinition, 'mode' | 'customSettings' | 'requiredHeroCount' | 'allowedClasses' | 'name' | 'environmentSettings'>,

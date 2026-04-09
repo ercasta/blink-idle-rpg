@@ -103,6 +103,7 @@ export type DamageCategory = 'physical' | 'magical';
 /** Elemental affinity — `neutral` means no elemental modifier. */
 export type Element = 'neutral' | 'fire' | 'water' | 'wind' | 'earth' | 'light' | 'darkness';
 
+/** All non-neutral elements (neutral has no associated slider or resistance). */
 export const ALL_ELEMENTS: Element[] = ['fire', 'water', 'wind', 'earth', 'light', 'darkness'];
 
 /**
