@@ -3,9 +3,13 @@
  *
  * Generates a 2-3 paragraph description that evokes the adventure's
  * difficulty, party requirements, and class restrictions.
+ *
+ * Also provides URL encoding/decoding for adventure share links,
+ * mirroring the hero share-link pattern in heroDescription.ts.
  */
 
 import type { AdventureDefinition, GameMode, HeroClass, CustomModeSettings } from '../types';
+import { DEFAULT_CUSTOM_SETTINGS } from '../types';
 
 // ── Difficulty prose ─────────────────────────────────────────────────────────
 
@@ -200,4 +204,85 @@ export function generateAdventureDescription(
   const p3 = getFlavourCloser(adventure.mode, seed);
 
   return [p1, p2, p3].join('\n\n');
+}
+
+// ── URL encoding / decoding for adventure share links ─────────────────────────
+
+const VALID_MODES: GameMode[] = ['normal', 'easy', 'hard', 'custom'];
+const HERO_CLASSES_ALL: HeroClass[] = ['Warrior', 'Mage', 'Ranger', 'Paladin', 'Rogue', 'Cleric'];
+
+/** Valid range for each CustomModeSettings percentage field, matching the UI slider bounds. */
+const CUSTOM_SETTING_MIN = -50;
+const CUSTOM_SETTING_MAX = 50;
+
+/**
+ * Encode an adventure into URL search params so it can be shared as a link or QR code.
+ * All information is encoded – the recipient can reconstruct the full AdventureDefinition.
+ */
+export function encodeAdventureToParams(adv: AdventureDefinition): URLSearchParams {
+  const params = new URLSearchParams();
+  params.set('advName', adv.name);
+  params.set('advMode', adv.mode);
+  params.set('advHeroCount', String(adv.requiredHeroCount));
+  params.set('advClasses', adv.allowedClasses.join(','));
+  if (adv.mode === 'custom' && adv.customSettings) {
+    params.set('advHeroPenalty', String(adv.customSettings.heroPenaltyPct));
+    params.set('advWipeoutPenalty', String(adv.customSettings.wipeoutPenaltyPct));
+    params.set('advExpMultiplier', String(adv.customSettings.expMultiplierPct));
+    params.set('advEncounterDifficulty', String(adv.customSettings.encounterDifficultyPct));
+  }
+  return params;
+}
+
+/**
+ * Decode adventure share data from URL search params.
+ * Returns null if the params are missing or invalid.
+ */
+export function decodeAdventureFromParams(params: URLSearchParams): AdventureDefinition | null {
+  const name = params.get('advName');
+  const modeRaw = params.get('advMode');
+  const heroCountRaw = params.get('advHeroCount');
+  const classesRaw = params.get('advClasses');
+
+  if (!name || !modeRaw || !heroCountRaw || !classesRaw) return null;
+  if (!VALID_MODES.includes(modeRaw as GameMode)) return null;
+
+  const mode = modeRaw as GameMode;
+  const requiredHeroCount = parseInt(heroCountRaw, 10);
+  if (isNaN(requiredHeroCount) || requiredHeroCount < 1 || requiredHeroCount > 6) return null;
+
+  const allowedClasses = classesRaw
+    .split(',')
+    .filter(c => HERO_CLASSES_ALL.includes(c as HeroClass)) as HeroClass[];
+  if (allowedClasses.length === 0) return null;
+
+  let customSettings: CustomModeSettings | undefined;
+  if (mode === 'custom') {
+    const hp = parseInt(params.get('advHeroPenalty') ?? '', 10);
+    const wp = parseInt(params.get('advWipeoutPenalty') ?? '', 10);
+    const em = parseInt(params.get('advExpMultiplier') ?? '', 10);
+    const ed = parseInt(params.get('advEncounterDifficulty') ?? '', 10);
+    if (isNaN(hp) || isNaN(wp) || isNaN(em) || isNaN(ed)) return null;
+    if ([hp, wp, em, ed].some(v => v < CUSTOM_SETTING_MIN || v > CUSTOM_SETTING_MAX)) return null;
+    customSettings = {
+      heroPenaltyPct: hp,
+      wipeoutPenaltyPct: wp,
+      expMultiplierPct: em,
+      encounterDifficultyPct: ed,
+    };
+  } else {
+    customSettings = { ...DEFAULT_CUSTOM_SETTINGS };
+  }
+
+  const adv: AdventureDefinition = {
+    id: `adventure-${crypto.randomUUID()}`,
+    name,
+    mode,
+    customSettings,
+    requiredHeroCount,
+    allowedClasses,
+    description: '',
+  };
+  adv.description = generateAdventureDescription(adv);
+  return adv;
 }

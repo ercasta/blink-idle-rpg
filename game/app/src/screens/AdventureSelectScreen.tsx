@@ -1,4 +1,6 @@
+import { useState, useRef, useEffect } from 'react';
 import type { AdventureDefinition, HeroClass } from '../types';
+import { decodeAdventureFromParams } from '../data/adventureDescription';
 
 const ALL_CLASSES: HeroClass[] = ['Warrior', 'Mage', 'Ranger', 'Paladin', 'Rogue', 'Cleric'];
 
@@ -20,9 +22,100 @@ const MODE_LABEL: Record<string, string> = {
 interface AdventureSelectScreenProps {
   adventures: AdventureDefinition[];
   onSelect: (adventure: AdventureDefinition) => void;
+  onJoinAdventure: (adventure: AdventureDefinition) => void;
   onManageAdventures: () => void;
   onBack: () => void;
 }
+
+// ── Join-via-link modal ───────────────────────────────────────────────────────
+
+function JoinModal({
+  onJoin,
+  onClose,
+}: {
+  onJoin: (adv: AdventureDefinition) => void;
+  onClose: () => void;
+}) {
+  const [linkText, setLinkText] = useState('');
+  const [error, setError] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { inputRef.current?.focus(); }, []);
+
+  function handleJoin() {
+    setError('');
+    let adv: AdventureDefinition | null = null;
+    let urlParseError = false;
+    try {
+      const url = new URL(linkText.trim());
+      adv = decodeAdventureFromParams(url.searchParams);
+    } catch {
+      urlParseError = true;
+      // Not a valid URL — also try as raw param string (e.g. advName=…&advMode=…)
+      try {
+        const params = new URLSearchParams(linkText.trim());
+        adv = decodeAdventureFromParams(params);
+        urlParseError = false;
+      } catch {
+        // ignore
+      }
+    }
+    if (!adv) {
+      setError(
+        urlParseError
+          ? 'Invalid URL format — paste the full share link.'
+          : 'Adventure data missing or corrupted — check the link and try again.',
+      );
+      return;
+    }
+    onJoin(adv);
+    onClose();
+  }
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-stone-800 border border-stone-600 rounded-2xl p-5 max-w-xs w-full flex flex-col gap-3"
+        onClick={e => e.stopPropagation()}
+      >
+        <h2 className="font-bold text-base text-stone-100">Join Adventure</h2>
+        <p className="text-xs text-stone-400">
+          Paste the adventure share link. The adventure will be added to your list and selected.
+        </p>
+
+        <input
+          ref={inputRef}
+          type="url"
+          value={linkText}
+          onChange={e => setLinkText(e.target.value)}
+          placeholder="https://…?advName=…"
+          className="w-full bg-stone-700 border border-stone-600 rounded-lg px-3 py-2 text-stone-100 text-sm focus:outline-none focus:border-amber-500"
+        />
+        {error && <p className="text-xs text-red-400">{error}</p>}
+
+        <button
+          onClick={handleJoin}
+          disabled={!linkText.trim()}
+          className="w-full py-3 rounded-xl bg-amber-700 hover:bg-amber-600 text-stone-100 text-sm font-bold transition-colors disabled:opacity-40"
+        >
+          Join
+        </button>
+
+        <button
+          onClick={onClose}
+          className="w-full py-2 rounded-xl border border-stone-600 text-stone-400 hover:text-stone-200 text-xs font-medium transition-colors"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Main screen ───────────────────────────────────────────────────────────────
 
 function ClassPips({ classes }: { classes: HeroClass[] }) {
   const allAllowed = classes.length === ALL_CLASSES.length;
@@ -41,11 +134,22 @@ function ClassPips({ classes }: { classes: HeroClass[] }) {
 export function AdventureSelectScreen({
   adventures,
   onSelect,
+  onJoinAdventure,
   onManageAdventures,
   onBack,
 }: AdventureSelectScreenProps) {
+  const [showJoin, setShowJoin] = useState(false);
+
   return (
     <div className="flex flex-col min-h-screen bg-stone-900 text-stone-100 px-4 py-6">
+      {/* Join modal */}
+      {showJoin && (
+        <JoinModal
+          onJoin={onJoinAdventure}
+          onClose={() => setShowJoin(false)}
+        />
+      )}
+
       {/* Header */}
       <div className="flex items-center gap-3 mb-2">
         <button
@@ -100,13 +204,19 @@ export function AdventureSelectScreen({
             ))}
           </div>
 
-          {/* Manage link */}
-          <div className="pt-4 mt-4 border-t border-stone-800 flex justify-center">
+          {/* Manage / Join links */}
+          <div className="pt-4 mt-4 border-t border-stone-800 flex justify-center gap-6">
             <button
               onClick={onManageAdventures}
               className="text-sm text-stone-500 hover:text-stone-300 underline transition-colors"
             >
               🗺️ Manage Adventures
+            </button>
+            <button
+              onClick={() => setShowJoin(true)}
+              className="text-sm text-stone-500 hover:text-stone-300 underline transition-colors"
+            >
+              🔗 Join via Link
             </button>
           </div>
         </>
