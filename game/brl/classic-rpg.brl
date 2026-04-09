@@ -270,9 +270,16 @@ fn calculate_damage(base: decimal, bonus: decimal): decimal {
 
 // Reduce damage by a resistance percentage (capped at 75%), minimum 1
 fn reduce_by_resist(dmg: integer, resistPct: integer): integer {
-    let capped: integer = min(75, resistPct)
+    let capped: integer = resistPct
+    if capped > 75 {
+        capped = 75
+    }
     if capped > 0 {
-        return max(1, dmg - dmg * capped / 100)
+        let reduced: integer = dmg - dmg * capped / 100
+        if reduced < 1 {
+            return 1
+        }
+        return reduced
     }
     return dmg
 }
