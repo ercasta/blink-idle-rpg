@@ -149,5 +149,47 @@
     "description": "The easy-custom scenario (−50% penalties, +50% exp, −50% difficulty) should score higher than the hard-penalty custom scenario. Validates that custom sliders have the expected directional effect.",
     "type": "mean_score_greater",
     "params": { "scenarioA": "custom_easy_exp", "scenarioB": "custom_hard_penalties" }
+  },
+  {
+    "id": "mages_beat_warriors_in_phys_resist",
+    "name": "Mages outperform warriors when enemies resist physical attacks",
+    "description": "In a world where all enemies resist physical damage, a pure mage party (magical damage) should score higher than a pure warrior party (physical damage). This validates that hero damage type and enemy resistance interact meaningfully.",
+    "type": "mean_score_greater",
+    "params": { "scenarioA": "mages_phys_resist_world", "scenarioB": "warriors_phys_resist_world" }
+  },
+  {
+    "id": "warriors_beat_mages_in_magic_resist",
+    "name": "Warriors outperform mages when enemies resist magical attacks",
+    "description": "In a world where all enemies resist magical damage, a pure warrior party (physical damage) should score higher than a pure mage party (magical damage). This validates that choosing a hero whose damage type avoids enemy resistances matters.",
+    "type": "mean_score_greater",
+    "params": { "scenarioA": "warriors_magic_resist_world", "scenarioB": "mages_magic_resist_world" }
+  },
+  {
+    "id": "env_scenarios_kills_positive",
+    "name": "All environment scenarios defeat at least one enemy per run",
+    "description": "Even in unfavorable environments, heroes should still be able to defeat enemies.",
+    "type": "kills_positive",
+    "params": {
+      "scenarios": [
+        "mages_phys_resist_world",
+        "warriors_phys_resist_world",
+        "warriors_magic_resist_world",
+        "mages_magic_resist_world"
+      ]
+    }
+  },
+  {
+    "id": "env_scenarios_score_nonnegative",
+    "name": "All environment scenarios produce non-negative mean scores",
+    "description": "Even in unfavorable environments, mean scores should remain non-negative.",
+    "type": "score_nonnegative",
+    "params": {
+      "scenarios": [
+        "mages_phys_resist_world",
+        "warriors_phys_resist_world",
+        "warriors_magic_resist_world",
+        "mages_magic_resist_world"
+      ]
+    }
   }
 ]
