@@ -247,11 +247,22 @@ const HERO_CLASSES_ALL: HeroClass[] = ['Warrior', 'Mage', 'Ranger', 'Paladin', '
 const CUSTOM_SETTING_MIN = -50;
 const CUSTOM_SETTING_MAX = 50;
 
-/** Environment setting keys (used for compact URL encoding). */
-const ENV_SETTING_KEYS: (keyof EnvironmentSettings)[] = [
-  'physicalPct', 'magicalPct', 'firePct', 'waterPct',
-  'windPct', 'earthPct', 'lightPct', 'darknessPct',
-];
+/** Mapping from EnvironmentSettings key to its abbreviated URL token. */
+const ENV_KEY_TO_ABBR: Record<keyof EnvironmentSettings, string> = {
+  physicalPct:  'ph',
+  magicalPct:   'mg',
+  firePct:      'fi',
+  waterPct:     'wa',
+  windPct:      'wi',
+  earthPct:     'ea',
+  lightPct:     'li',
+  darknessPct:  'dk',
+};
+
+/** Reverse mapping: abbreviated URL token → EnvironmentSettings key. */
+const ENV_ABBR_TO_KEY: Record<string, keyof EnvironmentSettings> = Object.fromEntries(
+  (Object.entries(ENV_KEY_TO_ABBR) as [keyof EnvironmentSettings, string][]).map(([k, v]) => [v, k]),
+) as Record<string, keyof EnvironmentSettings>;
 
 /**
  * Encode an adventure into URL search params so it can be shared as a link or QR code.
@@ -259,28 +270,29 @@ const ENV_SETTING_KEYS: (keyof EnvironmentSettings)[] = [
  */
 export function encodeAdventureToParams(adv: AdventureDefinition): URLSearchParams {
   const params = new URLSearchParams();
-  params.set('advName', adv.name);
-  params.set('advMode', adv.mode);
-  params.set('advHeroCount', String(adv.requiredHeroCount));
-  params.set('advClasses', adv.allowedClasses.join(','));
+  params.set('n', adv.name);
+  params.set('m', adv.mode);
+  params.set('c', String(adv.requiredHeroCount));
+  params.set('cl', adv.allowedClasses.join(','));
   if (adv.mode === 'custom' && adv.customSettings) {
-    params.set('advHeroPenalty', String(adv.customSettings.heroPenaltyPct));
-    params.set('advWipeoutPenalty', String(adv.customSettings.wipeoutPenaltyPct));
-    params.set('advExpMultiplier', String(adv.customSettings.expMultiplierPct));
-    params.set('advEncounterDifficulty', String(adv.customSettings.encounterDifficultyPct));
+    // hp = heroPenaltyPct, wp = wipeoutPenaltyPct, em = expMultiplierPct, ed = encounterDifficultyPct
+    params.set('hp', String(adv.customSettings.heroPenaltyPct));
+    params.set('wp', String(adv.customSettings.wipeoutPenaltyPct));
+    params.set('em', String(adv.customSettings.expMultiplierPct));
+    params.set('ed', String(adv.customSettings.encounterDifficultyPct));
   }
   // Environment settings — encode only non-default values to keep URLs short
   if (adv.environmentSettings) {
     const env = adv.environmentSettings;
     const def = DEFAULT_ENVIRONMENT_SETTINGS;
     const envEntries: string[] = [];
-    for (const key of ENV_SETTING_KEYS) {
+    for (const [key, abbr] of Object.entries(ENV_KEY_TO_ABBR) as [keyof EnvironmentSettings, string][]) {
       if (env[key] !== def[key]) {
-        envEntries.push(`${key}:${env[key]}`);
+        envEntries.push(`${abbr}:${env[key]}`);
       }
     }
     if (envEntries.length > 0) {
-      params.set('advEnv', envEntries.join(','));
+      params.set('env', envEntries.join(','));
     }
   }
   return params;
@@ -291,10 +303,10 @@ export function encodeAdventureToParams(adv: AdventureDefinition): URLSearchPara
  * Returns null if the params are missing or invalid.
  */
 export function decodeAdventureFromParams(params: URLSearchParams): AdventureDefinition | null {
-  const name = params.get('advName');
-  const modeRaw = params.get('advMode');
-  const heroCountRaw = params.get('advHeroCount');
-  const classesRaw = params.get('advClasses');
+  const name = params.get('n');
+  const modeRaw = params.get('m');
+  const heroCountRaw = params.get('c');
+  const classesRaw = params.get('cl');
 
   if (!name || !modeRaw || !heroCountRaw || !classesRaw) return null;
   if (!VALID_MODES.includes(modeRaw as GameMode)) return null;
@@ -310,10 +322,11 @@ export function decodeAdventureFromParams(params: URLSearchParams): AdventureDef
 
   let customSettings: CustomModeSettings | undefined;
   if (mode === 'custom') {
-    const hp = parseInt(params.get('advHeroPenalty') ?? '', 10);
-    const wp = parseInt(params.get('advWipeoutPenalty') ?? '', 10);
-    const em = parseInt(params.get('advExpMultiplier') ?? '', 10);
-    const ed = parseInt(params.get('advEncounterDifficulty') ?? '', 10);
+    // hp = heroPenaltyPct, wp = wipeoutPenaltyPct, em = expMultiplierPct, ed = encounterDifficultyPct
+    const hp = parseInt(params.get('hp') ?? '', 10);
+    const wp = parseInt(params.get('wp') ?? '', 10);
+    const em = parseInt(params.get('em') ?? '', 10);
+    const ed = parseInt(params.get('ed') ?? '', 10);
     if (isNaN(hp) || isNaN(wp) || isNaN(em) || isNaN(ed)) return null;
     if ([hp, wp, em, ed].some(v => v < CUSTOM_SETTING_MIN || v > CUSTOM_SETTING_MAX)) return null;
     customSettings = {
@@ -328,14 +341,15 @@ export function decodeAdventureFromParams(params: URLSearchParams): AdventureDef
 
   // Decode environment settings (optional; falls back to defaults)
   const environmentSettings: EnvironmentSettings = { ...DEFAULT_ENVIRONMENT_SETTINGS };
-  const envRaw = params.get('advEnv');
+  const envRaw = params.get('env');
   if (envRaw) {
     for (const entry of envRaw.split(',')) {
-      const [key, valStr] = entry.split(':');
-      if (key && valStr && ENV_SETTING_KEYS.includes(key as keyof EnvironmentSettings)) {
+      const [abbr, valStr] = entry.split(':');
+      const key = abbr ? ENV_ABBR_TO_KEY[abbr] : undefined;
+      if (key && valStr) {
         const val = parseInt(valStr, 10);
         if (!isNaN(val) && val >= 0 && val <= 100) {
-          environmentSettings[key as keyof EnvironmentSettings] = val;
+          environmentSettings[key] = val;
         }
       }
     }
