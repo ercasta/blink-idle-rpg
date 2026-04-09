@@ -310,7 +310,7 @@ function ImportModal({
       adv = decodeAdventureFromParams(url.searchParams);
     } catch {
       urlParseError = true;
-      // Not a valid URL — also try as raw param string (e.g. advName=…&advMode=…)
+      // Not a valid URL — also try as raw param string (e.g. n=…&m=…)
       try {
         const params = new URLSearchParams(linkText.trim());
         adv = decodeAdventureFromParams(params);
@@ -348,7 +348,7 @@ function ImportModal({
           type="url"
           value={linkText}
           onChange={e => setLinkText(e.target.value)}
-          placeholder="https://…?advName=…"
+          placeholder="https://…?n=…"
           className="w-full bg-stone-700 border border-stone-600 rounded-lg px-3 py-2 text-stone-100 text-sm focus:outline-none focus:border-amber-500"
         />
         {error && <p className="text-xs text-red-400">{error}</p>}
