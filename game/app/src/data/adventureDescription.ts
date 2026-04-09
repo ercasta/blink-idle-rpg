@@ -275,6 +275,7 @@ export function encodeAdventureToParams(adv: AdventureDefinition): URLSearchPara
   params.set('c', String(adv.requiredHeroCount));
   params.set('cl', adv.allowedClasses.join(','));
   if (adv.mode === 'custom' && adv.customSettings) {
+    // hp = heroPenaltyPct, wp = wipeoutPenaltyPct, em = expMultiplierPct, ed = encounterDifficultyPct
     params.set('hp', String(adv.customSettings.heroPenaltyPct));
     params.set('wp', String(adv.customSettings.wipeoutPenaltyPct));
     params.set('em', String(adv.customSettings.expMultiplierPct));
@@ -321,6 +322,7 @@ export function decodeAdventureFromParams(params: URLSearchParams): AdventureDef
 
   let customSettings: CustomModeSettings | undefined;
   if (mode === 'custom') {
+    // hp = heroPenaltyPct, wp = wipeoutPenaltyPct, em = expMultiplierPct, ed = encounterDifficultyPct
     const hp = parseInt(params.get('hp') ?? '', 10);
     const wp = parseInt(params.get('wp') ?? '', 10);
     const em = parseInt(params.get('em') ?? '', 10);
