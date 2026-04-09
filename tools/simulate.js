@@ -292,8 +292,24 @@ const HERO_DAMAGE_CATEGORY = {
   Warrior: 'physical', Mage: 'magical', Ranger: 'physical',
   Paladin: 'physical', Rogue: 'physical', Cleric: 'magical',
 };
-const DEFAULT_HERO_RESISTANCE = {
-  physical: 0, magical: 0, fire: 0, water: 0, wind: 0, earth: 0, light: 0, darkness: 0,
+
+// Damage element per hero class — derived from typical trait archetypes
+// (Warriors=neutral, Mages=fire, Rangers=wind, Paladins=light, Rogues=darkness, Clerics=light)
+const HERO_DAMAGE_ELEMENT = {
+  Warrior: 'neutral', Mage: 'fire', Ranger: 'wind',
+  Paladin: 'light', Rogue: 'darkness', Cleric: 'light',
+};
+
+// Hero class resistance profiles — derived from typical trait archetypes
+// Physical-leaning classes resist physical; magical-leaning resist magical.
+// Elemental affinity grants matching element resistance.
+const HERO_CLASS_RESISTANCE = {
+  Warrior: { physical: 25, magical: 0, fire: 0, water: 0, wind: 0, earth: 0, light: 0, darkness: 0 },
+  Mage:    { physical: 0, magical: 25, fire: 25, water: 0, wind: 0, earth: 0, light: 0, darkness: 0 },
+  Ranger:  { physical: 10, magical: 0, fire: 0, water: 0, wind: 10, earth: 0, light: 0, darkness: 0 },
+  Paladin: { physical: 15, magical: 0, fire: 0, water: 0, wind: 0, earth: 0, light: 15, darkness: 0 },
+  Rogue:   { physical: 15, magical: 0, fire: 0, water: 0, wind: 0, earth: 0, light: 0, darkness: 15 },
+  Cleric:  { physical: 0, magical: 15, fire: 0, water: 0, wind: 0, earth: 0, light: 15, darkness: 0 },
 };
 
 function buildHeroJson(heroClass, heroData) {
@@ -309,8 +325,8 @@ function buildHeroJson(heroClass, heroData) {
       damage: cls.damage, defense: cls.defense,
       attackSpeed: cls.attackSpeed, critChance: cls.critChance || 0.1, critMultiplier: cls.critMultiplier || 1.5,
     },
-    DamageType: { category: HERO_DAMAGE_CATEGORY[heroClass] || 'physical', element: 'neutral' },
-    Resistance: { ...DEFAULT_HERO_RESISTANCE },
+    DamageType: { category: HERO_DAMAGE_CATEGORY[heroClass] || 'physical', element: HERO_DAMAGE_ELEMENT[heroClass] || 'neutral' },
+    Resistance: { ...(HERO_CLASS_RESISTANCE[heroClass] || { physical: 0, magical: 0, fire: 0, water: 0, wind: 0, earth: 0, light: 0, darkness: 0 }) },
     Target: { entity: 0 },
     Team: { id: 'player', isPlayer: true },
     Skills: {
@@ -367,14 +383,14 @@ function buildEnemyJson(template, expMultiplier, environmentSettings) {
   const enemyCategory = _pseudoRoll(ti, 0) < env.magicalPct / 100 ? 'magical' : 'physical';
   const enemyElement = _pickEnemyElement(env, ti);
   const enemyResist = {
-    physical:  _pseudoRoll(ti, 10) < env.physicalPct  / 100 ? 50 : 0,
-    magical:   _pseudoRoll(ti, 11) < env.magicalPct   / 100 ? 50 : 0,
-    fire:      _pseudoRoll(ti, 12) < env.firePct      / 100 ? 50 : 0,
-    water:     _pseudoRoll(ti, 13) < env.waterPct     / 100 ? 50 : 0,
-    wind:      _pseudoRoll(ti, 14) < env.windPct      / 100 ? 50 : 0,
-    earth:     _pseudoRoll(ti, 15) < env.earthPct     / 100 ? 50 : 0,
-    light:     _pseudoRoll(ti, 16) < env.lightPct     / 100 ? 50 : 0,
-    darkness:  _pseudoRoll(ti, 17) < env.darknessPct  / 100 ? 50 : 0,
+    physical:  _pseudoRoll(ti, 10) < env.physicalPct  / 100 ? 75 : 0,
+    magical:   _pseudoRoll(ti, 11) < env.magicalPct   / 100 ? 75 : 0,
+    fire:      _pseudoRoll(ti, 12) < env.firePct      / 100 ? 75 : 0,
+    water:     _pseudoRoll(ti, 13) < env.waterPct     / 100 ? 75 : 0,
+    wind:      _pseudoRoll(ti, 14) < env.windPct      / 100 ? 75 : 0,
+    earth:     _pseudoRoll(ti, 15) < env.earthPct     / 100 ? 75 : 0,
+    light:     _pseudoRoll(ti, 16) < env.lightPct     / 100 ? 75 : 0,
+    darkness:  _pseudoRoll(ti, 17) < env.darknessPct  / 100 ? 75 : 0,
   };
 
   return {
