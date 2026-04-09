@@ -23,4 +23,10 @@ export const GAME_MODES: GameModeDefinition[] = [
     description: 'An intense challenge for veteran players. More enemies, faster progression, and severe punishments for failure.',
     difficulty: 'Hard',
   },
+  {
+    id: 'custom',
+    name: 'Custom Mode',
+    description: 'Tune every scoring parameter to your liking. Adjust death penalties, experience gain, encounter difficulty, and more with ±50% sliders.',
+    difficulty: 'Custom',
+  },
 ];

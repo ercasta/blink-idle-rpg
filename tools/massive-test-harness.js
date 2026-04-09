@@ -61,6 +61,7 @@ const {
   buildHeroJson,
   buildEnemyJson,
   buildConfigEntities,
+  applyCustomSettings,
 } = require('./simulate.js');
 
 // ─── CLI helpers ────────────────────────────────────────────────────────────
@@ -87,10 +88,21 @@ function loadJsonConfig(filePath, label) {
 // ─── Run a single scenario ──────────────────────────────────────────────────
 
 function runScenario(binaryPath, scenario, gameData, seedOffset, verbose) {
-  const mode = gameData.gameModes[scenario.mode];
+  let mode = gameData.gameModes[scenario.mode];
   if (!mode) {
     throw new Error(`Unknown mode "${scenario.mode}" in scenario "${scenario.id}"`);
   }
+
+  // For custom-mode scenarios, apply per-scenario multipliers on top of the
+  // normal-mode baseline.
+  const customSettings = scenario.customSettings || null;
+  if (scenario.mode === 'custom' && customSettings) {
+    mode = applyCustomSettings(gameData.gameModes['normal'], customSettings);
+  }
+  // Exp multiplier for custom mode
+  const expMult = (scenario.mode === 'custom' && customSettings)
+    ? 1 + (customSettings.expMultiplierPct || 0) / 100
+    : null;
 
   const results = [];
   for (let i = 0; i < scenario.runs; i++) {
@@ -99,7 +111,7 @@ function runScenario(binaryPath, scenario, gameData, seedOffset, verbose) {
       seed,
       maxSteps: DEFAULT_MAX_STEPS,
       heroes: scenario.party.map(cls => buildHeroJson(cls, gameData.heroes)),
-      enemies: gameData.enemies.map(e => buildEnemyJson(e)),
+      enemies: gameData.enemies.map(e => buildEnemyJson(e, expMult)),
       configEntities: buildConfigEntities(mode),
     };
 
@@ -184,7 +196,16 @@ function checkDeterminism(check, allResults, binaryPath, gameData, seedOffset) {
   const scenarioId = check.params.scenario;
   const sr = getScenarioResults(scenarioId, allResults);
   const scenario = sr.scenario;
-  const mode = gameData.gameModes[scenario.mode];
+  let mode = gameData.gameModes[scenario.mode];
+
+  // Apply custom settings if present
+  const customSettings = scenario.customSettings || null;
+  if (scenario.mode === 'custom' && customSettings) {
+    mode = applyCustomSettings(gameData.gameModes['normal'], customSettings);
+  }
+  const expMult = (scenario.mode === 'custom' && customSettings)
+    ? 1 + (customSettings.expMultiplierPct || 0) / 100
+    : null;
 
   const mismatches = [];
   for (let i = 0; i < sr.results.length; i++) {
@@ -193,7 +214,7 @@ function checkDeterminism(check, allResults, binaryPath, gameData, seedOffset) {
       seed,
       maxSteps: DEFAULT_MAX_STEPS,
       heroes: scenario.party.map(cls => buildHeroJson(cls, gameData.heroes)),
-      enemies: gameData.enemies.map(e => buildEnemyJson(e)),
+      enemies: gameData.enemies.map(e => buildEnemyJson(e, expMult)),
       configEntities: buildConfigEntities(mode),
     };
 

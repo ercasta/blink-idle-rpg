@@ -106,5 +106,35 @@
     "mode": "easy",
     "runs": 5,
     "seedStart": 1200
+  },
+  {
+    "id": "custom_hard_penalties",
+    "name": "Custom Mode — Max Penalties (+50%)",
+    "description": "Full party in custom mode with death penalty +50% and wipeout penalty +50% relative to normal. Verifies penalty multipliers are applied.",
+    "party": ["Warrior", "Mage", "Cleric", "Ranger", "Paladin", "Rogue"],
+    "mode": "custom",
+    "customSettings": {
+      "heroPenaltyPct": 50,
+      "wipeoutPenaltyPct": 50,
+      "expMultiplierPct": 0,
+      "encounterDifficultyPct": 0
+    },
+    "runs": 5,
+    "seedStart": 1300
+  },
+  {
+    "id": "custom_easy_exp",
+    "name": "Custom Mode — High EXP (+50%)",
+    "description": "Full party in custom mode with exp gain +50% and reduced encounter difficulty −50%. A favourable custom configuration.",
+    "party": ["Warrior", "Mage", "Cleric", "Ranger", "Paladin", "Rogue"],
+    "mode": "custom",
+    "customSettings": {
+      "heroPenaltyPct": -50,
+      "wipeoutPenaltyPct": -50,
+      "expMultiplierPct": 50,
+      "encounterDifficultyPct": -50
+    },
+    "runs": 5,
+    "seedStart": 1400
   }
 ]

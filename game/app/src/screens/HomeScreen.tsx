@@ -5,6 +5,7 @@ interface HomeScreenProps {
   onStart: () => void;
   onQuickPlay: () => void;
   onManageRoster: () => void;
+  onManageAdventures: () => void;
   onViewHistory: () => void;
   onReplayRun: (run: RunResult) => void;
 }
@@ -17,7 +18,7 @@ function formatDate(timestamp: number | undefined): string {
   });
 }
 
-export function HomeScreen({ recentRuns, onStart, onQuickPlay, onManageRoster, onViewHistory, onReplayRun }: HomeScreenProps) {
+export function HomeScreen({ recentRuns, onStart, onQuickPlay, onManageRoster, onManageAdventures, onViewHistory, onReplayRun }: HomeScreenProps) {
   return (
     <div className="flex flex-col items-center min-h-screen bg-stone-900 text-stone-100 px-4 py-8">
       {/* Title */}
@@ -34,9 +35,8 @@ export function HomeScreen({ recentRuns, onStart, onQuickPlay, onManageRoster, o
           skills and combat behaviour. No tapping required — your heroes fight on their own.
         </p>
         <p>
-          Send your party into battle and watch the simulation unfold wave by wave. Heroes grow
-          stronger as they level up, picking skills that match their traits. How deep can your
-          party reach?
+          Create adventures that define the difficulty, party size, and allowed hero classes.
+          Send your party in and watch the simulation unfold wave by wave.
         </p>
       </div>
 
@@ -48,17 +48,25 @@ export function HomeScreen({ recentRuns, onStart, onQuickPlay, onManageRoster, o
         >
           ▶ Start a Run
         </button>
-        <button
-          onClick={onManageRoster}
-          className="w-full py-3 rounded-xl bg-stone-700 hover:bg-stone-600 text-stone-100 font-bold text-base transition-colors shadow-lg"
-        >
-          🧑‍🤝‍🧑 Manage Hero Roster
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={onManageRoster}
+            className="flex-1 py-3 rounded-xl bg-stone-700 hover:bg-stone-600 text-stone-100 font-bold text-sm transition-colors shadow-lg"
+          >
+            🧑‍🤝‍🧑 Heroes
+          </button>
+          <button
+            onClick={onManageAdventures}
+            className="flex-1 py-3 rounded-xl bg-stone-700 hover:bg-stone-600 text-stone-100 font-bold text-sm transition-colors shadow-lg"
+          >
+            🗺️ Adventures
+          </button>
+        </div>
         <button
           onClick={onQuickPlay}
           className="w-full py-3 rounded-xl bg-stone-600 hover:bg-stone-500 text-stone-100 font-bold text-base transition-colors shadow-lg"
         >
-          ⚡ Quick Play (Random Party)
+          ⚡ Quick Play
         </button>
         <button
           onClick={onViewHistory}
@@ -82,7 +90,7 @@ export function HomeScreen({ recentRuns, onStart, onQuickPlay, onManageRoster, o
               >
                 <div className="flex flex-col">
                   <span className="text-sm text-stone-300">
-                    ⚔️ · Tier {run.deepestTier}
+                    {run.adventure ? run.adventure.name : '⚔️'} · Tier {run.deepestTier}
                   </span>
                   {run.timestamp && (
                     <span className="text-xs text-stone-500">{formatDate(run.timestamp)}</span>

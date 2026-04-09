@@ -4,10 +4,10 @@
  * Simple state-machine router: no URL routing needed for v1.
  *
  * Flow:
- *   home → roster (hero management)
- *   home → mode-select → party-select → (simulation) → battle → results
- *   home → (quick play: random party + normal mode) → battle → results
- *   results → rerun (same heroes + same mode, skip selection)
+ *   home → adventure-manager (create/edit/share adventures)
+ *   home → adventure-select → party-select → (simulation) → battle → results
+ *   home → (quick play: random adventure + random party) → battle → results
+ *   results → rerun (same heroes + same adventure, skip selection)
  *   home / results → run-history (view/manage all saved runs)
  *   run-history → replay (watch battle animation for a past run)
  *
@@ -16,7 +16,8 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { HomeScreen } from './screens/HomeScreen';
-import { ModeSelectScreen } from './screens/ModeSelectScreen';
+import { AdventureSelectScreen } from './screens/AdventureSelectScreen';
+import { AdventureScreen } from './screens/AdventureScreen';
 import { PartySelectScreen } from './screens/PartySelectScreen';
 import { RosterScreen } from './screens/RosterScreen';
 import { BattleScreen } from './screens/BattleScreen';
@@ -24,13 +25,14 @@ import { ResultsScreen } from './screens/ResultsScreen';
 import { RunHistoryScreen } from './screens/RunHistoryScreen';
 import { LoadingScreen } from './screens/LoadingScreen';
 import { runSimulation } from './engine/WasmSimEngine';
-import { generateRandomParty } from './data/heroes';
-import { GAME_MODES } from './data/gameModes';
+import { generateRandomAdventure, generateRandomPartyForAdventure } from './data/adventures';
+import { loadAdventures, saveAdventures } from './storage/adventureStorage';
 import { loadAllRuns, saveRun, toggleFavorite, deleteRun, importRun } from './storage/runStorage';
 import { loadRoster, saveRoster } from './storage/rosterStorage';
 import { decodeHeroFromParams } from './data/heroDescription';
 import type { SharedHeroData } from './data/heroDescription';
-import type { AppScreen, GameMode, HeroDefinition, GameSnapshot, RunResult, HeroPath } from './types';
+import type { AppScreen, AdventureDefinition, HeroDefinition, GameSnapshot, RunResult, HeroPath } from './types';
+import { DEFAULT_CUSTOM_SETTINGS } from './types';
 
 export default function App() {
   const [screen, setScreen] = useState<AppScreen | 'loading' | 'error'>(() => {
@@ -39,7 +41,8 @@ export default function App() {
     if (decodeHeroFromParams(params)) return 'roster';
     return 'home';
   });
-  const [selectedMode, setSelectedMode] = useState<GameMode>('normal');
+  const [selectedAdventure, setSelectedAdventure] = useState<AdventureDefinition | null>(null);
+  const [adventures, setAdventures] = useState<AdventureDefinition[]>([]);
   const [selectedHeroes, setSelectedHeroes] = useState<HeroDefinition[]>([]);
   const [roster, setRoster] = useState<HeroDefinition[]>([]);
   const [snapshots, setSnapshots] = useState<GameSnapshot[]>([]);
@@ -58,10 +61,11 @@ export default function App() {
   // Track whether the current battle is a replay of a saved run (no re-save on complete)
   const replayingRunRef = useRef<RunResult | null>(null);
 
-  // Load all runs and roster from IndexedDB on first mount
+  // Load all runs, roster, and adventures from IndexedDB on first mount
   useEffect(() => {
     loadAllRuns().then(setAllRuns);
     loadRoster().then(setRoster);
+    loadAdventures().then(setAdventures);
     // Clear the share params from the URL without reloading
     if (sharedHero) {
       const url = window.location.origin + window.location.pathname;
@@ -76,6 +80,13 @@ export default function App() {
     saveRoster(newRoster);
   }
 
+  // ── Adventure helpers ───────────────────────────────────────────────────
+
+  function handleAdventuresChange(newAdventures: AdventureDefinition[]) {
+    setAdventures(newAdventures);
+    saveAdventures(newAdventures);
+  }
+
   // ── Navigation helpers ──────────────────────────────────────────────────
 
   function goHome() {
@@ -84,13 +95,25 @@ export default function App() {
   }
 
   function startRun() {
-    setScreen('mode-select');
+    setScreen('adventure-select');
   }
 
   const quickPlay = useCallback(async () => {
-    const randomHeroes = generateRandomParty();
+    // Ensure at least one adventure exists; create a random one if needed
+    const currentAdventures = await loadAdventures();
+    let adventure: AdventureDefinition;
+    if (currentAdventures.length === 0) {
+      adventure = generateRandomAdventure();
+      const updated = [adventure];
+      setAdventures(updated);
+      await saveAdventures(updated);
+    } else {
+      adventure = currentAdventures[Math.floor(Math.random() * currentAdventures.length)];
+    }
+
+    const randomHeroes = generateRandomPartyForAdventure(adventure);
+    setSelectedAdventure(adventure);
     setSelectedHeroes(randomHeroes);
-    setSelectedMode('normal');
     replayingRunRef.current = null;
     setScreen('loading');
     setError(null);
@@ -98,7 +121,11 @@ export default function App() {
     try {
       const runs = await loadAllRuns();
       setPrevSnapshots(runs[0]?.snapshots ?? []);
-      const result = await runSimulation(randomHeroes, 'normal');
+      const result = await runSimulation(
+        randomHeroes,
+        adventure.mode,
+        adventure.customSettings ?? DEFAULT_CUSTOM_SETTINGS,
+      );
       setSnapshots(result.snapshots);
       setHeroPaths(result.heroPaths);
       setScreen('battle');
@@ -109,8 +136,8 @@ export default function App() {
     }
   }, []);
 
-  function onModeSelected(mode: GameMode) {
-    setSelectedMode(mode);
+  function onAdventureSelected(adventure: AdventureDefinition) {
+    setSelectedAdventure(adventure);
     setScreen('party-select');
   }
 
@@ -121,12 +148,15 @@ export default function App() {
     setError(null);
 
     try {
-      const modeDef = GAME_MODES.find(m => m.id === selectedMode);
-      if (!modeDef) throw new Error(`Unknown mode: ${selectedMode}`);
+      if (!selectedAdventure) throw new Error('No adventure selected');
 
       const runs = await loadAllRuns();
       setPrevSnapshots(runs[0]?.snapshots ?? []);
-      const result = await runSimulation(heroes, selectedMode);
+      const result = await runSimulation(
+        heroes,
+        selectedAdventure.mode,
+        selectedAdventure.customSettings ?? DEFAULT_CUSTOM_SETTINGS,
+      );
       setSnapshots(result.snapshots);
       setHeroPaths(result.heroPaths);
       setScreen('battle');
@@ -135,7 +165,7 @@ export default function App() {
       setError(e instanceof Error ? e.message : String(e));
       setScreen('error');
     }
-  }, [selectedMode]);
+  }, [selectedAdventure]);
 
   const onBattleComplete = useCallback(async (result: RunResult) => {
     // If this was a replay, show the original saved run in results (no re-save)
@@ -152,21 +182,23 @@ export default function App() {
       timestamp: Date.now(),
       favorited: false,
       heroes: selectedHeroes,
-      mode: selectedMode,
+      mode: selectedAdventure?.mode ?? 'normal',
+      customSettings: selectedAdventure?.mode === 'custom' ? selectedAdventure.customSettings : undefined,
+      adventure: selectedAdventure ?? undefined,
     };
     setRunResult(enrichedResult);
     await saveRun(enrichedResult);
     loadAllRuns().then(setAllRuns);
     setScreen('results');
-  }, [selectedHeroes, selectedMode]);
+  }, [selectedHeroes, selectedAdventure]);
 
   function playAgain() {
-    setScreen('mode-select');
+    setScreen('adventure-select');
   }
 
   const rerun = useCallback(async () => {
-    if (selectedHeroes.length === 0) {
-      setScreen('mode-select');
+    if (selectedHeroes.length === 0 || !selectedAdventure) {
+      setScreen('adventure-select');
       return;
     }
     replayingRunRef.current = null;
@@ -176,7 +208,11 @@ export default function App() {
     try {
       const runs = await loadAllRuns();
       setPrevSnapshots(runs[0]?.snapshots ?? []);
-      const result = await runSimulation(selectedHeroes, selectedMode);
+      const result = await runSimulation(
+        selectedHeroes,
+        selectedAdventure.mode,
+        selectedAdventure.customSettings ?? DEFAULT_CUSTOM_SETTINGS,
+      );
       setSnapshots(result.snapshots);
       setHeroPaths(result.heroPaths);
       setScreen('battle');
@@ -185,7 +221,7 @@ export default function App() {
       setError(e instanceof Error ? e.message : String(e));
       setScreen('error');
     }
-  }, [selectedHeroes, selectedMode]);
+  }, [selectedHeroes, selectedAdventure]);
 
   // ── Run history helpers ─────────────────────────────────────────────────
 
@@ -194,7 +230,7 @@ export default function App() {
     setSnapshots(run.snapshots);
     setHeroPaths(run.heroPaths);
     setSelectedHeroes(run.heroes ?? []);
-    setSelectedMode(run.mode ?? 'normal');
+    setSelectedAdventure(run.adventure ?? null);
     setPrevSnapshots([]);
     setScreen('battle');
   }
@@ -233,6 +269,7 @@ export default function App() {
         onStart={startRun}
         onQuickPlay={quickPlay}
         onManageRoster={() => setScreen('roster')}
+        onManageAdventures={() => setScreen('adventure-manager')}
         onViewHistory={() => setScreen('run-history')}
         onReplayRun={handleReplayRun}
       />
@@ -250,6 +287,27 @@ export default function App() {
     );
   }
 
+  if (screen === 'adventure-manager') {
+    return (
+      <AdventureScreen
+        adventures={adventures}
+        onAdventuresChange={handleAdventuresChange}
+        onBack={goHome}
+      />
+    );
+  }
+
+  if (screen === 'adventure-select') {
+    return (
+      <AdventureSelectScreen
+        adventures={adventures}
+        onSelect={onAdventureSelected}
+        onManageAdventures={() => setScreen('adventure-manager')}
+        onBack={goHome}
+      />
+    );
+  }
+
   if (screen === 'run-history') {
     return (
       <RunHistoryScreen
@@ -263,16 +321,13 @@ export default function App() {
     );
   }
 
-  if (screen === 'mode-select') {
-    return <ModeSelectScreen onSelect={onModeSelected} onBack={goHome} />;
-  }
-
-  if (screen === 'party-select') {
+  if (screen === 'party-select' && selectedAdventure) {
     return (
       <PartySelectScreen
         roster={roster}
+        adventure={selectedAdventure}
         onStart={onPartySelected}
-        onBack={() => setScreen('mode-select')}
+        onBack={() => setScreen('adventure-select')}
         onManageRoster={() => setScreen('roster')}
       />
     );
