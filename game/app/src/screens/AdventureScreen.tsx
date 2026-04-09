@@ -4,12 +4,18 @@
  * An Adventure bundles a game mode with custom settings, a required hero
  * count, and an allowed-class filter.  The player selects an adventure
  * before each run instead of manually choosing easy/normal/hard.
+ *
+ * Sharing now supports three modes:
+ *   • Copy Link  – copies a full URL with adventure params to the clipboard
+ *   • Share      – triggers the native share sheet (Web Share API)
+ *   • QR Code    – shows a modal with a scannable QR code
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import QRCode from 'qrcode';
 import type { AdventureDefinition, GameMode, HeroClass, CustomModeSettings } from '../types';
 import { DEFAULT_CUSTOM_SETTINGS } from '../types';
-import { generateAdventureDescription } from '../data/adventureDescription';
+import { generateAdventureDescription, encodeAdventureToParams, decodeAdventureFromParams } from '../data/adventureDescription';
 import { generateRandomAdventure } from '../data/adventures';
 
 const ALL_CLASSES: HeroClass[] = ['Warrior', 'Mage', 'Ranger', 'Paladin', 'Rogue', 'Cleric'];
@@ -28,6 +34,14 @@ const MODE_BADGE: Record<GameMode, string> = {
 const MODE_LABEL: Record<GameMode, string> = {
   easy: 'Easy', normal: 'Normal', hard: 'Hard', custom: 'Custom',
 };
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function getShareUrl(adv: AdventureDefinition): string {
+  const params = encodeAdventureToParams(adv);
+  const base = window.location.origin + window.location.pathname;
+  return `${base}?${params.toString()}`;
+}
 
 // ── Draft type ────────────────────────────────────────────────────────────────
 
@@ -110,6 +124,214 @@ function PctSlider({
   );
 }
 
+// ── QR Code Modal ─────────────────────────────────────────────────────────────
+
+function QrModal({ adv, onClose }: { adv: AdventureDefinition; onClose: () => void }) {
+  const [dataUrl, setDataUrl] = useState<string>('');
+  const url = getShareUrl(adv);
+
+  useEffect(() => {
+    QRCode.toDataURL(url, { width: 280, margin: 2 })
+      .then(setDataUrl)
+      .catch(e => console.error('[QrModal] QR generation failed', e));
+  }, [url]);
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-stone-800 border border-stone-600 rounded-2xl p-6 max-w-xs w-full flex flex-col items-center gap-4"
+        onClick={e => e.stopPropagation()}
+      >
+        <h2 className="font-bold text-base text-stone-100">Share QR Code</h2>
+        <p className="text-xs text-stone-400 text-center">
+          <span className="font-semibold text-stone-200">{adv.name}</span>
+        </p>
+        {dataUrl
+          ? <img src={dataUrl} alt="Adventure QR Code" className="rounded-xl w-56 h-56" />
+          : <div className="w-56 h-56 flex items-center justify-center text-stone-500 text-sm">Generating…</div>
+        }
+        <p className="text-xs text-stone-500 text-center break-all">{url}</p>
+        <button
+          onClick={onClose}
+          className="w-full py-2.5 rounded-xl bg-stone-700 hover:bg-stone-600 text-stone-200 text-sm font-medium transition-colors"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Share Modal ───────────────────────────────────────────────────────────────
+
+function ShareModal({
+  adv,
+  onClose,
+}: {
+  adv: AdventureDefinition;
+  onClose: () => void;
+}) {
+  const [copied, setCopied] = useState(false);
+  const [showQr, setShowQr] = useState(false);
+  const url = getShareUrl(adv);
+
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      window.prompt('Copy this link to share your adventure:', url);
+    }
+  }
+
+  async function nativeShare() {
+    if (typeof navigator.share === 'function') {
+      try {
+        await navigator.share({ title: adv.name, text: `Join my adventure: ${adv.name}`, url });
+      } catch {
+        // user cancelled – ignore
+      }
+    } else {
+      copyLink();
+    }
+  }
+
+  if (showQr) {
+    return <QrModal adv={adv} onClose={onClose} />;
+  }
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-stone-800 border border-stone-600 rounded-2xl p-5 max-w-xs w-full flex flex-col gap-3"
+        onClick={e => e.stopPropagation()}
+      >
+        <h2 className="font-bold text-base text-stone-100">Share Adventure</h2>
+        <p className="text-xs text-stone-400 text-center -mt-1">
+          <span className="font-semibold text-stone-200">{adv.name}</span>
+        </p>
+
+        <button
+          onClick={copyLink}
+          className="w-full py-3 rounded-xl bg-stone-700 hover:bg-stone-600 text-stone-100 text-sm font-medium transition-colors flex items-center justify-center gap-2"
+        >
+          {copied ? '✓ Copied!' : '🔗 Copy Link'}
+        </button>
+
+        {typeof navigator.share === 'function' && (
+          <button
+            onClick={nativeShare}
+            className="w-full py-3 rounded-xl bg-stone-700 hover:bg-stone-600 text-stone-100 text-sm font-medium transition-colors flex items-center justify-center gap-2"
+          >
+            📤 Share…
+          </button>
+        )}
+
+        <button
+          onClick={() => setShowQr(true)}
+          className="w-full py-3 rounded-xl bg-stone-700 hover:bg-stone-600 text-stone-100 text-sm font-medium transition-colors flex items-center justify-center gap-2"
+        >
+          📷 Show QR Code
+        </button>
+
+        <button
+          onClick={onClose}
+          className="w-full py-2 rounded-xl border border-stone-600 text-stone-400 hover:text-stone-200 text-xs font-medium transition-colors"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Import-from-link Modal ────────────────────────────────────────────────────
+
+function ImportModal({
+  onImport,
+  onClose,
+}: {
+  onImport: (adv: AdventureDefinition) => void;
+  onClose: () => void;
+}) {
+  const [linkText, setLinkText] = useState('');
+  const [error, setError] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { inputRef.current?.focus(); }, []);
+
+  function handleImport() {
+    setError('');
+    let adv: AdventureDefinition | null = null;
+    try {
+      // Try parsing as full URL first
+      const url = new URL(linkText.trim());
+      adv = decodeAdventureFromParams(url.searchParams);
+    } catch {
+      // Not a valid URL — also try as raw param string (e.g. advName=…&advMode=…)
+      try {
+        const params = new URLSearchParams(linkText.trim());
+        adv = decodeAdventureFromParams(params);
+      } catch {
+        // ignore
+      }
+    }
+    if (!adv) {
+      setError('Could not decode adventure — check the link and try again.');
+      return;
+    }
+    onImport(adv);
+    onClose();
+  }
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-stone-800 border border-stone-600 rounded-2xl p-5 max-w-xs w-full flex flex-col gap-3"
+        onClick={e => e.stopPropagation()}
+      >
+        <h2 className="font-bold text-base text-stone-100">Import via Link</h2>
+        <p className="text-xs text-stone-400">Paste the adventure share link below.</p>
+
+        <input
+          ref={inputRef}
+          type="url"
+          value={linkText}
+          onChange={e => setLinkText(e.target.value)}
+          placeholder="https://…?advName=…"
+          className="w-full bg-stone-700 border border-stone-600 rounded-lg px-3 py-2 text-stone-100 text-sm focus:outline-none focus:border-amber-500"
+        />
+        {error && <p className="text-xs text-red-400">{error}</p>}
+
+        <button
+          onClick={handleImport}
+          disabled={!linkText.trim()}
+          className="w-full py-3 rounded-xl bg-amber-700 hover:bg-amber-600 text-stone-100 text-sm font-bold transition-colors disabled:opacity-40"
+        >
+          Import Adventure
+        </button>
+
+        <button
+          onClick={onClose}
+          className="w-full py-2 rounded-xl border border-stone-600 text-stone-400 hover:text-stone-200 text-xs font-medium transition-colors"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 interface AdventureScreenProps {
@@ -127,7 +349,8 @@ export function AdventureScreen({
 }: AdventureScreenProps) {
   const [view, setView] = useState<ScreenView>('list');
   const [draft, setDraft] = useState<AdventureDraft>(defaultDraft);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [sharingAdv, setSharingAdv] = useState<AdventureDefinition | null>(null);
+  const [showImport, setShowImport] = useState(false);
 
   // Live description preview
   const liveDescription = useMemo(
@@ -176,38 +399,8 @@ export function AdventureScreen({
     onAdventuresChange([...adventures, generateRandomAdventure()]);
   }
 
-  function shareAdventure(adv: AdventureDefinition) {
-    const json = JSON.stringify(adv, null, 2);
-    navigator.clipboard.writeText(json).then(() => {
-      setCopiedId(adv.id);
-      setTimeout(() => setCopiedId(null), 2000);
-    }).catch(() => {
-      window.prompt('Copy this JSON to share your adventure:', json);
-    });
-  }
-
-  function importFromClipboard() {
-    navigator.clipboard.readText().then((text) => {
-      try {
-        const parsed = JSON.parse(text) as Partial<AdventureDefinition>;
-        if (!parsed.name || !parsed.mode) throw new Error('Invalid adventure JSON');
-        const adv: AdventureDefinition = {
-          id: `adventure-${crypto.randomUUID()}`,
-          name: parsed.name,
-          mode: parsed.mode,
-          customSettings: parsed.customSettings,
-          requiredHeroCount: parsed.requiredHeroCount ?? 4,
-          allowedClasses: parsed.allowedClasses?.length ? parsed.allowedClasses : [...ALL_CLASSES],
-          description: '',
-        };
-        adv.description = generateAdventureDescription(adv);
-        onAdventuresChange([...adventures, adv]);
-      } catch {
-        alert('Could not import adventure — invalid JSON in clipboard.');
-      }
-    }).catch(() => {
-      alert('Could not read clipboard. Try pasting JSON manually.');
-    });
+  function handleImportAdventure(adv: AdventureDefinition) {
+    onAdventuresChange([...adventures, adv]);
   }
 
   function setDraftMode(mode: GameMode) {
@@ -376,6 +569,17 @@ export function AdventureScreen({
   // ── List view ──────────────────────────────────────────────────────────────
   return (
     <div className="flex flex-col min-h-screen bg-stone-900 text-stone-100 px-4 py-6">
+      {/* Modals */}
+      {sharingAdv && (
+        <ShareModal adv={sharingAdv} onClose={() => setSharingAdv(null)} />
+      )}
+      {showImport && (
+        <ImportModal
+          onImport={handleImportAdventure}
+          onClose={() => setShowImport(false)}
+        />
+      )}
+
       {/* Header */}
       <div className="flex items-center gap-3 mb-2">
         <button onClick={onBack} className="text-stone-400 hover:text-stone-100 text-2xl leading-none">
@@ -403,11 +607,11 @@ export function AdventureScreen({
           🎲
         </button>
         <button
-          onClick={importFromClipboard}
+          onClick={() => setShowImport(true)}
           className="py-2.5 px-3 rounded-xl bg-stone-700 hover:bg-stone-600 text-stone-100 text-sm transition-colors"
-          title="Import adventure from clipboard JSON"
+          title="Import adventure from link"
         >
-          📋
+          🔗
         </button>
       </div>
 
@@ -449,10 +653,10 @@ export function AdventureScreen({
                   ✏️ Edit
                 </button>
                 <button
-                  onClick={() => shareAdventure(adv)}
+                  onClick={() => setSharingAdv(adv)}
                   className="flex-1 py-1.5 rounded-lg bg-stone-700 hover:bg-stone-600 text-stone-200 text-xs font-medium transition-colors"
                 >
-                  {copiedId === adv.id ? '✓ Copied!' : '📤 Share'}
+                  📤 Share
                 </button>
                 <button
                   onClick={() => deleteAdventure(adv.id)}

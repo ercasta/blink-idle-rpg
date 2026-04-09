@@ -24,6 +24,7 @@ import { BattleScreen } from './screens/BattleScreen';
 import { ResultsScreen } from './screens/ResultsScreen';
 import { RunHistoryScreen } from './screens/RunHistoryScreen';
 import { LoadingScreen } from './screens/LoadingScreen';
+import { RunReadyScreen } from './screens/RunReadyScreen';
 import { runSimulation } from './engine/WasmSimEngine';
 import { generateRandomAdventure, generateRandomPartyForAdventure } from './data/adventures';
 import { loadAdventures, saveAdventures } from './storage/adventureStorage';
@@ -31,14 +32,17 @@ import { loadAllRuns, saveRun, toggleFavorite, deleteRun, importRun } from './st
 import { loadRoster, saveRoster } from './storage/rosterStorage';
 import { decodeHeroFromParams } from './data/heroDescription';
 import type { SharedHeroData } from './data/heroDescription';
+import { decodeAdventureFromParams } from './data/adventureDescription';
 import type { AppScreen, AdventureDefinition, HeroDefinition, GameSnapshot, RunResult, HeroPath } from './types';
 import { DEFAULT_CUSTOM_SETTINGS } from './types';
 
 export default function App() {
-  const [screen, setScreen] = useState<AppScreen | 'loading' | 'error'>(() => {
+  const [screen, setScreen] = useState<AppScreen | 'loading' | 'run-ready' | 'error'>(() => {
     // If URL has a shared hero, start directly on roster
     const params = new URLSearchParams(window.location.search);
     if (decodeHeroFromParams(params)) return 'roster';
+    // If URL has a shared adventure, start directly on party-select
+    if (decodeAdventureFromParams(params)) return 'party-select';
     return 'home';
   });
   const [selectedAdventure, setSelectedAdventure] = useState<AdventureDefinition | null>(null);
@@ -57,6 +61,11 @@ export default function App() {
     const params = new URLSearchParams(window.location.search);
     return decodeHeroFromParams(params);
   });
+  // Shared adventure decoded from URL params (added to list and pre-selected)
+  const [sharedAdventure] = useState<AdventureDefinition | null>(() => {
+    const params = new URLSearchParams(window.location.search);
+    return decodeAdventureFromParams(params);
+  });
 
   // Track whether the current battle is a replay of a saved run (no re-save on complete)
   const replayingRunRef = useRef<RunResult | null>(null);
@@ -65,13 +74,27 @@ export default function App() {
   useEffect(() => {
     loadAllRuns().then(setAllRuns);
     loadRoster().then(setRoster);
-    loadAdventures().then(setAdventures);
+    loadAdventures().then(async (loadedAdventures) => {
+      let allAdventures = loadedAdventures;
+      if (sharedAdventure) {
+        // Add the shared adventure if it isn't already in the list (match by name+mode)
+        const exists = loadedAdventures.some(
+          a => a.name === sharedAdventure.name && a.mode === sharedAdventure.mode,
+        );
+        if (!exists) {
+          allAdventures = [...loadedAdventures, sharedAdventure];
+          await saveAdventures(allAdventures);
+        }
+        setSelectedAdventure(sharedAdventure);
+      }
+      setAdventures(allAdventures);
+    });
     // Clear the share params from the URL without reloading
-    if (sharedHero) {
+    if (sharedHero || sharedAdventure) {
       const url = window.location.origin + window.location.pathname;
       window.history.replaceState({}, '', url);
     }
-  }, [sharedHero]);
+  }, [sharedHero, sharedAdventure]);
 
   // ── Roster helpers ──────────────────────────────────────────────────────
 
@@ -128,7 +151,7 @@ export default function App() {
       );
       setSnapshots(result.snapshots);
       setHeroPaths(result.heroPaths);
-      setScreen('battle');
+      setScreen('run-ready');
     } catch (e) {
       console.error('[App] Quick play simulation error:', e);
       setError(e instanceof Error ? e.message : String(e));
@@ -138,6 +161,16 @@ export default function App() {
 
   function onAdventureSelected(adventure: AdventureDefinition) {
     setSelectedAdventure(adventure);
+    setScreen('party-select');
+  }
+
+  function handleJoinAdventure(adv: AdventureDefinition) {
+    // Add the adventure to the list if it isn't already saved (match by name+mode)
+    const exists = adventures.some(a => a.name === adv.name && a.mode === adv.mode);
+    if (!exists) {
+      handleAdventuresChange([...adventures, adv]);
+    }
+    setSelectedAdventure(adv);
     setScreen('party-select');
   }
 
@@ -159,7 +192,7 @@ export default function App() {
       );
       setSnapshots(result.snapshots);
       setHeroPaths(result.heroPaths);
-      setScreen('battle');
+      setScreen('run-ready');
     } catch (e) {
       console.error('[App] Simulation error:', e);
       setError(e instanceof Error ? e.message : String(e));
@@ -215,7 +248,7 @@ export default function App() {
       );
       setSnapshots(result.snapshots);
       setHeroPaths(result.heroPaths);
-      setScreen('battle');
+      setScreen('run-ready');
     } catch (e) {
       console.error('[App] Rerun simulation error:', e);
       setError(e instanceof Error ? e.message : String(e));
@@ -302,6 +335,7 @@ export default function App() {
       <AdventureSelectScreen
         adventures={adventures}
         onSelect={onAdventureSelected}
+        onJoinAdventure={handleJoinAdventure}
         onManageAdventures={() => setScreen('adventure-manager')}
         onBack={goHome}
       />
@@ -335,6 +369,10 @@ export default function App() {
 
   if (screen === 'loading') {
     return <LoadingScreen message={loadingMessage} />;
+  }
+
+  if (screen === 'run-ready') {
+    return <RunReadyScreen onPlay={() => setScreen('battle')} />;
   }
 
   if (screen === 'battle') {
