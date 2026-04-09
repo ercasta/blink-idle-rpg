@@ -95,6 +95,49 @@ export interface HeroPath {
 
 export type GameMode = 'normal' | 'easy' | 'hard' | 'custom';
 
+// ── Damage types & resistances ──────────────────────────────────────────────
+
+/** Physical or magical damage source category. */
+export type DamageCategory = 'physical' | 'magical';
+
+/** Elemental affinity — `neutral` means no elemental modifier. */
+export type Element = 'neutral' | 'fire' | 'water' | 'wind' | 'earth' | 'light' | 'darkness';
+
+/** All non-neutral elements (neutral has no associated slider or resistance). */
+export const ALL_ELEMENTS: Element[] = ['fire', 'water', 'wind', 'earth', 'light', 'darkness'];
+
+/**
+ * Adventure environment settings — probability sliders that control the
+ * chance of encountering enemies with specific damage types and resistances.
+ *
+ * Each slider is **unified**: a high "fire" value means enemies are more likely
+ * to BOTH deal fire damage AND resist fire attacks.  Sliders are independent
+ * across elements — an adventure can have both high fire and water chances.
+ *
+ * Each value is a percentage 0–100.
+ */
+export interface EnvironmentSettings {
+  physicalPct: number;
+  magicalPct: number;
+  firePct: number;
+  waterPct: number;
+  windPct: number;
+  earthPct: number;
+  lightPct: number;
+  darknessPct: number;
+}
+
+export const DEFAULT_ENVIRONMENT_SETTINGS: EnvironmentSettings = {
+  physicalPct: 50,
+  magicalPct: 30,
+  firePct: 15,
+  waterPct: 15,
+  windPct: 10,
+  earthPct: 10,
+  lightPct: 10,
+  darknessPct: 10,
+};
+
 /**
  * Custom-mode slider settings.
  * Each value is a percentage offset from the normal-mode baseline: -50 to +50.
@@ -129,6 +172,8 @@ export interface AdventureDefinition {
   requiredHeroCount: number;
   /** Classes permitted in the party (default: all 6) */
   allowedClasses: HeroClass[];
+  /** Environment sliders controlling enemy damage types and resistances */
+  environmentSettings?: EnvironmentSettings;
 }
 
 export interface GameModeDefinition {

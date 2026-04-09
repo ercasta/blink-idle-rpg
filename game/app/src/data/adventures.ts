@@ -2,7 +2,8 @@
  * Random adventure generation and default adventure data.
  */
 
-import type { AdventureDefinition, GameMode, HeroClass, HeroDefinition } from '../types';
+import type { AdventureDefinition, GameMode, HeroClass, HeroDefinition, EnvironmentSettings } from '../types';
+import { DEFAULT_ENVIRONMENT_SETTINGS } from '../types';
 import { generateAdventureDescription } from './adventureDescription';
 import { generateRandomHero } from './heroes';
 
@@ -44,6 +45,26 @@ function randomAdventureName(): string {
 
 // ── Random adventure ──────────────────────────────────────────────────────────
 
+/** Randomise a single environment slider value around a base, clamped to 0–100. */
+function randomPct(base: number, spread: number): number {
+  const v = base + Math.floor(Math.random() * spread * 2) - spread;
+  return Math.max(0, Math.min(100, Math.round(v / 5) * 5)); // snap to 5%
+}
+
+/** Generate random environment settings (unified per-element sliders). */
+function randomEnvironment(): EnvironmentSettings {
+  return {
+    physicalPct:  randomPct(DEFAULT_ENVIRONMENT_SETTINGS.physicalPct, 25),
+    magicalPct:   randomPct(DEFAULT_ENVIRONMENT_SETTINGS.magicalPct, 25),
+    firePct:      randomPct(DEFAULT_ENVIRONMENT_SETTINGS.firePct, 20),
+    waterPct:     randomPct(DEFAULT_ENVIRONMENT_SETTINGS.waterPct, 20),
+    windPct:      randomPct(DEFAULT_ENVIRONMENT_SETTINGS.windPct, 15),
+    earthPct:     randomPct(DEFAULT_ENVIRONMENT_SETTINGS.earthPct, 15),
+    lightPct:     randomPct(DEFAULT_ENVIRONMENT_SETTINGS.lightPct, 15),
+    darknessPct:  randomPct(DEFAULT_ENVIRONMENT_SETTINGS.darknessPct, 15),
+  };
+}
+
 /**
  * Generate a random adventure with randomised difficulty and party requirements.
  * Biased toward normal/easy modes for a good first experience.
@@ -66,6 +87,7 @@ export function generateRandomAdventure(): AdventureDefinition {
   }
 
   const name = randomAdventureName();
+  const environmentSettings = randomEnvironment();
 
   const draft: Omit<AdventureDefinition, 'description'> = {
     id: `adventure-${crypto.randomUUID()}`,
@@ -73,6 +95,7 @@ export function generateRandomAdventure(): AdventureDefinition {
     mode,
     requiredHeroCount,
     allowedClasses,
+    environmentSettings,
   };
 
   return {

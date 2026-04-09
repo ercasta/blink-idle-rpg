@@ -5,7 +5,7 @@
  * skill selection, and AI decision weights.
  */
 
-import type { HeroClass, HeroTraits, HeroPathEntry } from '../types';
+import type { HeroClass, HeroTraits, HeroPathEntry, DamageCategory, Element } from '../types';
 
 // ── Trait axis metadata (for UI) ────────────────────────────────────────────
 
@@ -344,4 +344,71 @@ export function simulateHeroPath(
   }
 
   return entries;
+}
+
+// ── Damage type & resistance derivation from traits ─────────────────────────
+
+const ELEMENT_THRESHOLD = 5;
+
+/**
+ * Derive a hero's primary damage category from the pm trait.
+ * Physical (pm ≤ −5), Magical (pm ≥ 5), default Physical.
+ */
+export function deriveDamageCategory(traits: HeroTraits): DamageCategory {
+  return traits.pm >= ELEMENT_THRESHOLD ? 'magical' : 'physical';
+}
+
+/**
+ * Derive a hero's damage element from the fw/we/ld traits.
+ * Picks the axis with the largest absolute value ≥ threshold.
+ */
+export function deriveDamageElement(traits: HeroTraits): Element {
+  const axes: { neg: Element; pos: Element; val: number }[] = [
+    { neg: 'fire',  pos: 'water',    val: traits.fw },
+    { neg: 'wind',  pos: 'earth',    val: traits.we },
+    { neg: 'light', pos: 'darkness', val: traits.ld },
+  ];
+
+  let best: { element: Element; magnitude: number } = { element: 'neutral', magnitude: 0 };
+  for (const axis of axes) {
+    const mag = Math.abs(axis.val);
+    if (mag >= ELEMENT_THRESHOLD && mag > best.magnitude) {
+      best = { element: axis.val < 0 ? axis.neg : axis.pos, magnitude: mag };
+    }
+  }
+  return best.element;
+}
+
+/** Resistance values (0–50) keyed by damage category or element. */
+export interface ResistanceProfile {
+  physical: number;
+  magical: number;
+  fire: number;
+  water: number;
+  wind: number;
+  earth: number;
+  light: number;
+  darkness: number;
+}
+
+function resistValue(traitVal: number, negative: boolean): number {
+  const oriented = negative ? -traitVal : traitVal;
+  return Math.max(0, Math.min(50, (oriented - ELEMENT_THRESHOLD) * 5));
+}
+
+/**
+ * Derive a hero's resistance profile from traits.
+ * Each resistance is 0–50% reduction for the corresponding damage type.
+ */
+export function deriveResistances(traits: HeroTraits): ResistanceProfile {
+  return {
+    physical:  resistValue(traits.pm, true),   // physical-leaning (negative pm) resists physical
+    magical:   resistValue(traits.pm, false),   // magical-leaning (positive pm) resists magical
+    fire:      resistValue(traits.fw, true),    // fire-leaning (negative fw) resists fire
+    water:     resistValue(traits.fw, false),   // water-leaning (positive fw) resists water
+    wind:      resistValue(traits.we, true),    // wind-leaning (negative we) resists wind
+    earth:     resistValue(traits.we, false),   // earth-leaning (positive we) resists earth
+    light:     resistValue(traits.ld, true),    // light-leaning (negative ld) resists light
+    darkness:  resistValue(traits.ld, false),   // darkness-leaning (positive ld) resists darkness
+  };
 }
