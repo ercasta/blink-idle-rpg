@@ -102,6 +102,24 @@ component Buffs {
     regenAmount: integer
 }
 
+// Damage type information — drives resistance-based damage reduction
+component DamageType {
+    category: string    // "physical" or "magical"
+    element: string     // "neutral", "fire", "water", "wind", "earth", "light", "darkness"
+}
+
+// Resistance profile — percentage reduction (0–100) for each damage type
+component Resistance {
+    physical: integer
+    magical: integer
+    fire: integer
+    water: integer
+    wind: integer
+    earth: integer
+    light: integer
+    darkness: integer
+}
+
 // Game state tracking
 component GameState {
     currentWave: integer
@@ -248,6 +266,22 @@ component GameMode {
 // Helper function to calculate damage
 fn calculate_damage(base: decimal, bonus: decimal): decimal {
     return base + bonus
+}
+
+// Reduce damage by a resistance percentage (capped at 75%), minimum 1
+fn reduce_by_resist(dmg: integer, resistPct: integer): integer {
+    let capped: integer = resistPct
+    if capped > 75 {
+        capped = 75
+    }
+    if capped > 0 {
+        let reduced: integer = dmg - dmg * capped / 100
+        if reduced < 1 {
+            return 1
+        }
+        return reduced
+    }
+    return dmg
 }
 
 // Helper function to calculate experience for level
@@ -489,6 +523,41 @@ let damage: integer = max(1, rawDamage - effectiveDefense)
                     // Apply critical hit
                     if random() < attacker.Combat.critChance {
                         damage = floor(damage * attacker.Combat.critMultiplier)
+                    }
+                    // Apply type-based resistance reduction
+                    if attacker has DamageType {
+                        if target has Resistance {
+let catResist: integer = 0
+                            if attacker.DamageType.category == "physical" {
+                                catResist = target.Resistance.physical
+                            }
+                            if attacker.DamageType.category == "magical" {
+                                catResist = target.Resistance.magical
+                            }
+let elemResist: integer = 0
+                            if attacker.DamageType.element == "fire" {
+                                elemResist = target.Resistance.fire
+                            }
+                            if attacker.DamageType.element == "water" {
+                                elemResist = target.Resistance.water
+                            }
+                            if attacker.DamageType.element == "wind" {
+                                elemResist = target.Resistance.wind
+                            }
+                            if attacker.DamageType.element == "earth" {
+                                elemResist = target.Resistance.earth
+                            }
+                            if attacker.DamageType.element == "light" {
+                                elemResist = target.Resistance.light
+                            }
+                            if attacker.DamageType.element == "darkness" {
+                                elemResist = target.Resistance.darkness
+                            }
+let totalResist: integer = min(75, catResist + elemResist)
+                            if totalResist > 0 {
+                                damage = max(1, damage - damage * totalResist / 100)
+                            }
+                        }
                     }
                     // Apply shield absorption
                     if target.Buffs.shieldAmount > 0 {
@@ -992,7 +1061,16 @@ let character: id = us.source
             if character.Target.entity != null {
 let target: id = character.Target.entity
                 if target.Health.current > 0 && target.Health.current < target.Health.max / 3 {
-                    target.Health.current -= character.Combat.damage * 2
+let execDmg: integer = character.Combat.damage * 2
+                    if character has DamageType {
+                        if target has Resistance {
+let ecr: integer = 0
+                            if character.DamageType.category == "physical" { ecr = target.Resistance.physical }
+                            if character.DamageType.category == "magical" { ecr = target.Resistance.magical }
+                            execDmg = reduce_by_resist(execDmg, ecr)
+                        }
+                    }
+                    target.Health.current -= execDmg
                     character.SkillCooldown.skill4Cooldown = 15.0d
                     schedule AfterAttack {
                         attacker: character
@@ -1017,6 +1095,14 @@ let character: id = us.source
 let target: id = character.Target.entity
                     if target.Health.current > 0 {
 let fireDmg: integer = character.Combat.damage + character.Stats.intelligence * 2
+                    if character has DamageType {
+                        if target has Resistance {
+let fcr: integer = 0
+                            if character.DamageType.category == "physical" { fcr = target.Resistance.physical }
+                            if character.DamageType.category == "magical" { fcr = target.Resistance.magical }
+                            fireDmg = reduce_by_resist(fireDmg, fcr)
+                        }
+                    }
                         target.Health.current -= fireDmg
                         character.SkillCooldown.skill1Cooldown = 6.0d
                         schedule AfterAttack {
@@ -1041,6 +1127,14 @@ let character: id = us.source
 let target: id = character.Target.entity
                     if target.Health.current > 0 {
 let frostDmg: integer = character.Combat.damage + character.Stats.intelligence
+                    if character has DamageType {
+                        if target has Resistance {
+let frcr: integer = 0
+                            if character.DamageType.category == "physical" { frcr = target.Resistance.physical }
+                            if character.DamageType.category == "magical" { frcr = target.Resistance.magical }
+                            frostDmg = reduce_by_resist(frostDmg, frcr)
+                        }
+                    }
                         target.Health.current -= frostDmg
                         target.Buffs.hasteBonus -= 0.3d
                         character.SkillCooldown.skill2Cooldown = 8.0d
@@ -1071,6 +1165,14 @@ let character: id = us.source
 let target: id = character.Target.entity
                     if target.Health.current > 0 {
 let blastDmg: integer = character.Combat.damage * 2 + character.Stats.intelligence * 3
+                    if character has DamageType {
+                        if target has Resistance {
+let abcr: integer = 0
+                            if character.DamageType.category == "physical" { abcr = target.Resistance.physical }
+                            if character.DamageType.category == "magical" { abcr = target.Resistance.magical }
+                            blastDmg = reduce_by_resist(blastDmg, abcr)
+                        }
+                    }
                         target.Health.current -= blastDmg
                         character.SkillCooldown.skill3Cooldown = 10.0d
                         schedule AfterAttack {
@@ -1109,6 +1211,14 @@ let character: id = us.source
 let target: id = character.Target.entity
                 if target.Health.current > 0 {
 let arrowDmg: integer = character.Combat.damage + character.Stats.dexterity
+                    if character has DamageType {
+                        if target has Resistance {
+let arcr: integer = 0
+                            if character.DamageType.category == "physical" { arcr = target.Resistance.physical }
+                            if character.DamageType.category == "magical" { arcr = target.Resistance.magical }
+                            arrowDmg = reduce_by_resist(arrowDmg, arcr)
+                        }
+                    }
                     target.Health.current -= arrowDmg
                     character.SkillCooldown.skill1Cooldown = 5.0d
                     schedule AfterAttack {
@@ -1132,6 +1242,14 @@ let hitCount: integer = 0
                 if hitCount < 3 {
                     if enemy.EnemyTemplate.isTemplate == false && enemy.Health.current > 0 {
 let multiDmg: integer = character.Combat.damage / 2 + character.Stats.dexterity
+                        if character has DamageType {
+                            if enemy has Resistance {
+let mscr: integer = 0
+                                if character.DamageType.category == "physical" { mscr = enemy.Resistance.physical }
+                                if character.DamageType.category == "magical" { mscr = enemy.Resistance.magical }
+                                multiDmg = reduce_by_resist(multiDmg, mscr)
+                            }
+                        }
                         enemy.Health.current -= multiDmg
                         hitCount += 1
                         schedule AfterAttack {
@@ -1172,6 +1290,14 @@ let character: id = us.source
 let target: id = character.Target.entity
                 if target.Health.current > 0 {
 let trapDmg: integer = character.Combat.damage + character.Stats.dexterity * 2
+                    if character has DamageType {
+                        if target has Resistance {
+let trcr: integer = 0
+                            if character.DamageType.category == "physical" { trcr = target.Resistance.physical }
+                            if character.DamageType.category == "magical" { trcr = target.Resistance.magical }
+                            trapDmg = reduce_by_resist(trapDmg, trcr)
+                        }
+                    }
                     target.Health.current -= trapDmg
                     character.SkillCooldown.skill4Cooldown = 15.0d
                     schedule AfterAttack {
@@ -1195,6 +1321,14 @@ let character: id = us.source
 let target: id = character.Target.entity
                 if target.Health.current > 0 {
 let holyDmg: integer = character.Combat.damage + character.Stats.wisdom
+                    if character has DamageType {
+                        if target has Resistance {
+let hscr: integer = 0
+                            if character.DamageType.category == "physical" { hscr = target.Resistance.physical }
+                            if character.DamageType.category == "magical" { hscr = target.Resistance.magical }
+                            holyDmg = reduce_by_resist(holyDmg, hscr)
+                        }
+                    }
                     target.Health.current -= holyDmg
                     // Self-heal from holy power
 let selfHeal: integer = 5 + character.Stats.wisdom
@@ -1235,6 +1369,14 @@ let hitCount: integer = 0
                 if hitCount < 4 {
                     if enemy.EnemyTemplate.isTemplate == false && enemy.Health.current > 0 {
 let consecDmg: integer = character.Stats.wisdom * 2
+                        if character has DamageType {
+                            if enemy has Resistance {
+let cscr: integer = 0
+                                if character.DamageType.category == "physical" { cscr = enemy.Resistance.physical }
+                                if character.DamageType.category == "magical" { cscr = enemy.Resistance.magical }
+                                consecDmg = reduce_by_resist(consecDmg, cscr)
+                            }
+                        }
                         enemy.Health.current -= consecDmg
                         hitCount += 1
                         schedule AfterAttack {
@@ -1287,6 +1429,14 @@ let character: id = us.source
 let target: id = character.Target.entity
                 if target.Health.current > 0 {
 let backstabDmg: integer = character.Combat.damage * 2 + character.Stats.dexterity * 2
+                    if character has DamageType {
+                        if target has Resistance {
+let bscr: integer = 0
+                            if character.DamageType.category == "physical" { bscr = target.Resistance.physical }
+                            if character.DamageType.category == "magical" { bscr = target.Resistance.magical }
+                            backstabDmg = reduce_by_resist(backstabDmg, bscr)
+                        }
+                    }
                     target.Health.current -= backstabDmg
                     character.SkillCooldown.skill1Cooldown = 5.0d
                     schedule AfterAttack {
@@ -1342,6 +1492,14 @@ let character: id = us.source
 let target: id = character.Target.entity
                 if target.Health.current > 0 {
 let shadowDmg: integer = character.Combat.damage * 3
+                    if character has DamageType {
+                        if target has Resistance {
+let sscr: integer = 0
+                            if character.DamageType.category == "physical" { sscr = target.Resistance.physical }
+                            if character.DamageType.category == "magical" { sscr = target.Resistance.magical }
+                            shadowDmg = reduce_by_resist(shadowDmg, sscr)
+                        }
+                    }
                     target.Health.current -= shadowDmg
                     character.SkillCooldown.skill4Cooldown = 15.0d
                     schedule AfterAttack {
@@ -1398,6 +1556,14 @@ let character: id = us.source
 let target: id = character.Target.entity
                     if target.Health.current > 0 {
 let smiteDmg: integer = character.Combat.damage + character.Stats.wisdom * 2
+                    if character has DamageType {
+                        if target has Resistance {
+let smcr: integer = 0
+                            if character.DamageType.category == "physical" { smcr = target.Resistance.physical }
+                            if character.DamageType.category == "magical" { smcr = target.Resistance.magical }
+                            smiteDmg = reduce_by_resist(smiteDmg, smcr)
+                        }
+                    }
                         target.Health.current -= smiteDmg
                         character.SkillCooldown.skill2Cooldown = 6.0d
                         schedule AfterAttack {

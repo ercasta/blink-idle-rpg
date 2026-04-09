@@ -136,5 +136,81 @@
     },
     "runs": 5,
     "seedStart": 1400
+  },
+  {
+    "id": "mages_phys_resist_world",
+    "name": "4x Mages in High Physical Resistance World",
+    "description": "Magical party facing enemies that strongly resist physical attacks. Mages should excel here because their magical damage bypasses physical resistance.",
+    "party": ["Mage", "Mage", "Mage", "Mage"],
+    "mode": "normal",
+    "environmentSettings": {
+      "physicalPct": 100,
+      "magicalPct": 0,
+      "firePct": 0,
+      "waterPct": 0,
+      "windPct": 0,
+      "earthPct": 0,
+      "lightPct": 0,
+      "darknessPct": 0
+    },
+    "runs": 5,
+    "seedStart": 1500
+  },
+  {
+    "id": "warriors_phys_resist_world",
+    "name": "4x Warriors in High Physical Resistance World",
+    "description": "Physical party facing enemies that strongly resist physical attacks. Warriors should struggle because their physical damage is heavily reduced.",
+    "party": ["Warrior", "Warrior", "Warrior", "Warrior"],
+    "mode": "normal",
+    "environmentSettings": {
+      "physicalPct": 100,
+      "magicalPct": 0,
+      "firePct": 0,
+      "waterPct": 0,
+      "windPct": 0,
+      "earthPct": 0,
+      "lightPct": 0,
+      "darknessPct": 0
+    },
+    "runs": 5,
+    "seedStart": 1600
+  },
+  {
+    "id": "warriors_magic_resist_world",
+    "name": "4x Warriors in High Magical Resistance World",
+    "description": "Physical party facing enemies that strongly resist magical attacks. Warriors should excel because their physical damage is unaffected.",
+    "party": ["Warrior", "Warrior", "Warrior", "Warrior"],
+    "mode": "normal",
+    "environmentSettings": {
+      "physicalPct": 0,
+      "magicalPct": 100,
+      "firePct": 0,
+      "waterPct": 0,
+      "windPct": 0,
+      "earthPct": 0,
+      "lightPct": 0,
+      "darknessPct": 0
+    },
+    "runs": 5,
+    "seedStart": 1700
+  },
+  {
+    "id": "mages_magic_resist_world",
+    "name": "4x Mages in High Magical Resistance World",
+    "description": "Magical party facing enemies that strongly resist magical attacks. Mages should struggle because their magical damage is heavily reduced.",
+    "party": ["Mage", "Mage", "Mage", "Mage"],
+    "mode": "normal",
+    "environmentSettings": {
+      "physicalPct": 0,
+      "magicalPct": 100,
+      "firePct": 0,
+      "waterPct": 0,
+      "windPct": 0,
+      "earthPct": 0,
+      "lightPct": 0,
+      "darknessPct": 0
+    },
+    "runs": 5,
+    "seedStart": 1800
   }
 ]

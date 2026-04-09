@@ -104,6 +104,9 @@ function runScenario(binaryPath, scenario, gameData, seedOffset, verbose) {
     ? 1 + (customSettings.expMultiplierPct || 0) / 100
     : null;
 
+  // Environment settings for damage type / resistance assignment
+  const envSettings = scenario.environmentSettings || null;
+
   const results = [];
   for (let i = 0; i < scenario.runs; i++) {
     const seed = scenario.seedStart + seedOffset + i;
@@ -111,7 +114,7 @@ function runScenario(binaryPath, scenario, gameData, seedOffset, verbose) {
       seed,
       maxSteps: DEFAULT_MAX_STEPS,
       heroes: scenario.party.map(cls => buildHeroJson(cls, gameData.heroes)),
-      enemies: gameData.enemies.map(e => buildEnemyJson(e, expMult)),
+      enemies: gameData.enemies.map(e => buildEnemyJson(e, expMult, envSettings)),
       configEntities: buildConfigEntities(mode),
     };
 
@@ -208,13 +211,14 @@ function checkDeterminism(check, allResults, binaryPath, gameData, seedOffset) {
     : null;
 
   const mismatches = [];
+  const envSettings = scenario.environmentSettings || null;
   for (let i = 0; i < sr.results.length; i++) {
     const seed = scenario.seedStart + seedOffset + i;
     const config = {
       seed,
       maxSteps: DEFAULT_MAX_STEPS,
       heroes: scenario.party.map(cls => buildHeroJson(cls, gameData.heroes)),
-      enemies: gameData.enemies.map(e => buildEnemyJson(e, expMult)),
+      enemies: gameData.enemies.map(e => buildEnemyJson(e, expMult, envSettings)),
       configEntities: buildConfigEntities(mode),
     };
 

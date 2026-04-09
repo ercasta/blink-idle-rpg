@@ -351,14 +351,14 @@ function _runWithWasm(
 
     // Derive enemy resistances — same unified sliders drive resistance chance
     const enemyResist = {
-      physical:  _pseudoRoll(ti, 10) < env.physicalPct  / 100 ? 30 : 0,
-      magical:   _pseudoRoll(ti, 11) < env.magicalPct   / 100 ? 30 : 0,
-      fire:      _pseudoRoll(ti, 12) < env.firePct      / 100 ? 30 : 0,
-      water:     _pseudoRoll(ti, 13) < env.waterPct     / 100 ? 30 : 0,
-      wind:      _pseudoRoll(ti, 14) < env.windPct      / 100 ? 30 : 0,
-      earth:     _pseudoRoll(ti, 15) < env.earthPct     / 100 ? 30 : 0,
-      light:     _pseudoRoll(ti, 16) < env.lightPct     / 100 ? 30 : 0,
-      darkness:  _pseudoRoll(ti, 17) < env.darknessPct  / 100 ? 30 : 0,
+      physical:  _pseudoRoll(ti, 10) < env.physicalPct  / 100 ? 50 : 0,
+      magical:   _pseudoRoll(ti, 11) < env.magicalPct   / 100 ? 50 : 0,
+      fire:      _pseudoRoll(ti, 12) < env.firePct      / 100 ? 50 : 0,
+      water:     _pseudoRoll(ti, 13) < env.waterPct     / 100 ? 50 : 0,
+      wind:      _pseudoRoll(ti, 14) < env.windPct      / 100 ? 50 : 0,
+      earth:     _pseudoRoll(ti, 15) < env.earthPct     / 100 ? 50 : 0,
+      light:     _pseudoRoll(ti, 16) < env.lightPct     / 100 ? 50 : 0,
+      darkness:  _pseudoRoll(ti, 17) < env.darknessPct  / 100 ? 50 : 0,
     };
 
     game.create_entity(tmpl.id);

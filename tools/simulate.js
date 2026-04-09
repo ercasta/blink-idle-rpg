@@ -287,6 +287,15 @@ fn main() {
 
 // ─── Build entity JSON for the native binary ────────────────────────────────
 
+// Damage-type defaults per hero class
+const HERO_DAMAGE_CATEGORY = {
+  Warrior: 'physical', Mage: 'magical', Ranger: 'physical',
+  Paladin: 'physical', Rogue: 'physical', Cleric: 'magical',
+};
+const DEFAULT_HERO_RESISTANCE = {
+  physical: 0, magical: 0, fire: 0, water: 0, wind: 0, earth: 0, light: 0, darkness: 0,
+};
+
 function buildHeroJson(heroClass, heroData) {
   const cls = heroData.classes[heroClass];
   if (!cls) throw new Error(`Unknown hero class: ${heroClass}`);
@@ -300,6 +309,8 @@ function buildHeroJson(heroClass, heroData) {
       damage: cls.damage, defense: cls.defense,
       attackSpeed: cls.attackSpeed, critChance: cls.critChance || 0.1, critMultiplier: cls.critMultiplier || 1.5,
     },
+    DamageType: { category: HERO_DAMAGE_CATEGORY[heroClass] || 'physical', element: 'neutral' },
+    Resistance: { ...DEFAULT_HERO_RESISTANCE },
     Target: { entity: 0 },
     Team: { id: 'player', isPlayer: true },
     Skills: {
@@ -312,10 +323,60 @@ function buildHeroJson(heroClass, heroData) {
   };
 }
 
-function buildEnemyJson(template, expMultiplier) {
+/**
+ * Simple deterministic pseudo-random in [0, 1) for enemy template setup.
+ * Matches WasmSimEngine._pseudoRoll() so environment-driven rolls
+ * produce identical results across native and WASM engines.
+ */
+function _pseudoRoll(templateIndex, slot) {
+  let h = (templateIndex * 2654435761 + slot * 2246822519) >>> 0;
+  h = ((h ^ (h >>> 16)) * 2246822507) >>> 0;
+  h = ((h ^ (h >>> 13)) * 3266489909) >>> 0;
+  h = (h ^ (h >>> 16)) >>> 0;
+  return (h & 0x7fffffff) / 0x80000000;
+}
+
+function _pickEnemyElement(env, templateIndex) {
+  const candidates = [];
+  const elementChances = [
+    ['fire', env.firePct], ['water', env.waterPct], ['wind', env.windPct],
+    ['earth', env.earthPct], ['light', env.lightPct], ['darkness', env.darknessPct],
+  ];
+  for (let i = 0; i < elementChances.length; i++) {
+    const [elem, chancePct] = elementChances[i];
+    if (_pseudoRoll(templateIndex, i + 1) < chancePct / 100) {
+      candidates.push(elem);
+    }
+  }
+  if (candidates.length === 0) return 'neutral';
+  const pickIdx = Math.floor(_pseudoRoll(templateIndex, 7) * candidates.length);
+  return candidates[pickIdx];
+}
+
+function buildEnemyJson(template, expMultiplier, environmentSettings) {
   const expReward = expMultiplier != null
     ? Math.round(template.expReward * expMultiplier)
     : template.expReward;
+
+  // Derive damage type & resistances from environment settings (if provided)
+  const env = environmentSettings || {
+    physicalPct: 50, magicalPct: 30, firePct: 15, waterPct: 15,
+    windPct: 10, earthPct: 10, lightPct: 10, darknessPct: 10,
+  };
+  const ti = template.id - 100; // template index (0-based)
+  const enemyCategory = _pseudoRoll(ti, 0) < env.magicalPct / 100 ? 'magical' : 'physical';
+  const enemyElement = _pickEnemyElement(env, ti);
+  const enemyResist = {
+    physical:  _pseudoRoll(ti, 10) < env.physicalPct  / 100 ? 50 : 0,
+    magical:   _pseudoRoll(ti, 11) < env.magicalPct   / 100 ? 50 : 0,
+    fire:      _pseudoRoll(ti, 12) < env.firePct      / 100 ? 50 : 0,
+    water:     _pseudoRoll(ti, 13) < env.waterPct     / 100 ? 50 : 0,
+    wind:      _pseudoRoll(ti, 14) < env.windPct      / 100 ? 50 : 0,
+    earth:     _pseudoRoll(ti, 15) < env.earthPct     / 100 ? 50 : 0,
+    light:     _pseudoRoll(ti, 16) < env.lightPct     / 100 ? 50 : 0,
+    darkness:  _pseudoRoll(ti, 17) < env.darknessPct  / 100 ? 50 : 0,
+  };
+
   return {
     _entityId: template.id,
     Character: {
@@ -329,6 +390,8 @@ function buildEnemyJson(template, expMultiplier) {
       damage: template.damage, defense: Math.floor(template.tier * 2),
       attackSpeed: template.speed, critChance: 0.05, critMultiplier: 1.5,
     },
+    DamageType: { category: enemyCategory, element: enemyElement },
+    Resistance: enemyResist,
     Target: { entity: 0 },
     Team: { id: 'enemy', isPlayer: false },
     Enemy: { tier: template.tier, isBoss: template.isBoss || false, expReward, wave: template.tier, name: template.name },
