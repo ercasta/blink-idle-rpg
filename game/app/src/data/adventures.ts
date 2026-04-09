@@ -2,7 +2,7 @@
  * Random adventure generation and default adventure data.
  */
 
-import type { AdventureDefinition, HeroClass, HeroDefinition } from '../types';
+import type { AdventureDefinition, GameMode, HeroClass, HeroDefinition } from '../types';
 import { generateAdventureDescription } from './adventureDescription';
 import { generateRandomHero } from './heroes';
 
@@ -49,7 +49,7 @@ function randomAdventureName(): string {
  * Biased toward normal/easy modes for a good first experience.
  */
 export function generateRandomAdventure(): AdventureDefinition {
-  const modes = ['normal', 'normal', 'easy', 'hard'] as const;
+  const modes: GameMode[] = ['normal', 'normal', 'easy', 'hard'];
   const mode = pickRandom(modes);
 
   // Hero count: bias toward 4
