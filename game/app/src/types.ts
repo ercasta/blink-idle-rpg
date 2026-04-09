@@ -95,6 +95,61 @@ export interface HeroPath {
 
 export type GameMode = 'normal' | 'easy' | 'hard' | 'custom';
 
+// ── Damage types & resistances ──────────────────────────────────────────────
+
+/** Physical or magical damage source category. */
+export type DamageCategory = 'physical' | 'magical';
+
+/** Elemental affinity — `neutral` means no elemental modifier. */
+export type Element = 'neutral' | 'fire' | 'water' | 'wind' | 'earth' | 'light' | 'darkness';
+
+export const ALL_ELEMENTS: Element[] = ['fire', 'water', 'wind', 'earth', 'light', 'darkness'];
+
+/**
+ * Adventure environment settings — probability sliders that control the
+ * chance of encountering enemies with specific damage types and resistances.
+ *
+ * Each value is a percentage 0–100.  Sliders are **independent**: an adventure
+ * can have both high fire and high water chances simultaneously.
+ */
+export interface EnvironmentSettings {
+  // Enemy damage type chances (0–100%)
+  magicalChancePct: number;
+  fireChancePct: number;
+  waterChancePct: number;
+  windChancePct: number;
+  earthChancePct: number;
+  lightChancePct: number;
+  darknessChancePct: number;
+  // Enemy resistance chances (0–100%)
+  resistPhysicalChancePct: number;
+  resistMagicalChancePct: number;
+  resistFireChancePct: number;
+  resistWaterChancePct: number;
+  resistWindChancePct: number;
+  resistEarthChancePct: number;
+  resistLightChancePct: number;
+  resistDarknessChancePct: number;
+}
+
+export const DEFAULT_ENVIRONMENT_SETTINGS: EnvironmentSettings = {
+  magicalChancePct: 30,
+  fireChancePct: 15,
+  waterChancePct: 15,
+  windChancePct: 10,
+  earthChancePct: 10,
+  lightChancePct: 10,
+  darknessChancePct: 10,
+  resistPhysicalChancePct: 20,
+  resistMagicalChancePct: 20,
+  resistFireChancePct: 10,
+  resistWaterChancePct: 10,
+  resistWindChancePct: 10,
+  resistEarthChancePct: 10,
+  resistLightChancePct: 10,
+  resistDarknessChancePct: 10,
+};
+
 /**
  * Custom-mode slider settings.
  * Each value is a percentage offset from the normal-mode baseline: -50 to +50.
@@ -129,6 +184,8 @@ export interface AdventureDefinition {
   requiredHeroCount: number;
   /** Classes permitted in the party (default: all 6) */
   allowedClasses: HeroClass[];
+  /** Environment sliders controlling enemy damage types and resistances */
+  environmentSettings?: EnvironmentSettings;
 }
 
 export interface GameModeDefinition {

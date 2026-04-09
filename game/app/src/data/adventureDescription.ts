@@ -8,8 +8,8 @@
  * mirroring the hero share-link pattern in heroDescription.ts.
  */
 
-import type { AdventureDefinition, GameMode, HeroClass, CustomModeSettings } from '../types';
-import { DEFAULT_CUSTOM_SETTINGS } from '../types';
+import type { AdventureDefinition, GameMode, HeroClass, CustomModeSettings, EnvironmentSettings } from '../types';
+import { DEFAULT_CUSTOM_SETTINGS, DEFAULT_ENVIRONMENT_SETTINGS } from '../types';
 
 // ── Difficulty prose ─────────────────────────────────────────────────────────
 
@@ -182,14 +182,59 @@ function getFlavourCloser(mode: GameMode, seed: number): string {
   return list[seed % list.length];
 }
 
+// ── Environment prose ────────────────────────────────────────────────────────
+
+const ELEMENT_EMOJI: Record<string, string> = {
+  fire: '🔥', water: '💧', wind: '💨', earth: '🪨', light: '✨', darkness: '🌑',
+};
+
+function getEnvironmentSentence(env?: EnvironmentSettings): string {
+  if (!env) return '';
+
+  const highDmg: string[] = [];
+  const highResist: string[] = [];
+
+  // Damage type highlights (>= 30% is noteworthy)
+  if (env.magicalChancePct >= 50) highDmg.push('magical');
+  const elements: [string, number][] = [
+    ['fire', env.fireChancePct], ['water', env.waterChancePct],
+    ['wind', env.windChancePct], ['earth', env.earthChancePct],
+    ['light', env.lightChancePct], ['darkness', env.darknessChancePct],
+  ];
+  for (const [name, pct] of elements) {
+    if (pct >= 30) highDmg.push(`${ELEMENT_EMOJI[name]} ${name}`);
+  }
+
+  // Resistance highlights
+  const resists: [string, number][] = [
+    ['physical', env.resistPhysicalChancePct], ['magical', env.resistMagicalChancePct],
+    ['fire', env.resistFireChancePct], ['water', env.resistWaterChancePct],
+    ['wind', env.resistWindChancePct], ['earth', env.resistEarthChancePct],
+    ['light', env.resistLightChancePct], ['darkness', env.resistDarknessChancePct],
+  ];
+  for (const [name, pct] of resists) {
+    if (pct >= 30) highResist.push(name);
+  }
+
+  const parts: string[] = [];
+  if (highDmg.length > 0) {
+    parts.push(`Enemies favour ${highDmg.join(', ')} damage`);
+  }
+  if (highResist.length > 0) {
+    parts.push(`many resist ${highResist.join(', ')} attacks`);
+  }
+  if (parts.length === 0) return '';
+  return parts.join('; ') + '.';
+}
+
 // ── Public entry point ────────────────────────────────────────────────────────
 
 /**
- * Generate a dynamic 2-3 paragraph description for an adventure.
+ * Generate a dynamic 2-4 paragraph description for an adventure.
  * Uses the adventure's settings to produce evocative, varied prose.
  */
 export function generateAdventureDescription(
-  adventure: Pick<AdventureDefinition, 'mode' | 'customSettings' | 'requiredHeroCount' | 'allowedClasses' | 'name'>,
+  adventure: Pick<AdventureDefinition, 'mode' | 'customSettings' | 'requiredHeroCount' | 'allowedClasses' | 'name' | 'environmentSettings'>,
 ): string {
   // Use a simple stable hash of the adventure name as a seed so the same
   // name always produces the same variant of sentences.
@@ -201,9 +246,14 @@ export function generateAdventureDescription(
 
   const p2 = getPartyRequirementSentence(adventure.requiredHeroCount, adventure.allowedClasses);
 
+  const envSentence = getEnvironmentSentence(adventure.environmentSettings);
+
   const p3 = getFlavourCloser(adventure.mode, seed);
 
-  return [p1, p2, p3].join('\n\n');
+  const paragraphs = [p1, p2];
+  if (envSentence) paragraphs.push(envSentence);
+  paragraphs.push(p3);
+  return paragraphs.join('\n\n');
 }
 
 // ── URL encoding / decoding for adventure share links ─────────────────────────
@@ -214,6 +264,15 @@ const HERO_CLASSES_ALL: HeroClass[] = ['Warrior', 'Mage', 'Ranger', 'Paladin', '
 /** Valid range for each CustomModeSettings percentage field, matching the UI slider bounds. */
 const CUSTOM_SETTING_MIN = -50;
 const CUSTOM_SETTING_MAX = 50;
+
+/** Environment setting keys (used for compact URL encoding). */
+const ENV_SETTING_KEYS: (keyof EnvironmentSettings)[] = [
+  'magicalChancePct', 'fireChancePct', 'waterChancePct', 'windChancePct',
+  'earthChancePct', 'lightChancePct', 'darknessChancePct',
+  'resistPhysicalChancePct', 'resistMagicalChancePct', 'resistFireChancePct',
+  'resistWaterChancePct', 'resistWindChancePct', 'resistEarthChancePct',
+  'resistLightChancePct', 'resistDarknessChancePct',
+];
 
 /**
  * Encode an adventure into URL search params so it can be shared as a link or QR code.
@@ -230,6 +289,20 @@ export function encodeAdventureToParams(adv: AdventureDefinition): URLSearchPara
     params.set('advWipeoutPenalty', String(adv.customSettings.wipeoutPenaltyPct));
     params.set('advExpMultiplier', String(adv.customSettings.expMultiplierPct));
     params.set('advEncounterDifficulty', String(adv.customSettings.encounterDifficultyPct));
+  }
+  // Environment settings — encode only non-default values to keep URLs short
+  if (adv.environmentSettings) {
+    const env = adv.environmentSettings;
+    const def = DEFAULT_ENVIRONMENT_SETTINGS;
+    const envEntries: string[] = [];
+    for (const key of ENV_SETTING_KEYS) {
+      if (env[key] !== def[key]) {
+        envEntries.push(`${key}:${env[key]}`);
+      }
+    }
+    if (envEntries.length > 0) {
+      params.set('advEnv', envEntries.join(','));
+    }
   }
   return params;
 }
@@ -274,6 +347,21 @@ export function decodeAdventureFromParams(params: URLSearchParams): AdventureDef
     customSettings = { ...DEFAULT_CUSTOM_SETTINGS };
   }
 
+  // Decode environment settings (optional; falls back to defaults)
+  const environmentSettings: EnvironmentSettings = { ...DEFAULT_ENVIRONMENT_SETTINGS };
+  const envRaw = params.get('advEnv');
+  if (envRaw) {
+    for (const entry of envRaw.split(',')) {
+      const [key, valStr] = entry.split(':');
+      if (key && valStr && ENV_SETTING_KEYS.includes(key as keyof EnvironmentSettings)) {
+        const val = parseInt(valStr, 10);
+        if (!isNaN(val) && val >= 0 && val <= 100) {
+          environmentSettings[key as keyof EnvironmentSettings] = val;
+        }
+      }
+    }
+  }
+
   const adv: AdventureDefinition = {
     id: `adventure-${crypto.randomUUID()}`,
     name,
@@ -281,6 +369,7 @@ export function decodeAdventureFromParams(params: URLSearchParams): AdventureDef
     customSettings,
     requiredHeroCount,
     allowedClasses,
+    environmentSettings,
     description: '',
   };
   adv.description = generateAdventureDescription(adv);

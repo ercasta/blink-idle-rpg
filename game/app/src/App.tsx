@@ -148,6 +148,7 @@ export default function App() {
         randomHeroes,
         adventure.mode,
         adventure.customSettings ?? DEFAULT_CUSTOM_SETTINGS,
+        adventure.environmentSettings,
       );
       setSnapshots(result.snapshots);
       setHeroPaths(result.heroPaths);
@@ -189,6 +190,7 @@ export default function App() {
         heroes,
         selectedAdventure.mode,
         selectedAdventure.customSettings ?? DEFAULT_CUSTOM_SETTINGS,
+        selectedAdventure.environmentSettings,
       );
       setSnapshots(result.snapshots);
       setHeroPaths(result.heroPaths);
@@ -245,6 +247,7 @@ export default function App() {
         selectedHeroes,
         selectedAdventure.mode,
         selectedAdventure.customSettings ?? DEFAULT_CUSTOM_SETTINGS,
+        selectedAdventure.environmentSettings,
       );
       setSnapshots(result.snapshots);
       setHeroPaths(result.heroPaths);

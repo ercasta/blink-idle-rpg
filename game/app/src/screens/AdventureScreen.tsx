@@ -13,8 +13,8 @@
 
 import { useState, useMemo, useEffect, useRef } from 'react';
 import QRCode from 'qrcode';
-import type { AdventureDefinition, GameMode, HeroClass, CustomModeSettings } from '../types';
-import { DEFAULT_CUSTOM_SETTINGS } from '../types';
+import type { AdventureDefinition, GameMode, HeroClass, CustomModeSettings, EnvironmentSettings } from '../types';
+import { DEFAULT_CUSTOM_SETTINGS, DEFAULT_ENVIRONMENT_SETTINGS } from '../types';
 import { generateAdventureDescription, encodeAdventureToParams, decodeAdventureFromParams } from '../data/adventureDescription';
 import { generateRandomAdventure } from '../data/adventures';
 
@@ -52,6 +52,7 @@ interface AdventureDraft {
   customSettings: CustomModeSettings;
   requiredHeroCount: number;
   allowedClasses: HeroClass[];
+  environmentSettings: EnvironmentSettings;
 }
 
 function draftToDefinition(draft: AdventureDraft): AdventureDefinition {
@@ -62,12 +63,14 @@ function draftToDefinition(draft: AdventureDraft): AdventureDefinition {
     customSettings: draft.mode === 'custom' ? draft.customSettings : undefined,
     requiredHeroCount: draft.requiredHeroCount,
     allowedClasses: draft.allowedClasses,
+    environmentSettings: draft.environmentSettings,
     description: generateAdventureDescription({
       name: draft.name,
       mode: draft.mode,
       customSettings: draft.mode === 'custom' ? draft.customSettings : undefined,
       requiredHeroCount: draft.requiredHeroCount,
       allowedClasses: draft.allowedClasses,
+      environmentSettings: draft.environmentSettings,
     }),
   };
 }
@@ -80,6 +83,7 @@ function adventureToDraft(adv: AdventureDefinition): AdventureDraft {
     customSettings: adv.customSettings ?? DEFAULT_CUSTOM_SETTINGS,
     requiredHeroCount: adv.requiredHeroCount,
     allowedClasses: adv.allowedClasses,
+    environmentSettings: adv.environmentSettings ?? { ...DEFAULT_ENVIRONMENT_SETTINGS },
   };
 }
 
@@ -90,6 +94,7 @@ function defaultDraft(): AdventureDraft {
     customSettings: { ...DEFAULT_CUSTOM_SETTINGS },
     requiredHeroCount: 4,
     allowedClasses: [...ALL_CLASSES],
+    environmentSettings: { ...DEFAULT_ENVIRONMENT_SETTINGS },
   };
 }
 
@@ -119,6 +124,34 @@ function PctSlider({
       />
       <div className="flex justify-between text-xs text-stone-600">
         <span>−50%</span><span>0%</span><span>+50%</span>
+      </div>
+    </div>
+  );
+}
+
+/** A percentage slider for environment settings (0–100%). */
+function EnvSlider({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex justify-between text-xs text-stone-400">
+        <span>{label}</span>
+        <span className="font-bold text-stone-300">{value}%</span>
+      </div>
+      <input
+        type="range" min={0} max={100} step={5} value={value}
+        onChange={e => onChange(Number(e.target.value))}
+        className="w-full accent-cyan-500"
+      />
+      <div className="flex justify-between text-xs text-stone-600">
+        <span>0%</span><span>50%</span><span>100%</span>
       </div>
     </div>
   );
@@ -367,6 +400,7 @@ export function AdventureScreen({
       customSettings: draft.mode === 'custom' ? draft.customSettings : undefined,
       requiredHeroCount: draft.requiredHeroCount,
       allowedClasses: draft.allowedClasses,
+      environmentSettings: draft.environmentSettings,
     }),
     [draft],
   );
@@ -418,6 +452,13 @@ export function AdventureScreen({
     setDraft(prev => ({
       ...prev,
       customSettings: { ...prev.customSettings, [key]: value },
+    }));
+  }
+
+  function setDraftEnv<K extends keyof EnvironmentSettings>(key: K, value: number) {
+    setDraft(prev => ({
+      ...prev,
+      environmentSettings: { ...prev.environmentSettings, [key]: value },
     }));
   }
 
@@ -547,6 +588,56 @@ export function AdventureScreen({
                   </button>
                 );
               })}
+            </div>
+          </div>
+
+          {/* Environment: enemy damage types */}
+          <div className="bg-stone-800 border border-stone-700 rounded-xl p-4">
+            <label className="block text-xs text-stone-400 mb-2">Enemy Damage Types</label>
+            <p className="text-xs text-cyan-300 mb-3">
+              Chance of encountering enemies with each damage type. Sliders are independent — an adventure can have both high fire and water chances.
+            </p>
+            <div className="flex flex-col gap-3">
+              <EnvSlider label="🔮 Magical Damage" value={draft.environmentSettings.magicalChancePct}
+                onChange={v => setDraftEnv('magicalChancePct', v)} />
+              <EnvSlider label="🔥 Fire" value={draft.environmentSettings.fireChancePct}
+                onChange={v => setDraftEnv('fireChancePct', v)} />
+              <EnvSlider label="💧 Water" value={draft.environmentSettings.waterChancePct}
+                onChange={v => setDraftEnv('waterChancePct', v)} />
+              <EnvSlider label="💨 Wind" value={draft.environmentSettings.windChancePct}
+                onChange={v => setDraftEnv('windChancePct', v)} />
+              <EnvSlider label="🪨 Earth" value={draft.environmentSettings.earthChancePct}
+                onChange={v => setDraftEnv('earthChancePct', v)} />
+              <EnvSlider label="✨ Light" value={draft.environmentSettings.lightChancePct}
+                onChange={v => setDraftEnv('lightChancePct', v)} />
+              <EnvSlider label="🌑 Darkness" value={draft.environmentSettings.darknessChancePct}
+                onChange={v => setDraftEnv('darknessChancePct', v)} />
+            </div>
+          </div>
+
+          {/* Environment: enemy resistances */}
+          <div className="bg-stone-800 border border-stone-700 rounded-xl p-4">
+            <label className="block text-xs text-stone-400 mb-2">Enemy Resistances</label>
+            <p className="text-xs text-cyan-300 mb-3">
+              Chance of encountering enemies resistant to each damage type. Forces party diversification.
+            </p>
+            <div className="flex flex-col gap-3">
+              <EnvSlider label="🗡️ Resist Physical" value={draft.environmentSettings.resistPhysicalChancePct}
+                onChange={v => setDraftEnv('resistPhysicalChancePct', v)} />
+              <EnvSlider label="🔮 Resist Magical" value={draft.environmentSettings.resistMagicalChancePct}
+                onChange={v => setDraftEnv('resistMagicalChancePct', v)} />
+              <EnvSlider label="🔥 Resist Fire" value={draft.environmentSettings.resistFireChancePct}
+                onChange={v => setDraftEnv('resistFireChancePct', v)} />
+              <EnvSlider label="💧 Resist Water" value={draft.environmentSettings.resistWaterChancePct}
+                onChange={v => setDraftEnv('resistWaterChancePct', v)} />
+              <EnvSlider label="💨 Resist Wind" value={draft.environmentSettings.resistWindChancePct}
+                onChange={v => setDraftEnv('resistWindChancePct', v)} />
+              <EnvSlider label="🪨 Resist Earth" value={draft.environmentSettings.resistEarthChancePct}
+                onChange={v => setDraftEnv('resistEarthChancePct', v)} />
+              <EnvSlider label="✨ Resist Light" value={draft.environmentSettings.resistLightChancePct}
+                onChange={v => setDraftEnv('resistLightChancePct', v)} />
+              <EnvSlider label="🌑 Resist Darkness" value={draft.environmentSettings.resistDarknessChancePct}
+                onChange={v => setDraftEnv('resistDarknessChancePct', v)} />
             </div>
           </div>
 

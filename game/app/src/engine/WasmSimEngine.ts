@@ -9,8 +9,9 @@
  *   • Accepts runtime data (heroes, enemies, config) via create_entity/add_component
  */
 
-import type { GameSnapshot, HeroDefinition, GameMode, HeroPath, CustomModeSettings } from '../types';
-import { simulateHeroPath, getSkillName } from '../data/traits';
+import type { GameSnapshot, HeroDefinition, GameMode, HeroPath, CustomModeSettings, EnvironmentSettings, DamageCategory, Element } from '../types';
+import { DEFAULT_ENVIRONMENT_SETTINGS } from '../types';
+import { simulateHeroPath, getSkillName, deriveDamageCategory, deriveDamageElement, deriveResistances } from '../data/traits';
 
 // ── Hero stats per class ────────────────────────────────────────────────────
 
@@ -199,6 +200,7 @@ export async function runSimulation(
   selectedHeroes: HeroDefinition[],
   mode: GameMode,
   customSettings?: CustomModeSettings,
+  environmentSettings?: EnvironmentSettings,
 ): Promise<{ snapshots: GameSnapshot[]; heroPaths: HeroPath[] }> {
   const mod = await loadWasmModule();
   if (!mod) {
@@ -214,7 +216,7 @@ export async function runSimulation(
   const seed = (BigInt(seedBytes[0]) << 32n) | BigInt(seedBytes[1]);
   const game = mod.BlinkWasmGame.with_seed(seed);
   try {
-    const snapshots = _runWithWasm(game, selectedHeroes, mode, customSettings);
+    const snapshots = _runWithWasm(game, selectedHeroes, mode, customSettings, environmentSettings);
 
     // Simulate hero progression paths using the trait system
     const heroPaths: HeroPath[] = selectedHeroes.map(hero => {
@@ -261,6 +263,7 @@ function _runWithWasm(
   selectedHeroes: HeroDefinition[],
   mode: GameMode,
   customSettings?: CustomModeSettings,
+  environmentSettings?: EnvironmentSettings,
 ): GameSnapshot[] {
   // 1. Register components + intern strings (no static entities in RPG BRL)
   game.init_static();
@@ -273,6 +276,8 @@ function _runWithWasm(
   const expMult = mode === 'custom' && customSettings
     ? 1 + customSettings.expMultiplierPct / 100
     : 1;
+
+  const env = environmentSettings ?? DEFAULT_ENVIRONMENT_SETTINGS;
 
   // 2. Create hero entities (IDs 1..N)
   selectedHeroes.forEach((hero, i) => {
@@ -297,6 +302,11 @@ function _runWithWasm(
     const maxMana    = Math.max(50,  100 + wisBonus);
     const critChance = Math.min(0.5, 0.05 + hero.stats.dexterity * 0.01);
 
+    // Derive damage type and resistances from hero traits
+    const dmgCategory = deriveDamageCategory(hero.traits);
+    const dmgElement  = deriveDamageElement(hero.traits);
+    const resistances = deriveResistances(hero.traits);
+
     game.create_entity(heroId);
     game.add_component(heroId, 'Character', JSON.stringify({
       name: hero.name, class: hero.heroClass, level: 1, experience: 0, experienceToLevel: 100,
@@ -311,6 +321,10 @@ function _runWithWasm(
     game.add_component(heroId, 'Combat', JSON.stringify({
       damage, defense, attackSpeed, critChance, critMultiplier: 1.5,
     }));
+    game.add_component(heroId, 'DamageType', JSON.stringify({
+      category: dmgCategory, element: dmgElement,
+    }));
+    game.add_component(heroId, 'Resistance', JSON.stringify(resistances));
     game.add_component(heroId, 'Target', JSON.stringify({ entity: 0 }));
     game.add_component(heroId, 'Team',   JSON.stringify({ id: 'player', isPlayer: true }));
     game.add_component(heroId, 'Skills', JSON.stringify({
@@ -325,7 +339,27 @@ function _runWithWasm(
   });
 
   // 3. Create enemy templates (IDs 100–108)
-  for (const tmpl of ENEMY_TEMPLATES) {
+  // Assign damage types and resistances based on adventure environment settings.
+  // Each template gets a deterministic roll using its index as a simple seed offset.
+  for (let ti = 0; ti < ENEMY_TEMPLATES.length; ti++) {
+    const tmpl = ENEMY_TEMPLATES[ti];
+    // Derive enemy damage type from environment chances (deterministic per template index)
+    const enemyCategory: DamageCategory =
+      _pseudoRoll(ti, 0) < env.magicalChancePct / 100 ? 'magical' : 'physical';
+    const enemyElement = _pickEnemyElement(env, ti);
+
+    // Derive enemy resistances from environment chances
+    const enemyResist = {
+      physical:  _pseudoRoll(ti, 10) < env.resistPhysicalChancePct / 100 ? 30 : 0,
+      magical:   _pseudoRoll(ti, 11) < env.resistMagicalChancePct  / 100 ? 30 : 0,
+      fire:      _pseudoRoll(ti, 12) < env.resistFireChancePct     / 100 ? 30 : 0,
+      water:     _pseudoRoll(ti, 13) < env.resistWaterChancePct    / 100 ? 30 : 0,
+      wind:      _pseudoRoll(ti, 14) < env.resistWindChancePct     / 100 ? 30 : 0,
+      earth:     _pseudoRoll(ti, 15) < env.resistEarthChancePct    / 100 ? 30 : 0,
+      light:     _pseudoRoll(ti, 16) < env.resistLightChancePct    / 100 ? 30 : 0,
+      darkness:  _pseudoRoll(ti, 17) < env.resistDarknessChancePct / 100 ? 30 : 0,
+    };
+
     game.create_entity(tmpl.id);
     game.add_component(tmpl.id, 'Character', JSON.stringify({
       name: tmpl.name, class: tmpl.boss ? 'Boss' : 'Monster',
@@ -340,6 +374,10 @@ function _runWithWasm(
       damage: tmpl.dmg, defense: Math.floor(tmpl.tier * 2),
       attackSpeed: tmpl.spd, critChance: 0.05, critMultiplier: 1.5,
     }));
+    game.add_component(tmpl.id, 'DamageType', JSON.stringify({
+      category: enemyCategory, element: enemyElement,
+    }));
+    game.add_component(tmpl.id, 'Resistance', JSON.stringify(enemyResist));
     game.add_component(tmpl.id, 'Target', JSON.stringify({ entity: 0 }));
     game.add_component(tmpl.id, 'Team',   JSON.stringify({ id: 'enemy', isPlayer: false }));
     game.add_component(tmpl.id, 'Enemy',  JSON.stringify({
@@ -412,7 +450,11 @@ function _runWithWasm(
     bossesDefeated: 0, wavesCompleted: 0,
   }));
 
-  // 8. Run simulation — capture a snapshot at every ProgressCheckpoint
+  // 8. Environment settings entity (ID 95) — stores adventure damage/resistance chances
+  game.create_entity(95);
+  game.add_component(95, 'EnvironmentConfig', JSON.stringify(env));
+
+  // 9. Run simulation — capture a snapshot at every ProgressCheckpoint
   game.schedule_event('GameStart', 0.0);
 
   const snapshots: GameSnapshot[] = [];
@@ -485,4 +527,45 @@ function _captureSnapshot(
     isGameOver:      (gs?.['gameOver']        as boolean) ?? false,
     victory:         (gs?.['victory']         as boolean) ?? false,
   };
+}
+
+// ── Damage-type helpers for enemy template setup ────────────────────────────
+
+/**
+ * Simple deterministic pseudo-random number in [0, 1) for enemy template setup.
+ * Uses a hash of (templateIndex, slot) so each roll is independent and reproducible.
+ */
+function _pseudoRoll(templateIndex: number, slot: number): number {
+  // Simple hash: Murmur-inspired mixing
+  let h = (templateIndex * 2654435761 + slot * 2246822519) >>> 0;
+  h = ((h ^ (h >> 16)) * 2246822507) >>> 0;
+  h = ((h ^ (h >> 13)) * 3266489909) >>> 0;
+  h = (h ^ (h >> 16)) >>> 0;
+  return (h & 0x7fffffff) / 0x80000000;
+}
+
+/**
+ * Pick an enemy element based on environment chances.
+ * Rolls independently for each element; if multiple match, picks deterministically.
+ */
+function _pickEnemyElement(env: EnvironmentSettings, templateIndex: number): Element {
+  const candidates: Element[] = [];
+  const elementChances: [Element, number][] = [
+    ['fire',     env.fireChancePct],
+    ['water',    env.waterChancePct],
+    ['wind',     env.windChancePct],
+    ['earth',    env.earthChancePct],
+    ['light',    env.lightChancePct],
+    ['darkness', env.darknessChancePct],
+  ];
+  for (let i = 0; i < elementChances.length; i++) {
+    const [elem, chancePct] = elementChances[i];
+    if (_pseudoRoll(templateIndex, i + 1) < chancePct / 100) {
+      candidates.push(elem);
+    }
+  }
+  if (candidates.length === 0) return 'neutral';
+  // Deterministic pick from candidates
+  const pickIdx = Math.floor(_pseudoRoll(templateIndex, 7) * candidates.length);
+  return candidates[pickIdx];
 }
