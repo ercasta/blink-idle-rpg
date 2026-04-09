@@ -110,45 +110,32 @@ export const ALL_ELEMENTS: Element[] = ['fire', 'water', 'wind', 'earth', 'light
  * Adventure environment settings — probability sliders that control the
  * chance of encountering enemies with specific damage types and resistances.
  *
- * Each value is a percentage 0–100.  Sliders are **independent**: an adventure
- * can have both high fire and high water chances simultaneously.
+ * Each slider is **unified**: a high "fire" value means enemies are more likely
+ * to BOTH deal fire damage AND resist fire attacks.  Sliders are independent
+ * across elements — an adventure can have both high fire and water chances.
+ *
+ * Each value is a percentage 0–100.
  */
 export interface EnvironmentSettings {
-  // Enemy damage type chances (0–100%)
-  magicalChancePct: number;
-  fireChancePct: number;
-  waterChancePct: number;
-  windChancePct: number;
-  earthChancePct: number;
-  lightChancePct: number;
-  darknessChancePct: number;
-  // Enemy resistance chances (0–100%)
-  resistPhysicalChancePct: number;
-  resistMagicalChancePct: number;
-  resistFireChancePct: number;
-  resistWaterChancePct: number;
-  resistWindChancePct: number;
-  resistEarthChancePct: number;
-  resistLightChancePct: number;
-  resistDarknessChancePct: number;
+  physicalPct: number;
+  magicalPct: number;
+  firePct: number;
+  waterPct: number;
+  windPct: number;
+  earthPct: number;
+  lightPct: number;
+  darknessPct: number;
 }
 
 export const DEFAULT_ENVIRONMENT_SETTINGS: EnvironmentSettings = {
-  magicalChancePct: 30,
-  fireChancePct: 15,
-  waterChancePct: 15,
-  windChancePct: 10,
-  earthChancePct: 10,
-  lightChancePct: 10,
-  darknessChancePct: 10,
-  resistPhysicalChancePct: 20,
-  resistMagicalChancePct: 20,
-  resistFireChancePct: 10,
-  resistWaterChancePct: 10,
-  resistWindChancePct: 10,
-  resistEarthChancePct: 10,
-  resistLightChancePct: 10,
-  resistDarknessChancePct: 10,
+  physicalPct: 50,
+  magicalPct: 30,
+  firePct: 15,
+  waterPct: 15,
+  windPct: 10,
+  earthPct: 10,
+  lightPct: 10,
+  darknessPct: 10,
 };
 
 /**

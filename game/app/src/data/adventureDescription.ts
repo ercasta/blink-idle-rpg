@@ -191,40 +191,21 @@ const ELEMENT_EMOJI: Record<string, string> = {
 function getEnvironmentSentence(env?: EnvironmentSettings): string {
   if (!env) return '';
 
-  const highDmg: string[] = [];
-  const highResist: string[] = [];
+  const notable: string[] = [];
 
-  // Damage type highlights (>= 30% is noteworthy)
-  if (env.magicalChancePct >= 50) highDmg.push('magical');
+  // Highlight elements with high presence (>= 30%)
+  if (env.magicalPct >= 50) notable.push('magical');
   const elements: [string, number][] = [
-    ['fire', env.fireChancePct], ['water', env.waterChancePct],
-    ['wind', env.windChancePct], ['earth', env.earthChancePct],
-    ['light', env.lightChancePct], ['darkness', env.darknessChancePct],
+    ['fire', env.firePct], ['water', env.waterPct],
+    ['wind', env.windPct], ['earth', env.earthPct],
+    ['light', env.lightPct], ['darkness', env.darknessPct],
   ];
   for (const [name, pct] of elements) {
-    if (pct >= 30) highDmg.push(`${ELEMENT_EMOJI[name]} ${name}`);
+    if (pct >= 30) notable.push(`${ELEMENT_EMOJI[name]} ${name}`);
   }
 
-  // Resistance highlights
-  const resists: [string, number][] = [
-    ['physical', env.resistPhysicalChancePct], ['magical', env.resistMagicalChancePct],
-    ['fire', env.resistFireChancePct], ['water', env.resistWaterChancePct],
-    ['wind', env.resistWindChancePct], ['earth', env.resistEarthChancePct],
-    ['light', env.resistLightChancePct], ['darkness', env.resistDarknessChancePct],
-  ];
-  for (const [name, pct] of resists) {
-    if (pct >= 30) highResist.push(name);
-  }
-
-  const parts: string[] = [];
-  if (highDmg.length > 0) {
-    parts.push(`Enemies favour ${highDmg.join(', ')} damage`);
-  }
-  if (highResist.length > 0) {
-    parts.push(`many resist ${highResist.join(', ')} attacks`);
-  }
-  if (parts.length === 0) return '';
-  return parts.join('; ') + '.';
+  if (notable.length === 0) return '';
+  return `Enemies in this region favour ${notable.join(', ')} — both dealing and resisting it.`;
 }
 
 // ── Public entry point ────────────────────────────────────────────────────────
@@ -268,11 +249,8 @@ const CUSTOM_SETTING_MAX = 50;
 
 /** Environment setting keys (used for compact URL encoding). */
 const ENV_SETTING_KEYS: (keyof EnvironmentSettings)[] = [
-  'magicalChancePct', 'fireChancePct', 'waterChancePct', 'windChancePct',
-  'earthChancePct', 'lightChancePct', 'darknessChancePct',
-  'resistPhysicalChancePct', 'resistMagicalChancePct', 'resistFireChancePct',
-  'resistWaterChancePct', 'resistWindChancePct', 'resistEarthChancePct',
-  'resistLightChancePct', 'resistDarknessChancePct',
+  'physicalPct', 'magicalPct', 'firePct', 'waterPct',
+  'windPct', 'earthPct', 'lightPct', 'darknessPct',
 ];
 
 /**

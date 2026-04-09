@@ -51,24 +51,17 @@ function randomPct(base: number, spread: number): number {
   return Math.max(0, Math.min(100, Math.round(v / 5) * 5)); // snap to 5%
 }
 
-/** Generate random environment settings (enemy damage types + resistances). */
+/** Generate random environment settings (unified per-element sliders). */
 function randomEnvironment(): EnvironmentSettings {
   return {
-    magicalChancePct:          randomPct(DEFAULT_ENVIRONMENT_SETTINGS.magicalChancePct, 25),
-    fireChancePct:             randomPct(DEFAULT_ENVIRONMENT_SETTINGS.fireChancePct, 20),
-    waterChancePct:            randomPct(DEFAULT_ENVIRONMENT_SETTINGS.waterChancePct, 20),
-    windChancePct:             randomPct(DEFAULT_ENVIRONMENT_SETTINGS.windChancePct, 15),
-    earthChancePct:            randomPct(DEFAULT_ENVIRONMENT_SETTINGS.earthChancePct, 15),
-    lightChancePct:            randomPct(DEFAULT_ENVIRONMENT_SETTINGS.lightChancePct, 15),
-    darknessChancePct:         randomPct(DEFAULT_ENVIRONMENT_SETTINGS.darknessChancePct, 15),
-    resistPhysicalChancePct:   randomPct(DEFAULT_ENVIRONMENT_SETTINGS.resistPhysicalChancePct, 20),
-    resistMagicalChancePct:    randomPct(DEFAULT_ENVIRONMENT_SETTINGS.resistMagicalChancePct, 20),
-    resistFireChancePct:       randomPct(DEFAULT_ENVIRONMENT_SETTINGS.resistFireChancePct, 15),
-    resistWaterChancePct:      randomPct(DEFAULT_ENVIRONMENT_SETTINGS.resistWaterChancePct, 15),
-    resistWindChancePct:       randomPct(DEFAULT_ENVIRONMENT_SETTINGS.resistWindChancePct, 15),
-    resistEarthChancePct:      randomPct(DEFAULT_ENVIRONMENT_SETTINGS.resistEarthChancePct, 15),
-    resistLightChancePct:      randomPct(DEFAULT_ENVIRONMENT_SETTINGS.resistLightChancePct, 15),
-    resistDarknessChancePct:   randomPct(DEFAULT_ENVIRONMENT_SETTINGS.resistDarknessChancePct, 15),
+    physicalPct:  randomPct(DEFAULT_ENVIRONMENT_SETTINGS.physicalPct, 25),
+    magicalPct:   randomPct(DEFAULT_ENVIRONMENT_SETTINGS.magicalPct, 25),
+    firePct:      randomPct(DEFAULT_ENVIRONMENT_SETTINGS.firePct, 20),
+    waterPct:     randomPct(DEFAULT_ENVIRONMENT_SETTINGS.waterPct, 20),
+    windPct:      randomPct(DEFAULT_ENVIRONMENT_SETTINGS.windPct, 15),
+    earthPct:     randomPct(DEFAULT_ENVIRONMENT_SETTINGS.earthPct, 15),
+    lightPct:     randomPct(DEFAULT_ENVIRONMENT_SETTINGS.lightPct, 15),
+    darknessPct:  randomPct(DEFAULT_ENVIRONMENT_SETTINGS.darknessPct, 15),
   };
 }
 

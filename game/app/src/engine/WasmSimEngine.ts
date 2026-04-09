@@ -340,24 +340,25 @@ function _runWithWasm(
 
   // 3. Create enemy templates (IDs 100–108)
   // Assign damage types and resistances based on adventure environment settings.
-  // Each template gets a deterministic roll using its index as a simple seed offset.
+  // Each unified slider controls BOTH the chance of dealing that damage type
+  // AND the chance of resisting that damage type.
   for (let ti = 0; ti < ENEMY_TEMPLATES.length; ti++) {
     const tmpl = ENEMY_TEMPLATES[ti];
-    // Derive enemy damage type from environment chances (deterministic per template index)
+    // Derive enemy damage category from environment chances
     const enemyCategory: DamageCategory =
-      _pseudoRoll(ti, 0) < env.magicalChancePct / 100 ? 'magical' : 'physical';
+      _pseudoRoll(ti, 0) < env.magicalPct / 100 ? 'magical' : 'physical';
     const enemyElement = _pickEnemyElement(env, ti);
 
-    // Derive enemy resistances from environment chances
+    // Derive enemy resistances — same unified sliders drive resistance chance
     const enemyResist = {
-      physical:  _pseudoRoll(ti, 10) < env.resistPhysicalChancePct / 100 ? 30 : 0,
-      magical:   _pseudoRoll(ti, 11) < env.resistMagicalChancePct  / 100 ? 30 : 0,
-      fire:      _pseudoRoll(ti, 12) < env.resistFireChancePct     / 100 ? 30 : 0,
-      water:     _pseudoRoll(ti, 13) < env.resistWaterChancePct    / 100 ? 30 : 0,
-      wind:      _pseudoRoll(ti, 14) < env.resistWindChancePct     / 100 ? 30 : 0,
-      earth:     _pseudoRoll(ti, 15) < env.resistEarthChancePct    / 100 ? 30 : 0,
-      light:     _pseudoRoll(ti, 16) < env.resistLightChancePct    / 100 ? 30 : 0,
-      darkness:  _pseudoRoll(ti, 17) < env.resistDarknessChancePct / 100 ? 30 : 0,
+      physical:  _pseudoRoll(ti, 10) < env.physicalPct  / 100 ? 30 : 0,
+      magical:   _pseudoRoll(ti, 11) < env.magicalPct   / 100 ? 30 : 0,
+      fire:      _pseudoRoll(ti, 12) < env.firePct      / 100 ? 30 : 0,
+      water:     _pseudoRoll(ti, 13) < env.waterPct     / 100 ? 30 : 0,
+      wind:      _pseudoRoll(ti, 14) < env.windPct      / 100 ? 30 : 0,
+      earth:     _pseudoRoll(ti, 15) < env.earthPct     / 100 ? 30 : 0,
+      light:     _pseudoRoll(ti, 16) < env.lightPct     / 100 ? 30 : 0,
+      darkness:  _pseudoRoll(ti, 17) < env.darknessPct  / 100 ? 30 : 0,
     };
 
     game.create_entity(tmpl.id);
@@ -551,12 +552,12 @@ function _pseudoRoll(templateIndex: number, slot: number): number {
 function _pickEnemyElement(env: EnvironmentSettings, templateIndex: number): Element {
   const candidates: Element[] = [];
   const elementChances: [Element, number][] = [
-    ['fire',     env.fireChancePct],
-    ['water',    env.waterChancePct],
-    ['wind',     env.windChancePct],
-    ['earth',    env.earthChancePct],
-    ['light',    env.lightChancePct],
-    ['darkness', env.darknessChancePct],
+    ['fire',     env.firePct],
+    ['water',    env.waterPct],
+    ['wind',     env.windPct],
+    ['earth',    env.earthPct],
+    ['light',    env.lightPct],
+    ['darkness', env.darknessPct],
   ];
   for (let i = 0; i < elementChances.length; i++) {
     const [elem, chancePct] = elementChances[i];

@@ -75,15 +75,15 @@ Enemies receive damage types and resistances at spawn time based on the **advent
 ### Enemy Damage Assignment
 
 When an enemy spawns:
-1. Roll for category: `random() < environment.magicalChancePct / 100` → magical, else physical.
-2. Roll for each element independently: if `random() < environment.<element>ChancePct / 100`, add that element to a candidate pool.
+1. Roll for category: `random() < environment.magicalPct / 100` → magical, else physical.
+2. Roll for each element independently: if `random() < environment.<element>Pct / 100`, add that element to a candidate pool.
 3. If the candidate pool is non-empty, pick one at random. Otherwise the element is neutral.
 
 ### Enemy Resistance Assignment
 
-When an enemy spawns:
-1. For each resistance type (physical, magical, fire, water, wind, earth, light, darkness):
-   - Roll: if `random() < environment.<type>ResistChancePct / 100`, the enemy gains 30% resistance to that type.
+Each unified slider controls BOTH damage and resistance. When an enemy spawns:
+1. For each type (physical, magical, fire, water, wind, earth, light, darkness):
+   - Roll: if `random() < environment.<type>Pct / 100`, the enemy gains 30% resistance to that type.
 2. Enemies can have multiple resistances simultaneously.
 
 ---
@@ -117,30 +117,20 @@ appliedDamage = finalDamage - shieldAbsorb
 
 Adventures include an `environmentSettings` object with sliders controlling the encounter environment:
 
-### Enemy Damage Type Chances (0–100%)
+### Unified Environment Sliders (0–100%)
+
+Each slider controls BOTH enemy damage type AND resistance for that category/element. A high "fire" value means enemies are more likely to both deal fire damage and resist fire attacks.
 
 | Field | Description | Default |
 |-------|-------------|---------|
-| `magicalChancePct` | Chance enemies deal magical (vs physical) damage | 30 |
-| `fireChancePct` | Chance enemies deal fire-element damage | 15 |
-| `waterChancePct` | Chance enemies deal water-element damage | 15 |
-| `windChancePct` | Chance enemies deal wind-element damage | 10 |
-| `earthChancePct` | Chance enemies deal earth-element damage | 10 |
-| `lightChancePct` | Chance enemies deal light-element damage | 10 |
-| `darknessChancePct` | Chance enemies deal darkness-element damage | 10 |
-
-### Enemy Resistance Chances (0–100%)
-
-| Field | Description | Default |
-|-------|-------------|---------|
-| `resistPhysicalChancePct` | Chance enemies resist physical damage | 20 |
-| `resistMagicalChancePct` | Chance enemies resist magical damage | 20 |
-| `resistFireChancePct` | Chance enemies resist fire damage | 10 |
-| `resistWaterChancePct` | Chance enemies resist water damage | 10 |
-| `resistWindChancePct` | Chance enemies resist wind damage | 10 |
-| `resistEarthChancePct` | Chance enemies resist earth damage | 10 |
-| `resistLightChancePct` | Chance enemies resist light damage | 10 |
-| `resistDarknessChancePct` | Chance enemies resist darkness damage | 10 |
+| `physicalPct` | Physical damage + physical resistance | 50 |
+| `magicalPct` | Magical damage + magical resistance | 30 |
+| `firePct` | Fire element + fire resistance | 15 |
+| `waterPct` | Water element + water resistance | 15 |
+| `windPct` | Wind element + wind resistance | 10 |
+| `earthPct` | Earth element + earth resistance | 10 |
+| `lightPct` | Light element + light resistance | 10 |
+| `darknessPct` | Darkness element + darkness resistance | 10 |
 
 **Key design note**: Unlike hero traits where fire/water are opposite ends of a single axis, adventure environment sliders are **independent**. An adventure can have both high fire and high water enemy chances, forcing players to diversify their party composition.
 

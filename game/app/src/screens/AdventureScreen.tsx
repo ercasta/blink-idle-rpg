@@ -591,53 +591,29 @@ export function AdventureScreen({
             </div>
           </div>
 
-          {/* Environment: enemy damage types */}
+          {/* Environment: unified per-element sliders */}
           <div className="bg-stone-800 border border-stone-700 rounded-xl p-4">
-            <label className="block text-xs text-stone-400 mb-2">Enemy Damage Types</label>
+            <label className="block text-xs text-stone-400 mb-2">Environment</label>
             <p className="text-xs text-cyan-300 mb-3">
-              Chance of encountering enemies with each damage type. Sliders are independent — an adventure can have both high fire and water chances.
+              Each slider controls the chance of encountering enemies that both deal AND resist that type. Sliders are independent — an adventure can have high fire and water simultaneously.
             </p>
             <div className="flex flex-col gap-3">
-              <EnvSlider label="🔮 Magical Damage" value={draft.environmentSettings.magicalChancePct}
-                onChange={v => setDraftEnv('magicalChancePct', v)} />
-              <EnvSlider label="🔥 Fire" value={draft.environmentSettings.fireChancePct}
-                onChange={v => setDraftEnv('fireChancePct', v)} />
-              <EnvSlider label="💧 Water" value={draft.environmentSettings.waterChancePct}
-                onChange={v => setDraftEnv('waterChancePct', v)} />
-              <EnvSlider label="💨 Wind" value={draft.environmentSettings.windChancePct}
-                onChange={v => setDraftEnv('windChancePct', v)} />
-              <EnvSlider label="🪨 Earth" value={draft.environmentSettings.earthChancePct}
-                onChange={v => setDraftEnv('earthChancePct', v)} />
-              <EnvSlider label="✨ Light" value={draft.environmentSettings.lightChancePct}
-                onChange={v => setDraftEnv('lightChancePct', v)} />
-              <EnvSlider label="🌑 Darkness" value={draft.environmentSettings.darknessChancePct}
-                onChange={v => setDraftEnv('darknessChancePct', v)} />
-            </div>
-          </div>
-
-          {/* Environment: enemy resistances */}
-          <div className="bg-stone-800 border border-stone-700 rounded-xl p-4">
-            <label className="block text-xs text-stone-400 mb-2">Enemy Resistances</label>
-            <p className="text-xs text-cyan-300 mb-3">
-              Chance of encountering enemies resistant to each damage type. Forces party diversification.
-            </p>
-            <div className="flex flex-col gap-3">
-              <EnvSlider label="🗡️ Resist Physical" value={draft.environmentSettings.resistPhysicalChancePct}
-                onChange={v => setDraftEnv('resistPhysicalChancePct', v)} />
-              <EnvSlider label="🔮 Resist Magical" value={draft.environmentSettings.resistMagicalChancePct}
-                onChange={v => setDraftEnv('resistMagicalChancePct', v)} />
-              <EnvSlider label="🔥 Resist Fire" value={draft.environmentSettings.resistFireChancePct}
-                onChange={v => setDraftEnv('resistFireChancePct', v)} />
-              <EnvSlider label="💧 Resist Water" value={draft.environmentSettings.resistWaterChancePct}
-                onChange={v => setDraftEnv('resistWaterChancePct', v)} />
-              <EnvSlider label="💨 Resist Wind" value={draft.environmentSettings.resistWindChancePct}
-                onChange={v => setDraftEnv('resistWindChancePct', v)} />
-              <EnvSlider label="🪨 Resist Earth" value={draft.environmentSettings.resistEarthChancePct}
-                onChange={v => setDraftEnv('resistEarthChancePct', v)} />
-              <EnvSlider label="✨ Resist Light" value={draft.environmentSettings.resistLightChancePct}
-                onChange={v => setDraftEnv('resistLightChancePct', v)} />
-              <EnvSlider label="🌑 Resist Darkness" value={draft.environmentSettings.resistDarknessChancePct}
-                onChange={v => setDraftEnv('resistDarknessChancePct', v)} />
+              <EnvSlider label="🗡️ Physical" value={draft.environmentSettings.physicalPct}
+                onChange={v => setDraftEnv('physicalPct', v)} />
+              <EnvSlider label="🔮 Magical" value={draft.environmentSettings.magicalPct}
+                onChange={v => setDraftEnv('magicalPct', v)} />
+              <EnvSlider label="🔥 Fire" value={draft.environmentSettings.firePct}
+                onChange={v => setDraftEnv('firePct', v)} />
+              <EnvSlider label="💧 Water" value={draft.environmentSettings.waterPct}
+                onChange={v => setDraftEnv('waterPct', v)} />
+              <EnvSlider label="💨 Wind" value={draft.environmentSettings.windPct}
+                onChange={v => setDraftEnv('windPct', v)} />
+              <EnvSlider label="🪨 Earth" value={draft.environmentSettings.earthPct}
+                onChange={v => setDraftEnv('earthPct', v)} />
+              <EnvSlider label="✨ Light" value={draft.environmentSettings.lightPct}
+                onChange={v => setDraftEnv('lightPct', v)} />
+              <EnvSlider label="🌑 Darkness" value={draft.environmentSettings.darknessPct}
+                onChange={v => setDraftEnv('darknessPct', v)} />
             </div>
           </div>
 
