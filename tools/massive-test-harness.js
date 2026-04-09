@@ -47,7 +47,7 @@ const ROOT             = path.join(__dirname, '..');
 const DEFAULT_DATA_DIR = path.join(ROOT, 'game', 'data');
 
 // Match the e2e test step limit (packages/blink-engine-wasm/tests/e2e-test.ts)
-const DEFAULT_MAX_STEPS = 2500000;
+const DEFAULT_MAX_STEPS = 5000000;
 
 // Seed offset per retry — keeps each attempt's seed range non-overlapping
 // (scenario.runs is at most ~20, so 10 000 is a safe margin)
@@ -172,6 +172,8 @@ function evaluateCheck(check, allResults, binaryPath, gameData, seedOffset) {
         return checkVictoryImpliesBoss(check, allResults);
       case 'win_rate_greater_or_equal':
         return checkWinRateGreaterOrEqual(check, allResults);
+      case 'mean_score_margin':
+        return checkMeanScoreMargin(check, allResults);
       default:
         return { passed: false, message: `Unknown check type: "${check.type}"` };
     }
@@ -450,6 +452,38 @@ function checkWinRateGreaterOrEqual(check, allResults) {
   return {
     passed: false,
     message: `Expected ${scenarioA} win rate (${rateA}%) >= ${scenarioB} win rate (${rateB}%)`,
+  };
+}
+
+/**
+ * Check that scenarioA's mean score exceeds scenarioB's by at least `minMarginPct`%.
+ * This validates that game mechanics produce *meaningful* score differences,
+ * not just barely-positive ones.
+ */
+function checkMeanScoreMargin(check, allResults) {
+  const { scenarioA, scenarioB, minMarginPct } = check.params;
+  const srA = getScenarioResults(scenarioA, allResults);
+  const srB = getScenarioResults(scenarioB, allResults);
+
+  const meanA = srA.kpis.meanScore;
+  const meanB = srB.kpis.meanScore;
+
+  // Avoid division by zero — use absolute margin if base is near zero
+  const marginPct = meanB !== 0
+    ? ((meanA - meanB) / Math.abs(meanB)) * 100
+    : (meanA > meanB ? Infinity : -Infinity);
+
+  if (marginPct >= minMarginPct) {
+    return {
+      passed: true,
+      message: `${scenarioA} mean score (${meanA}) exceeds ${scenarioB} (${meanB}) ` +
+        `by ${marginPct.toFixed(1)}% (≥ ${minMarginPct}% required)`,
+    };
+  }
+  return {
+    passed: false,
+    message: `Expected ${scenarioA} (${meanA}) to exceed ${scenarioB} (${meanB}) ` +
+      `by ≥ ${minMarginPct}%, actual margin: ${marginPct.toFixed(1)}%`,
   };
 }
 

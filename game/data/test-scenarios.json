@@ -153,7 +153,7 @@
       "lightPct": 0,
       "darknessPct": 0
     },
-    "runs": 5,
+    "runs": 10,
     "seedStart": 1500
   },
   {
@@ -172,7 +172,7 @@
       "lightPct": 0,
       "darknessPct": 0
     },
-    "runs": 5,
+    "runs": 10,
     "seedStart": 1600
   },
   {
@@ -191,7 +191,7 @@
       "lightPct": 0,
       "darknessPct": 0
     },
-    "runs": 5,
+    "runs": 10,
     "seedStart": 1700
   },
   {
@@ -210,7 +210,140 @@
       "lightPct": 0,
       "darknessPct": 0
     },
-    "runs": 5,
+    "runs": 10,
     "seedStart": 1800
+  },
+  {
+    "id": "all_warriors_neutral_world",
+    "name": "4x Warriors in Neutral World",
+    "description": "Physical party in a world with no environmental resistances. Baseline for comparison with resist worlds.",
+    "party": ["Warrior", "Warrior", "Warrior", "Warrior"],
+    "mode": "normal",
+    "environmentSettings": {
+      "physicalPct": 0,
+      "magicalPct": 0,
+      "firePct": 0,
+      "waterPct": 0,
+      "windPct": 0,
+      "earthPct": 0,
+      "lightPct": 0,
+      "darknessPct": 0
+    },
+    "runs": 10,
+    "seedStart": 1900
+  },
+  {
+    "id": "all_mages_neutral_world",
+    "name": "4x Mages in Neutral World",
+    "description": "Magical party in a world with no environmental resistances. Baseline for comparison with resist worlds.",
+    "party": ["Mage", "Mage", "Mage", "Mage"],
+    "mode": "normal",
+    "environmentSettings": {
+      "physicalPct": 0,
+      "magicalPct": 0,
+      "firePct": 0,
+      "waterPct": 0,
+      "windPct": 0,
+      "earthPct": 0,
+      "lightPct": 0,
+      "darknessPct": 0
+    },
+    "runs": 10,
+    "seedStart": 2000
+  },
+  {
+    "id": "mages_fire_resist_world",
+    "name": "4x Mages in High Fire Resistance World",
+    "description": "Mages (fire-element damage) facing enemies that strongly resist fire. Should significantly underperform compared to a neutral world.",
+    "party": ["Mage", "Mage", "Mage", "Mage"],
+    "mode": "normal",
+    "environmentSettings": {
+      "physicalPct": 0,
+      "magicalPct": 0,
+      "firePct": 100,
+      "waterPct": 0,
+      "windPct": 0,
+      "earthPct": 0,
+      "lightPct": 0,
+      "darknessPct": 0
+    },
+    "runs": 10,
+    "seedStart": 2100
+  },
+  {
+    "id": "paladins_light_resist_world",
+    "name": "4x Paladins in High Light Resistance World",
+    "description": "Paladins (light-element damage) facing enemies that strongly resist light. Should underperform compared to a neutral world.",
+    "party": ["Paladin", "Paladin", "Paladin", "Paladin"],
+    "mode": "normal",
+    "environmentSettings": {
+      "physicalPct": 0,
+      "magicalPct": 0,
+      "firePct": 0,
+      "waterPct": 0,
+      "windPct": 0,
+      "earthPct": 0,
+      "lightPct": 100,
+      "darknessPct": 0
+    },
+    "runs": 10,
+    "seedStart": 2200
+  },
+  {
+    "id": "paladins_neutral_world",
+    "name": "4x Paladins in Neutral World",
+    "description": "Paladins in a world with no environmental resistances. Baseline for paladin elemental comparison.",
+    "party": ["Paladin", "Paladin", "Paladin", "Paladin"],
+    "mode": "normal",
+    "environmentSettings": {
+      "physicalPct": 0,
+      "magicalPct": 0,
+      "firePct": 0,
+      "waterPct": 0,
+      "windPct": 0,
+      "earthPct": 0,
+      "lightPct": 0,
+      "darknessPct": 0
+    },
+    "runs": 10,
+    "seedStart": 2300
+  },
+  {
+    "id": "warriors_phys_and_fire_resist_world",
+    "name": "4x Warriors in Physical+Fire Resistance World",
+    "description": "Warriors (physical + neutral) in a world with both physical and fire resistance. Should perform worse than in just physical-resist world since they already take physical penalty.",
+    "party": ["Warrior", "Warrior", "Warrior", "Warrior"],
+    "mode": "normal",
+    "environmentSettings": {
+      "physicalPct": 100,
+      "magicalPct": 0,
+      "firePct": 100,
+      "waterPct": 0,
+      "windPct": 0,
+      "earthPct": 0,
+      "lightPct": 0,
+      "darknessPct": 0
+    },
+    "runs": 10,
+    "seedStart": 2400
+  },
+  {
+    "id": "mages_phys_and_fire_resist_world",
+    "name": "4x Mages in Physical+Fire Resistance World",
+    "description": "Mages (magical + fire) in a world with both physical and fire resistance. Mages bypass physical resistance but are hit by fire resistance.",
+    "party": ["Mage", "Mage", "Mage", "Mage"],
+    "mode": "normal",
+    "environmentSettings": {
+      "physicalPct": 100,
+      "magicalPct": 0,
+      "firePct": 100,
+      "waterPct": 0,
+      "windPct": 0,
+      "earthPct": 0,
+      "lightPct": 0,
+      "darknessPct": 0
+    },
+    "runs": 10,
+    "seedStart": 2500
   }
 ]

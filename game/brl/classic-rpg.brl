@@ -460,6 +460,20 @@ let newEnemy: id = clone templateId {
                 isTemplate: false
             }
         }
+
+        // Apply encounter-based stat scaling so enemies grow tougher over time.
+        // hpScale  = 1 + encounterCount * healthScaleRate / 100000
+        // dmgScale = 1 + encounterCount * damageScaleRate / 100000
+        if entity has SpawnConfig {
+let encD: decimal = entity.GameState.encounterCount
+let hpRate: decimal = entity.SpawnConfig.healthScaleRate
+let dmgRate: decimal = entity.SpawnConfig.damageScaleRate
+let hpScale: decimal = 1.0d + encD * hpRate / 100000.0d
+let dmgScale: decimal = 1.0d + encD * dmgRate / 100000.0d
+            newEnemy.Health.current = max(1, floor(newEnemy.Health.current * hpScale))
+            newEnemy.Health.max = max(1, floor(newEnemy.Health.max * hpScale))
+            newEnemy.Combat.damage = max(1, floor(newEnemy.Combat.damage * dmgScale))
+        }
         
         // Target will be assigned by the retargeting system
         newEnemy.Target.entity = null
@@ -483,6 +497,18 @@ let newBoss: id = clone bossTemplate {
             EnemyTemplate {
                 isTemplate: false
             }
+        }
+
+        // Apply encounter-based stat scaling (same as regular enemies)
+        if entity has SpawnConfig {
+let bEncD: decimal = entity.GameState.encounterCount
+let bHpRate: decimal = entity.SpawnConfig.healthScaleRate
+let bDmgRate: decimal = entity.SpawnConfig.damageScaleRate
+let bHpScale: decimal = 1.0d + bEncD * bHpRate / 100000.0d
+let bDmgScale: decimal = 1.0d + bEncD * bDmgRate / 100000.0d
+            newBoss.Health.current = max(1, floor(newBoss.Health.current * bHpScale))
+            newBoss.Health.max = max(1, floor(newBoss.Health.max * bHpScale))
+            newBoss.Combat.damage = max(1, floor(newBoss.Combat.damage * bDmgScale))
         }
 
         // Target will be assigned by the retargeting system
@@ -920,7 +946,19 @@ let boss: id = clone templateId {
             }
         }
 
-        // Mini-boss buffs: 2.5x HP, 1.5x damage
+        // Apply encounter-based stat scaling (same as regular enemies)
+        if entity has SpawnConfig {
+let mbEncD: decimal = entity.GameState.encounterCount
+let mbHpRate: decimal = entity.SpawnConfig.healthScaleRate
+let mbDmgRate: decimal = entity.SpawnConfig.damageScaleRate
+let mbHpScale: decimal = 1.0d + mbEncD * mbHpRate / 100000.0d
+let mbDmgScale: decimal = 1.0d + mbEncD * mbDmgRate / 100000.0d
+            boss.Health.current = max(1, floor(boss.Health.current * mbHpScale))
+            boss.Health.max = max(1, floor(boss.Health.max * mbHpScale))
+            boss.Combat.damage = max(1, floor(boss.Combat.damage * mbDmgScale))
+        }
+
+        // Mini-boss buffs: 2.5x HP, 1.5x damage (applied after scaling)
         boss.Health.current = floor(boss.Health.current * 2.5d)
         boss.Health.max = floor(boss.Health.max * 2.5d)
         boss.Combat.damage = floor(boss.Combat.damage * 1.5d)

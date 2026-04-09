@@ -188,8 +188,81 @@
         "mages_phys_resist_world",
         "warriors_phys_resist_world",
         "warriors_magic_resist_world",
-        "mages_magic_resist_world"
+        "mages_magic_resist_world",
+        "all_warriors_neutral_world",
+        "all_mages_neutral_world",
+        "mages_fire_resist_world",
+        "paladins_light_resist_world",
+        "paladins_neutral_world",
+        "warriors_phys_and_fire_resist_world",
+        "mages_phys_and_fire_resist_world"
       ]
     }
+  },
+  {
+    "id": "env_new_scenarios_kills_positive",
+    "name": "All new environment scenarios defeat at least one enemy per run",
+    "description": "Even in unfavorable environments, heroes should still be able to defeat enemies.",
+    "type": "kills_positive",
+    "params": {
+      "scenarios": [
+        "all_warriors_neutral_world",
+        "all_mages_neutral_world",
+        "mages_fire_resist_world",
+        "paladins_light_resist_world",
+        "paladins_neutral_world",
+        "warriors_phys_and_fire_resist_world",
+        "mages_phys_and_fire_resist_world"
+      ]
+    }
+  },
+  {
+    "id": "mages_margin_over_warriors_phys_resist",
+    "name": "Mages significantly outperform warriors in physical-resist world",
+    "description": "In a 100% physical resistance world, mages (magical damage) should score at least 5% more than warriors (physical damage). A tiny margin suggests resistances are not impactful enough.",
+    "type": "mean_score_margin",
+    "params": { "scenarioA": "mages_phys_resist_world", "scenarioB": "warriors_phys_resist_world", "minMarginPct": 5 }
+  },
+  {
+    "id": "warriors_margin_over_mages_magic_resist",
+    "name": "Warriors significantly outperform mages in magical-resist world",
+    "description": "In a 100% magical resistance world, warriors (physical damage) should score at least 5% more than mages (magical damage).",
+    "type": "mean_score_margin",
+    "params": { "scenarioA": "warriors_magic_resist_world", "scenarioB": "mages_magic_resist_world", "minMarginPct": 5 }
+  },
+  {
+    "id": "neutral_warriors_beat_resisted_warriors",
+    "name": "Warriors in neutral world outperform warriors in physical-resist world",
+    "description": "Warriors should score higher in a neutral world (no enemy resistances) than in a world where all enemies resist physical attacks. Validates that environmental resistance degrades performance of mismatched heroes.",
+    "type": "mean_score_greater",
+    "params": { "scenarioA": "all_warriors_neutral_world", "scenarioB": "warriors_phys_resist_world" }
+  },
+  {
+    "id": "neutral_mages_beat_resisted_mages",
+    "name": "Mages in neutral world outperform mages in magical-resist world",
+    "description": "Mages should score higher in a neutral world than in a world where all enemies resist magical attacks.",
+    "type": "mean_score_greater",
+    "params": { "scenarioA": "all_mages_neutral_world", "scenarioB": "mages_magic_resist_world" }
+  },
+  {
+    "id": "mages_fire_resist_worse_than_neutral",
+    "name": "Mages underperform in fire-resist world compared to neutral",
+    "description": "Mages deal fire-element damage. In a 100% fire-resist world, their element is penalised, so they should score lower than in a neutral world.",
+    "type": "mean_score_greater",
+    "params": { "scenarioA": "all_mages_neutral_world", "scenarioB": "mages_fire_resist_world" }
+  },
+  {
+    "id": "paladins_light_resist_worse_than_neutral",
+    "name": "Paladins underperform in light-resist world compared to neutral",
+    "description": "Paladins deal light-element damage. In a 100% light-resist world, their element is penalised, so they should score lower than in a neutral world.",
+    "type": "mean_score_greater",
+    "params": { "scenarioA": "paladins_neutral_world", "scenarioB": "paladins_light_resist_world" }
+  },
+  {
+    "id": "mages_beat_warriors_phys_fire_resist",
+    "name": "Mages still outperform warriors in physical+fire resist world",
+    "description": "In a world with both physical and fire resistance, mages (magical+fire) lose their element advantage but still bypass physical resistance. Warriors (physical+neutral) are fully penalised by physical resistance. Mages should still score higher.",
+    "type": "mean_score_greater",
+    "params": { "scenarioA": "mages_phys_and_fire_resist_world", "scenarioB": "warriors_phys_and_fire_resist_world" }
   }
 ]
