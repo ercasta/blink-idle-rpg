@@ -52,28 +52,28 @@ const MODE_CONFIGS: Record<Exclude<GameMode, 'custom'>, {
 }> = {
   normal: {
     bossEveryKills: 100, tierProgressionKills: 500,
-    healthScaleRate: 200, damageScaleRate: 300, initialEnemyCount: 5,
-    retreatTimePenalty: 10.0, deathTimePenaltyMultiplier: 5.0, fleeCooldown: 5.0,
+    healthScaleRate: 80, damageScaleRate: 60, initialEnemyCount: 5,
+    retreatTimePenalty: 10.0, deathTimePenaltyMultiplier: 2.0, fleeCooldown: 5.0,
     pointsPerKill: 10, pointsPerWave: 50, pointsPerBoss: 500,
-    pointsLostPerDeath: 100, pointsLostPerRetreat: 50, pointsLostPerPenaltySecond: 2,
+    pointsLostPerDeath: 30, pointsLostPerRetreat: 50, pointsLostPerPenaltySecond: 2,
     timeBonusPoints: 1000, timeBonusInterval: 10.0,
   },
   // Easy = all numeric parameters × 0.5 vs Normal (less intense experience overall)
   easy: {
     bossEveryKills: 150, tierProgressionKills: 750,
-    healthScaleRate: 100, damageScaleRate: 150, initialEnemyCount: 3,
-    retreatTimePenalty: 5.0, deathTimePenaltyMultiplier: 2.5, fleeCooldown: 5.0,
+    healthScaleRate: 40, damageScaleRate: 30, initialEnemyCount: 3,
+    retreatTimePenalty: 5.0, deathTimePenaltyMultiplier: 1.0, fleeCooldown: 5.0,
     pointsPerKill: 5, pointsPerWave: 25, pointsPerBoss: 250,
-    pointsLostPerDeath: 50, pointsLostPerRetreat: 25, pointsLostPerPenaltySecond: 1,
+    pointsLostPerDeath: 15, pointsLostPerRetreat: 25, pointsLostPerPenaltySecond: 1,
     timeBonusPoints: 500, timeBonusInterval: 15.0,
   },
   // Hard = all numeric parameters × 1.5 vs Normal (higher stakes, bigger rewards and penalties)
   hard: {
     bossEveryKills: 75, tierProgressionKills: 400,
-    healthScaleRate: 300, damageScaleRate: 450, initialEnemyCount: 7,
-    retreatTimePenalty: 15.0, deathTimePenaltyMultiplier: 7.5, fleeCooldown: 5.0,
+    healthScaleRate: 120, damageScaleRate: 90, initialEnemyCount: 7,
+    retreatTimePenalty: 15.0, deathTimePenaltyMultiplier: 3.0, fleeCooldown: 5.0,
     pointsPerKill: 15, pointsPerWave: 75, pointsPerBoss: 750,
-    pointsLostPerDeath: 150, pointsLostPerRetreat: 75, pointsLostPerPenaltySecond: 3,
+    pointsLostPerDeath: 45, pointsLostPerRetreat: 75, pointsLostPerPenaltySecond: 3,
     timeBonusPoints: 1500, timeBonusInterval: 5.0,
   },
 };

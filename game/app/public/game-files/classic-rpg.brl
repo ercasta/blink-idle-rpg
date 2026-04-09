@@ -666,16 +666,23 @@ let character: id = clu.source
     }
 }
 
-// Level up stat increases (generous to keep pace with enemy scaling)
+// Level up stat increases — compound (exponential) growth to match enemy scaling.
+// Defense gain: flat 2 + 10% of current defense (kicks in strongly at mid/high levels).
+// HP/damage/mana: percentage of current value with a minimum flat floor so early levels
+// always feel meaningful.
 rule level_up_stats on LevelUp(lu: id) {
     if entity has GameState {
 let character: id = lu.source
-        character.Health.max += 30
-        character.Health.current += 30
-        character.Combat.damage += 5
-        character.Combat.defense += 3
-        character.Mana.max += 15
-        character.Mana.current += 15
+let hpGain: integer = max(20, floor(character.Health.max * 0.08d))
+        character.Health.max += hpGain
+        character.Health.current += hpGain
+let dmgGain: integer = max(3, floor(character.Combat.damage * 0.08d))
+        character.Combat.damage += dmgGain
+let defGain: integer = 2 + floor(character.Combat.defense * 0.10d)
+        character.Combat.defense += defGain
+let manaGain: integer = max(8, floor(character.Mana.max * 0.08d))
+        character.Mana.max += manaGain
+        character.Mana.current += manaGain
     }
 }
 
