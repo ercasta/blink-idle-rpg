@@ -37,6 +37,7 @@ export interface RunResult {
   heroes?: HeroDefinition[];
   mode?: GameMode;
   customSettings?: CustomModeSettings;
+  adventure?: AdventureDefinition;
 }
 
 export type HeroClass = 'Warrior' | 'Mage' | 'Ranger' | 'Paladin' | 'Rogue' | 'Cleric';
@@ -117,6 +118,19 @@ export const DEFAULT_CUSTOM_SETTINGS: CustomModeSettings = {
   encounterDifficultyPct: 0,
 };
 
+export interface AdventureDefinition {
+  id: string;
+  name: string;
+  /** Auto-generated prose description based on the adventure's settings */
+  description: string;
+  mode: GameMode;
+  customSettings?: CustomModeSettings;
+  /** Exact number of heroes the party must have (1–6, default 4) */
+  requiredHeroCount: number;
+  /** Classes permitted in the party (default: all 6) */
+  allowedClasses: HeroClass[];
+}
+
 export interface GameModeDefinition {
   id: GameMode;
   name: string;
@@ -134,6 +148,8 @@ export type AppScreen =
   | 'home'
   | 'roster'
   | 'mode-select'
+  | 'adventure-select'
+  | 'adventure-manager'
   | 'party-select'
   | 'battle'
   | 'results'
