@@ -42,6 +42,7 @@
 
 const path = require('path');
 const fs   = require('fs');
+const os   = require('os');
 
 const ROOT             = path.join(__dirname, '..');
 const DEFAULT_DATA_DIR = path.join(ROOT, 'game', 'data');
@@ -55,7 +56,7 @@ const SEED_OFFSET_STEP = 10000;
 
 const {
   ensureBinary,
-  runOneSimulation,
+  runOneSimulationAsync,
   aggregateKPIs,
   loadGameData,
   buildHeroJson,
@@ -85,77 +86,174 @@ function loadJsonConfig(filePath, label) {
   return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
 }
 
-// ─── Run a single scenario ──────────────────────────────────────────────────
+// ─── Bounded-concurrency async runner ───────────────────────────────────────
 
-function runScenario(binaryPath, scenario, gameData, seedOffset, verbose) {
+/**
+ * Run an array of zero-argument async factory functions with at most
+ * `concurrency` running simultaneously.  Results are returned in the same
+ * order as `tasks`.
+ *
+ * @template T
+ * @param {Array<() => Promise<T>>} tasks
+ * @param {number} concurrency
+ * @returns {Promise<T[]>}
+ */
+async function runWithConcurrency(tasks, concurrency) {
+  const results = new Array(tasks.length);
+  let nextIdx = 0;
+
+  async function worker() {
+    while (nextIdx < tasks.length) {
+      const idx = nextIdx++;
+      results[idx] = await tasks[idx]();
+    }
+  }
+
+  // Spin up at most `concurrency` workers; each drains the shared queue.
+  const workers = [];
+  for (let i = 0; i < Math.min(concurrency, tasks.length); i++) {
+    workers.push(worker());
+  }
+  await Promise.all(workers);
+  return results;
+}
+
+// ─── Run all scenarios in parallel ──────────────────────────────────────────
+
+/**
+ * Build the simulation config for a single run of a scenario.
+ */
+function buildRunConfig(scenario, gameData, seed) {
   let mode = gameData.gameModes[scenario.mode];
   if (!mode) {
     throw new Error(`Unknown mode "${scenario.mode}" in scenario "${scenario.id}"`);
   }
-
-  // For custom-mode scenarios, apply per-scenario multipliers on top of the
-  // normal-mode baseline.
   const customSettings = scenario.customSettings || null;
   if (scenario.mode === 'custom' && customSettings) {
     mode = applyCustomSettings(gameData.gameModes['normal'], customSettings);
   }
-  // Exp multiplier for custom mode
   const expMult = (scenario.mode === 'custom' && customSettings)
     ? 1 + (customSettings.expMultiplierPct || 0) / 100
     : null;
-
-  // Environment settings for damage type / resistance assignment
   const envSettings = scenario.environmentSettings || null;
 
-  const results = [];
-  for (let i = 0; i < scenario.runs; i++) {
-    const seed = scenario.seedStart + seedOffset + i;
-    const config = {
-      seed,
-      maxSteps: DEFAULT_MAX_STEPS,
-      heroes: scenario.party.map(cls => buildHeroJson(cls, gameData.heroes)),
-      enemies: gameData.enemies.map(e => buildEnemyJson(e, expMult, envSettings)),
-      configEntities: buildConfigEntities(mode),
-    };
+  return {
+    seed,
+    maxSteps: DEFAULT_MAX_STEPS,
+    heroes: scenario.party.map(cls => buildHeroJson(cls, gameData.heroes)),
+    enemies: gameData.enemies.map(e => buildEnemyJson(e, expMult, envSettings)),
+    configEntities: buildConfigEntities(mode),
+  };
+}
 
-    try {
-      const result = runOneSimulation(binaryPath, config);
-      results.push(result);
+/**
+ * Run all scenario runs in parallel (bounded by CPU count).
+ * Returns a map of scenarioId → { scenario, results[], kpis }.
+ *
+ * Individual run failures are logged and excluded from results rather than
+ * aborting the entire batch.
+ *
+ * @param {string} binaryPath
+ * @param {object[]} scenarios
+ * @param {object} gameData
+ * @param {number} seedOffset
+ * @param {boolean} verbose
+ * @param {Function} log   — progress logger (stderr-safe)
+ * @returns {Promise<object>}
+ */
+async function runAllScenariosParallel(binaryPath, scenarios, gameData, seedOffset, verbose, log) {
+  const concurrency = os.cpus().length;
+
+  // Flatten every (scenario × run-index) pair into an ordered task list.
+  const tasks   = [];
+  const runMeta = [];   // parallel metadata for each task slot
+
+  for (const scenario of scenarios) {
+    for (let i = 0; i < scenario.runs; i++) {
+      const seed   = scenario.seedStart + seedOffset + i;
+      const config = buildRunConfig(scenario, gameData, seed);
+      const runIdx = i;
+      const scId   = scenario.id;
+
+      tasks.push(() =>
+        runOneSimulationAsync(binaryPath, config).catch(err => ({
+          _error: err.message,
+          _seed:  seed,
+          _scId:  scId,
+          _run:   runIdx,
+        }))
+      );
+      runMeta.push({ scenarioId: scId, runIndex: runIdx, seed });
+    }
+  }
+
+  const totalRuns = tasks.length;
+  log(`  Spawning ${totalRuns} simulations (concurrency=${concurrency})...`);
+
+  const rawResults = await runWithConcurrency(tasks, concurrency);
+
+  // Group successful results back by scenario.
+  const allResults = {};
+  for (const scenario of scenarios) {
+    allResults[scenario.id] = { scenario, results: [] };
+  }
+
+  for (let t = 0; t < rawResults.length; t++) {
+    const { scenarioId, runIndex, seed } = runMeta[t];
+    const raw = rawResults[t];
+
+    if (raw && !raw._error) {
+      allResults[scenarioId].results.push(raw);
       if (verbose) {
-        const gs = result.gameState || {};
-        const sc = result.score || {};
+        const gs      = raw.gameState || {};
+        const sc      = raw.score    || {};
         const outcome = gs.gameOver ? (gs.victory ? 'Victory' : 'Defeat') : 'Timeout';
-        console.log(
-          `    run ${i + 1}/${scenario.runs} seed=${seed}: ` +
+        log(
+          `    ${scenarioId} run ${runIndex + 1} seed=${seed}: ` +
           `score=${String(sc.total ?? 0).padStart(6)} ` +
           `wave=${String(gs.currentWave ?? 1).padStart(3)} ` +
           `kills=${String(gs.enemiesDefeated ?? 0).padStart(4)} ` +
           outcome
         );
       }
-    } catch (err) {
-      console.error(`    run ${i + 1}/${scenario.runs} FAILED: ${err.message}`);
+    } else {
+      const msg = raw?._error || 'unknown error';
+      process.stderr.write(
+        `  WARN: ${scenarioId} run ${runIndex + 1} seed=${seed} failed: ${msg}\n`
+      );
     }
   }
 
-  return {
-    scenario,
-    results,
-    kpis: aggregateKPIs(results),
-  };
+  // Attach KPIs and print one-line summary per scenario.
+  for (const scenario of scenarios) {
+    const sr  = allResults[scenario.id];
+    sr.kpis   = aggregateKPIs(sr.results);
+    if (!verbose) {
+      const k = sr.kpis;
+      log(
+        `  ${scenario.id.padEnd(25)} ` +
+        `${sr.results.length} runs | ` +
+        `mean score: ${String(k.meanScore ?? 'N/A').padStart(7)} | ` +
+        `win rate: ${String((k.winRate ?? 0) + '%').padStart(6)} | ` +
+        `mean wave: ${String(k.meanWave ?? 'N/A').padStart(5)}`
+      );
+    }
+  }
+
+  return allResults;
 }
 
 // ─── Check evaluation dispatch ──────────────────────────────────────────────
 
 /**
  * Evaluate a single check against collected scenario results.
- * Returns { passed: boolean, message: string }
+ * Returns a Promise<{ passed: boolean, message: string }>.
  */
-function evaluateCheck(check, allResults, binaryPath, gameData, seedOffset) {
+async function evaluateCheck(check, allResults, binaryPath, gameData, seedOffset) {
   try {
     switch (check.type) {
       case 'determinism':
-        return checkDeterminism(check, allResults, binaryPath, gameData, seedOffset);
+        return await checkDeterminism(check, allResults, binaryPath, gameData, seedOffset);
       case 'score_nonnegative':
         return checkScoreNonnegative(check, allResults);
       case 'score_consistent':
@@ -197,36 +295,25 @@ function getScenarioResults(scenarioId, allResults) {
 
 // ─── Check implementations ──────────────────────────────────────────────────
 
-function checkDeterminism(check, allResults, binaryPath, gameData, seedOffset) {
+async function checkDeterminism(check, allResults, binaryPath, gameData, seedOffset) {
   const scenarioId = check.params.scenario;
   const sr = getScenarioResults(scenarioId, allResults);
   const scenario = sr.scenario;
-  let mode = gameData.gameModes[scenario.mode];
 
-  // Apply custom settings if present
-  const customSettings = scenario.customSettings || null;
-  if (scenario.mode === 'custom' && customSettings) {
-    mode = applyCustomSettings(gameData.gameModes['normal'], customSettings);
-  }
-  const expMult = (scenario.mode === 'custom' && customSettings)
-    ? 1 + (customSettings.expMultiplierPct || 0) / 100
-    : null;
+  const concurrency = os.cpus().length;
+  const envSettings = scenario.environmentSettings || null;
+
+  // Build one replay task per original run, all in parallel.
+  const tasks = sr.results.map((original, i) => {
+    const seed   = scenario.seedStart + seedOffset + i;
+    const config = buildRunConfig(scenario, gameData, seed);
+    return () => runOneSimulationAsync(binaryPath, config).then(replay => ({ original, replay, seed }));
+  });
+
+  const replayResults = await runWithConcurrency(tasks, concurrency);
 
   const mismatches = [];
-  const envSettings = scenario.environmentSettings || null;
-  for (let i = 0; i < sr.results.length; i++) {
-    const seed = scenario.seedStart + seedOffset + i;
-    const config = {
-      seed,
-      maxSteps: DEFAULT_MAX_STEPS,
-      heroes: scenario.party.map(cls => buildHeroJson(cls, gameData.heroes)),
-      enemies: gameData.enemies.map(e => buildEnemyJson(e, expMult, envSettings)),
-      configEntities: buildConfigEntities(mode),
-    };
-
-    const replay = runOneSimulation(binaryPath, config);
-    const original = sr.results[i];
-
+  for (const { original, replay, seed } of replayResults) {
     const diffs = [];
     if (original.score.total !== replay.score.total) {
       diffs.push(`score.total: ${original.score.total} vs ${replay.score.total}`);
@@ -243,7 +330,6 @@ function checkDeterminism(check, allResults, binaryPath, gameData, seedOffset) {
     if (String(original.gameState.victory) !== String(replay.gameState.victory)) {
       diffs.push(`victory: ${original.gameState.victory} vs ${replay.gameState.victory}`);
     }
-
     if (diffs.length > 0) {
       mismatches.push({ seed, diffs });
     }
@@ -508,9 +594,9 @@ function resolveScenarioList(params) {
  * @param {string} [options.scenariosFile]     Scenarios JSON path
  * @param {string} [options.checksFile]        Checks JSON path
  * @param {boolean} [options.rebuild=false]    Force binary recompile
- * @returns {{ passed: object[], failed: object[], summary: object }}
+ * @returns {Promise<{ passed: object[], failed: object[], summary: object }>}
  */
-function runHarness(options = {}) {
+async function runHarness(options = {}) {
   const {
     retries       = 3,
     showPassed    = false,
@@ -528,7 +614,6 @@ function runHarness(options = {}) {
     console.log = (...args) => process.stderr.write(args.join(' ') + '\n');
   }
   const log  = jsonOutput ? (...a) => process.stderr.write(a.join(' ') + '\n') : origConsoleLog;
-  const logw = jsonOutput ? (...a) => process.stderr.write(a.join(' ') + '\n') : (...a) => process.stdout.write(a.join(' '));
 
   // 1. Load config
   const scenarios = loadJsonConfig(scenariosFile, 'Scenarios');
@@ -559,36 +644,22 @@ function runHarness(options = {}) {
       log('═'.repeat(72));
     }
 
-    // 3a. Run all scenarios
+    // 3a. Run all scenarios in parallel
     log(`\n── Running ${scenarios.length} scenarios ──`);
-    const allResults = {};
-    for (const scenario of scenarios) {
-      if (!verbose) {
-        logw(`  ${scenario.id.padEnd(25)} `);
-      } else {
-        log(`\n  ${scenario.name} (${scenario.id}):`);
-      }
+    const allResults = await runAllScenariosParallel(
+      binaryPath, scenarios, gameData, seedOffset, verbose, log
+    );
 
-      const result = runScenario(binaryPath, scenario, gameData, seedOffset, verbose);
-      allResults[scenario.id] = result;
-
-      if (!verbose) {
-        const k = result.kpis;
-        log(
-          `${result.results.length} runs | ` +
-          `mean score: ${String(k.meanScore ?? 'N/A').padStart(7)} | ` +
-          `win rate: ${String((k.winRate ?? 0) + '%').padStart(6)} | ` +
-          `mean wave: ${String(k.meanWave ?? 'N/A').padStart(5)}`
-        );
-      }
-    }
-
-    // 3b. Evaluate pending checks
+    // 3b. Evaluate pending checks (determinism replays are also parallel)
     log(`\n── Evaluating ${pendingChecks.length} check(s) (attempt ${attempt + 1}) ──`);
-    const stillFailing = [];
+    const checkResults = await Promise.all(
+      pendingChecks.map(check => evaluateCheck(check, allResults, binaryPath, gameData, seedOffset))
+    );
 
-    for (const check of pendingChecks) {
-      const result = evaluateCheck(check, allResults, binaryPath, gameData, seedOffset);
+    const stillFailing = [];
+    for (let ci = 0; ci < pendingChecks.length; ci++) {
+      const check  = pendingChecks[ci];
+      const result = checkResults[ci];
 
       if (result.passed) {
         passedChecks.push({
@@ -695,25 +766,25 @@ if (require.main === module) {
   const scenariosFile = getArg('scenarios', undefined);
   const checksFile    = getArg('checks', undefined);
 
-  try {
-    const result = runHarness({
-      retries,
-      showPassed,
-      verbose,
-      jsonOutput,
-      dataDir,
-      rebuild,
-      ...(scenariosFile ? { scenariosFile } : {}),
-      ...(checksFile ? { checksFile } : {}),
+  runHarness({
+    retries,
+    showPassed,
+    verbose,
+    jsonOutput,
+    dataDir,
+    rebuild,
+    ...(scenariosFile ? { scenariosFile } : {}),
+    ...(checksFile ? { checksFile } : {}),
+  })
+    .then(result => {
+      printReport(result, showPassed, jsonOutput);
+      process.exit(result.summary.allPassed ? 0 : 1);
+    })
+    .catch(err => {
+      console.error(`\nFATAL ERROR: ${err.message}`);
+      if (err.stack) console.error(err.stack);
+      process.exit(2);
     });
-
-    printReport(result, showPassed, jsonOutput);
-    process.exit(result.summary.allPassed ? 0 : 1);
-  } catch (err) {
-    console.error(`\nFATAL ERROR: ${err.message}`);
-    if (err.stack) console.error(err.stack);
-    process.exit(2);
-  }
 }
 
 module.exports = { runHarness };
