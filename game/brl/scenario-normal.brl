@@ -27,9 +27,9 @@ scenario_info = new entity {
 // Standard game configuration (this is the original balance)
 flee_config = new entity {
     FleeConfig {
-        retreatTimePenalty: 5.0d              // 5 seconds
-        deathTimePenaltyMultiplier: 1.0d      // 1x = 5 seconds per death
-        fleeCooldown: 3.0d                    // 3 seconds between flees
+        retreatTimePenalty: 10.0d             // 10 seconds (normal baseline)
+        deathTimePenaltyMultiplier: 5.0d      // 5x = 50 seconds per death
+        fleeCooldown: 5.0d                    // 5 seconds between flees
     }
 }
 
@@ -88,14 +88,14 @@ enemy_compendium = new entity {
 // Scoring rules for Normal mode (see doc/game-design/game-modes.md)
 let scoring_entity: id = new entity {
     ScoringRules {
-        pointsPerKill: 15
+        pointsPerKill: 10
         pointsPerWave: 50
         pointsPerBoss: 500
-        pointsLostPerDeath: 5
-        pointsLostPerRetreat: 10
-        pointsLostPerPenaltySecond: 0
-        timeBonusPoints: 3000
-        timeBonusInterval: 30.0d
+        pointsLostPerDeath: 100
+        pointsLostPerRetreat: 50
+        pointsLostPerPenaltySecond: 2
+        timeBonusPoints: 1000
+        timeBonusInterval: 10.0d
     }
     Score {
         total: 0

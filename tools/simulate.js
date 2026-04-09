@@ -312,7 +312,10 @@ function buildHeroJson(heroClass, heroData) {
   };
 }
 
-function buildEnemyJson(template) {
+function buildEnemyJson(template, expMultiplier) {
+  const expReward = expMultiplier != null
+    ? Math.round(template.expReward * expMultiplier)
+    : template.expReward;
   return {
     _entityId: template.id,
     Character: {
@@ -328,10 +331,33 @@ function buildEnemyJson(template) {
     },
     Target: { entity: 0 },
     Team: { id: 'enemy', isPlayer: false },
-    Enemy: { tier: template.tier, isBoss: template.isBoss || false, expReward: template.expReward, wave: template.tier, name: template.name },
+    Enemy: { tier: template.tier, isBoss: template.isBoss || false, expReward, wave: template.tier, name: template.name },
     EnemyTemplate: { isTemplate: true },
     Buffs: { damageBonus: 0, defenseBonus: 0, hasteBonus: 0.0, shieldAmount: 0, regenAmount: 0 },
     ...(template.isBoss ? { FinalBoss: { isFinalBoss: true } } : {}),
+  };
+}
+
+/**
+ * Derive a mode-config object from the normal baseline by applying
+ * CustomModeSettings percentage offsets.  Mirrors the logic in WasmSimEngine.ts.
+ *
+ * @param {object} normalMode  The normal-mode entry from game-modes.json
+ * @param {object} customSettings  { heroPenaltyPct, wipeoutPenaltyPct, expMultiplierPct, encounterDifficultyPct }
+ */
+function applyCustomSettings(normalMode, customSettings) {
+  const cs = customSettings || {};
+  const hpMult   = 1 + (cs.heroPenaltyPct       || 0) / 100;
+  const wpMult   = 1 + (cs.wipeoutPenaltyPct    || 0) / 100;
+  const diffMult = 1 + (cs.encounterDifficultyPct || 0) / 100;
+  return {
+    ...normalMode,
+    pointsLostPerDeath:        Math.round(normalMode.pointsLostPerDeath        * hpMult),
+    deathTimePenaltyMultiplier: normalMode.deathTimePenaltyMultiplier           * wpMult,
+    retreatTimePenalty:         normalMode.retreatTimePenalty                   * wpMult,
+    pointsLostPerRetreat:      Math.round(normalMode.pointsLostPerRetreat      * wpMult),
+    healthScaleRate:           Math.round(normalMode.healthScaleRate            * diffMult),
+    damageScaleRate:           Math.round(normalMode.damageScaleRate            * diffMult),
   };
 }
 
@@ -496,12 +522,16 @@ if (require.main === module) {
     for (let i = 0; i < runs; i++) {
       const seed = seedStart + i;
       try {
+        // For 'custom' mode, use normal baseline (no customSettings in CLI mode)
+        const effectiveMode = modeId === 'custom'
+          ? applyCustomSettings(gameData.gameModes['normal'], {})
+          : mode;
         const config = {
           seed,
           maxSteps: 500000,
           heroes: party.map(cls => buildHeroJson(cls, gameData.heroes)),
-          enemies: gameData.enemies.map(e => buildEnemyJson(e)),
-          configEntities: buildConfigEntities(mode),
+          enemies: gameData.enemies.map(e => buildEnemyJson(e, null)),
+          configEntities: buildConfigEntities(effectiveMode),
         };
 
         const result = runOneSimulation(binaryPath, config);
@@ -548,4 +578,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { ensureBinary, runOneSimulation, aggregateKPIs, loadGameData, buildHeroJson, buildEnemyJson, buildConfigEntities };
+module.exports = { ensureBinary, runOneSimulation, aggregateKPIs, loadGameData, buildHeroJson, buildEnemyJson, buildConfigEntities, applyCustomSettings };

@@ -36,6 +36,7 @@ export interface RunResult {
   favorited?: boolean;
   heroes?: HeroDefinition[];
   mode?: GameMode;
+  customSettings?: CustomModeSettings;
 }
 
 export type HeroClass = 'Warrior' | 'Mage' | 'Ranger' | 'Paladin' | 'Rogue' | 'Cleric';
@@ -91,7 +92,30 @@ export interface HeroPath {
   finalStats: { str: number; dex: number; int: number; con: number; wis: number };
 }
 
-export type GameMode = 'normal' | 'easy' | 'hard';
+export type GameMode = 'normal' | 'easy' | 'hard' | 'custom';
+
+/**
+ * Custom-mode slider settings.
+ * Each value is a percentage offset from the normal-mode baseline: -50 to +50.
+ * A value of 0 means "same as normal mode", -50 means half, +50 means 1.5×.
+ */
+export interface CustomModeSettings {
+  /** Hero-death score penalty offset in % (−50…+50) */
+  heroPenaltyPct: number;
+  /** Party-wipeout respawn-time penalty offset in % (−50…+50) */
+  wipeoutPenaltyPct: number;
+  /** Experience-gain multiplier offset in % (−50…+50) */
+  expMultiplierPct: number;
+  /** Encounter-difficulty (enemy health/damage scaling) offset in % (−50…+50) */
+  encounterDifficultyPct: number;
+}
+
+export const DEFAULT_CUSTOM_SETTINGS: CustomModeSettings = {
+  heroPenaltyPct: 0,
+  wipeoutPenaltyPct: 0,
+  expMultiplierPct: 0,
+  encounterDifficultyPct: 0,
+};
 
 export interface GameModeDefinition {
   id: GameMode;
@@ -103,6 +127,7 @@ export interface GameModeDefinition {
 export interface RunConfig {
   mode: GameMode;
   selectedHeroes: HeroDefinition[];
+  customSettings?: CustomModeSettings;
 }
 
 export type AppScreen =

@@ -9,7 +9,7 @@
  *   • Accepts runtime data (heroes, enemies, config) via create_entity/add_component
  */
 
-import type { GameSnapshot, HeroDefinition, GameMode, HeroPath } from '../types';
+import type { GameSnapshot, HeroDefinition, GameMode, HeroPath, CustomModeSettings } from '../types';
 import { simulateHeroPath, getSkillName } from '../data/traits';
 
 // ── Hero stats per class ────────────────────────────────────────────────────
@@ -41,7 +41,7 @@ const CLASS_ATTACK_SPEED: Record<string, number> = {
 
 // ── Game mode spawn configs ─────────────────────────────────────────────────
 
-const MODE_CONFIGS: Record<GameMode, {
+const MODE_CONFIGS: Record<Exclude<GameMode, 'custom'>, {
   bossEveryKills: number; tierProgressionKills: number;
   healthScaleRate: number; damageScaleRate: number; initialEnemyCount: number;
   retreatTimePenalty: number; deathTimePenaltyMultiplier: number; fleeCooldown: number;
@@ -57,21 +57,23 @@ const MODE_CONFIGS: Record<GameMode, {
     pointsLostPerDeath: 100, pointsLostPerRetreat: 50, pointsLostPerPenaltySecond: 2,
     timeBonusPoints: 1000, timeBonusInterval: 10.0,
   },
+  // Easy = Normal × 0.5 for punishing parameters, × 1.5 for lenient parameters
   easy: {
     bossEveryKills: 150, tierProgressionKills: 750,
     healthScaleRate: 100, damageScaleRate: 150, initialEnemyCount: 3,
-    retreatTimePenalty: 5.0, deathTimePenaltyMultiplier: 3.0, fleeCooldown: 5.0,
+    retreatTimePenalty: 5.0, deathTimePenaltyMultiplier: 2.5, fleeCooldown: 5.0,
     pointsPerKill: 5, pointsPerWave: 25, pointsPerBoss: 250,
     pointsLostPerDeath: 50, pointsLostPerRetreat: 25, pointsLostPerPenaltySecond: 1,
     timeBonusPoints: 500, timeBonusInterval: 15.0,
   },
+  // Hard = Normal × 1.5 for punishing parameters, × 0.5 for lenient parameters
   hard: {
     bossEveryKills: 75, tierProgressionKills: 400,
     healthScaleRate: 300, damageScaleRate: 450, initialEnemyCount: 7,
-    retreatTimePenalty: 15.0, deathTimePenaltyMultiplier: 7.0, fleeCooldown: 5.0,
-    pointsPerKill: 15, pointsPerWave: 75, pointsPerBoss: 1000,
-    pointsLostPerDeath: 200, pointsLostPerRetreat: 100, pointsLostPerPenaltySecond: 5,
-    timeBonusPoints: 2000, timeBonusInterval: 5.0,
+    retreatTimePenalty: 15.0, deathTimePenaltyMultiplier: 7.5, fleeCooldown: 5.0,
+    pointsPerKill: 15, pointsPerWave: 75, pointsPerBoss: 750,
+    pointsLostPerDeath: 150, pointsLostPerRetreat: 75, pointsLostPerPenaltySecond: 3,
+    timeBonusPoints: 1500, timeBonusInterval: 5.0,
   },
 };
 
@@ -155,6 +157,32 @@ async function loadWasmModule(): Promise<WasmModule | null> {
   }
 }
 
+// ── Custom-mode config builder ───────────────────────────────────────────────
+
+/**
+ * Derives a custom mode configuration from the normal-mode baseline by
+ * applying percentage offsets supplied via the slider settings.
+ */
+function buildCustomConfig(settings: CustomModeSettings) {
+  const base = MODE_CONFIGS.normal;
+  const hpMult   = 1 + settings.heroPenaltyPct       / 100;
+  const wpMult   = 1 + settings.wipeoutPenaltyPct    / 100;
+  const diffMult = 1 + settings.encounterDifficultyPct / 100;
+
+  return {
+    ...base,
+    // Death-penalty group (hero penalty slider)
+    pointsLostPerDeath: Math.round(base.pointsLostPerDeath * hpMult),
+    // Wipeout/respawn-time penalty group (wipeout slider)
+    deathTimePenaltyMultiplier: base.deathTimePenaltyMultiplier * wpMult,
+    retreatTimePenalty: base.retreatTimePenalty * wpMult,
+    pointsLostPerRetreat: Math.round(base.pointsLostPerRetreat * wpMult),
+    // Encounter difficulty group
+    healthScaleRate: Math.round(base.healthScaleRate * diffMult),
+    damageScaleRate: Math.round(base.damageScaleRate * diffMult),
+  };
+}
+
 // ── Public API ──────────────────────────────────────────────────────────────
 
 /**
@@ -170,6 +198,7 @@ async function loadWasmModule(): Promise<WasmModule | null> {
 export async function runSimulation(
   selectedHeroes: HeroDefinition[],
   mode: GameMode,
+  customSettings?: CustomModeSettings,
 ): Promise<{ snapshots: GameSnapshot[]; heroPaths: HeroPath[] }> {
   const mod = await loadWasmModule();
   if (!mod) {
@@ -185,7 +214,7 @@ export async function runSimulation(
   const seed = (BigInt(seedBytes[0]) << 32n) | BigInt(seedBytes[1]);
   const game = mod.BlinkWasmGame.with_seed(seed);
   try {
-    const snapshots = _runWithWasm(game, selectedHeroes, mode);
+    const snapshots = _runWithWasm(game, selectedHeroes, mode, customSettings);
 
     // Simulate hero progression paths using the trait system
     const heroPaths: HeroPath[] = selectedHeroes.map(hero => {
@@ -231,11 +260,19 @@ function _runWithWasm(
   game: BlinkWasmGame,
   selectedHeroes: HeroDefinition[],
   mode: GameMode,
+  customSettings?: CustomModeSettings,
 ): GameSnapshot[] {
   // 1. Register components + intern strings (no static entities in RPG BRL)
   game.init_static();
 
-  const cfg = MODE_CONFIGS[mode] ?? MODE_CONFIGS.normal;
+  const cfg = mode === 'custom'
+    ? buildCustomConfig(customSettings ?? { heroPenaltyPct: 0, wipeoutPenaltyPct: 0, expMultiplierPct: 0, encounterDifficultyPct: 0 })
+    : (MODE_CONFIGS[mode] ?? MODE_CONFIGS.normal);
+
+  // Exp multiplier for custom mode (applies to all enemy expReward values)
+  const expMult = mode === 'custom' && customSettings
+    ? 1 + customSettings.expMultiplierPct / 100
+    : 1;
 
   // 2. Create hero entities (IDs 1..N)
   selectedHeroes.forEach((hero, i) => {
@@ -306,7 +343,7 @@ function _runWithWasm(
     game.add_component(tmpl.id, 'Target', JSON.stringify({ entity: 0 }));
     game.add_component(tmpl.id, 'Team',   JSON.stringify({ id: 'enemy', isPlayer: false }));
     game.add_component(tmpl.id, 'Enemy',  JSON.stringify({
-      tier: tmpl.tier, isBoss: tmpl.boss, expReward: tmpl.exp, wave: tmpl.tier, name: tmpl.name,
+      tier: tmpl.tier, isBoss: tmpl.boss, expReward: Math.round(tmpl.exp * expMult), wave: tmpl.tier, name: tmpl.name,
     }));
     game.add_component(tmpl.id, 'EnemyTemplate', JSON.stringify({ isTemplate: true }));
     game.add_component(tmpl.id, 'Buffs', JSON.stringify({

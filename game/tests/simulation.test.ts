@@ -357,4 +357,87 @@ describe('Simulation Harness', () => {
     const minScore = Math.min(...scores);
     assert.ok(minScore > 0, `All runs should have positive scores; min was ${minScore}`);
   });
+
+  // ── 8. Custom mode — death penalty multiplier ─────────────────────────────
+  it('custom mode: 1.5× death penalty multiplier increases pointsLostPerDeath', () => {
+    // Normal baseline: pointsLostPerDeath = 100
+    // With heroPenaltyPct = +50 → multiplier = 1.5 → 150
+    const customPointsLostPerDeath = Math.round(100 * (1 + 50 / 100)); // 150
+    const game = buildFastGame({ pointsPerKill: 10 });
+
+    // Override ScoringRules with the custom death penalty
+    const existingRules = game.getComponent(96, 'ScoringRules') as any;
+    game.addComponent(96, 'ScoringRules', {
+      ...existingRules,
+      pointsLostPerDeath: customPointsLostPerDeath,
+    });
+
+    game.scheduleEvent('GameStart', 0, {});
+
+    let steps = 0;
+    while (steps < 100000) {
+      const results = game.runUntilComplete(500);
+      steps += results.length;
+      if (results.length < 500) break;
+      const gs = game.getComponent(99, 'GameState') as any;
+      if (gs && gs.gameOver) break;
+    }
+
+    const sc = game.getComponent(96, 'ScoringRules') as any;
+    game.destroy();
+
+    assert.strictEqual(
+      sc.pointsLostPerDeath,
+      customPointsLostPerDeath,
+      `pointsLostPerDeath should be ${customPointsLostPerDeath} (1.5× normal 100)`
+    );
+  });
+
+  // ── 9. Custom mode — exp multiplier raises hero levels faster ─────────────
+  it('custom mode: 1.5× exp multiplier causes heroes to reach at least as high a level', () => {
+    // Normal exp reward per enemy kill = 10 (Goblin)
+    // With expMultiplierPct = +50 → 15
+    const normalExpReward  = 10;
+    const boostedExpReward = Math.round(normalExpReward * 1.5); // 15
+
+    function buildGameWithExp(expReward: number) {
+      const game = buildFastGame({ maxTier: 2, goblinHP: 1, bossHP: 1 });
+
+      // Patch the goblin template expReward (entity ID 100)
+      const enemy = game.getComponent(100, 'Enemy') as any;
+      if (enemy) {
+        game.addComponent(100, 'Enemy', { ...enemy, expReward });
+      }
+
+      return game;
+    }
+
+    const gameNormal  = buildGameWithExp(normalExpReward);
+    const gameBoosted = buildGameWithExp(boostedExpReward);
+
+    for (const g of [gameNormal, gameBoosted]) {
+      g.scheduleEvent('GameStart', 0, {});
+      let steps = 0;
+      while (steps < 100000) {
+        const results = g.runUntilComplete(500);
+        steps += results.length;
+        if (results.length < 500) break;
+        const gs = g.getComponent(99, 'GameState') as any;
+        if (gs && gs.gameOver) break;
+      }
+    }
+
+    const charNormal  = gameNormal.getComponent(1, 'Character')  as any;
+    const charBoosted = gameBoosted.getComponent(1, 'Character') as any;
+    gameNormal.destroy();
+    gameBoosted.destroy();
+
+    assert.ok(charNormal,  'normal hero Character should exist');
+    assert.ok(charBoosted, 'boosted hero Character should exist');
+
+    assert.ok(
+      charBoosted.level >= charNormal.level,
+      `boosted-exp hero level (${charBoosted.level}) should be ≥ normal-exp level (${charNormal.level})`
+    );
+  });
 });

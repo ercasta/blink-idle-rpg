@@ -23,7 +23,8 @@
         "solo_warrior", "solo_mage", "solo_rogue",
         "duo_warrior_mage", "trio_mixed", "full_balanced",
         "all_warriors", "all_mages", "glass_cannon", "tank_heavy",
-        "full_balanced_hard", "full_balanced_easy"
+        "full_balanced_hard", "full_balanced_easy",
+        "custom_hard_penalties", "custom_easy_exp"
       ]
     }
   },
@@ -37,7 +38,8 @@
         "solo_warrior", "solo_mage", "solo_rogue",
         "duo_warrior_mage", "trio_mixed", "full_balanced",
         "all_warriors", "all_mages", "glass_cannon", "tank_heavy",
-        "full_balanced_hard", "full_balanced_easy"
+        "full_balanced_hard", "full_balanced_easy",
+        "custom_hard_penalties", "custom_easy_exp"
       ]
     }
   },
@@ -51,7 +53,8 @@
         "solo_warrior", "solo_mage", "solo_rogue",
         "duo_warrior_mage", "trio_mixed", "full_balanced",
         "all_warriors", "all_mages", "glass_cannon", "tank_heavy",
-        "full_balanced_hard", "full_balanced_easy"
+        "full_balanced_hard", "full_balanced_easy",
+        "custom_hard_penalties", "custom_easy_exp"
       ]
     }
   },
@@ -65,7 +68,8 @@
         "solo_warrior", "solo_mage", "solo_rogue",
         "duo_warrior_mage", "trio_mixed", "full_balanced",
         "all_warriors", "all_mages", "glass_cannon", "tank_heavy",
-        "full_balanced_hard", "full_balanced_easy"
+        "full_balanced_hard", "full_balanced_easy",
+        "custom_hard_penalties", "custom_easy_exp"
       ]
     }
   },
@@ -131,5 +135,19 @@
     "description": "Class diversity should provide at least as much combat effectiveness as stacking the same class. If 4x warriors consistently kill more than a 6-hero balanced team, class balance needs work.",
     "type": "mean_kills_greater",
     "params": { "scenarioA": "full_balanced", "scenarioB": "all_warriors" }
+  },
+  {
+    "id": "custom_hard_penalties_nonnegative",
+    "name": "Custom mode with max penalties still yields non-negative scores",
+    "description": "Even with death and wipeout penalties at +50%, the full balanced party should produce non-negative average scores. If scores go negative, penalties are too severe relative to rewards.",
+    "type": "score_nonnegative",
+    "params": { "scenarios": ["custom_hard_penalties"] }
+  },
+  {
+    "id": "custom_easy_exp_higher_than_custom_hard",
+    "name": "Favourable custom config scores higher than punishing custom config",
+    "description": "The easy-custom scenario (−50% penalties, +50% exp, −50% difficulty) should score higher than the hard-penalty custom scenario. Validates that custom sliders have the expected directional effect.",
+    "type": "mean_score_greater",
+    "params": { "scenarioA": "custom_easy_exp", "scenarioB": "custom_hard_penalties" }
   }
 ]

@@ -30,7 +30,8 @@ import { loadAllRuns, saveRun, toggleFavorite, deleteRun, importRun } from './st
 import { loadRoster, saveRoster } from './storage/rosterStorage';
 import { decodeHeroFromParams } from './data/heroDescription';
 import type { SharedHeroData } from './data/heroDescription';
-import type { AppScreen, GameMode, HeroDefinition, GameSnapshot, RunResult, HeroPath } from './types';
+import type { AppScreen, GameMode, HeroDefinition, GameSnapshot, RunResult, HeroPath, CustomModeSettings } from './types';
+import { DEFAULT_CUSTOM_SETTINGS } from './types';
 
 export default function App() {
   const [screen, setScreen] = useState<AppScreen | 'loading' | 'error'>(() => {
@@ -40,6 +41,7 @@ export default function App() {
     return 'home';
   });
   const [selectedMode, setSelectedMode] = useState<GameMode>('normal');
+  const [customSettings, setCustomSettings] = useState<CustomModeSettings>(DEFAULT_CUSTOM_SETTINGS);
   const [selectedHeroes, setSelectedHeroes] = useState<HeroDefinition[]>([]);
   const [roster, setRoster] = useState<HeroDefinition[]>([]);
   const [snapshots, setSnapshots] = useState<GameSnapshot[]>([]);
@@ -98,7 +100,7 @@ export default function App() {
     try {
       const runs = await loadAllRuns();
       setPrevSnapshots(runs[0]?.snapshots ?? []);
-      const result = await runSimulation(randomHeroes, 'normal');
+      const result = await runSimulation(randomHeroes, 'normal', DEFAULT_CUSTOM_SETTINGS);
       setSnapshots(result.snapshots);
       setHeroPaths(result.heroPaths);
       setScreen('battle');
@@ -109,8 +111,11 @@ export default function App() {
     }
   }, []);
 
-  function onModeSelected(mode: GameMode) {
+  function onModeSelected(mode: GameMode, settings?: CustomModeSettings) {
     setSelectedMode(mode);
+    if (mode === 'custom' && settings) {
+      setCustomSettings(settings);
+    }
     setScreen('party-select');
   }
 
@@ -126,7 +131,7 @@ export default function App() {
 
       const runs = await loadAllRuns();
       setPrevSnapshots(runs[0]?.snapshots ?? []);
-      const result = await runSimulation(heroes, selectedMode);
+      const result = await runSimulation(heroes, selectedMode, customSettings);
       setSnapshots(result.snapshots);
       setHeroPaths(result.heroPaths);
       setScreen('battle');
@@ -153,6 +158,7 @@ export default function App() {
       favorited: false,
       heroes: selectedHeroes,
       mode: selectedMode,
+      customSettings: selectedMode === 'custom' ? customSettings : undefined,
     };
     setRunResult(enrichedResult);
     await saveRun(enrichedResult);
@@ -176,7 +182,7 @@ export default function App() {
     try {
       const runs = await loadAllRuns();
       setPrevSnapshots(runs[0]?.snapshots ?? []);
-      const result = await runSimulation(selectedHeroes, selectedMode);
+      const result = await runSimulation(selectedHeroes, selectedMode, customSettings);
       setSnapshots(result.snapshots);
       setHeroPaths(result.heroPaths);
       setScreen('battle');
@@ -195,6 +201,7 @@ export default function App() {
     setHeroPaths(run.heroPaths);
     setSelectedHeroes(run.heroes ?? []);
     setSelectedMode(run.mode ?? 'normal');
+    setCustomSettings(run.customSettings ?? DEFAULT_CUSTOM_SETTINGS);
     setPrevSnapshots([]);
     setScreen('battle');
   }
