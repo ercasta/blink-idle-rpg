@@ -57,7 +57,7 @@ const MODE_CONFIGS: Record<Exclude<GameMode, 'custom'>, {
     pointsLostPerDeath: 100, pointsLostPerRetreat: 50, pointsLostPerPenaltySecond: 2,
     timeBonusPoints: 1000, timeBonusInterval: 10.0,
   },
-  // Easy = Normal × 0.5 for punishing parameters, × 1.5 for lenient parameters
+  // Easy = all numeric parameters × 0.5 vs Normal (less intense experience overall)
   easy: {
     bossEveryKills: 150, tierProgressionKills: 750,
     healthScaleRate: 100, damageScaleRate: 150, initialEnemyCount: 3,
@@ -66,7 +66,7 @@ const MODE_CONFIGS: Record<Exclude<GameMode, 'custom'>, {
     pointsLostPerDeath: 50, pointsLostPerRetreat: 25, pointsLostPerPenaltySecond: 1,
     timeBonusPoints: 500, timeBonusInterval: 15.0,
   },
-  // Hard = Normal × 1.5 for punishing parameters, × 0.5 for lenient parameters
+  // Hard = all numeric parameters × 1.5 vs Normal (higher stakes, bigger rewards and penalties)
   hard: {
     bossEveryKills: 75, tierProgressionKills: 400,
     healthScaleRate: 300, damageScaleRate: 450, initialEnemyCount: 7,
