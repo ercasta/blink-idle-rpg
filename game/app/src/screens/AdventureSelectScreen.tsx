@@ -45,19 +45,27 @@ function JoinModal({
   function handleJoin() {
     setError('');
     let adv: AdventureDefinition | null = null;
+    let urlParseError = false;
     try {
       const url = new URL(linkText.trim());
       adv = decodeAdventureFromParams(url.searchParams);
     } catch {
+      urlParseError = true;
+      // Not a valid URL — also try as raw param string (e.g. advName=…&advMode=…)
       try {
         const params = new URLSearchParams(linkText.trim());
         adv = decodeAdventureFromParams(params);
+        urlParseError = false;
       } catch {
         // ignore
       }
     }
     if (!adv) {
-      setError('Could not decode adventure — check the link and try again.');
+      setError(
+        urlParseError
+          ? 'Invalid URL format — paste the full share link.'
+          : 'Adventure data missing or corrupted — check the link and try again.',
+      );
       return;
     }
     onJoin(adv);

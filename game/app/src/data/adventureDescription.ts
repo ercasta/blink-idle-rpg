@@ -211,6 +211,10 @@ export function generateAdventureDescription(
 const VALID_MODES: GameMode[] = ['normal', 'easy', 'hard', 'custom'];
 const HERO_CLASSES_ALL: HeroClass[] = ['Warrior', 'Mage', 'Ranger', 'Paladin', 'Rogue', 'Cleric'];
 
+/** Valid range for each CustomModeSettings percentage field, matching the UI slider bounds. */
+const CUSTOM_SETTING_MIN = -50;
+const CUSTOM_SETTING_MAX = 50;
+
 /**
  * Encode an adventure into URL search params so it can be shared as a link or QR code.
  * All information is encoded – the recipient can reconstruct the full AdventureDefinition.
@@ -259,7 +263,7 @@ export function decodeAdventureFromParams(params: URLSearchParams): AdventureDef
     const em = parseInt(params.get('advExpMultiplier') ?? '', 10);
     const ed = parseInt(params.get('advEncounterDifficulty') ?? '', 10);
     if (isNaN(hp) || isNaN(wp) || isNaN(em) || isNaN(ed)) return null;
-    if ([hp, wp, em, ed].some(v => v < -50 || v > 50)) return null;
+    if ([hp, wp, em, ed].some(v => v < CUSTOM_SETTING_MIN || v > CUSTOM_SETTING_MAX)) return null;
     customSettings = {
       heroPenaltyPct: hp,
       wipeoutPenaltyPct: wp,
