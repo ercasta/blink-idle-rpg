@@ -3,17 +3,25 @@ import type { RunResult, HeroPath } from '../types';
 
 interface ResultsScreenProps {
   result: RunResult;
+  prevResult?: RunResult | null;
   onPlayAgain: () => void;
   onRerun: () => void;
   onHome: () => void;
   onToggleFavorite?: (id: string) => void;
 }
 
-function Row({ label, value }: { label: string; value: string | number }) {
+function Row({ label, value, delta }: { label: string; value: string | number; delta?: number | null }) {
   return (
     <div className="flex justify-between items-center py-2 border-b border-stone-800 last:border-0">
       <span className="text-stone-400 text-sm">{label}</span>
-      <span className="font-semibold text-stone-100">{value}</span>
+      <span className="font-semibold text-stone-100 flex items-center gap-1.5">
+        {value}
+        {delta !== undefined && delta !== null && delta !== 0 && (
+          <span className={`text-xs ${delta > 0 ? 'text-green-400' : 'text-red-400'}`}>
+            {delta > 0 ? '▲' : '▼'} {Math.abs(delta).toLocaleString()}
+          </span>
+        )}
+      </span>
     </div>
   );
 }
@@ -24,9 +32,11 @@ function formatTime(seconds: number) {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
-export function ResultsScreen({ result, onPlayAgain, onRerun, onHome, onToggleFavorite }: ResultsScreenProps) {
+export function ResultsScreen({ result, prevResult, onPlayAgain, onRerun, onHome, onToggleFavorite }: ResultsScreenProps) {
   const { finalScore, enemiesDefeated, playerDeaths, bossesDefeated, totalTime, deepestTier, deepestWave, heroPaths } = result;
   const [expandedHero, setExpandedHero] = useState<string | null>(null);
+
+  const scoreDelta = prevResult != null ? finalScore - prevResult.finalScore : null;
 
   function handleDownload() {
     const json = JSON.stringify(result, null, 2);
@@ -47,19 +57,27 @@ export function ResultsScreen({ result, onPlayAgain, onRerun, onHome, onToggleFa
         <h1 className="text-2xl font-bold mb-1">
           {'Run Completed!'}
         </h1>
-        <p className="text-4xl font-extrabold text-amber-400">
+        <p className="text-4xl font-extrabold text-amber-400 flex items-center justify-center gap-2">
           {finalScore.toLocaleString()}
-          <span className="text-lg text-stone-400 font-normal ml-1">pts</span>
+          <span className="text-lg text-stone-400 font-normal">pts</span>
+          {scoreDelta !== null && scoreDelta !== 0 && (
+            <span className={`text-xl font-bold ${scoreDelta > 0 ? 'text-green-400' : 'text-red-400'}`}>
+              {scoreDelta > 0 ? '▲' : '▼'} {Math.abs(scoreDelta).toLocaleString()}
+            </span>
+          )}
         </p>
+        {prevResult != null && scoreDelta === 0 && (
+          <p className="text-xs text-stone-500 mt-1">↔ same score as previous run</p>
+        )}
       </div>
 
       {/* KPI table */}
       <div className="bg-stone-800 border border-stone-700 rounded-xl px-5 py-3 mb-6">
-        <Row label="Deepest Tier" value={deepestTier} />
-        <Row label="Deepest Wave" value={deepestWave} />
-        <Row label="Enemies Defeated" value={enemiesDefeated} />
-        <Row label="Bosses Killed" value={bossesDefeated} />
-        <Row label="Hero Deaths" value={playerDeaths} />
+        <Row label="Deepest Tier" value={deepestTier} delta={prevResult != null ? deepestTier - prevResult.deepestTier : null} />
+        <Row label="Deepest Wave" value={deepestWave} delta={prevResult != null ? deepestWave - prevResult.deepestWave : null} />
+        <Row label="Enemies Defeated" value={enemiesDefeated} delta={prevResult != null ? enemiesDefeated - prevResult.enemiesDefeated : null} />
+        <Row label="Bosses Killed" value={bossesDefeated} delta={prevResult != null ? bossesDefeated - prevResult.bossesDefeated : null} />
+        <Row label="Hero Deaths" value={playerDeaths} delta={prevResult != null ? -(playerDeaths - prevResult.playerDeaths) : null} />
         <Row label="Simulation Time" value={formatTime(totalTime)} />
       </div>
 

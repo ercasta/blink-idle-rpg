@@ -36,6 +36,45 @@ import { decodeAdventureFromParams } from './data/adventureDescription';
 import type { AppScreen, AdventureDefinition, HeroDefinition, GameSnapshot, RunResult, HeroPath } from './types';
 import { DEFAULT_CUSTOM_SETTINGS } from './types';
 
+// ── Leave-run confirmation modal ──────────────────────────────────────────────
+
+function LeaveRunModal({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) { if (e.key === 'Escape') onCancel(); }
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [onCancel]);
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4"
+      onClick={onCancel}
+    >
+      <div
+        className="bg-stone-800 border border-stone-600 rounded-2xl p-5 max-w-xs w-full flex flex-col gap-3"
+        onClick={e => e.stopPropagation()}
+      >
+        <h2 className="font-bold text-base text-stone-100">⚠️ Leave Current Run?</h2>
+        <p className="text-xs text-stone-400">
+          Your run is still in progress. If you leave now, the current progress will be lost.
+        </p>
+        <button
+          onClick={onConfirm}
+          className="w-full py-3 rounded-xl bg-red-800 hover:bg-red-700 text-stone-100 text-sm font-bold transition-colors"
+        >
+          Leave Run
+        </button>
+        <button
+          onClick={onCancel}
+          className="w-full py-2 rounded-xl border border-stone-600 text-stone-400 hover:text-stone-200 text-xs font-medium transition-colors"
+        >
+          Stay
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [screen, setScreen] = useState<AppScreen | 'loading' | 'run-ready' | 'error'>(() => {
     // If URL has a shared hero, start directly on roster
@@ -69,6 +108,10 @@ export default function App() {
 
   // Track whether the current battle is a replay of a saved run (no re-save on complete)
   const replayingRunRef = useRef<RunResult | null>(null);
+  // The most recent saved run before the current run (used to show deltas in results)
+  const prevRunRef = useRef<RunResult | null>(null);
+  // Leave-run confirmation modal visibility
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
 
   // Load all runs, roster, and adventures from IndexedDB on first mount
   useEffect(() => {
@@ -95,6 +138,37 @@ export default function App() {
       window.history.replaceState({}, '', url);
     }
   }, [sharedHero, sharedAdventure]);
+
+  // ── Browser back button / page-leave interception ──────────────────────
+
+  // Screens where losing progress would be bad
+  const isActiveRun = ['loading', 'run-ready', 'battle'].includes(screen);
+
+  useEffect(() => {
+    if (!isActiveRun) return;
+    // Push a dummy history entry so the back button fires popstate instead of
+    // navigating away, giving us a chance to confirm.
+    window.history.pushState({ blinkGuard: true }, '');
+
+    function handlePopState() {
+      // Show the custom modal; re-push the guard entry so the URL stays stable
+      window.history.pushState({ blinkGuard: true }, '');
+      setShowLeaveModal(true);
+    }
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [isActiveRun]);
+
+  useEffect(() => {
+    function handleBeforeUnload(e: BeforeUnloadEvent) {
+      if (isActiveRun) {
+        e.preventDefault();
+      }
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isActiveRun]);
 
   // ── Roster helpers ──────────────────────────────────────────────────────
 
@@ -143,6 +217,7 @@ export default function App() {
 
     try {
       const runs = await loadAllRuns();
+      prevRunRef.current = runs[0] ?? null;
       setPrevSnapshots(runs[0]?.snapshots ?? []);
       const result = await runSimulation(
         randomHeroes,
@@ -185,6 +260,7 @@ export default function App() {
       if (!selectedAdventure) throw new Error('No adventure selected');
 
       const runs = await loadAllRuns();
+      prevRunRef.current = runs[0] ?? null;
       setPrevSnapshots(runs[0]?.snapshots ?? []);
       const result = await runSimulation(
         heroes,
@@ -242,6 +318,7 @@ export default function App() {
 
     try {
       const runs = await loadAllRuns();
+      prevRunRef.current = runs[0] ?? null;
       setPrevSnapshots(runs[0]?.snapshots ?? []);
       const result = await runSimulation(
         selectedHeroes,
@@ -371,22 +448,50 @@ export default function App() {
   }
 
   if (screen === 'loading') {
-    return <LoadingScreen message={loadingMessage} />;
+    return (
+      <>
+        {showLeaveModal && (
+          <LeaveRunModal
+            onConfirm={() => { setShowLeaveModal(false); setScreen('home'); setError(null); }}
+            onCancel={() => setShowLeaveModal(false)}
+          />
+        )}
+        <LoadingScreen message={loadingMessage} />
+      </>
+    );
   }
 
   if (screen === 'run-ready') {
-    return <RunReadyScreen onPlay={() => setScreen('battle')} />;
+    return (
+      <>
+        {showLeaveModal && (
+          <LeaveRunModal
+            onConfirm={() => { setShowLeaveModal(false); setScreen('home'); setError(null); }}
+            onCancel={() => setShowLeaveModal(false)}
+          />
+        )}
+        <RunReadyScreen onPlay={() => setScreen('battle')} />
+      </>
+    );
   }
 
   if (screen === 'battle') {
     return (
-      <BattleScreen
-        snapshots={snapshots}
-        prevSnapshots={prevSnapshots}
-        heroes={selectedHeroes}
-        heroPaths={heroPaths}
-        onComplete={onBattleComplete}
-      />
+      <>
+        {showLeaveModal && (
+          <LeaveRunModal
+            onConfirm={() => { setShowLeaveModal(false); setScreen('home'); setError(null); }}
+            onCancel={() => setShowLeaveModal(false)}
+          />
+        )}
+        <BattleScreen
+          snapshots={snapshots}
+          prevSnapshots={prevSnapshots}
+          heroes={selectedHeroes}
+          heroPaths={heroPaths}
+          onComplete={onBattleComplete}
+        />
+      </>
     );
   }
 
@@ -394,6 +499,7 @@ export default function App() {
     return (
       <ResultsScreen
         result={runResult}
+        prevResult={replayingRunRef.current ? null : prevRunRef.current}
         onPlayAgain={playAgain}
         onRerun={rerun}
         onHome={goHome}

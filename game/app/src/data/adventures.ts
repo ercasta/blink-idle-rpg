@@ -38,8 +38,8 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-/** Generate a random adventure name like "Forsaken Vale" */
-function randomAdventureName(): string {
+/** Generate a random adventure name like "The Forsaken Vale" */
+export function randomAdventureName(): string {
   return `The ${pickRandom(ADVENTURE_ADJECTIVES)} ${pickRandom(ADVENTURE_NOUNS)}`;
 }
 

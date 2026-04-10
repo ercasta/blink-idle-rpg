@@ -16,7 +16,7 @@ import QRCode from 'qrcode';
 import type { AdventureDefinition, GameMode, HeroClass, CustomModeSettings, EnvironmentSettings } from '../types';
 import { DEFAULT_CUSTOM_SETTINGS, DEFAULT_ENVIRONMENT_SETTINGS } from '../types';
 import { generateAdventureDescription, encodeAdventureToParams, decodeAdventureFromParams } from '../data/adventureDescription';
-import { generateRandomAdventure } from '../data/adventures';
+import { generateRandomAdventure, randomAdventureName } from '../data/adventures';
 
 const ALL_CLASSES: HeroClass[] = ['Warrior', 'Mage', 'Ranger', 'Paladin', 'Rogue', 'Cleric'];
 
@@ -89,7 +89,7 @@ function adventureToDraft(adv: AdventureDefinition): AdventureDraft {
 
 function defaultDraft(): AdventureDraft {
   return {
-    name: '',
+    name: randomAdventureName(),
     mode: 'normal',
     customSettings: { ...DEFAULT_CUSTOM_SETTINGS },
     requiredHeroCount: 4,
@@ -372,6 +372,55 @@ function ImportModal({
   );
 }
 
+// ── Overwrite Confirmation Modal ──────────────────────────────────────────────
+
+function OverwriteConfirmModal({
+  name,
+  onConfirm,
+  onCancel,
+}: {
+  name: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) { if (e.key === 'Escape') onCancel(); }
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [onCancel]);
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4"
+      onClick={onCancel}
+    >
+      <div
+        className="bg-stone-800 border border-stone-600 rounded-2xl p-5 max-w-xs w-full flex flex-col gap-3"
+        onClick={e => e.stopPropagation()}
+      >
+        <h2 className="font-bold text-base text-stone-100">⚠️ Name Already Exists</h2>
+        <p className="text-xs text-stone-400">
+          An adventure named{' '}
+          <span className="font-semibold text-stone-200">"{name}"</span>{' '}
+          already exists. Do you want to overwrite it?
+        </p>
+        <button
+          onClick={onConfirm}
+          className="w-full py-3 rounded-xl bg-red-800 hover:bg-red-700 text-stone-100 text-sm font-bold transition-colors"
+        >
+          Overwrite
+        </button>
+        <button
+          onClick={onCancel}
+          className="w-full py-2 rounded-xl border border-stone-600 text-stone-400 hover:text-stone-200 text-xs font-medium transition-colors"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 interface AdventureScreenProps {
@@ -391,6 +440,8 @@ export function AdventureScreen({
   const [draft, setDraft] = useState<AdventureDraft>(defaultDraft);
   const [sharingAdv, setSharingAdv] = useState<AdventureDefinition | null>(null);
   const [showImport, setShowImport] = useState(false);
+  // Overwrite confirmation: holds the pending adventure waiting for user confirmation
+  const [pendingOverwrite, setPendingOverwrite] = useState<AdventureDefinition | null>(null);
 
   // Live description preview
   const liveDescription = useMemo(
@@ -420,16 +471,37 @@ export function AdventureScreen({
     setDraft(defaultDraft());
   }
 
-  function saveAdventure() {
-    if (!draft.name.trim()) return;
-    const adv = draftToDefinition(draft);
+  function commitSaveAdventure(adv: AdventureDefinition) {
     if (view === 'edit' && draft.id) {
-      onAdventuresChange(adventures.map(a => a.id === draft.id ? adv : a));
+      // Replace by id; also remove any other adventure with the same name (the duplicate)
+      onAdventuresChange(
+        adventures
+          .filter(a => a.id === draft.id || a.name.trim().toLowerCase() !== adv.name.trim().toLowerCase())
+          .map(a => a.id === draft.id ? adv : a),
+      );
     } else {
-      onAdventuresChange([...adventures, adv]);
+      // Remove existing adventure with same name, then append new one
+      onAdventuresChange([
+        ...adventures.filter(a => a.name.trim().toLowerCase() !== adv.name.trim().toLowerCase()),
+        adv,
+      ]);
     }
     setView('list');
     setDraft(defaultDraft());
+  }
+
+  function saveAdventure() {
+    if (!draft.name.trim()) return;
+    const adv = draftToDefinition(draft);
+    // Check for a duplicate name (ignoring the adventure currently being edited)
+    const duplicate = adventures.find(
+      a => a.name.trim().toLowerCase() === draft.name.trim().toLowerCase() && a.id !== draft.id,
+    );
+    if (duplicate) {
+      setPendingOverwrite(adv);
+      return;
+    }
+    commitSaveAdventure(adv);
   }
 
   function deleteAdventure(id: string) {
@@ -441,7 +513,21 @@ export function AdventureScreen({
   }
 
   function handleImportAdventure(adv: AdventureDefinition) {
-    onAdventuresChange([...adventures, adv]);
+    const duplicate = adventures.find(
+      a => a.name.trim().toLowerCase() === adv.name.trim().toLowerCase(),
+    );
+    if (duplicate) {
+      setPendingOverwrite(adv);
+      return;
+    }
+    commitImportAdventure(adv);
+  }
+
+  function commitImportAdventure(adv: AdventureDefinition) {
+    onAdventuresChange([
+      ...adventures.filter(a => a.name.trim().toLowerCase() !== adv.name.trim().toLowerCase()),
+      adv,
+    ]);
   }
 
   function setDraftMode(mode: GameMode) {
@@ -488,6 +574,17 @@ export function AdventureScreen({
   if (view === 'create' || view === 'edit') {
     return (
       <div className="flex flex-col min-h-screen bg-stone-900 text-stone-100 px-4 py-6">
+        {pendingOverwrite && (
+          <OverwriteConfirmModal
+            name={pendingOverwrite.name}
+            onConfirm={() => {
+              const adv = pendingOverwrite;
+              setPendingOverwrite(null);
+              commitSaveAdventure(adv);
+            }}
+            onCancel={() => setPendingOverwrite(null)}
+          />
+        )}
         <div className="flex items-center gap-3 mb-4">
           <button onClick={cancelForm} className="text-stone-400 hover:text-stone-100 text-2xl leading-none">
             ←
@@ -651,6 +748,17 @@ export function AdventureScreen({
         <ImportModal
           onImport={handleImportAdventure}
           onClose={() => setShowImport(false)}
+        />
+      )}
+      {pendingOverwrite && (
+        <OverwriteConfirmModal
+          name={pendingOverwrite.name}
+          onConfirm={() => {
+            const adv = pendingOverwrite;
+            setPendingOverwrite(null);
+            commitImportAdventure(adv);
+          }}
+          onCancel={() => setPendingOverwrite(null)}
         />
       )}
 

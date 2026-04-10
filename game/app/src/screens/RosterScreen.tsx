@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import QRCode from 'qrcode';
 import { TRAIT_AXES, TRAIT_MIN, TRAIT_MAX, defaultTraits, randomTraits, simulateHeroPath, getSkillName } from '../data/traits';
 import type { HeroDefinition, HeroClass, HeroTraits } from '../types';
 import { generateRandomHero } from '../data/heroes';
@@ -17,6 +18,199 @@ const CLASS_ROLES: Record<HeroClass, string> = {
   Warrior: 'Tank / DPS', Mage: 'Burst DPS', Ranger: 'Control / DPS',
   Paladin: 'Support / Tank', Rogue: 'Finisher / DPS', Cleric: 'Healer / Support',
 };
+
+// ── Hero sharing helpers ──────────────────────────────────────────────────────
+
+function getHeroShareUrl(hero: HeroDefinition): string {
+  const params = encodeHeroToParams({ name: hero.name, heroClass: hero.heroClass, traits: hero.traits });
+  const base = window.location.origin + window.location.pathname;
+  return `${base}?${params.toString()}`;
+}
+
+// ── Hero QR Modal ─────────────────────────────────────────────────────────────
+
+function HeroQrModal({ hero, onClose }: { hero: HeroDefinition; onClose: () => void }) {
+  const [dataUrl, setDataUrl] = useState<string>('');
+  const url = getHeroShareUrl(hero);
+
+  useEffect(() => {
+    QRCode.toDataURL(url, { width: 280, margin: 2 })
+      .then(setDataUrl)
+      .catch(e => console.error('[HeroQrModal] QR generation failed', e));
+  }, [url]);
+
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose(); }
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-stone-800 border border-stone-600 rounded-2xl p-6 max-w-xs w-full flex flex-col items-center gap-4"
+        onClick={e => e.stopPropagation()}
+      >
+        <h2 className="font-bold text-base text-stone-100">Share QR Code</h2>
+        <p className="text-xs text-stone-400 text-center">
+          <span className="font-semibold text-stone-200">{hero.name}</span>
+        </p>
+        {dataUrl
+          ? <img src={dataUrl} alt="Hero QR Code" className="rounded-xl w-56 h-56" />
+          : <div className="w-56 h-56 flex items-center justify-center text-stone-500 text-sm">Generating…</div>
+        }
+        <p className="text-xs text-stone-500 text-center break-all">{url}</p>
+        <button
+          onClick={onClose}
+          className="w-full py-2.5 rounded-xl bg-stone-700 hover:bg-stone-600 text-stone-200 text-sm font-medium transition-colors"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Hero Share Modal ──────────────────────────────────────────────────────────
+
+function HeroShareModal({ hero, onClose }: { hero: HeroDefinition; onClose: () => void }) {
+  const [copied, setCopied] = useState(false);
+  const [showQr, setShowQr] = useState(false);
+  const url = getHeroShareUrl(hero);
+
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose(); }
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [onClose]);
+
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      window.prompt('Copy this link to share your hero:', url);
+    }
+  }
+
+  async function nativeShare() {
+    if (typeof navigator.share === 'function') {
+      try {
+        await navigator.share({ title: hero.name, text: `Check out my hero: ${hero.name}`, url });
+      } catch {
+        // user cancelled – ignore
+      }
+    } else {
+      copyLink();
+    }
+  }
+
+  if (showQr) {
+    return <HeroQrModal hero={hero} onClose={onClose} />;
+  }
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-stone-800 border border-stone-600 rounded-2xl p-5 max-w-xs w-full flex flex-col gap-3"
+        onClick={e => e.stopPropagation()}
+      >
+        <h2 className="font-bold text-base text-stone-100">Share Hero</h2>
+        <p className="text-xs text-stone-400 text-center -mt-1">
+          <span className="font-semibold text-stone-200">{hero.name}</span>
+          {' '}·{' '}
+          <span className="text-stone-400">{hero.heroClass}</span>
+        </p>
+
+        <button
+          onClick={copyLink}
+          className="w-full py-3 rounded-xl bg-stone-700 hover:bg-stone-600 text-stone-100 text-sm font-medium transition-colors flex items-center justify-center gap-2"
+        >
+          {copied ? '✓ Copied!' : '🔗 Copy Link'}
+        </button>
+
+        {typeof navigator.share === 'function' && (
+          <button
+            onClick={nativeShare}
+            className="w-full py-3 rounded-xl bg-stone-700 hover:bg-stone-600 text-stone-100 text-sm font-medium transition-colors flex items-center justify-center gap-2"
+          >
+            📤 Share…
+          </button>
+        )}
+
+        <button
+          onClick={() => setShowQr(true)}
+          className="w-full py-3 rounded-xl bg-stone-700 hover:bg-stone-600 text-stone-100 text-sm font-medium transition-colors flex items-center justify-center gap-2"
+        >
+          📷 Show QR Code
+        </button>
+
+        <button
+          onClick={onClose}
+          className="w-full py-2 rounded-xl border border-stone-600 text-stone-400 hover:text-stone-200 text-xs font-medium transition-colors"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Hero Overwrite Confirmation Modal ─────────────────────────────────────────
+
+function HeroOverwriteConfirmModal({
+  name,
+  onConfirm,
+  onCancel,
+}: {
+  name: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) { if (e.key === 'Escape') onCancel(); }
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [onCancel]);
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4"
+      onClick={onCancel}
+    >
+      <div
+        className="bg-stone-800 border border-stone-600 rounded-2xl p-5 max-w-xs w-full flex flex-col gap-3"
+        onClick={e => e.stopPropagation()}
+      >
+        <h2 className="font-bold text-base text-stone-100">⚠️ Name Already Exists</h2>
+        <p className="text-xs text-stone-400">
+          A hero named{' '}
+          <span className="font-semibold text-stone-200">"{name}"</span>{' '}
+          already exists in your roster. Do you want to overwrite it?
+        </p>
+        <button
+          onClick={onConfirm}
+          className="w-full py-3 rounded-xl bg-red-800 hover:bg-red-700 text-stone-100 text-sm font-bold transition-colors"
+        >
+          Overwrite
+        </button>
+        <button
+          onClick={onCancel}
+          className="w-full py-2 rounded-xl border border-stone-600 text-stone-400 hover:text-stone-200 text-xs font-medium transition-colors"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
 
 interface RosterScreenProps {
   roster: HeroDefinition[];
@@ -47,7 +241,10 @@ export function RosterScreen({ roster, onRosterChange, onBack, sharedHero }: Ros
       traits: sharedHero.traits,
     };
   });
-  const [shareCopied, setShareCopied] = useState<string | null>(null);
+  const [sharingHero, setSharingHero] = useState<HeroDefinition | null>(null);
+  // Overwrite confirmation: holds the hero waiting for user confirmation
+  const [pendingHeroCreate, setPendingHeroCreate] = useState<HeroDefinition | null>(null);
+  const [pendingHeroEdit, setPendingHeroEdit] = useState<HeroDefinition | null>(null);
 
   function openEditTraits(hero: HeroDefinition) {
     setEditingHero({ ...hero });
@@ -55,7 +252,22 @@ export function RosterScreen({ roster, onRosterChange, onBack, sharedHero }: Ros
   }
 
   function saveEdit(updated: HeroDefinition) {
-    const newRoster = roster.map(h => h.id === updated.id ? updated : h);
+    // Check if the name changed and now conflicts with another hero
+    const duplicate = roster.find(
+      h => h.id !== updated.id && h.name.trim().toLowerCase() === updated.name.trim().toLowerCase(),
+    );
+    if (duplicate) {
+      setPendingHeroEdit(updated);
+      return;
+    }
+    commitSaveEdit(updated);
+  }
+
+  function commitSaveEdit(updated: HeroDefinition) {
+    // Remove the conflicting hero (if any), then update the edited one
+    const newRoster = roster
+      .filter(h => h.id === updated.id || h.name.trim().toLowerCase() !== updated.name.trim().toLowerCase())
+      .map(h => h.id === updated.id ? updated : h);
     onRosterChange(newRoster);
     setView('list');
     setEditingHero(null);
@@ -110,22 +322,29 @@ export function RosterScreen({ roster, onRosterChange, onBack, sharedHero }: Ros
       ...draftHero,
       description: generateHeroDescription(draftHero.heroClass, draftHero.traits),
     };
-    onRosterChange([...roster, finalHero]);
+    // Check for duplicate name
+    const duplicate = roster.find(
+      h => h.name.trim().toLowerCase() === finalHero.name.trim().toLowerCase(),
+    );
+    if (duplicate) {
+      setPendingHeroCreate(finalHero);
+      return;
+    }
+    commitCreate(finalHero);
+  }
+
+  function commitCreate(finalHero: HeroDefinition) {
+    // Remove any existing hero with the same name, then append new one
+    onRosterChange([
+      ...roster.filter(h => h.name.trim().toLowerCase() !== finalHero.name.trim().toLowerCase()),
+      finalHero,
+    ]);
     setView('list');
     setDraftHero(null);
   }
 
-  function copyShareLink(hero: HeroDefinition) {
-    const params = encodeHeroToParams({ name: hero.name, heroClass: hero.heroClass, traits: hero.traits });
-    const base = window.location.origin + window.location.pathname;
-    const url = `${base}?${params.toString()}`;
-    navigator.clipboard.writeText(url).then(() => {
-      setShareCopied(hero.id);
-      setTimeout(() => setShareCopied(null), 2000);
-    }).catch(() => {
-      // Fallback: prompt user to copy
-      window.prompt('Copy this link to share your hero:', url);
-    });
+  function openShareModal(hero: HeroDefinition) {
+    setSharingHero(hero);
   }
 
   // ── Edit existing hero ───────────────────────────────────────────────────
@@ -133,6 +352,17 @@ export function RosterScreen({ roster, onRosterChange, onBack, sharedHero }: Ros
   if (view === 'edit-traits' && editingHero) {
     return (
       <div className="flex flex-col min-h-screen bg-stone-900 text-stone-100 px-4 py-6">
+        {pendingHeroEdit && (
+          <HeroOverwriteConfirmModal
+            name={pendingHeroEdit.name}
+            onConfirm={() => {
+              const hero = pendingHeroEdit;
+              setPendingHeroEdit(null);
+              commitSaveEdit(hero);
+            }}
+            onCancel={() => setPendingHeroEdit(null)}
+          />
+        )}
         <div className="flex items-center gap-3 mb-4">
           <button
             onClick={() => { setView('list'); setEditingHero(null); }}
@@ -201,6 +431,17 @@ export function RosterScreen({ roster, onRosterChange, onBack, sharedHero }: Ros
   if (view === 'create' && draftHero) {
     return (
       <div className="flex flex-col min-h-screen bg-stone-900 text-stone-100 px-4 py-6">
+        {pendingHeroCreate && (
+          <HeroOverwriteConfirmModal
+            name={pendingHeroCreate.name}
+            onConfirm={() => {
+              const hero = pendingHeroCreate;
+              setPendingHeroCreate(null);
+              commitCreate(hero);
+            }}
+            onCancel={() => setPendingHeroCreate(null)}
+          />
+        )}
         <div className="flex items-center gap-3 mb-4">
           <button
             onClick={() => { setView('list'); setDraftHero(null); }}
@@ -316,6 +557,10 @@ export function RosterScreen({ roster, onRosterChange, onBack, sharedHero }: Ros
 
   return (
     <div className="flex flex-col min-h-screen bg-stone-900 text-stone-100 px-4 py-6">
+      {/* Share modal */}
+      {sharingHero && (
+        <HeroShareModal hero={sharingHero} onClose={() => setSharingHero(null)} />
+      )}
       <div className="flex items-center gap-3 mb-2">
         <button
           onClick={onBack}
@@ -430,15 +675,11 @@ export function RosterScreen({ roster, onRosterChange, onBack, sharedHero }: Ros
                 ⚙️
               </button>
               <button
-                onClick={() => copyShareLink(hero)}
-                className={`flex-1 px-3 bg-stone-800 border rounded-xl text-lg transition-colors ${
-                  shareCopied === hero.id
-                    ? 'border-amber-500 text-amber-400'
-                    : 'border-stone-700 hover:border-amber-600'
-                }`}
+                onClick={() => openShareModal(hero)}
+                className="flex-1 px-3 bg-stone-800 border border-stone-700 hover:border-amber-600 rounded-xl text-lg transition-colors"
                 title="Share hero"
               >
-                {shareCopied === hero.id ? '✓' : '🔗'}
+                📤
               </button>
               <button
                 onClick={() => deleteHero(hero.id)}
