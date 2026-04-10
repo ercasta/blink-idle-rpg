@@ -7,6 +7,14 @@ import { encodeHeroToParams } from '../data/heroDescription';
 const CARD_W = 54;
 const CARD_H = 85.6;
 
+// A4 page dimensions in mm
+const PAGE_W = 210;
+const PAGE_H = 297;
+
+// Offsets to center the card on an A4 page
+const CARD_X = (PAGE_W - CARD_W) / 2;
+const CARD_Y = (PAGE_H - CARD_H) / 2;
+
 // Margins & layout constants (mm)
 const MARGIN = 4;
 const INNER_W = CARD_W - MARGIN * 2;
@@ -129,54 +137,58 @@ export async function printHeroFigurine(hero: HeroDefinition): Promise<void> {
     svgToPng(classIconSvg(hero.heroClass), 64),
   ]);
 
-  // Create PDF in portrait orientation, mm units, credit-card size
+  // Create PDF in portrait orientation, mm units, A4 page size
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
-    format: [CARD_W, CARD_H],
+    format: 'a4',
   });
 
-  // Background: white
+  // Background: white (full A4 page)
   doc.setFillColor(255, 255, 255);
-  doc.rect(0, 0, CARD_W, CARD_H, 'F');
+  doc.rect(0, 0, PAGE_W, PAGE_H, 'F');
+
+  // Card background
+  doc.setFillColor(255, 255, 255);
+  doc.rect(CARD_X, CARD_Y, CARD_W, CARD_H, 'F');
 
   // Border
   doc.setDrawColor(0, 0, 0);
   doc.setLineWidth(0.4);
-  doc.rect(1, 1, CARD_W - 2, CARD_H - 2, 'S');
+  doc.rect(CARD_X + 1, CARD_Y + 1, CARD_W - 2, CARD_H - 2, 'S');
 
-  let cursorY = MARGIN + 2;
+  let cursorY = CARD_Y + MARGIN + 2;
 
   // ── Hero name ──────────────────────────────────────────────────────────────
   doc.setFont('times', 'bold');
   doc.setFontSize(9);
   doc.setTextColor(0, 0, 0);
-  doc.text(hero.name, CARD_W / 2, cursorY, { align: 'center' });
+  doc.text(hero.name, CARD_X + CARD_W / 2, cursorY, { align: 'center' });
   cursorY += 4;
 
   // ── Hero class (icon | class name | icon) ──────────────────────────────────
   const iconMm = 4; // icon width/height in mm
   const iconY = cursorY - 0.5; // top of icon (slightly above text baseline)
   // Left icon
-  doc.addImage(iconPng, 'PNG', MARGIN, iconY, iconMm, iconMm);
+  doc.addImage(iconPng, 'PNG', CARD_X + MARGIN, iconY, iconMm, iconMm);
   // Right icon
-  doc.addImage(iconPng, 'PNG', CARD_W - MARGIN - iconMm, iconY, iconMm, iconMm);
+  doc.addImage(iconPng, 'PNG', CARD_X + CARD_W - MARGIN - iconMm, iconY, iconMm, iconMm);
   // Class name text centred between icons
   doc.setFont('times', 'italic');
   doc.setFontSize(6.5);
   doc.setTextColor(60, 60, 60);
-  doc.text(hero.heroClass.toUpperCase(), CARD_W / 2, cursorY + iconMm * ICON_TEXT_VERTICAL_OFFSET, { align: 'center' });
+  doc.text(hero.heroClass.toUpperCase(), CARD_X + CARD_W / 2, cursorY + iconMm * ICON_TEXT_VERTICAL_OFFSET, { align: 'center' });
   cursorY += iconMm + 1.5;
 
   // Thin separator line
   doc.setDrawColor(0, 0, 0);
   doc.setLineWidth(0.2);
-  doc.line(MARGIN, cursorY, CARD_W - MARGIN, cursorY);
+  doc.line(CARD_X + MARGIN, cursorY, CARD_X + CARD_W - MARGIN, cursorY);
   cursorY += 3;
 
   // ── Description ───────────────────────────────────────────────────────────
   // Reserve space at the bottom for the QR code; truncate description to fit.
-  const qrTop = CARD_H - MARGIN - QR_SIZE;
+  const qrTop = CARD_Y + CARD_H - MARGIN - QR_SIZE;
   const maxDescY = qrTop - 2; // 2 mm gap above QR code
   const description = hero.description ?? '';
   doc.setFont('times', 'normal');
@@ -186,13 +198,13 @@ export async function printHeroFigurine(hero: HeroDefinition): Promise<void> {
   const allLines: string[] = doc.splitTextToSize(description, INNER_W) as string[];
   for (const line of allLines) {
     if (cursorY + lineHeight > maxDescY) break;
-    doc.text(line, MARGIN, cursorY);
+    doc.text(line, CARD_X + MARGIN, cursorY);
     cursorY += lineHeight;
   }
 
   // ── QR code ────────────────────────────────────────────────────────────────
   // Always place at a fixed position at the bottom, centred horizontally
-  const qrX = MARGIN + (INNER_W - QR_SIZE) / 2;
+  const qrX = CARD_X + MARGIN + (INNER_W - QR_SIZE) / 2;
   doc.addImage(qrDataUrl, 'PNG', qrX, qrTop, QR_SIZE, QR_SIZE);
 
   // Download the PDF
