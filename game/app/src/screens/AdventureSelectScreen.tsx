@@ -1,12 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import type { AdventureDefinition, HeroClass } from '../types';
 import { decodeAdventureFromParams } from '../data/adventureDescription';
+import { ClassIcon, MapIcon, HeroesIcon } from '../components/icons';
 
 const ALL_CLASSES: HeroClass[] = ['Warrior', 'Mage', 'Ranger', 'Paladin', 'Rogue', 'Cleric'];
-
-const CLASS_EMOJIS: Record<HeroClass, string> = {
-  Warrior: '⚔️', Mage: '🧙', Ranger: '🏹', Paladin: '🛡️', Rogue: '🗡️', Cleric: '🙏',
-};
 
 const MODE_BADGE: Record<string, string> = {
   easy:   'bg-green-800 text-green-200',
@@ -125,7 +122,7 @@ function ClassPips({ classes }: { classes: HeroClass[] }) {
   return (
     <span className="text-xs text-stone-400 flex items-center gap-0.5">
       {classes.map(c => (
-        <span key={c} title={c}>{CLASS_EMOJIS[c]}</span>
+        <span key={c} title={c}><ClassIcon heroClass={c} size={14}/></span>
       ))}
     </span>
   );
@@ -166,7 +163,7 @@ export function AdventureSelectScreen({
 
       {adventures.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center py-12">
-          <div className="text-5xl">🗺️</div>
+          <MapIcon size={48} className="text-stone-500"/>
           <p className="text-stone-400 text-sm">
             You have no adventures yet.<br />Create one in the Adventure Manager.
           </p>
@@ -194,7 +191,7 @@ export function AdventureSelectScreen({
                   </span>
                 </div>
                 <div className="flex items-center gap-3 mb-2 text-xs text-stone-400">
-                  <span>👥 {adv.requiredHeroCount} {adv.requiredHeroCount === 1 ? 'hero' : 'heroes'}</span>
+                  <span className="inline-flex items-center gap-1"><HeroesIcon size={13}/> {adv.requiredHeroCount} {adv.requiredHeroCount === 1 ? 'hero' : 'heroes'}</span>
                   <ClassPips classes={adv.allowedClasses} />
                 </div>
                 <p className="text-xs text-stone-400 leading-relaxed line-clamp-2">
@@ -210,7 +207,7 @@ export function AdventureSelectScreen({
               onClick={onManageAdventures}
               className="text-sm text-stone-500 hover:text-stone-300 underline transition-colors"
             >
-              🗺️ Manage Adventures
+              <span className="inline-flex items-center gap-1"><MapIcon size={14}/> Manage Adventures</span>
             </button>
             <button
               onClick={() => setShowJoin(true)}

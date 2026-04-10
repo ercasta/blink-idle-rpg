@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <!-- Shield body -->
+  <path d="M12 2L21 6.5V14C21 18.5 17 21.5 12 23C7 21.5 3 18.5 3 14V6.5Z"
+    fill="#4a3020" stroke="#a07040" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- Crossed swords -->
+  <line x1="9" y1="9" x2="15" y2="16" stroke="#d4b48a" stroke-width="1.75" stroke-linecap="round"/>
+  <line x1="15" y1="9" x2="9" y2="16" stroke="#d4b48a" stroke-width="1.75" stroke-linecap="round"/>
+  <!-- Crossguards -->
+  <line x1="8.2" y1="10.2" x2="9.8" y2="8.2" stroke="#d4b48a" stroke-width="1.2" stroke-linecap="round"/>
+  <line x1="14.2" y1="10.2" x2="15.8" y2="8.2" stroke="#d4b48a" stroke-width="1.2" stroke-linecap="round"/>
+</svg>

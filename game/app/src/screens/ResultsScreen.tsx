@@ -1,5 +1,6 @@
 import { Fragment, useState } from 'react';
 import type { RunResult, HeroPath } from '../types';
+import { CrossedSwordsIcon, RepeatIcon, PlayIcon, DownloadIcon, StarIcon } from '../components/icons';
 
 interface ResultsScreenProps {
   result: RunResult;
@@ -53,7 +54,9 @@ export function ResultsScreen({ result, prevResult, onPlayAgain, onRerun, onHome
     <div className="flex flex-col min-h-screen bg-stone-900 text-stone-100 px-4 py-8">
       {/* Outcome */}
       <div className="text-center mb-8">
-        <div className="text-5xl mb-3">⚔️</div>
+        <div className="mb-3 flex justify-center">
+          <CrossedSwordsIcon size={48} className="text-amber-600"/>
+        </div>
         <h1 className="text-2xl font-bold mb-1">
           {'Run Completed!'}
         </h1>
@@ -108,13 +111,13 @@ export function ResultsScreen({ result, prevResult, onPlayAgain, onRerun, onHome
           onClick={onRerun}
           className="w-full py-4 rounded-xl bg-amber-700 hover:bg-amber-600 text-stone-100 font-bold text-lg transition-colors"
         >
-          🔁 Rerun (same heroes)
+          <span className="inline-flex items-center gap-2"><RepeatIcon size={18}/> Rerun (same heroes)</span>
         </button>
         <button
           onClick={onPlayAgain}
           className="w-full py-3 rounded-xl bg-stone-700 hover:bg-stone-600 text-stone-100 font-bold transition-colors"
         >
-          ▶ Play Again (new setup)
+          <span className="inline-flex items-center gap-2"><PlayIcon size={16}/> Play Again (new setup)</span>
         </button>
         {/* Favorite + Download row */}
         {result.id && (
@@ -128,14 +131,16 @@ export function ResultsScreen({ result, prevResult, onPlayAgain, onRerun, onHome
                     : 'bg-stone-700 border-stone-600 text-stone-300 hover:bg-stone-600'
                 }`}
               >
-                {result.favorited ? '★ Favorited' : '☆ Add to Favorites'}
+                {result.favorited
+                  ? <span className="inline-flex items-center gap-1"><StarIcon size={14} filled/> Favorited</span>
+                  : <span className="inline-flex items-center gap-1"><StarIcon size={14}/> Add to Favorites</span>}
               </button>
             )}
             <button
               onClick={handleDownload}
               className="flex-1 py-2.5 rounded-xl bg-stone-700 hover:bg-stone-600 text-stone-300 font-bold text-sm transition-colors border border-stone-600"
             >
-              ⬇ Download Run
+              <span className="inline-flex items-center gap-1"><DownloadIcon size={14}/> Download Run</span>
             </button>
           </div>
         )}

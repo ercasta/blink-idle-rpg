@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { GameSnapshot, HeroDefinition, RunResult, HeroPath } from '../types';
+import { ClassIcon, CrossedSwordsIcon, TrophyIcon, SkipIcon } from '../components/icons';
 
 const STEP_INTERVAL_MS = 1000; // 1 second per checkpoint step
 
@@ -102,8 +103,10 @@ export function BattleScreen({ snapshots, prevSnapshots = [], heroes, heroPaths,
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-bold">
           {done
-            ? current.victory ? '🏆 Victory!' : '⚔️ Run Completed'
-            : '⚔️ Battle in Progress'}
+            ? current.victory
+              ? <span className="inline-flex items-center gap-2"><TrophyIcon size={22}/> Victory!</span>
+              : <span className="inline-flex items-center gap-2"><CrossedSwordsIcon size={22}/> Run Completed</span>
+            : <span className="inline-flex items-center gap-2"><CrossedSwordsIcon size={22}/> Battle in Progress</span>}
         </h1>
         <span className="text-stone-400 text-sm">
           Step {Math.min(stepIndex + 1, totalSteps)} / {totalSteps}
@@ -145,8 +148,8 @@ export function BattleScreen({ snapshots, prevSnapshots = [], heroes, heroPaths,
             const level = current.heroLevels[hero.name] ?? 1;
             return (
               <div key={hero.id} className="flex items-center justify-between">
-                <span className="text-sm">
-                  {hero.emoji} {hero.name}
+                <span className="text-sm inline-flex items-center gap-1.5">
+                  <ClassIcon heroClass={hero.heroClass} size={18}/> {hero.name}
                   <span className="text-stone-500 ml-1 text-xs">{hero.heroClass}</span>
                 </span>
                 <span className="text-sm font-bold text-amber-400">Lv {level}</span>
@@ -162,7 +165,7 @@ export function BattleScreen({ snapshots, prevSnapshots = [], heroes, heroPaths,
           onClick={handleSkip}
           className="w-full py-3 rounded-xl border border-stone-600 text-stone-400 hover:text-stone-100 hover:border-stone-400 text-sm transition-colors"
         >
-          ⏭ Skip to Results
+          <span className="inline-flex items-center gap-2"><SkipIcon size={16}/> Skip to Results</span>
         </button>
       )}
 
