@@ -69,6 +69,8 @@ export default function App() {
 
   // Track whether the current battle is a replay of a saved run (no re-save on complete)
   const replayingRunRef = useRef<RunResult | null>(null);
+  // The most recent saved run before the current run (used to show deltas in results)
+  const prevRunRef = useRef<RunResult | null>(null);
 
   // Load all runs, roster, and adventures from IndexedDB on first mount
   useEffect(() => {
@@ -95,6 +97,42 @@ export default function App() {
       window.history.replaceState({}, '', url);
     }
   }, [sharedHero, sharedAdventure]);
+
+  // ── Browser back button / page-leave interception ──────────────────────
+
+  // Screens where losing progress would be bad
+  const isActiveRun = ['loading', 'run-ready', 'battle'].includes(screen);
+
+  useEffect(() => {
+    if (!isActiveRun) return;
+    // Push a dummy history entry so the back button fires popstate instead of
+    // navigating away, giving us a chance to confirm.
+    window.history.pushState({ blinkGuard: true }, '');
+
+    function handlePopState() {
+      if (window.confirm('Leave the current run? Progress will be lost.')) {
+        // User confirmed — go home (don't re-push state)
+        setScreen('home');
+        setError(null);
+      } else {
+        // User cancelled — restore the guard entry
+        window.history.pushState({ blinkGuard: true }, '');
+      }
+    }
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [isActiveRun]);
+
+  useEffect(() => {
+    function handleBeforeUnload(e: BeforeUnloadEvent) {
+      if (isActiveRun) {
+        e.preventDefault();
+      }
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isActiveRun]);
 
   // ── Roster helpers ──────────────────────────────────────────────────────
 
@@ -143,6 +181,7 @@ export default function App() {
 
     try {
       const runs = await loadAllRuns();
+      prevRunRef.current = runs[0] ?? null;
       setPrevSnapshots(runs[0]?.snapshots ?? []);
       const result = await runSimulation(
         randomHeroes,
@@ -185,6 +224,7 @@ export default function App() {
       if (!selectedAdventure) throw new Error('No adventure selected');
 
       const runs = await loadAllRuns();
+      prevRunRef.current = runs[0] ?? null;
       setPrevSnapshots(runs[0]?.snapshots ?? []);
       const result = await runSimulation(
         heroes,
@@ -242,6 +282,7 @@ export default function App() {
 
     try {
       const runs = await loadAllRuns();
+      prevRunRef.current = runs[0] ?? null;
       setPrevSnapshots(runs[0]?.snapshots ?? []);
       const result = await runSimulation(
         selectedHeroes,
@@ -394,6 +435,7 @@ export default function App() {
     return (
       <ResultsScreen
         result={runResult}
+        prevResult={replayingRunRef.current ? null : prevRunRef.current}
         onPlayAgain={playAgain}
         onRerun={rerun}
         onHome={goHome}
