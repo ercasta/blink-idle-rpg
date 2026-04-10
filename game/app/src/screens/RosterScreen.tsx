@@ -39,6 +39,12 @@ function HeroQrModal({ hero, onClose }: { hero: HeroDefinition; onClose: () => v
       .catch(e => console.error('[HeroQrModal] QR generation failed', e));
   }, [url]);
 
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose(); }
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [onClose]);
+
   return (
     <div
       className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4"
@@ -74,6 +80,12 @@ function HeroShareModal({ hero, onClose }: { hero: HeroDefinition; onClose: () =
   const [copied, setCopied] = useState(false);
   const [showQr, setShowQr] = useState(false);
   const url = getHeroShareUrl(hero);
+
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose(); }
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [onClose]);
 
   async function copyLink() {
     try {
@@ -162,6 +174,12 @@ function HeroOverwriteConfirmModal({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) { if (e.key === 'Escape') onCancel(); }
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [onCancel]);
+
   return (
     <div
       className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4"

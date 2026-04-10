@@ -383,6 +383,12 @@ function OverwriteConfirmModal({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) { if (e.key === 'Escape') onCancel(); }
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [onCancel]);
+
   return (
     <div
       className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4"
