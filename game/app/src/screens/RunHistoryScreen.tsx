@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import type { RunResult } from '../types';
+import { PlayIcon, SkullIcon, MountainIcon, CrossedSwordsIcon, HeroesIcon, DownloadIcon, ImportIcon, TrashIcon, StarIcon, HistoryIcon } from '../components/icons';
 
 interface RunHistoryScreenProps {
   runs: RunResult[];
@@ -42,8 +43,12 @@ function RunCard({
   onToggleFavorite: () => void;
   onDelete: () => void;
 }) {
-  const modeLabel =
-    run.mode === 'easy' ? '🟢 Easy' : run.mode === 'hard' ? '🔴 Hard' : '🟡 Normal';
+  const modeBadge =
+    run.mode === 'easy'
+      ? <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500 inline-block"/>Easy</span>
+      : run.mode === 'hard'
+      ? <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500 inline-block"/>Hard</span>
+      : <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block"/>Normal</span>;
   const heroNames = (run.heroes ?? []).map(h => h.name).join(', ') || '—';
 
   return (
@@ -54,21 +59,21 @@ function RunCard({
           <span className="text-amber-400 font-bold text-lg">
             {run.finalScore.toLocaleString()} pts
           </span>
-          <span className="text-stone-500 text-xs ml-2">{modeLabel}</span>
+          <span className="text-stone-500 text-xs ml-2">{modeBadge}</span>
         </div>
         <span className="text-stone-500 text-xs">{formatDate(run.timestamp)}</span>
       </div>
 
       {/* Stats row */}
       <div className="flex gap-4 text-xs text-stone-400">
-        <span>🏔️ Tier {run.deepestTier}</span>
-        <span>⚔️ Wave {run.deepestWave}</span>
-        <span>💀 {run.enemiesDefeated} killed</span>
+        <span className="inline-flex items-center gap-1"><MountainIcon size={14}/> Tier {run.deepestTier}</span>
+        <span className="inline-flex items-center gap-1"><CrossedSwordsIcon size={14}/> Wave {run.deepestWave}</span>
+        <span className="inline-flex items-center gap-1"><SkullIcon size={14}/> {run.enemiesDefeated} killed</span>
       </div>
 
       {/* Heroes */}
       {heroNames !== '—' && (
-        <div className="text-xs text-stone-400 truncate">🧙 {heroNames}</div>
+        <div className="text-xs text-stone-400 truncate inline-flex items-center gap-1"><HeroesIcon size={14}/> {heroNames}</div>
       )}
 
       {/* Actions */}
@@ -77,7 +82,7 @@ function RunCard({
           onClick={onReplay}
           className="flex-1 min-w-[70px] py-1.5 rounded-lg bg-amber-700 hover:bg-amber-600 text-stone-100 text-xs font-bold transition-colors"
         >
-          ▶ Replay
+          <span className="inline-flex items-center gap-1.5"><PlayIcon size={12}/> Replay</span>
         </button>
         <button
           onClick={onToggleFavorite}
@@ -87,19 +92,21 @@ function RunCard({
               : 'bg-stone-700 border-stone-600 text-stone-300 hover:bg-stone-600'
           }`}
         >
-          {run.favorited ? '★ Saved' : '☆ Save'}
+          {run.favorited
+            ? <span className="inline-flex items-center gap-1"><StarIcon size={12} filled/> Saved</span>
+            : <span className="inline-flex items-center gap-1"><StarIcon size={12}/> Save</span>}
         </button>
         <button
           onClick={() => downloadRun(run)}
           className="flex-1 min-w-[70px] py-1.5 rounded-lg bg-stone-700 hover:bg-stone-600 text-stone-300 text-xs font-bold transition-colors border border-stone-600"
         >
-          ⬇ Export
+          <span className="inline-flex items-center gap-1"><DownloadIcon size={12}/> Export</span>
         </button>
         <button
           onClick={onDelete}
           className="py-1.5 px-3 rounded-lg bg-stone-700 hover:bg-red-900 text-stone-400 hover:text-red-300 text-xs font-bold transition-colors border border-stone-600"
         >
-          🗑
+          <TrashIcon size={16}/>
         </button>
       </div>
     </div>
@@ -159,7 +166,7 @@ export function RunHistoryScreen({
           onClick={() => fileInputRef.current?.click()}
           className="py-1.5 px-3 rounded-lg bg-stone-700 hover:bg-stone-600 text-stone-300 text-xs font-bold transition-colors border border-stone-600"
         >
-          ⬆ Import
+          <span className="inline-flex items-center gap-1"><ImportIcon size={12}/> Import</span>
         </button>
         <input
           ref={fileInputRef}
@@ -172,7 +179,7 @@ export function RunHistoryScreen({
 
       {runs.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center text-stone-500 gap-3">
-          <span className="text-4xl">📭</span>
+          <HistoryIcon size={48} className="text-stone-600"/>
           <p className="text-sm">No runs saved yet.</p>
           <p className="text-xs text-stone-600">
             Complete a run to see it here, or import an exported file.
@@ -184,7 +191,7 @@ export function RunHistoryScreen({
           {favorites.length > 0 && (
             <section>
               <h2 className="text-xs font-semibold text-stone-500 uppercase tracking-widest mb-3">
-                ★ Favorites
+                <span className="inline-flex items-center gap-1"><StarIcon size={12} filled/> Favorites</span>
               </h2>
               <div className="flex flex-col gap-3">
                 {favorites.map(run => (

@@ -1,10 +1,8 @@
 import { useState } from 'react';
 import type { HeroDefinition, HeroClass, AdventureDefinition } from '../types';
+import { ClassIcon, HeroesIcon, PlayIcon } from '../components/icons';
 
 const ALL_CLASSES: HeroClass[] = ['Warrior', 'Mage', 'Ranger', 'Paladin', 'Rogue', 'Cleric'];
-const CLASS_EMOJIS: Record<HeroClass, string> = {
-  Warrior: '⚔️', Mage: '🧙', Ranger: '🏹', Paladin: '🛡️', Rogue: '🗡️', Cleric: '🙏',
-};
 
 interface PartySelectScreenProps {
   roster: HeroDefinition[];
@@ -66,13 +64,13 @@ export function PartySelectScreen({ roster, adventure, onStart, onBack, onManage
         {' · '}
         {maxParty} {maxParty === 1 ? 'hero' : 'heroes'} required
         {!allClassesAllowed && (
-          <span> · {allowedClasses.map(c => CLASS_EMOJIS[c]).join(' ')}</span>
+          <span className="inline-flex items-center gap-0.5"> · {allowedClasses.map(c => <ClassIcon key={c} heroClass={c} size={14}/>)}</span>
         )}
       </div>
 
       {eligibleRosterCount === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center py-12">
-          <div className="text-5xl">🧑‍🤝‍🧑</div>
+          <HeroesIcon size={48} className="text-stone-500"/>
           <p className="text-stone-400 text-sm">
             {roster.length === 0
               ? 'Your roster is empty. Create heroes before starting a run.'
@@ -129,7 +127,7 @@ export function PartySelectScreen({ roster, adventure, onStart, onBack, onManage
                       : 'bg-stone-800 border-stone-600 text-stone-400 hover:border-stone-400'
                   }`}
                 >
-                  {CLASS_EMOJIS[hc]} {hc}
+                  <span className="inline-flex items-center gap-1.5"><ClassIcon heroClass={hc} size={14}/> {hc}</span>
                 </button>
               ))}
             </div>
@@ -157,7 +155,7 @@ export function PartySelectScreen({ roster, adventure, onStart, onBack, onManage
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <span className="text-3xl">{hero.emoji}</span>
+                    <ClassIcon heroClass={hero.heroClass} size={32}/>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-bold">{hero.name}</span>
@@ -197,7 +195,7 @@ export function PartySelectScreen({ roster, adventure, onStart, onBack, onManage
             >
               {selected.length < 1
                 ? 'Select at least 1 hero'
-                : `⚔️ Run! (${selected.length} hero${selected.length !== 1 ? 'es' : ''})`}
+                : <span className="inline-flex items-center gap-2"><PlayIcon size={18}/> Run! ({selected.length} hero{selected.length !== 1 ? 'es' : ''})</span>}
             </button>
           </div>
         </>

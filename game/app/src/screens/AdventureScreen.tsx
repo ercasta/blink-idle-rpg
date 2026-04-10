@@ -17,12 +17,9 @@ import type { AdventureDefinition, GameMode, HeroClass, CustomModeSettings, Envi
 import { DEFAULT_CUSTOM_SETTINGS, DEFAULT_ENVIRONMENT_SETTINGS } from '../types';
 import { generateAdventureDescription, encodeAdventureToParams, decodeAdventureFromParams } from '../data/adventureDescription';
 import { generateRandomAdventure, randomAdventureName } from '../data/adventures';
+import { ClassIcon, MapIcon, HeroesIcon, DiceIcon, PhysicalIcon, MagicalIcon, FireIcon, WaterIcon, WindIcon, EarthIcon, LightIcon, DarknessIcon, TrashIcon, ImportIcon } from '../components/icons';
 
 const ALL_CLASSES: HeroClass[] = ['Warrior', 'Mage', 'Ranger', 'Paladin', 'Rogue', 'Cleric'];
-
-const CLASS_EMOJIS: Record<HeroClass, string> = {
-  Warrior: '⚔️', Mage: '🧙', Ranger: '🏹', Paladin: '🛡️', Rogue: '🗡️', Cleric: '🙏',
-};
 
 const MODE_BADGE: Record<GameMode, string> = {
   easy:   'bg-green-800 text-green-200',
@@ -135,7 +132,7 @@ function EnvSlider({
   value,
   onChange,
 }: {
-  label: string;
+  label: React.ReactNode;
   value: number;
   onChange: (v: number) => void;
 }) {
@@ -681,7 +678,7 @@ export function AdventureScreen({
                         : 'bg-stone-700 border-stone-600 text-stone-400 hover:border-stone-400'
                     }`}
                   >
-                    {CLASS_EMOJIS[hc]} {hc}
+                    <span className="inline-flex items-center gap-1.5"><ClassIcon heroClass={hc} size={14}/> {hc}</span>
                   </button>
                 );
               })}
@@ -695,21 +692,21 @@ export function AdventureScreen({
               Each slider controls the chance of encountering enemies that both deal AND resist that type. Sliders are independent — an adventure can have high fire and water simultaneously.
             </p>
             <div className="flex flex-col gap-3">
-              <EnvSlider label="🗡️ Physical" value={draft.environmentSettings.physicalPct}
+              <EnvSlider label={<span className="inline-flex items-center gap-1.5"><PhysicalIcon size={14}/> Physical</span>} value={draft.environmentSettings.physicalPct}
                 onChange={v => setDraftEnv('physicalPct', v)} />
-              <EnvSlider label="🔮 Magical" value={draft.environmentSettings.magicalPct}
+              <EnvSlider label={<span className="inline-flex items-center gap-1.5"><MagicalIcon size={14}/> Magical</span>} value={draft.environmentSettings.magicalPct}
                 onChange={v => setDraftEnv('magicalPct', v)} />
-              <EnvSlider label="🔥 Fire" value={draft.environmentSettings.firePct}
+              <EnvSlider label={<span className="inline-flex items-center gap-1.5"><FireIcon size={14}/> Fire</span>} value={draft.environmentSettings.firePct}
                 onChange={v => setDraftEnv('firePct', v)} />
-              <EnvSlider label="💧 Water" value={draft.environmentSettings.waterPct}
+              <EnvSlider label={<span className="inline-flex items-center gap-1.5"><WaterIcon size={14}/> Water</span>} value={draft.environmentSettings.waterPct}
                 onChange={v => setDraftEnv('waterPct', v)} />
-              <EnvSlider label="💨 Wind" value={draft.environmentSettings.windPct}
+              <EnvSlider label={<span className="inline-flex items-center gap-1.5"><WindIcon size={14}/> Wind</span>} value={draft.environmentSettings.windPct}
                 onChange={v => setDraftEnv('windPct', v)} />
-              <EnvSlider label="🪨 Earth" value={draft.environmentSettings.earthPct}
+              <EnvSlider label={<span className="inline-flex items-center gap-1.5"><EarthIcon size={14}/> Earth</span>} value={draft.environmentSettings.earthPct}
                 onChange={v => setDraftEnv('earthPct', v)} />
-              <EnvSlider label="✨ Light" value={draft.environmentSettings.lightPct}
+              <EnvSlider label={<span className="inline-flex items-center gap-1.5"><LightIcon size={14}/> Light</span>} value={draft.environmentSettings.lightPct}
                 onChange={v => setDraftEnv('lightPct', v)} />
-              <EnvSlider label="🌑 Darkness" value={draft.environmentSettings.darknessPct}
+              <EnvSlider label={<span className="inline-flex items-center gap-1.5"><DarknessIcon size={14}/> Darkness</span>} value={draft.environmentSettings.darknessPct}
                 onChange={v => setDraftEnv('darknessPct', v)} />
             </div>
           </div>
@@ -786,20 +783,20 @@ export function AdventureScreen({
           className="py-2.5 px-3 rounded-xl bg-stone-700 hover:bg-stone-600 text-stone-100 text-sm transition-colors"
           title="Generate a random adventure"
         >
-          🎲
+          <DiceIcon size={18}/>
         </button>
         <button
           onClick={() => setShowImport(true)}
           className="py-2.5 px-3 rounded-xl bg-stone-700 hover:bg-stone-600 text-stone-100 text-sm transition-colors"
           title="Import adventure from link"
         >
-          🔗
+          <ImportIcon size={18}/>
         </button>
       </div>
 
       {adventures.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center py-12">
-          <div className="text-5xl">🗺️</div>
+          <MapIcon size={48} className="text-stone-500"/>
           <p className="text-stone-400 text-sm">No adventures yet.<br />Create your first one above.</p>
         </div>
       ) : (
@@ -816,9 +813,9 @@ export function AdventureScreen({
                 </span>
               </div>
               <div className="flex flex-wrap items-center gap-3 mb-2 text-xs text-stone-400">
-                <span>👥 {adv.requiredHeroCount} {adv.requiredHeroCount === 1 ? 'hero' : 'heroes'}</span>
+                <span className="inline-flex items-center gap-1"><HeroesIcon size={13}/> {adv.requiredHeroCount} {adv.requiredHeroCount === 1 ? 'hero' : 'heroes'}</span>
                 {adv.allowedClasses.length < ALL_CLASSES.length ? (
-                  <span>{adv.allowedClasses.map(c => CLASS_EMOJIS[c]).join(' ')}</span>
+                  <span className="inline-flex items-center gap-0.5">{adv.allowedClasses.map(c => <ClassIcon key={c} heroClass={c} size={14}/>)}</span>
                 ) : (
                   <span>All classes</span>
                 )}
@@ -844,7 +841,7 @@ export function AdventureScreen({
                   onClick={() => deleteAdventure(adv.id)}
                   className="py-1.5 px-3 rounded-lg bg-stone-700 hover:bg-red-900 text-stone-400 hover:text-red-300 text-xs font-medium transition-colors"
                 >
-                  🗑️
+                  <TrashIcon size={16}/>
                 </button>
               </div>
             </div>

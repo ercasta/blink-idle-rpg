@@ -1,3 +1,4 @@
+import { LogoIcon, PlayIcon, HeroesIcon, MapIcon, LightningIcon, HistoryIcon, CrossedSwordsIcon } from '../components/icons';
 import type { RunResult } from '../types';
 
 interface HomeScreenProps {
@@ -23,7 +24,9 @@ export function HomeScreen({ recentRuns, onStart, onQuickPlay, onManageRoster, o
     <div className="flex flex-col items-center min-h-screen bg-stone-900 text-stone-100 px-4 py-8">
       {/* Title */}
       <div className="mb-8 text-center">
-        <div className="text-6xl mb-3">🐉</div>
+        <div className="mb-3 flex justify-center">
+          <LogoIcon size={72} />
+        </div>
         <h1 className="text-3xl font-bold text-amber-500 tracking-tight">Blink Idle RPG</h1>
         <p className="text-stone-400 mt-2 text-sm">An autonomous idle battle simulation</p>
       </div>
@@ -46,33 +49,33 @@ export function HomeScreen({ recentRuns, onStart, onQuickPlay, onManageRoster, o
           onClick={onStart}
           className="w-full py-4 rounded-xl bg-amber-700 hover:bg-amber-600 text-stone-100 font-bold text-lg transition-colors shadow-lg"
         >
-          ▶ Start a Run
+          <span className="inline-flex items-center gap-2"><PlayIcon size={18}/> Start a Run</span>
         </button>
         <div className="flex gap-2">
           <button
             onClick={onManageRoster}
             className="flex-1 py-3 rounded-xl bg-stone-700 hover:bg-stone-600 text-stone-100 font-bold text-sm transition-colors shadow-lg"
           >
-            🧑‍🤝‍🧑 Heroes
+            <span className="inline-flex items-center gap-1.5"><HeroesIcon size={16}/> Heroes</span>
           </button>
           <button
             onClick={onManageAdventures}
             className="flex-1 py-3 rounded-xl bg-stone-700 hover:bg-stone-600 text-stone-100 font-bold text-sm transition-colors shadow-lg"
           >
-            🗺️ Adventures
+            <span className="inline-flex items-center gap-1.5"><MapIcon size={16}/> Adventures</span>
           </button>
         </div>
         <button
           onClick={onQuickPlay}
           className="w-full py-3 rounded-xl bg-stone-600 hover:bg-stone-500 text-stone-100 font-bold text-base transition-colors shadow-lg"
         >
-          ⚡ Quick Play
+          <span className="inline-flex items-center gap-2"><LightningIcon size={18}/> Quick Play</span>
         </button>
         <button
           onClick={onViewHistory}
           className="w-full py-3 rounded-xl bg-stone-700 hover:bg-stone-600 text-stone-300 font-bold text-base transition-colors shadow-lg border border-stone-600"
         >
-          📋 Run History
+          <span className="inline-flex items-center gap-2"><HistoryIcon size={18}/> Run History</span>
         </button>
       </div>
 
@@ -90,7 +93,7 @@ export function HomeScreen({ recentRuns, onStart, onQuickPlay, onManageRoster, o
               >
                 <div className="flex flex-col">
                   <span className="text-sm text-stone-300">
-                    {run.adventure ? run.adventure.name : '⚔️'} · Tier {run.deepestTier}
+                    <span className="inline-flex items-center gap-1">{run.adventure ? run.adventure.name : <CrossedSwordsIcon size={14}/>}</span> · Tier {run.deepestTier}
                   </span>
                   {run.timestamp && (
                     <span className="text-xs text-stone-500">{formatDate(run.timestamp)}</span>
@@ -104,7 +107,7 @@ export function HomeScreen({ recentRuns, onStart, onQuickPlay, onManageRoster, o
                     onClick={() => onReplayRun(run)}
                     className="py-1 px-2 rounded-lg bg-amber-700 hover:bg-amber-600 text-stone-100 text-xs font-bold transition-colors"
                   >
-                    ▶
+                    <PlayIcon size={12}/>
                   </button>
                 </div>
               </div>

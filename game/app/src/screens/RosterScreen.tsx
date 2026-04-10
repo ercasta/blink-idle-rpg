@@ -8,9 +8,11 @@ import type { SharedHeroData } from '../data/heroDescription';
 import { loadSkillCatalog } from '../data/skillCatalog';
 import type { SkillEntry } from '../data/skillCatalog';
 import { printHeroFigurine } from '../utils/heroFigurine';
+import { ClassIcon, HeroesIcon, DiceIcon, RerollIcon, CrystalIcon, SkillTypeIcon, TrashIcon } from '../components/icons';
 
 const ALL_CLASSES: HeroClass[] = ['Warrior', 'Mage', 'Ranger', 'Paladin', 'Rogue', 'Cleric'];
 
+// Kept for backward-compat hero object construction (emoji field is stored in hero data).
 const CLASS_EMOJIS: Record<HeroClass, string> = {
   Warrior: '⚔️', Mage: '🧙', Ranger: '🏹', Paladin: '🛡️', Rogue: '🗡️', Cleric: '🙏',
 };
@@ -419,7 +421,7 @@ export function RosterScreen({ roster, onRosterChange, onBack, sharedHero }: Ros
                       : 'bg-stone-700 border-stone-600 text-stone-300 hover:border-stone-400'
                   }`}
                 >
-                  {CLASS_EMOJIS[hc]} {hc}
+                  <span className="inline-flex items-center gap-1"><ClassIcon heroClass={hc} size={12}/> {hc}</span>
                 </button>
               ))}
             </div>
@@ -498,7 +500,7 @@ export function RosterScreen({ roster, onRosterChange, onBack, sharedHero }: Ros
                       : 'bg-stone-700 border-stone-600 text-stone-300 hover:border-stone-400'
                   }`}
                 >
-                  {CLASS_EMOJIS[hc]} {hc}
+                  <span className="inline-flex items-center gap-1"><ClassIcon heroClass={hc} size={12}/> {hc}</span>
                 </button>
               ))}
             </div>
@@ -508,7 +510,7 @@ export function RosterScreen({ roster, onRosterChange, onBack, sharedHero }: Ros
         {/* Stats preview */}
         <div className="bg-stone-800 border border-stone-700 rounded-xl p-4 mb-4">
           <div className="flex items-center gap-3 mb-3">
-            <span className="text-3xl">{draftHero.emoji}</span>
+            <ClassIcon heroClass={draftHero.heroClass} size={32}/>
             <div>
               <div className="font-bold text-lg">{draftHero.name || 'Unnamed Hero'}</div>
               <div className="text-xs text-stone-400">{draftHero.heroClass} · {draftHero.role}</div>
@@ -526,7 +528,7 @@ export function RosterScreen({ roster, onRosterChange, onBack, sharedHero }: Ros
             onClick={rerollDraft}
             className="w-full py-2 rounded-lg border border-stone-600 text-stone-300 hover:text-stone-100 hover:border-stone-400 text-sm transition-colors"
           >
-            🎲 Reroll Hero
+            <span className="inline-flex items-center gap-1.5"><RerollIcon size={16}/> Reroll Hero</span>
           </button>
         </div>
 
@@ -537,7 +539,7 @@ export function RosterScreen({ roster, onRosterChange, onBack, sharedHero }: Ros
             onClick={randomizeDraftTraits}
             className="flex-1 py-2 rounded-lg border border-stone-600 text-stone-300 hover:text-stone-100 hover:border-stone-400 text-sm transition-colors"
           >
-            🎲 Random Traits
+            <span className="inline-flex items-center gap-1.5"><DiceIcon size={16}/> Random Traits</span>
           </button>
           <button
             onClick={resetDraftTraits}
@@ -628,7 +630,7 @@ export function RosterScreen({ roster, onRosterChange, onBack, sharedHero }: Ros
                     : 'bg-stone-800 border-stone-600 text-stone-400 hover:border-stone-400'
                 }`}
               >
-                {CLASS_EMOJIS[hc]} {hc}
+                <span className="inline-flex items-center gap-1"><ClassIcon heroClass={hc} size={12}/> {hc}</span>
               </button>
             ))}
           </div>
@@ -649,7 +651,7 @@ export function RosterScreen({ roster, onRosterChange, onBack, sharedHero }: Ros
       <div className="flex flex-col gap-3 flex-1">
         {roster.length === 0 && (
           <div className="flex-1 flex flex-col items-center justify-center gap-3 text-stone-500 py-12">
-            <div className="text-5xl">🧑‍🤝‍🧑</div>
+            <HeroesIcon size={48} className="text-stone-600"/>
             <p className="text-sm text-center">No heroes yet.<br />Tap above to create your first hero.</p>
           </div>
         )}
@@ -662,7 +664,7 @@ export function RosterScreen({ roster, onRosterChange, onBack, sharedHero }: Ros
           <div key={hero.id} className="flex gap-2">
             <div className="flex-1 bg-stone-800 border border-stone-700 rounded-xl p-4">
               <div className="flex items-center gap-3">
-                <span className="text-3xl">{hero.emoji}</span>
+                <ClassIcon heroClass={hero.heroClass} size={32}/>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-bold">{hero.name}</span>
@@ -707,7 +709,7 @@ export function RosterScreen({ roster, onRosterChange, onBack, sharedHero }: Ros
                 className="flex-1 px-3 bg-stone-800 border border-stone-700 hover:border-red-600 hover:text-red-400 rounded-xl text-lg transition-colors"
                 title="Remove hero"
               >
-                🗑️
+                <TrashIcon size={18}/>
               </button>
             </div>
           </div>
@@ -757,7 +759,7 @@ export function TraitEditor({ hero, traits, onChangeTrait, onReset, onDone, done
   return (
     <div className="flex-1 overflow-y-auto">
       <div className="flex items-center gap-3 mb-4">
-        <span className="text-3xl">{hero.emoji}</span>
+        <ClassIcon heroClass={hero.heroClass} size={32}/>
         <div>
           <div className="font-bold">{hero.name}</div>
           <div className="text-xs text-stone-400">{hero.heroClass} · {hero.role}</div>
@@ -806,7 +808,7 @@ export function TraitEditor({ hero, traits, onChangeTrait, onReset, onDone, done
           onClick={() => { setShowPath(p => !p); setSelectedSkill(null); }}
           className="w-full py-3 rounded-xl border border-stone-600 text-stone-300 hover:text-stone-100 hover:border-stone-400 text-sm font-medium transition-colors"
         >
-          🔮 {showPath ? 'Hide Hero Path' : 'Predict Hero Path'}
+          <span className="inline-flex items-center gap-1.5"><CrystalIcon size={16}/> {showPath ? 'Hide Hero Path' : 'Predict Hero Path'}</span>
         </button>
 
         {showPath && (
@@ -847,8 +849,8 @@ export function TraitEditor({ hero, traits, onChangeTrait, onReset, onDone, done
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="font-semibold text-stone-200">{selectedSkill.name}</span>
                   {selectedSkill.skillType && (
-                    <span className="text-stone-400 text-[0.65rem] uppercase tracking-wide border border-stone-600 rounded px-1.5 py-0.5">
-                      {selectedSkill.skillType}
+                    <span className="text-stone-400 text-[0.65rem] uppercase tracking-wide border border-stone-600 rounded px-1.5 py-0.5 inline-flex items-center gap-1">
+                      <SkillTypeIcon skillType={selectedSkill.skillType} size={10}/> {selectedSkill.skillType}
                     </span>
                   )}
                 </div>
