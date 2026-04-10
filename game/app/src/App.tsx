@@ -143,22 +143,46 @@ export default function App() {
 
   // Screens where losing progress would be bad
   const isActiveRun = ['loading', 'run-ready', 'battle'].includes(screen);
+  // Any screen that is not the root home/error screen
+  const isNonHome = !['home', 'error'].includes(screen);
 
   useEffect(() => {
-    if (!isActiveRun) return;
+    if (!isNonHome) return;
     // Push a dummy history entry so the back button fires popstate instead of
-    // navigating away, giving us a chance to confirm.
+    // navigating away, giving us a chance to intercept.
     window.history.pushState({ blinkGuard: true }, '');
 
     function handlePopState() {
-      // Show the custom modal; re-push the guard entry so the URL stays stable
+      // Re-push the guard entry so the URL stays stable and subsequent presses
+      // continue to be intercepted.
       window.history.pushState({ blinkGuard: true }, '');
-      setShowLeaveModal(true);
+      if (isActiveRun) {
+        // Mid-run: ask for confirmation before leaving
+        setShowLeaveModal(true);
+      } else {
+        // Not mid-run: navigate back in-app to the logical parent screen.
+        // Explicit map keeps the intent clear as new screens are added.
+        const parentScreen: Partial<Record<AppScreen, AppScreen>> = {
+          roster:              'home',
+          'adventure-manager': 'home',
+          'adventure-select':  'home',
+          'party-select':      'adventure-select',
+          'run-history':       'home',
+          results:             'home',
+        };
+        const target = parentScreen[screen] ?? 'home';
+        setScreen(target);
+        if (target === 'home') setError(null);
+      }
     }
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [isActiveRun]);
+  // Re-run whenever the screen changes so the handler always closes over the
+  // current screen value (isActiveRun is derived from screen, so no need to
+  // list it separately).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [screen]);
 
   useEffect(() => {
     function handleBeforeUnload(e: BeforeUnloadEvent) {
