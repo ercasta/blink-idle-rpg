@@ -30,7 +30,8 @@
 
 const path = require('path');
 const fs = require('fs');
-const { execSync } = require('child_process');
+const { execSync, execFile } = require('child_process');
+const os = require('os');
 
 const ROOT = path.join(__dirname, '..');
 const RUNTIME_PATH = path.join(ROOT, 'packages', 'blink-runtime');
@@ -498,6 +499,36 @@ function buildConfigEntities(mode) {
   ];
 }
 
+// ─── Run one simulation (async) ─────────────────────────────────────────────
+
+/**
+ * Run a single simulation asynchronously.
+ * Returns a Promise that resolves with the parsed JSON result.
+ */
+function runOneSimulationAsync(binaryPath, config) {
+  return new Promise((resolve, reject) => {
+    const input = JSON.stringify(config);
+    const child = execFile(
+      binaryPath,
+      [],
+      { encoding: 'utf-8', timeout: 120_000, maxBuffer: 10 * 1024 * 1024 },
+      (err, stdout, stderr) => {
+        if (err) {
+          reject(new Error(`Simulation binary failed: ${stderr || err.message}`));
+          return;
+        }
+        try {
+          resolve(JSON.parse(stdout.trim()));
+        } catch (parseErr) {
+          reject(new Error(`Failed to parse simulation output: ${parseErr.message}\nOutput: ${stdout.slice(0, 200)}`));
+        }
+      }
+    );
+    child.stdin.write(input);
+    child.stdin.end();
+  });
+}
+
 // ─── Run one simulation ─────────────────────────────────────────────────────
 
 function runOneSimulation(binaryPath, config) {
@@ -657,4 +688,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { ensureBinary, runOneSimulation, aggregateKPIs, loadGameData, buildHeroJson, buildEnemyJson, buildConfigEntities, applyCustomSettings };
+module.exports = { ensureBinary, runOneSimulation, runOneSimulationAsync, aggregateKPIs, loadGameData, buildHeroJson, buildEnemyJson, buildConfigEntities, applyCustomSettings };
