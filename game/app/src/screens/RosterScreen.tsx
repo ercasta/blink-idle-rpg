@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import QRCode from 'qrcode';
-import { TRAIT_AXES, TRAIT_MIN, TRAIT_MAX, defaultTraits, randomTraits, simulateHeroPath, getSkillName } from '../data/traits';
+import { TRAIT_AXES, TRAIT_MIN, TRAIT_MAX, defaultTraits, randomTraits, computeBaseStats, simulateHeroPath, getSkillName } from '../data/traits';
 import type { HeroDefinition, HeroClass, HeroTraits } from '../types';
 import { generateRandomHero } from '../data/heroes';
 import { generateHeroDescription, encodeHeroToParams } from '../data/heroDescription';
@@ -8,7 +8,7 @@ import type { SharedHeroData } from '../data/heroDescription';
 import { loadSkillCatalog } from '../data/skillCatalog';
 import type { SkillEntry } from '../data/skillCatalog';
 import { printHeroFigurine } from '../utils/heroFigurine';
-import { ClassIcon, HeroesIcon, DiceIcon, RerollIcon, CrystalIcon, SkillTypeIcon, TrashIcon } from '../components/icons';
+import { ClassIcon, HeroesIcon, DiceIcon, CrystalIcon, SkillTypeIcon, TrashIcon } from '../components/icons';
 
 const ALL_CLASSES: HeroClass[] = ['Warrior', 'Mage', 'Ranger', 'Paladin', 'Rogue', 'Cleric'];
 
@@ -260,7 +260,7 @@ export function RosterScreen({ roster, onRosterChange, onBack, sharedHero }: Ros
       description: generateHeroDescription(sharedHero.heroClass, sharedHero.traits),
       role: CLASS_ROLES[sharedHero.heroClass],
       emoji: CLASS_EMOJIS[sharedHero.heroClass],
-      stats: { strength: 8, dexterity: 8, intelligence: 8, constitution: 8, wisdom: 8 },
+      stats: computeBaseStats(sharedHero.heroClass, sharedHero.traits),
       traits: sharedHero.traits,
     };
   });
@@ -305,23 +305,22 @@ export function RosterScreen({ roster, onRosterChange, onBack, sharedHero }: Ros
     setView('create');
   }
 
-  function rerollDraft() {
-    setDraftHero(generateRandomHero());
-  }
-
   function randomizeDraftTraits() {
     if (!draftHero) return;
-    setDraftHero({ ...draftHero, traits: randomTraits() });
+    const newTraits = randomTraits();
+    setDraftHero({ ...draftHero, traits: newTraits, stats: computeBaseStats(draftHero.heroClass, newTraits) });
   }
 
   function resetDraftTraits() {
     if (!draftHero) return;
-    setDraftHero({ ...draftHero, traits: defaultTraits() });
+    const newTraits = defaultTraits();
+    setDraftHero({ ...draftHero, traits: newTraits, stats: computeBaseStats(draftHero.heroClass, newTraits) });
   }
 
   function setDraftTrait(key: keyof HeroTraits, value: number) {
     if (!draftHero) return;
-    setDraftHero({ ...draftHero, traits: { ...draftHero.traits, [key]: value } });
+    const newTraits = { ...draftHero.traits, [key]: value };
+    setDraftHero({ ...draftHero, traits: newTraits, stats: computeBaseStats(draftHero.heroClass, newTraits) });
   }
 
   function setDraftName(name: string) {
@@ -336,6 +335,7 @@ export function RosterScreen({ roster, onRosterChange, onBack, sharedHero }: Ros
       heroClass,
       emoji: CLASS_EMOJIS[heroClass],
       role: CLASS_ROLES[heroClass],
+      stats: computeBaseStats(heroClass, draftHero.traits),
     });
   }
 
@@ -414,7 +414,11 @@ export function RosterScreen({ roster, onRosterChange, onBack, sharedHero }: Ros
               {ALL_CLASSES.map(hc => (
                 <button
                   key={hc}
-                  onClick={() => setEditingHero(prev => prev ? { ...prev, heroClass: hc, emoji: CLASS_EMOJIS[hc], role: CLASS_ROLES[hc] } : prev)}
+                  onClick={() => setEditingHero(prev => {
+                    if (!prev) return prev;
+                    const newTraits = prev.traits;
+                    return { ...prev, heroClass: hc, emoji: CLASS_EMOJIS[hc], role: CLASS_ROLES[hc], stats: computeBaseStats(hc, newTraits) };
+                  })}
                   className={`py-1.5 rounded-lg text-xs font-medium transition-colors border ${
                     editingHero.heroClass === hc
                       ? 'bg-amber-700 border-amber-500 text-stone-100'
@@ -432,14 +436,23 @@ export function RosterScreen({ roster, onRosterChange, onBack, sharedHero }: Ros
           hero={editingHero}
           traits={editingHero.traits}
           onChangeTrait={(key, val) =>
-            setEditingHero(prev => prev ? { ...prev, traits: { ...prev.traits, [key]: val } } : prev)
+            setEditingHero(prev => {
+              if (!prev) return prev;
+              const newTraits = { ...prev.traits, [key]: val };
+              return { ...prev, traits: newTraits, stats: computeBaseStats(prev.heroClass, newTraits) };
+            })
           }
           onReset={() =>
-            setEditingHero(prev => prev ? { ...prev, traits: defaultTraits() } : prev)
+            setEditingHero(prev => {
+              if (!prev) return prev;
+              const newTraits = defaultTraits();
+              return { ...prev, traits: newTraits, stats: computeBaseStats(prev.heroClass, newTraits) };
+            })
           }
           onDone={() => saveEdit({
             ...editingHero,
             description: generateHeroDescription(editingHero.heroClass, editingHero.traits),
+            stats: computeBaseStats(editingHero.heroClass, editingHero.traits),
           })}
           doneLabel="Save"
           doneDisabled={!editingHero.name.trim()}
@@ -507,29 +520,15 @@ export function RosterScreen({ roster, onRosterChange, onBack, sharedHero }: Ros
           </div>
         </div>
 
-        {/* Stats preview */}
+        {/* Hero info card */}
         <div className="bg-stone-800 border border-stone-700 rounded-xl p-4 mb-4">
-          <div className="flex items-center gap-3 mb-3">
+          <div className="flex items-center gap-3">
             <ClassIcon heroClass={draftHero.heroClass} size={32}/>
             <div>
               <div className="font-bold text-lg">{draftHero.name || 'Unnamed Hero'}</div>
               <div className="text-xs text-stone-400">{draftHero.heroClass} · {draftHero.role}</div>
             </div>
           </div>
-          <div className="grid grid-cols-5 gap-1 text-xs text-center mb-3">
-            {Object.entries(draftHero.stats).map(([stat, val]) => (
-              <div key={stat} className="bg-stone-700/50 rounded p-1">
-                <div className="text-stone-400 uppercase" style={{ fontSize: '0.6rem' }}>{stat.slice(0, 3)}</div>
-                <div className="font-bold text-stone-200">{val}</div>
-              </div>
-            ))}
-          </div>
-          <button
-            onClick={rerollDraft}
-            className="w-full py-2 rounded-lg border border-stone-600 text-stone-300 hover:text-stone-100 hover:border-stone-400 text-sm transition-colors"
-          >
-            <span className="inline-flex items-center gap-1.5"><RerollIcon size={16}/> Reroll Hero</span>
-          </button>
         </div>
 
         {/* Trait editor */}
@@ -672,14 +671,6 @@ export function RosterScreen({ roster, onRosterChange, onBack, sharedHero }: Ros
                   </div>
                   <p className="text-xs text-stone-400 mt-0.5">{hero.role}</p>
                 </div>
-              </div>
-              <div className="mt-3 grid grid-cols-5 gap-1 text-xs text-center">
-                {Object.entries(hero.stats).map(([stat, val]) => (
-                  <div key={stat} className="bg-stone-700/50 rounded p-1">
-                    <div className="text-stone-400 uppercase" style={{ fontSize: '0.6rem' }}>{stat.slice(0, 3)}</div>
-                    <div className="font-bold text-stone-200">{val}</div>
-                  </div>
-                ))}
               </div>
               {/* Hero description */}
               {hero.description && (

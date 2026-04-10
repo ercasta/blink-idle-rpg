@@ -170,17 +170,6 @@ export function PartySelectScreen({ roster, adventure, onStart, onBack, onManage
                       <p className="text-xs text-stone-500 mt-1 leading-relaxed">{hero.description}</p>
                     </div>
                   </div>
-                  {/* Stat bar */}
-                  <div className="mt-3 grid grid-cols-5 gap-1 text-xs text-center">
-                    {Object.entries(hero.stats).map(([stat, val]) => (
-                      <div key={stat} className="bg-stone-700/50 rounded p-1">
-                        <div className="text-stone-400 uppercase" style={{ fontSize: '0.6rem' }}>
-                          {stat.slice(0, 3)}
-                        </div>
-                        <div className="font-bold text-stone-200">{val}</div>
-                      </div>
-                    ))}
-                  </div>
                 </button>
               );
             })}
