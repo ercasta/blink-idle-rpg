@@ -7,6 +7,7 @@ import { generateHeroDescription, encodeHeroToParams } from '../data/heroDescrip
 import type { SharedHeroData } from '../data/heroDescription';
 import { loadSkillCatalog } from '../data/skillCatalog';
 import type { SkillEntry } from '../data/skillCatalog';
+import { printHeroFigurine } from '../utils/heroFigurine';
 
 const ALL_CLASSES: HeroClass[] = ['Warrior', 'Mage', 'Ranger', 'Paladin', 'Rogue', 'Cleric'];
 
@@ -79,6 +80,7 @@ function HeroQrModal({ hero, onClose }: { hero: HeroDefinition; onClose: () => v
 function HeroShareModal({ hero, onClose }: { hero: HeroDefinition; onClose: () => void }) {
   const [copied, setCopied] = useState(false);
   const [showQr, setShowQr] = useState(false);
+  const [printing, setPrinting] = useState(false);
   const url = getHeroShareUrl(hero);
 
   useEffect(() => {
@@ -106,6 +108,17 @@ function HeroShareModal({ hero, onClose }: { hero: HeroDefinition; onClose: () =
       }
     } else {
       copyLink();
+    }
+  }
+
+  async function handlePrint() {
+    setPrinting(true);
+    try {
+      await printHeroFigurine(hero);
+    } catch (e) {
+      console.error('[HeroShareModal] PDF generation failed', e);
+    } finally {
+      setPrinting(false);
     }
   }
 
@@ -150,6 +163,14 @@ function HeroShareModal({ hero, onClose }: { hero: HeroDefinition; onClose: () =
           className="w-full py-3 rounded-xl bg-stone-700 hover:bg-stone-600 text-stone-100 text-sm font-medium transition-colors flex items-center justify-center gap-2"
         >
           📷 Show QR Code
+        </button>
+
+        <button
+          onClick={handlePrint}
+          disabled={printing}
+          className="w-full py-3 rounded-xl bg-stone-700 hover:bg-stone-600 text-stone-100 text-sm font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {printing ? '⏳ Generating…' : '🖨️ Print Figurine'}
         </button>
 
         <button
