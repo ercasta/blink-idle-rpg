@@ -14,6 +14,9 @@ const INNER_W = CARD_W - MARGIN * 2;
 // Fixed QR code size reserved at the bottom of the card (mm)
 const QR_SIZE = 30;
 
+// Fraction of the class-icon height at which the class name text baseline sits
+const ICON_TEXT_VERTICAL_OFFSET = 0.65;
+
 function getHeroShareUrl(hero: HeroDefinition): string {
   const params = encodeHeroToParams({ name: hero.name, heroClass: hero.heroClass, traits: hero.traits });
   const base = window.location.origin + window.location.pathname;
@@ -92,14 +95,17 @@ function svgToPng(svgString: string, pxSize: number): Promise<string> {
     const url = URL.createObjectURL(blob);
     const img = new Image();
     img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = pxSize;
-      canvas.height = pxSize;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) { URL.revokeObjectURL(url); reject(new Error('No 2d context')); return; }
-      ctx.drawImage(img, 0, 0, pxSize, pxSize);
-      URL.revokeObjectURL(url);
-      resolve(canvas.toDataURL('image/png'));
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = pxSize;
+        canvas.height = pxSize;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) { reject(new Error('No 2d context')); return; }
+        ctx.drawImage(img, 0, 0, pxSize, pxSize);
+        resolve(canvas.toDataURL('image/png'));
+      } finally {
+        URL.revokeObjectURL(url);
+      }
     };
     img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('SVG load failed')); };
     img.src = url;
@@ -159,7 +165,7 @@ export async function printHeroFigurine(hero: HeroDefinition): Promise<void> {
   doc.setFont('times', 'italic');
   doc.setFontSize(6.5);
   doc.setTextColor(60, 60, 60);
-  doc.text(hero.heroClass.toUpperCase(), CARD_W / 2, cursorY + iconMm * 0.65, { align: 'center' });
+  doc.text(hero.heroClass.toUpperCase(), CARD_W / 2, cursorY + iconMm * ICON_TEXT_VERTICAL_OFFSET, { align: 'center' });
   cursorY += iconMm + 1.5;
 
   // Thin separator line
