@@ -514,7 +514,7 @@ export function AdventureScreen({
       setPendingOverwrite(adv);
       return;
     }
-    onAdventuresChange([...adventures, adv]);
+    commitImportAdventure(adv);
   }
 
   function commitImportAdventure(adv: AdventureDefinition) {
