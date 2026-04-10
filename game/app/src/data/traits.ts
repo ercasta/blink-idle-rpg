@@ -75,6 +75,73 @@ const CLASS_BASE_GROWTH: Record<HeroClass, [number, number, number, number, numb
   Cleric:  [0.10, 0.15, 0.35, 0.30, 0.70],
 };
 
+// ── Deterministic base stats from class + traits ────────────────────────────
+
+/**
+ * Compute base stats deterministically from class and traits.
+ * Distributes 40 total stat points (base 4 per stat + 20 distributed)
+ * using class growth weights modified by trait affinities, with no randomness.
+ */
+export function computeBaseStats(
+  heroClass: HeroClass,
+  traits: HeroTraits,
+): { strength: number; dexterity: number; intelligence: number; constitution: number; wisdom: number } {
+  const w_pm = norm(traits.pm);
+  const w_od = norm(traits.od);
+  const w_sa = norm(traits.sa);
+  const w_rc = norm(traits.rc);
+  const w_fw = norm(traits.fw);
+  const w_we = norm(traits.we);
+  const w_ld = norm(traits.ld);
+  const w_co = norm(traits.co);
+  const w_sh = norm(traits.sh);
+  const w_rm = norm(traits.rm);
+  const w_ai = norm(traits.ai);
+
+  // Same trait affinity scores as computeLevelUpGains
+  const affinity_STR = -w_pm + w_rm - w_od + w_sa;
+  const affinity_DEX = -w_rm - w_rc - w_sh - w_we;
+  const affinity_INT =  w_pm - w_fw - w_co;
+  const affinity_CON =  w_od - w_ai + w_rc + w_we;
+  const affinity_WIS = -w_sa + w_sh + w_co - w_ld;
+
+  const baseGrowth = CLASS_BASE_GROWTH[heroClass];
+  const affinities = [affinity_STR, affinity_DEX, affinity_INT, affinity_CON, affinity_WIS];
+
+  // Combine class growth with trait affinities (deterministic, no jitter)
+  const weights: number[] = [];
+  for (let i = 0; i < 5; i++) {
+    let w = baseGrowth[i] + affinities[i] * 0.35;
+    w = Math.max(0.05, w);
+    weights.push(w);
+  }
+
+  // Distribute 20 points proportionally (each stat starts at 4, total = 40)
+  const pool = 20;
+  const totalWeight = weights.reduce((a, b) => a + b, 0);
+  const raw = weights.map(w => (w / totalWeight) * pool);
+  const stats = raw.map(r => Math.floor(r));
+
+  // Distribute remaining fractional points by largest remainder
+  let allocated = stats.reduce((a, b) => a + b, 0);
+  const remainders = raw.map((r, i) => ({ i, frac: r - stats[i] }));
+  remainders.sort((a, b) => b.frac - a.frac);
+  for (const { i } of remainders) {
+    if (allocated >= pool) break;
+    stats[i]++;
+    allocated++;
+  }
+
+  // Add base of 4, cap each stat at [4, 18]
+  const statNames = ['strength', 'dexterity', 'intelligence', 'constitution', 'wisdom'] as const;
+  const result: Record<string, number> = {};
+  for (let i = 0; i < 5; i++) {
+    result[statNames[i]] = clamp(4 + stats[i], 4, 18);
+  }
+
+  return result as { strength: number; dexterity: number; intelligence: number; constitution: number; wisdom: number };
+}
+
 // ── Stat growth per level-up ────────────────────────────────────────────────
 
 /**

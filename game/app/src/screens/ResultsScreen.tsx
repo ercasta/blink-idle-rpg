@@ -1,4 +1,4 @@
-import { Fragment, useState } from 'react';
+import { useState } from 'react';
 import type { RunResult, HeroPath } from '../types';
 import { CrossedSwordsIcon, RepeatIcon, PlayIcon, DownloadIcon, StarIcon } from '../components/icons';
 
@@ -166,7 +166,7 @@ function HeroPathCard({
   expanded: boolean;
   onToggle: () => void;
 }) {
-  const { heroName, heroClass, entries, finalStats } = path;
+  const { heroName, heroClass, entries } = path;
   const skillEntries = entries.filter(e => e.skillChosen);
 
   return (
@@ -184,22 +184,9 @@ function HeroPathCard({
 
       {expanded && (
         <div className="px-4 pb-4 border-t border-stone-700">
-          {/* Final stats */}
-          <div className="mt-3 mb-3">
-            <h3 className="text-xs text-stone-400 uppercase tracking-wider mb-2">Final Stats</h3>
-            <div className="grid grid-cols-5 gap-1 text-xs text-center">
-              {(['str', 'dex', 'int', 'con', 'wis'] as const).map(stat => (
-                <div key={stat} className="bg-stone-700/50 rounded p-1.5">
-                  <div className="text-stone-400 uppercase" style={{ fontSize: '0.6rem' }}>{stat}</div>
-                  <div className="font-bold text-amber-400">{finalStats[stat]}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
           {/* Skills learned */}
           {skillEntries.length > 0 && (
-            <div>
+            <div className="mt-3">
               <h3 className="text-xs text-stone-400 uppercase tracking-wider mb-2">Skills Learned</h3>
               <div className="flex flex-col gap-1">
                 {skillEntries.map((entry, i) => (
@@ -211,36 +198,6 @@ function HeroPathCard({
               </div>
             </div>
           )}
-
-          {/* Stat gains per level (compact) */}
-          <div className="mt-3">
-            <h3 className="text-xs text-stone-400 uppercase tracking-wider mb-2">Stat Growth (per level-up)</h3>
-            <div className="max-h-40 overflow-y-auto">
-              <div className="grid grid-cols-6 gap-x-1 text-xs text-center">
-                <div className="text-stone-500 font-semibold">Lv</div>
-                <div className="text-stone-500 font-semibold">STR</div>
-                <div className="text-stone-500 font-semibold">DEX</div>
-                <div className="text-stone-500 font-semibold">INT</div>
-                <div className="text-stone-500 font-semibold">CON</div>
-                <div className="text-stone-500 font-semibold">WIS</div>
-                {entries.slice(0, 20).map((entry, i) => (
-                  <Fragment key={i}>
-                    <div className="text-stone-500">{entry.level}</div>
-                    <div className="text-green-400">+{entry.statsGained.str}</div>
-                    <div className="text-green-400">+{entry.statsGained.dex}</div>
-                    <div className="text-green-400">+{entry.statsGained.int}</div>
-                    <div className="text-green-400">+{entry.statsGained.con}</div>
-                    <div className="text-green-400">+{entry.statsGained.wis}</div>
-                  </Fragment>
-                ))}
-              </div>
-              {entries.length > 20 && (
-                <p className="text-stone-500 text-xs mt-1 text-center">
-                  … and {entries.length - 20} more levels
-                </p>
-              )}
-            </div>
-          </div>
         </div>
       )}
     </div>
