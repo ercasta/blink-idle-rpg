@@ -170,7 +170,7 @@ export default function App() {
           'run-history':       'home',
           results:             'home',
         };
-        const target = parentScreen[screen] ?? 'home';
+        const target = parentScreen[screen as AppScreen] ?? 'home';
         setScreen(target);
         if (target === 'home') setError(null);
       }
