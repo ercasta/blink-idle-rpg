@@ -1,9 +1,9 @@
 /**
  * Custom SVG icon components for Blink Idle RPG.
  *
- * Colour palette:
- *   – General UI icons: currentColor (inherits parent text colour)
- *   – Class icons use muted class colours (per issue spec: brownish palette,
+ * Color palette:
+ *   – General UI icons: currentColor (inherits parent text color)
+ *   – Class icons use muted class colors (per issue spec: brownish palette,
  *     blue / red / green allowed but not too saturated, for class icons only)
  *   – Element icons: warm brown / amber tones
  */

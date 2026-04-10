@@ -12,7 +12,7 @@ import { ClassIcon, HeroesIcon, DiceIcon, RerollIcon, CrystalIcon, SkillTypeIcon
 
 const ALL_CLASSES: HeroClass[] = ['Warrior', 'Mage', 'Ranger', 'Paladin', 'Rogue', 'Cleric'];
 
-// Kept for backward-compat hero object construction (emoji field is stored in hero data).
+// Kept for backward-compatibility hero object construction (emoji field is stored in hero data).
 const CLASS_EMOJIS: Record<HeroClass, string> = {
   Warrior: '⚔️', Mage: '🧙', Ranger: '🏹', Paladin: '🛡️', Rogue: '🗡️', Cleric: '🙏',
 };
