@@ -131,11 +131,9 @@ export function BattleScreen({ snapshots, prevSnapshots = [], heroes, heroPaths,
           }
           accent
         />
-        <KpiCard label="Tier · Wave" value={`${current.currentTier} · ${current.currentWave}`} />
         <KpiCard label="Enemies Defeated" value={current.enemiesDefeated} />
         <KpiCard label="Bosses Defeated" value={current.bossesDefeated} />
         <KpiCard label="Hero Deaths" value={current.playerDeaths} />
-        <KpiCard label="Sim Time" value={`${current.simulationTime.toFixed(0)}s`} />
       </div>
 
       {/* Hero levels */}
