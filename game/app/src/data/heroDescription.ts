@@ -244,7 +244,7 @@ export function generateHeroDescription(heroClass: HeroClass, traits: HeroTraits
   const role = computeRole(heroClass, traits);
   const lineRoleSentence = line === 'front'
     ? `Preferring the front line, this ${role} excels at close-quarters engagement.`
-    : `Favouring the back line, this ${role} contributes best from a safe distance.`;
+    : `Favoring the back line, this ${role} contributes best from a safe distance.`;
 
   // Paragraph 1: Class intro + line/role sentence + top strong traits (up to 2)
   const p1Parts: string[] = [CLASS_INTROS[heroClass], lineRoleSentence];
