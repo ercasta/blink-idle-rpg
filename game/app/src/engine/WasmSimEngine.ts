@@ -1053,7 +1053,7 @@ function _generateLocationNames(seedNum: number, count: number, env: Environment
       attempt++;
       name = allNames[_narrativeHash(seedNum, i, 42 + attempt) % allNames.length];
     }
-    if (used.has(name)) name = `${name} ${i + 1}`;
+    if (used.has(name)) name = `${name} (${names.length + 1})`;
     used.add(name);
     names.push(name);
   }
@@ -1148,6 +1148,7 @@ function _generateNarrativeLog(
       emit(day, 1, 2, `The party decides to travel toward ${nextLocation}.`);
       emit(day, 1, 3, `The path leads through ${terrainDesc}. Travel will take several hours.`);
 
+      const prevLocation = locationNames[currentLocationIdx];
       currentLocationIdx = nextLocIdx;
       locationsLeft--;
 
@@ -1156,7 +1157,7 @@ function _generateNarrativeLog(
       const encountersToday = Math.min(encountersRemaining,
         Math.max(0, 1 + (dayHash % 4))); // 1-4 encounters
 
-      emit(day, 1, 2, `The party sets out from ${locationNames[Math.max(0, currentLocationIdx - 1)]} toward ${nextLocation}, following the ${terrain} road.`);
+      emit(day, 1, 2, `The party sets out from ${prevLocation} toward ${nextLocation}, following the ${terrain} road.`);
       emit(day, 1, 3, `The route will take approximately ${travelHours} hours.`);
 
       let hour = 2;
@@ -1195,9 +1196,8 @@ function _generateNarrativeLog(
         }
 
         // Combat outcome
-        const killed = enemyCount;
         const xp = enemy.exp * enemyCount;
-        emit(day, hour, 3, `The party defeats the ${enemy.name}${enemyCount > 1 ? 's' : ''}. ${killed} enem${killed > 1 ? 'ies' : 'y'} slain, ${xp} XP earned.`);
+        emit(day, hour, 3, `The party defeats the ${enemy.name}${enemyCount > 1 ? 's' : ''}. ${enemyCount} enem${enemyCount > 1 ? 'ies' : 'y'} slain, ${xp} XP earned.`);
 
         encountersRemaining -= enemyCount;
         hour++;

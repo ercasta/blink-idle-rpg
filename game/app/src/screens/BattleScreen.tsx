@@ -285,7 +285,7 @@ function NarrativeLogEntry({ entry }: { entry: NarrativeEntry }) {
     3: 'text-stone-400 italic',
   };
   return (
-    <div className={`${levelStyles[entry.level as NarrativeLevel] ?? 'text-stone-300'} leading-relaxed`}>
+    <div className={`${levelStyles[entry.level]} leading-relaxed`}>
       {entry.text}
     </div>
   );

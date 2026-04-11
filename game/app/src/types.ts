@@ -255,7 +255,7 @@ export type NarrativeLevel = 1 | 2 | 3;
 export interface NarrativeEntry {
   /** Day the message was generated (1-based). */
   day: number;
-  /** Hour within the day (0-based). */
+  /** Hour within the day (0–11). */
   hour: number;
   /** Verbosity level: 1=Headlines, 2=Standard, 3=Detailed. */
   level: NarrativeLevel;
