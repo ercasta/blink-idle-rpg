@@ -92,8 +92,9 @@ Seed
 ### Adventure Seed
 
 The adventure seed is a 32-bit unsigned integer derived from the adventure's
-configuration. It is computed identically to the existing `mapSeed` but with an
-additional `"quest"` salt:
+configuration. It is computed identically to the existing `mapSeed` (see
+[story-mode.md](story-mode.md#map-generation)) but with an additional
+`"quest"` salt to produce a different sequence:
 
 ```
 adventureSeed = hash(adventureName + "|quest|" + mode + "|" + str(requiredHeroCount)
@@ -101,9 +102,10 @@ adventureSeed = hash(adventureName + "|quest|" + mode + "|" + str(requiredHeroCo
                      + "|" + environmentSettingsString)
 ```
 
-The `hash` function is the same DJB2/FNV-1a used for `mapSeed`. The
-`adventureSeed` is stored in the `AdventureState` component and used as the
-PRNG seed for all adventure composition decisions.
+Here `adventureName` is the `AdventureDefinition.name` field (the same value
+used for `mapSeed`). The `hash` function is the same DJB2/FNV-1a used for
+`mapSeed`. The `adventureSeed` is stored in the `AdventureState` component and
+used as the PRNG seed for all adventure composition decisions.
 
 ### PRNG Usage
 
@@ -325,6 +327,12 @@ component NpcPool {
     greeting: string             // Short greeting line for narrative
 }
 ```
+
+When an NPC is drawn, their `personality` influences narrative tone. For
+example, a `gruff` NPC's dialogue uses curt phrasing ("Speak. What do you
+want?"), while a `kind` NPC uses warmer text ("Welcome, travellers! How can I
+help?"). The `greeting` field provides a pre-written line, and the `personality`
+value is available as the `{npc_personality}` slot for use in event templates.
 
 **Built-in pool** (20+ entries):
 
@@ -741,6 +749,10 @@ Each milestone is associated with a **target map layer**. The milestone's key
 event triggers when the party visits a location in that layer (or the next layer
 if the specific layer has been traversed). This connects the quest to the map
 exploration without forcing a single path.
+
+The story mode map has **5 layers** (0–4), where layer 0 is the starting town
+and layer 4 is the final destination. Milestones target layers 1–3, which
+are the traversal layers containing mixed towns and wilderness locations.
 
 ```
 milestoneTargetLayer(index, total):
