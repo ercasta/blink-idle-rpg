@@ -345,5 +345,50 @@
     },
     "runs": 10,
     "seedStart": 2500
+  },
+  {
+    "id": "story_balanced_normal",
+    "name": "Story Mode — Balanced 4-Hero Party (Normal)",
+    "description": "Story mode simulation: balanced party with boosted XP (custom +50% exp, -50% encounter difficulty) to approximate the 25× story multiplier in a shorter run.",
+    "party": ["Warrior", "Mage", "Cleric", "Ranger"],
+    "mode": "custom",
+    "customSettings": {
+      "heroPenaltyPct": 0,
+      "wipeoutPenaltyPct": 0,
+      "expMultiplierPct": 50,
+      "encounterDifficultyPct": -50
+    },
+    "runs": 3,
+    "seedStart": 3000
+  },
+  {
+    "id": "story_full_party",
+    "name": "Story Mode — Full 6-Hero Party (Normal)",
+    "description": "Story mode simulation: full party of all classes with story-like XP boost. Validates that a full party can handle story mode encounters.",
+    "party": ["Warrior", "Mage", "Cleric", "Ranger", "Paladin", "Rogue"],
+    "mode": "custom",
+    "customSettings": {
+      "heroPenaltyPct": 0,
+      "wipeoutPenaltyPct": 0,
+      "expMultiplierPct": 50,
+      "encounterDifficultyPct": -50
+    },
+    "runs": 3,
+    "seedStart": 3100
+  },
+  {
+    "id": "story_duo",
+    "name": "Story Mode — Duo Warrior + Mage",
+    "description": "Story mode simulation: small party with story-like XP boost. Tests that even a small party can progress through story mode.",
+    "party": ["Warrior", "Mage"],
+    "mode": "custom",
+    "customSettings": {
+      "heroPenaltyPct": 0,
+      "wipeoutPenaltyPct": 0,
+      "expMultiplierPct": 50,
+      "encounterDifficultyPct": -50
+    },
+    "runs": 3,
+    "seedStart": 3200
   }
 ]

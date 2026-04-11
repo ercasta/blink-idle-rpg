@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { RunResult, HeroPath, HeroDefinition, RunType } from '../types';
+import type { RunResult, HeroPath, HeroDefinition } from '../types';
 import { CrossedSwordsIcon, RepeatIcon, PlayIcon, DownloadIcon, StarIcon, TrophyIcon } from '../components/icons';
 import { heroSummary } from '../data/traits';
 

@@ -456,6 +456,7 @@ export function AdventureScreen({
       requiredHeroCount: draft.requiredHeroCount,
       allowedClasses: draft.allowedClasses,
       environmentSettings: draft.environmentSettings,
+      runType: draft.runType,
     }),
     [draft],
   );

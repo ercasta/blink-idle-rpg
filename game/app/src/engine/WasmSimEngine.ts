@@ -898,7 +898,6 @@ function _runStoryMode(
 
   // Compute story KPIs from final game state
   const finalGs = JSON.parse(game.get_component(99, 'GameState')) as Record<string, unknown>;
-  const finalScore = JSON.parse(game.get_component(96, 'Score')) as Record<string, unknown>;
   const totalEncounters = (finalGs['enemiesDefeated'] as number) ?? 0;
 
   // Generate deterministic story KPIs based on seed and game outcome

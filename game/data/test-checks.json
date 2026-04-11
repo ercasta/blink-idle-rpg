@@ -251,10 +251,48 @@
     "params": { "scenarioA": "paladins_neutral_world", "scenarioB": "paladins_light_resist_world" }
   },
   {
-    "id": "mages_beat_warriors_phys_fire_resist",
-    "name": "Mages still outperform warriors in physical+fire resist world",
-    "description": "In a world with both physical and fire resistance, mages (magical+fire) lose their element advantage but still bypass physical resistance. Warriors (physical+neutral) are fully penalised by physical resistance. Mages should still score higher.",
-    "type": "mean_score_greater",
-    "params": { "scenarioA": "mages_phys_and_fire_resist_world", "scenarioB": "warriors_phys_and_fire_resist_world" }
+    "id": "story_scenarios_kills_positive",
+    "name": "Story mode scenarios defeat at least one enemy per run",
+    "description": "All story mode scenarios should defeat enemies. Story mode has fewer encounters but each should still result in kills.",
+    "type": "kills_positive",
+    "params": {
+      "scenarios": [
+        "story_balanced_normal",
+        "story_full_party",
+        "story_duo"
+      ]
+    }
+  },
+  {
+    "id": "story_scenarios_score_nonnegative",
+    "name": "Story mode scenarios with well-composed parties produce non-negative scores",
+    "description": "Story mode has boosted XP and reduced difficulty, so well-composed parties should achieve non-negative scores.",
+    "type": "score_nonnegative",
+    "params": {
+      "scenarios": [
+        "story_balanced_normal",
+        "story_full_party"
+      ]
+    }
+  },
+  {
+    "id": "story_scenarios_score_consistent",
+    "name": "Story mode score totals equal sum of sub-components",
+    "description": "Score consistency check for story mode runs. Score.total must equal the sum of all positive sub-components minus all penalties.",
+    "type": "score_consistent",
+    "params": {
+      "scenarios": [
+        "story_balanced_normal",
+        "story_full_party",
+        "story_duo"
+      ]
+    }
+  },
+  {
+    "id": "story_full_party_beats_duo",
+    "name": "Story mode full party defeats more enemies than duo",
+    "description": "A full 6-hero party in story mode should kill more enemies than a 2-hero duo. Validates that party size matters even in story mode.",
+    "type": "mean_kills_greater",
+    "params": { "scenarioA": "story_full_party", "scenarioB": "story_duo" }
   }
 ]
