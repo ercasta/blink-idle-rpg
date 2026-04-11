@@ -11,7 +11,7 @@
 
 import type { GameSnapshot, HeroDefinition, GameMode, HeroPath, CustomModeSettings, EnvironmentSettings, DamageCategory, Element } from '../types';
 import { DEFAULT_ENVIRONMENT_SETTINGS } from '../types';
-import { simulateHeroPath, getSkillName, deriveDamageCategory, deriveDamageElement, deriveResistances } from '../data/traits';
+import { simulateHeroPath, getSkillName, deriveDamageCategory, deriveDamageElement, deriveResistances, computeLinePreferenceScore } from '../data/traits';
 
 // ── Hero stats per class ────────────────────────────────────────────────────
 
@@ -279,7 +279,19 @@ function _runWithWasm(
 
   const env = environmentSettings ?? DEFAULT_ENVIRONMENT_SETTINGS;
 
-  // 2. Create hero entities (IDs 1..N)
+  // 2a. Assign heroes to front/back line based on trait preference scores
+  const heroScores = selectedHeroes.map((h, i) => ({
+    index: i,
+    score: computeLinePreferenceScore(h.traits),
+  }));
+  heroScores.sort((a, b) => b.score - a.score);
+  const frontCount = Math.ceil(selectedHeroes.length / 2);
+  const heroLines: ('front' | 'back')[] = new Array(selectedHeroes.length);
+  heroScores.forEach((hs, rank) => {
+    heroLines[hs.index] = rank < frontCount ? 'front' : 'back';
+  });
+
+  // 2b. Create hero entities (IDs 1..N)
   selectedHeroes.forEach((hero, i) => {
     const heroId = i + 1;
     const heroClass = hero.heroClass;
@@ -296,11 +308,18 @@ function _runWithWasm(
     const wisBonus = Math.floor((hero.stats.wisdom - 10) * 5);
 
     const maxHp      = Math.max(50,  baseHp  + conBonus);
-    const damage     = Math.max(5,   baseDmg + strBonus + intBonus);
-    const defense    = Math.max(0,   baseDef + Math.floor(hero.stats.constitution - 10));
+    let   damage     = Math.max(5,   baseDmg + strBonus + intBonus);
+    let   defense    = Math.max(0,   baseDef + Math.floor(hero.stats.constitution - 10));
     const attackSpeed = Math.max(0.3, baseSpd + dexBonus);
     const maxMana    = Math.max(50,  100 + wisBonus);
     const critChance = Math.min(0.5, 0.05 + hero.stats.dexterity * 0.01);
+
+    // Apply front/back line buffs: front → +25% damage, back → +25% defense
+    if (heroLines[i] === 'front') {
+      damage = Math.round(damage * 1.25);
+    } else {
+      defense = Math.round(defense * 1.25);
+    }
 
     // Derive damage type and resistances from hero traits
     const dmgCategory = deriveDamageCategory(hero.traits);
@@ -361,6 +380,11 @@ function _runWithWasm(
       darkness:  _pseudoRoll(ti, 17) < env.darknessPct  / 100 ? 75 : 0,
     };
 
+    // Apply front/back line buff to enemies: even-index → front (+25% dmg), odd-index → back (+25% def)
+    const enemyLine = ti % 2 === 0 || tmpl.boss ? 'front' : 'back';
+    const enemyDmg = enemyLine === 'front' ? Math.round(tmpl.dmg * 1.25) : tmpl.dmg;
+    const enemyDef = enemyLine === 'back' ? Math.round(Math.floor(tmpl.tier * 2) * 1.25) : Math.floor(tmpl.tier * 2);
+
     game.create_entity(tmpl.id);
     game.add_component(tmpl.id, 'Character', JSON.stringify({
       name: tmpl.name, class: tmpl.boss ? 'Boss' : 'Monster',
@@ -372,7 +396,7 @@ function _runWithWasm(
       strength: 8, dexterity: 8, intelligence: 4, constitution: 8, wisdom: 4,
     }));
     game.add_component(tmpl.id, 'Combat', JSON.stringify({
-      damage: tmpl.dmg, defense: Math.floor(tmpl.tier * 2),
+      damage: enemyDmg, defense: enemyDef,
       attackSpeed: tmpl.spd, critChance: 0.05, critMultiplier: 1.5,
     }));
     game.add_component(tmpl.id, 'DamageType', JSON.stringify({

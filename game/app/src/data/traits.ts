@@ -5,7 +5,7 @@
  * skill selection, and AI decision weights.
  */
 
-import type { HeroClass, HeroTraits, HeroPathEntry, DamageCategory, Element } from '../types';
+import type { HeroClass, HeroTraits, HeroPathEntry, DamageCategory, Element, LinePreference, HeroRole } from '../types';
 
 // ── Trait axis metadata (for UI) ────────────────────────────────────────────
 
@@ -478,4 +478,90 @@ export function deriveResistances(traits: HeroTraits): ResistanceProfile {
     light:     resistValue(traits.ld, true),    // light-leaning (negative ld) resists light
     darkness:  resistValue(traits.ld, false),   // darkness-leaning (positive ld) resists darkness
   };
+}
+
+// ── Line preference (front / back) ──────────────────────────────────────────
+
+/**
+ * Compute a hero's front/back line preference score from traits.
+ * Positive → prefers front line, negative → prefers back line.
+ *
+ * Front-line indicators: melee (positive rm), offensive (negative od),
+ * attacker (positive sa), risky (negative rc), physical (negative pm).
+ * Back-line indicators: range (negative rm), defensive (positive od),
+ * supportive (negative sa), cautious (positive rc), magical (positive pm).
+ */
+export function computeLinePreferenceScore(traits: HeroTraits): number {
+  const w_pm = norm(traits.pm);
+  const w_od = norm(traits.od);
+  const w_sa = norm(traits.sa);
+  const w_rc = norm(traits.rc);
+  const w_rm = norm(traits.rm);
+  const w_ai = norm(traits.ai);
+
+  return (
+    w_rm * 1.5    // melee (positive rm) → front
+    - w_od * 1.2  // offensive (negative od) → front
+    + w_sa * 1.0  // attacker (positive sa) → front
+    - w_rc * 0.8  // risky (negative rc) → front
+    - w_pm * 0.6  // physical (negative pm) → front
+    + w_ai * 0.5  // inflict (positive ai) → front
+  );
+}
+
+export function computeLinePreference(traits: HeroTraits): LinePreference {
+  return computeLinePreferenceScore(traits) >= 0 ? 'front' : 'back';
+}
+
+// ── Hero role ───────────────────────────────────────────────────────────────
+
+/**
+ * Compute a hero's combat role from traits.
+ * Scores each role and picks the highest.
+ */
+export function computeRole(heroClass: HeroClass, traits: HeroTraits): HeroRole {
+  const w_pm = norm(traits.pm);
+  const w_od = norm(traits.od);
+  const w_sa = norm(traits.sa);
+  const w_rc = norm(traits.rc);
+  const w_rm = norm(traits.rm);
+  const w_ai = norm(traits.ai);
+  const w_af = norm(traits.af);
+  const w_co = norm(traits.co);
+  const w_sh = norm(traits.sh);
+
+  const scores: { role: HeroRole; score: number }[] = [
+    { role: 'Tank',       score: w_od * 1.5 + w_rc * 1.0 + w_rm * 0.8 - w_sa * 0.5 + w_sh * 0.4 },
+    { role: 'DPS',        score: -w_od * 1.2 + w_sa * 1.5 + w_ai * 1.0 - w_rc * 0.5 + w_af * 0.3 },
+    { role: 'Support',    score: -w_sa * 1.5 + w_co * 0.8 + w_sh * 0.6 + w_od * 0.5 + w_rc * 0.3 },
+    { role: 'Healer',     score: -w_sa * 1.3 - w_ai * 1.2 + w_rc * 0.8 + w_od * 0.5 - w_pm * 0.3 },
+    { role: 'Controller', score: w_pm * 1.0 - w_af * 1.0 + w_co * 0.8 - w_sa * 0.5 + w_rc * 0.3 },
+    { role: 'Skirmisher', score: -w_rm * 1.0 - w_rc * 1.0 + w_sa * 0.8 - w_od * 0.5 + w_af * 0.3 },
+  ];
+
+  const classBias: Record<HeroClass, Partial<Record<HeroRole, number>>> = {
+    Warrior:  { Tank: 0.3, DPS: 0.2 },
+    Mage:     { DPS: 0.2, Controller: 0.3 },
+    Ranger:   { DPS: 0.2, Skirmisher: 0.3 },
+    Paladin:  { Tank: 0.3, Support: 0.2 },
+    Rogue:    { DPS: 0.2, Skirmisher: 0.3 },
+    Cleric:   { Healer: 0.3, Support: 0.2 },
+  };
+
+  for (const s of scores) {
+    s.score += classBias[heroClass]?.[s.role] ?? 0;
+  }
+
+  scores.sort((a, b) => b.score - a.score);
+  return scores[0].role;
+}
+
+/**
+ * Build a combined sentence describing a hero's line, role, and class.
+ * e.g. "front line Support Mage"
+ */
+export function heroSummary(heroClass: HeroClass, traits: HeroTraits, linePreference?: LinePreference): string {
+  const line = linePreference ?? computeLinePreference(traits);
+  const role = computeRole(heroClass, traits);
+  return `${line} line ${role} ${heroClass}`;
 }

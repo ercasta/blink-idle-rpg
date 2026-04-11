@@ -4,7 +4,7 @@
  */
 
 import type { HeroDefinition, HeroClass } from '../types';
-import { randomTraits, computeBaseStats } from './traits';
+import { randomTraits, computeBaseStats, computeLinePreference, computeRole } from './traits';
 import { generateHeroDescription } from './heroDescription';
 
 export const HEROES: HeroDefinition[] = [
@@ -76,11 +76,6 @@ const CLASS_EMOJIS: Record<HeroClass, string> = {
   Warrior: '⚔️', Mage: '🧙', Ranger: '🏹', Paladin: '🛡️', Rogue: '🗡️', Cleric: '🙏',
 };
 
-const CLASS_ROLES: Record<HeroClass, string> = {
-  Warrior: 'Tank / DPS', Mage: 'Burst DPS', Ranger: 'Control / DPS',
-  Paladin: 'Support / Tank', Rogue: 'Finisher / DPS', Cleric: 'Healer / Support',
-};
-
 const FIRST_NAMES: Record<HeroClass, string[]> = {
   Warrior: ['Gorak', 'Bjorn', 'Hilda', 'Roland', 'Vex', 'Korrin', 'Bran', 'Ulric'],
   Mage: ['Zara', 'Orion', 'Celeste', 'Magnus', 'Freya', 'Alaric', 'Solara', 'Nyx'],
@@ -104,10 +99,11 @@ export function generateRandomHero(): HeroDefinition {
     name,
     heroClass: hc,
     description: generateHeroDescription(hc, traits),
-    role: CLASS_ROLES[hc],
+    role: computeRole(hc, traits),
     emoji: CLASS_EMOJIS[hc],
     stats: computeBaseStats(hc, traits),
     traits,
+    linePreference: computeLinePreference(traits),
   };
 }
 
@@ -145,10 +141,11 @@ export function generateRandomParty(): HeroDefinition[] {
       name,
       heroClass: hc,
       description: generateHeroDescription(hc, traits),
-      role: CLASS_ROLES[hc],
+      role: computeRole(hc, traits),
       emoji: CLASS_EMOJIS[hc],
       stats: computeBaseStats(hc, traits),
       traits,
+      linePreference: computeLinePreference(traits),
     };
   });
 }

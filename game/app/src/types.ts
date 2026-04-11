@@ -61,6 +61,15 @@ export interface HeroTraits {
   af: number;   // area ↔ focus
 }
 
+/** Front line (melee, offensive) or back line (ranged, defensive). */
+export type LinePreference = 'front' | 'back';
+
+/** Combat role computed from traits. */
+export type HeroRole = 'Tank' | 'DPS' | 'Support' | 'Healer' | 'Controller' | 'Skirmisher';
+
+export const ALL_LINE_PREFERENCES: LinePreference[] = ['front', 'back'];
+export const ALL_ROLES: HeroRole[] = ['Tank', 'DPS', 'Support', 'Healer', 'Controller', 'Skirmisher'];
+
 export interface HeroDefinition {
   id: string;
   name: string;
@@ -76,6 +85,8 @@ export interface HeroDefinition {
     wisdom: number;
   };
   traits: HeroTraits;
+  /** Computed front/back line preference based on traits */
+  linePreference?: LinePreference;
   /** Whether the player has starred this hero as a favourite */
   favourite?: boolean;
   /** Total number of adventures this hero has participated in */

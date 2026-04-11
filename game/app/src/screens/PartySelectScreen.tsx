@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import type { HeroDefinition, HeroClass, AdventureDefinition } from '../types';
+import type { HeroDefinition, HeroClass, AdventureDefinition, LinePreference, HeroRole } from '../types';
+import { ALL_LINE_PREFERENCES, ALL_ROLES } from '../types';
 import { ClassIcon, HeroesIcon, PlayIcon, StarIcon } from '../components/icons';
+import { computeLinePreference, computeRole, heroSummary } from '../data/traits';
 
 const ALL_CLASSES: HeroClass[] = ['Warrior', 'Mage', 'Ranger', 'Paladin', 'Rogue', 'Cleric'];
 
@@ -20,6 +22,8 @@ export function PartySelectScreen({ roster, adventure, onStart, onBack, onManage
   const [selected, setSelected] = useState<string[]>([]);
   const [filterName, setFilterName] = useState('');
   const [filterClass, setFilterClass] = useState<HeroClass | ''>('');
+  const [filterLine, setFilterLine] = useState<LinePreference | ''>('');
+  const [filterRole, setFilterRole] = useState<HeroRole | ''>('');
   const [filterFavourites, setFilterFavourites] = useState(false);
   const [sortBy, setSortBy] = useState<'name' | 'adventures'>('name');
 
@@ -45,8 +49,10 @@ export function PartySelectScreen({ roster, adventure, onStart, onBack, onManage
       if (!allowedClasses.includes(hero.heroClass)) return false;
       const nameMatch = hero.name.toLowerCase().includes(filterName.toLowerCase());
       const classMatch = filterClass === '' || hero.heroClass === filterClass;
+      const lineMatch = filterLine === '' || (hero.linePreference ?? computeLinePreference(hero.traits)) === filterLine;
+      const roleMatch = filterRole === '' || (hero.role ?? computeRole(hero.heroClass, hero.traits)) === filterRole;
       const favMatch = !filterFavourites || hero.favourite === true;
-      return nameMatch && classMatch && favMatch;
+      return nameMatch && classMatch && lineMatch && roleMatch && favMatch;
     })
     .sort((a, b) => {
       if (sortBy === 'adventures') {
@@ -116,30 +122,31 @@ export function PartySelectScreen({ roster, adventure, onStart, onBack, onManage
               onChange={e => setFilterName(e.target.value)}
               className="w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-100 text-sm placeholder-stone-500 focus:outline-none focus:border-amber-500"
             />
-            <div className="flex flex-wrap gap-1">
-              <button
-                onClick={() => setFilterClass('')}
-                className={`px-2 py-1 rounded-lg text-xs font-medium border transition-colors ${
-                  filterClass === ''
-                    ? 'bg-amber-700 border-amber-500 text-stone-100'
-                    : 'bg-stone-800 border-stone-600 text-stone-400 hover:border-stone-400'
-                }`}
+            <div className="flex flex-wrap gap-2">
+              <select
+                value={filterClass}
+                onChange={e => setFilterClass(e.target.value as HeroClass | '')}
+                className="bg-stone-800 border border-stone-700 rounded-lg px-2 py-1.5 text-stone-300 text-xs focus:outline-none focus:border-amber-500"
               >
-                All
-              </button>
-              {allowedClasses.map(hc => (
-                <button
-                  key={hc}
-                  onClick={() => setFilterClass(prev => prev === hc ? '' : hc)}
-                  className={`px-2 py-1 rounded-lg text-xs font-medium border transition-colors ${
-                    filterClass === hc
-                      ? 'bg-amber-700 border-amber-500 text-stone-100'
-                      : 'bg-stone-800 border-stone-600 text-stone-400 hover:border-stone-400'
-                  }`}
-                >
-                  <span className="inline-flex items-center gap-1.5"><ClassIcon heroClass={hc} size={14}/> {hc}</span>
-                </button>
-              ))}
+                <option value="">All Classes</option>
+                {allowedClasses.map(hc => <option key={hc} value={hc}>{hc}</option>)}
+              </select>
+              <select
+                value={filterLine}
+                onChange={e => setFilterLine(e.target.value as LinePreference | '')}
+                className="bg-stone-800 border border-stone-700 rounded-lg px-2 py-1.5 text-stone-300 text-xs focus:outline-none focus:border-amber-500"
+              >
+                <option value="">All Lines</option>
+                {ALL_LINE_PREFERENCES.map(lp => <option key={lp} value={lp}>{lp} line</option>)}
+              </select>
+              <select
+                value={filterRole}
+                onChange={e => setFilterRole(e.target.value as HeroRole | '')}
+                className="bg-stone-800 border border-stone-700 rounded-lg px-2 py-1.5 text-stone-300 text-xs focus:outline-none focus:border-amber-500"
+              >
+                <option value="">All Roles</option>
+                {ALL_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
             </div>
             <div className="flex gap-2">
               <button
@@ -192,7 +199,7 @@ export function PartySelectScreen({ roster, adventure, onStart, onBack, onManage
                     <div className="flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-bold">{hero.name}</span>
-                        <span className="text-xs text-stone-400">{hero.heroClass}</span>
+                        <span className="text-xs text-stone-400">{heroSummary(hero.heroClass, hero.traits, hero.linePreference)}</span>
                         {hero.favourite && (
                           <StarIcon size={12} filled className="text-amber-400"/>
                         )}
@@ -202,7 +209,6 @@ export function PartySelectScreen({ roster, adventure, onStart, onBack, onManage
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-stone-400 mt-0.5">{hero.role}</p>
                       <p className="text-xs text-stone-600 mt-0.5">
                         {adventuresPlayed} adventure{adventuresPlayed !== 1 ? 's' : ''} played
                       </p>
