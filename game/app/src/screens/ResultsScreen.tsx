@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import type { RunResult, HeroPath } from '../types';
+import type { RunResult, HeroPath, HeroDefinition } from '../types';
 import { CrossedSwordsIcon, RepeatIcon, PlayIcon, DownloadIcon, StarIcon } from '../components/icons';
+import { heroSummary } from '../data/traits';
 
 interface ResultsScreenProps {
   result: RunResult;
@@ -83,16 +84,20 @@ export function ResultsScreen({ result, prevResult, onPlayAgain, onRerun, onHome
             Hero Paths
           </h2>
           <div className="flex flex-col gap-2">
-            {heroPaths.map(path => (
+            {heroPaths.map(path => {
+              const matchingHero = result.heroes?.find(h => h.name === path.heroName);
+              return (
               <HeroPathCard
                 key={path.heroName}
                 path={path}
+                hero={matchingHero}
                 expanded={expandedHero === path.heroName}
                 onToggle={() => setExpandedHero(
                   expandedHero === path.heroName ? null : path.heroName
                 )}
               />
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -151,14 +156,17 @@ export function ResultsScreen({ result, prevResult, onPlayAgain, onRerun, onHome
 
 function HeroPathCard({
   path,
+  hero,
   expanded,
   onToggle,
 }: {
   path: HeroPath;
+  hero?: HeroDefinition;
   expanded: boolean;
   onToggle: () => void;
 }) {
   const { heroName, heroClass, entries } = path;
+  const summary = hero ? heroSummary(hero.heroClass, hero.traits, hero.linePreference) : heroClass;
   const skillEntries = entries.filter(e => e.skillChosen);
 
   return (
@@ -169,7 +177,7 @@ function HeroPathCard({
       >
         <div>
           <span className="font-bold">{heroName}</span>
-          <span className="text-xs text-stone-400 ml-2">{heroClass}</span>
+          <span className="text-xs text-stone-400 ml-2">{summary}</span>
         </div>
         <span className="text-stone-500 text-sm">{expanded ? '▲' : '▼'}</span>
       </button>

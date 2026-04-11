@@ -2,6 +2,7 @@ import { jsPDF } from 'jspdf';
 import QRCode from 'qrcode';
 import type { HeroClass, HeroDefinition } from '../types';
 import { encodeHeroToParams } from '../data/heroDescription';
+import { heroSummary } from '../data/traits';
 
 // Credit-card dimensions in mm (vertical orientation)
 const CARD_W = 54;
@@ -20,7 +21,7 @@ const MARGIN = 4;
 const INNER_W = CARD_W - MARGIN * 2;
 
 // Fixed QR code size reserved at the bottom of the card (mm)
-const QR_SIZE = 30;
+const QR_SIZE = 15;
 
 // Fraction of the class-icon height at which the class name text baseline sits
 const ICON_TEXT_VERTICAL_OFFSET = 0.65;
@@ -182,7 +183,7 @@ export async function printHeroFigurine(hero: HeroDefinition): Promise<void> {
   doc.setFont('times', 'italic');
   doc.setFontSize(6.5);
   doc.setTextColor(60, 60, 60);
-  doc.text(hero.heroClass.toUpperCase(), CARD_X + CARD_W / 2, cursorY + iconMm * ICON_TEXT_VERTICAL_OFFSET, { align: 'center' });
+  doc.text(heroSummary(hero.heroClass, hero.traits, hero.linePreference).toUpperCase(), CARD_X + CARD_W / 2, cursorY + iconMm * ICON_TEXT_VERTICAL_OFFSET, { align: 'center' });
   cursorY += iconMm + 1.5;
 
   // Thin separator line
@@ -199,7 +200,7 @@ export async function printHeroFigurine(hero: HeroDefinition): Promise<void> {
   doc.setFont('times', 'normal');
   doc.setFontSize(5.5);
   doc.setTextColor(0, 0, 0);
-  const lineHeight = 2.8;
+  const lineHeight = 2.2;
   const allLines: string[] = doc.splitTextToSize(description, INNER_W) as string[];
   for (const line of allLines) {
     if (cursorY + lineHeight > maxDescY) break;

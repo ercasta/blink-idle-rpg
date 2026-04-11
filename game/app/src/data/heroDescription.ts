@@ -7,6 +7,7 @@
  */
 
 import type { HeroTraits, HeroClass } from '../types';
+import { computeLinePreference, computeRole } from './traits';
 
 // ── Threshold helpers ────────────────────────────────────────────────────────
 
@@ -238,8 +239,15 @@ export function generateHeroDescription(heroClass: HeroClass, traits: HeroTraits
 
   const paragraphs: string[] = [];
 
-  // Paragraph 1: Class intro + top strong traits (up to 2)
-  const p1Parts: string[] = [CLASS_INTROS[heroClass]];
+  // Compute line and role for the intro sentence
+  const line = computeLinePreference(traits);
+  const role = computeRole(heroClass, traits);
+  const lineRoleSentence = line === 'front'
+    ? `Preferring the front line, this ${role} excels at close-quarters engagement.`
+    : `Favoring the back line, this ${role} contributes best from a safe distance.`;
+
+  // Paragraph 1: Class intro + line/role sentence + top strong traits (up to 2)
+  const p1Parts: string[] = [CLASS_INTROS[heroClass], lineRoleSentence];
   for (const e of strong.slice(0, 2)) {
     const s = getSentence(e.key, e.value);
     if (s) p1Parts.push(s);
