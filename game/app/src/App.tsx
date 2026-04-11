@@ -324,6 +324,21 @@ export default function App() {
     setRunResult(enrichedResult);
     await saveRun(enrichedResult);
     loadAllRuns().then(setAllRuns);
+
+    // Increment adventuresPlayed for each hero that participated in this run
+    if (selectedHeroes.length > 0) {
+      const participantIds = new Set(selectedHeroes.map(h => h.id));
+      setRoster(prevRoster => {
+        const updatedRoster = prevRoster.map(h =>
+          participantIds.has(h.id)
+            ? { ...h, adventuresPlayed: (h.adventuresPlayed ?? 0) + 1 }
+            : h,
+        );
+        saveRoster(updatedRoster);
+        return updatedRoster;
+      });
+    }
+
     setScreen('results');
   }, [selectedHeroes, selectedAdventure]);
 

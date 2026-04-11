@@ -278,32 +278,96 @@ export interface SharedHeroData {
   name: string;
   heroClass: HeroClass;
   traits: HeroTraits;
+  /** Total adventures played — included in QR to track hero history */
+  adventuresPlayed?: number;
 }
 
 const TRAIT_KEYS: (keyof HeroTraits)[] = ['pm', 'od', 'sa', 'rc', 'fw', 'we', 'ld', 'co', 'sh', 'rm', 'ai', 'af'];
 const HERO_CLASSES: HeroClass[] = ['Warrior', 'Mage', 'Ranger', 'Paladin', 'Rogue', 'Cleric'];
 
 /**
- * Encode a hero's share data into URL search params.
+ * Single-character codes for each hero class (compact QR encoding).
+ * W=Warrior, M=Mage, R=Ranger, P=Paladin, G=roGue, C=Cleric
+ */
+const CLASS_TO_CODE: Record<HeroClass, string> = {
+  Warrior: 'W', Mage: 'M', Ranger: 'R', Paladin: 'P', Rogue: 'G', Cleric: 'C',
+};
+const CODE_TO_CLASS: Record<string, HeroClass> = {
+  W: 'Warrior', M: 'Mage', R: 'Ranger', P: 'Paladin', G: 'Rogue', C: 'Cleric',
+};
+
+/**
+ * Encode all 12 trait values into a 24-character string.
+ * Each trait value (−16…15) is offset by +16 → 0…31, then zero-padded to 2 decimal digits.
+ * Example: −16 → "00", 0 → "16", 15 → "31"
+ */
+function encodeTraits(traits: HeroTraits): string {
+  return TRAIT_KEYS.map(k => String(traits[k] + 16).padStart(2, '0')).join('');
+}
+
+/**
+ * Decode a 24-character trait string back to a HeroTraits object.
+ * Returns null if the string is malformed.
+ */
+function decodeTraits(encoded: string): HeroTraits | null {
+  if (encoded.length !== 24) return null;
+  const result: Partial<HeroTraits> = {};
+  for (let i = 0; i < TRAIT_KEYS.length; i++) {
+    const raw = parseInt(encoded.slice(i * 2, i * 2 + 2), 10);
+    if (isNaN(raw) || raw < 0 || raw > 31) return null;
+    result[TRAIT_KEYS[i]] = raw - 16;
+  }
+  return result as HeroTraits;
+}
+
+/**
+ * Encode a hero's share data into URL search params (compact format).
+ *
+ * Compact params:
+ *   n  – hero name
+ *   c  – class as 1 alphanumeric char (W/M/R/P/G/C)
+ *   t  – 24-char trait string (all 12 traits, 2 decimal digits each, offset +16)
+ *   a  – adventures played (optional)
  */
 export function encodeHeroToParams(data: SharedHeroData): URLSearchParams {
   const params = new URLSearchParams();
-  params.set('heroName', data.name);
-  params.set('heroClass', data.heroClass);
-  for (const key of TRAIT_KEYS) {
-    params.set(key, String(data.traits[key]));
+  params.set('n', data.name);
+  params.set('c', CLASS_TO_CODE[data.heroClass]);
+  params.set('t', encodeTraits(data.traits));
+  if (data.adventuresPlayed !== undefined && data.adventuresPlayed > 0) {
+    params.set('a', String(data.adventuresPlayed));
   }
   return params;
 }
 
 /**
  * Decode hero share data from URL search params.
+ * Supports both the compact format (n/c/t/a) and the legacy format (heroName/heroClass/pm/od/…).
  * Returns null if the params are missing or invalid.
  */
 export function decodeHeroFromParams(params: URLSearchParams): SharedHeroData | null {
+  // ── Compact format ──────────────────────────────────────────────────────────
+  const nameCompact = params.get('n');
+  const classCode = params.get('c');
+  const traitStr = params.get('t');
+  if (nameCompact && classCode && traitStr) {
+    const heroClass = CODE_TO_CLASS[classCode];
+    if (!heroClass) return null;
+    const traits = decodeTraits(traitStr);
+    if (!traits) return null;
+    const adventuresRaw = params.get('a');
+    const adventuresPlayed = adventuresRaw !== null ? parseInt(adventuresRaw, 10) : undefined;
+    return {
+      name: nameCompact,
+      heroClass,
+      traits,
+      adventuresPlayed: adventuresPlayed !== undefined && !isNaN(adventuresPlayed) ? adventuresPlayed : undefined,
+    };
+  }
+
+  // ── Legacy format (heroName / heroClass / individual trait params) ──────────
   const name = params.get('heroName');
   const heroClassRaw = params.get('heroClass');
-
   if (!name || !heroClassRaw) return null;
   if (!HERO_CLASSES.includes(heroClassRaw as HeroClass)) return null;
 
