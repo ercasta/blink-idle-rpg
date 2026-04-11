@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { GameSnapshot, HeroDefinition, RunResult, HeroPath } from '../types';
 import { ClassIcon, CrossedSwordsIcon, TrophyIcon, SkipIcon } from '../components/icons';
-import { computeLinePreference, computeRole } from '../data/traits';
+import { heroSummary } from '../data/traits';
 
 const STEP_INTERVAL_MS = 1000; // 1 second per checkpoint step
 
@@ -149,7 +149,7 @@ export function BattleScreen({ snapshots, prevSnapshots = [], heroes, heroPaths,
               <div key={hero.id} className="flex items-center justify-between">
                 <span className="text-sm inline-flex items-center gap-1.5">
                   <ClassIcon heroClass={hero.heroClass} size={18}/> {hero.name}
-                  <span className="text-stone-500 ml-1 text-xs">{hero.linePreference ?? computeLinePreference(hero.traits)} line {hero.role ?? computeRole(hero.heroClass, hero.traits)} {hero.heroClass}</span>
+                  <span className="text-stone-500 ml-1 text-xs">{heroSummary(hero.heroClass, hero.traits, hero.linePreference)}</span>
                 </span>
                 <span className="text-sm font-bold text-amber-400">Lv {level}</span>
               </div>
