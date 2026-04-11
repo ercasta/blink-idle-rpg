@@ -959,20 +959,20 @@ function _runStoryMode(
   // Compute quest result before finalising finalDestinationReached so that
   // quest completion can contribute to that flag.
   let questScore = 0;
-  let questNarrative: NarrativeEntry[] = [];
   let questObjectiveCompleted = false;
   let objectiveCompletionDay = STORY_TOTAL_DAYS;
+  // Defer narrative generation until completionDay is known (see below).
+  let pendingQuestResult: ReturnType<typeof simulateQuestProgress> | null = null;
 
   if (adventure) {
     const adventureSeed = computeAdventureSeed(adventure);
-    const questResult = simulateQuestProgress(
+    pendingQuestResult = simulateQuestProgress(
       adventureSeed, totalEncounters, locationsVisited,
     );
-    questScore = questResult.totalQuestScore;
-    questNarrative = generateQuestNarrative(questResult);
-    questObjectiveCompleted = questResult.objectiveCompleted;
-    if (questResult.objectiveCompletionDay !== undefined) {
-      objectiveCompletionDay = questResult.objectiveCompletionDay;
+    questScore = pendingQuestResult.totalQuestScore;
+    questObjectiveCompleted = pendingQuestResult.objectiveCompleted;
+    if (pendingQuestResult.objectiveCompletionDay !== undefined) {
+      objectiveCompletionDay = pendingQuestResult.objectiveCompletionDay;
     }
   }
 
@@ -1001,6 +1001,11 @@ function _runStoryMode(
     const daysRemaining = STORY_TOTAL_DAYS - completionDay;
     earlyCompletionBonus = daysRemaining * QUEST_EARLY_COMPLETION_POINTS_PER_DAY;
   }
+
+  // Now that completionDay is known, generate quest narrative capped to that day.
+  const questNarrative: NarrativeEntry[] = pendingQuestResult
+    ? generateQuestNarrative(pendingQuestResult, completionDay)
+    : [];
 
   // Pad to exactly completionDay snapshots (one per day) if we have fewer
   while (snapshots.length < completionDay) {
@@ -1033,8 +1038,7 @@ function _runStoryMode(
   );
 
   // Merge quest narrative entries into the base log, sorted by day/hour
-  // (filter quest entries that fall after the completion day)
-  const narrativeLog = [...baseNarrativeLog, ...questNarrative.filter(e => e.day <= completionDay)]
+  const narrativeLog = [...baseNarrativeLog, ...questNarrative]
     .sort((a, b) => a.day - b.day || a.hour - b.hour);
 
   return { snapshots, storyKpis, narrativeLog };

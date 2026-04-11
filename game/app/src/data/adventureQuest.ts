@@ -1036,10 +1036,9 @@ export function simulateQuestProgress(
     if (lastMilestone) {
       const lastKeyCompletionDay = lastMilestone.completedViaBailout
         ? lastMilestone.activationDay + lastMilestone.bailoutDay
-        : Math.max(
-            ...lastMilestone.events.filter(e => e.isKeyEvent).map(e => e.completedDay),
-            lastMilestone.activationDay + 1,
-          );
+        : lastMilestone.events
+            .filter(e => e.isKeyEvent)
+            .reduce((max, e) => Math.max(max, e.completedDay), lastMilestone.activationDay + 1);
       objectiveCompletionDay = Math.min(lastKeyCompletionDay + 1, STORY_TOTAL_DAYS);
     }
 
@@ -1080,13 +1079,18 @@ import type { NarrativeEntry, NarrativeLevel } from '../types';
  * Generate quest-related narrative entries to weave into the story log.
  * These entries are interleaved with the base story narrative based on
  * the quest simulation results.
+ *
+ * @param maxDay - Only emit entries up to and including this day (defaults to
+ *   STORY_TOTAL_DAYS). Used when the run ends early due to objective completion.
  */
-export function generateQuestNarrative(questResult: QuestSimResult): NarrativeEntry[] {
+export function generateQuestNarrative(questResult: QuestSimResult, maxDay: number = STORY_TOTAL_DAYS): NarrativeEntry[] {
   const entries: NarrativeEntry[] = [];
   const quest = questResult.quest;
 
   function emit(day: number, hour: number, level: NarrativeLevel, text: string) {
-    entries.push({ day, hour, level, text });
+    if (day <= maxDay) {
+      entries.push({ day, hour, level, text });
+    }
   }
 
   // Objective introduction (day 1)
@@ -1143,7 +1147,9 @@ export function generateQuestNarrative(questResult: QuestSimResult): NarrativeEn
     const completionDay = lastMilestone
       ? (lastMilestone.completedViaBailout
           ? lastMilestone.activationDay + lastMilestone.bailoutDay
-          : Math.max(...lastMilestone.events.filter(e => e.isKeyEvent).map(e => e.completedDay), lastMilestone.activationDay + 1))
+          : lastMilestone.events
+              .filter(e => e.isKeyEvent)
+              .reduce((max, e) => Math.max(max, e.completedDay), lastMilestone.activationDay + 1))
       : 30;
 
     const objectiveDay = Math.min(completionDay + 1, 30);
