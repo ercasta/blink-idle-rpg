@@ -106,6 +106,19 @@ export function ResultsScreen({ result, prevResult, leaderboardPosition, isNewBe
         <Row label="Hero Deaths" value={playerDeaths} delta={prevResult != null ? playerDeaths - prevResult.playerDeaths : null} lowerIsBetter />
       </div>
 
+      {/* Story mode KPIs */}
+      {result.storyKpis && (
+        <div className="bg-blue-900/20 border border-blue-800 rounded-xl px-5 py-3 mb-6">
+          <p className="text-xs text-blue-300 uppercase tracking-widest font-semibold mb-2">📖 Story Journey</p>
+          <Row label="Days Travelled" value={result.storyKpis.currentDay} />
+          <Row label="Locations Visited" value={`${result.storyKpis.locationsVisited} / ${result.storyKpis.totalLocations}`} />
+          <Row label="Towns Rested" value={result.storyKpis.townsRested} />
+          <Row label="Ambushes Survived" value={result.storyKpis.ambushesSurvived} />
+          <Row label="Final Destination" value={result.storyKpis.finalDestinationReached ? '✓ Reached' : '✗ Not reached'} />
+          <Row label="Exploration Bonus" value={`+${result.storyKpis.explorationBonus.toLocaleString()} pts`} />
+        </div>
+      )}
+
       {/* Hero Paths */}
       {heroPaths && heroPaths.length > 0 && (
         <div className="mb-6">

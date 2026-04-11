@@ -38,6 +38,8 @@ export interface RunResult {
   mode?: GameMode;
   customSettings?: CustomModeSettings;
   adventure?: AdventureDefinition;
+  /** Story mode KPIs (only present for story runs) */
+  storyKpis?: StoryKpis;
 }
 
 export type HeroClass = 'Warrior' | 'Mage' | 'Ranger' | 'Paladin' | 'Rogue' | 'Cleric';
@@ -109,6 +111,9 @@ export interface HeroPath {
 }
 
 export type GameMode = 'normal' | 'easy' | 'hard' | 'custom';
+
+/** Run type: fight mode (classic 3000-encounter) or story mode (30-day journey). */
+export type RunType = 'fight' | 'story';
 
 // ── Damage types & resistances ──────────────────────────────────────────────
 
@@ -189,6 +194,8 @@ export interface AdventureDefinition {
   allowedClasses: HeroClass[];
   /** Environment sliders controlling enemy damage types and resistances */
   environmentSettings?: EnvironmentSettings;
+  /** Run type: 'fight' (classic 3000-encounter) or 'story' (30-day journey). Defaults to 'fight'. */
+  runType?: RunType;
 }
 
 export interface GameModeDefinition {
@@ -216,6 +223,8 @@ export interface LeaderboardEntry {
   heroNames: string[];
   /** Whether the run ended in victory. */
   victory: boolean;
+  /** Run type: fight or story. Defaults to 'fight' for legacy entries. */
+  runType?: RunType;
 }
 
 /** Per-adventure leaderboard (top 10 runs by score). */
@@ -236,3 +245,23 @@ export type AppScreen =
   | 'battle'
   | 'results'
   | 'run-history';
+
+// ── Story mode types ────────────────────────────────────────────────────────
+
+/** Story mode KPIs — tracked during a story run. */
+export interface StoryKpis {
+  /** Current day (1-based, max 30) */
+  currentDay: number;
+  /** Total unique locations visited */
+  locationsVisited: number;
+  /** Total locations in the map */
+  totalLocations: number;
+  /** Number of town rests */
+  townsRested: number;
+  /** Night ambushes survived without hero deaths */
+  ambushesSurvived: number;
+  /** Whether the party reached the final destination */
+  finalDestinationReached: boolean;
+  /** Total exploration bonus points */
+  explorationBonus: number;
+}

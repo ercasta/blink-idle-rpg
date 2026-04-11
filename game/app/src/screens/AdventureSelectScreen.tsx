@@ -191,9 +191,16 @@ export function AdventureSelectScreen({
                 >
                   <div className="flex items-start justify-between gap-2 mb-1">
                     <span className="font-bold text-base leading-tight">{adv.name}</span>
-                    <span className={`shrink-0 text-xs px-2 py-0.5 rounded-full font-semibold ${MODE_BADGE[adv.mode] ?? ''}`}>
-                      {MODE_LABEL[adv.mode] ?? adv.mode}
-                    </span>
+                    <div className="flex gap-1.5 shrink-0">
+                      {(adv.runType ?? 'fight') === 'story' && (
+                        <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-blue-800 text-blue-200">
+                          📖 Story
+                        </span>
+                      )}
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${MODE_BADGE[adv.mode] ?? ''}`}>
+                        {MODE_LABEL[adv.mode] ?? adv.mode}
+                      </span>
+                    </div>
                   </div>
                   <div className="flex items-center gap-3 mb-2 text-xs text-stone-400">
                     <span className="inline-flex items-center gap-1"><HeroesIcon size={13}/> {adv.requiredHeroCount} {adv.requiredHeroCount === 1 ? 'hero' : 'heroes'}</span>

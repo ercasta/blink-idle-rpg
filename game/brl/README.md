@@ -16,6 +16,7 @@ Blink Rule Language (BRL) source files for the game.  BRL is used for both
 | `scenario-easy.brl` | Easy difficulty overrides (spawn rate, scaling, penalties) |
 | `scenario-normal.brl` | Normal difficulty configuration (canonical balanced values) |
 | `scenario-hard.brl` | Hard difficulty overrides |
+| `story-mode.brl` | Story mode components (StoryConfig, MapLocation, TravelState) — extends classic-rpg.brl |
 | `test-heroes.brl` | Two hero entities (Warrior + Mage) used by the test harness only |
 
 ---

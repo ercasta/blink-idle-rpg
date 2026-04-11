@@ -1,0 +1,63 @@
+// =============================================================================
+// BLINK IDLE RPG — STORY MODE
+// =============================================================================
+// Story mode extends the classic RPG combat system with a 30-day journey
+// through a procedurally generated map. The party travels between locations,
+// encounters enemies along the way, and earns exploration bonuses.
+//
+// This file defines story-mode-specific components. The combat rules from
+// classic-rpg.brl are fully reused — story mode wraps them in a travel/day
+// structure with fewer total encounters but boosted XP rewards.
+//
+// At runtime, the TypeScript engine (WasmSimEngine.ts) sets up story mode
+// by configuring:
+//   - Fewer total encounters (~60-120 vs 3000 in fight mode)
+//   - Higher XP multiplier (25×) to keep hero progression meaningful
+//   - Day-based checkpoints (30 snapshots, one per day)
+//   - Exploration bonus scoring at the end of the journey
+//
+// Combat rules (attack_rule, skill usage, damage types, leveling, spawning,
+// scoring) are shared with fight mode — no duplication.
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// STORY CONFIG COMPONENT
+// Tracks the overall story journey state
+// -----------------------------------------------------------------------------
+
+component StoryConfig {
+    totalDays: integer          // Total days in the journey (default 30)
+    currentDay: integer         // Current day (1-based)
+    encountersPerDay: integer   // Average encounters per travel day
+    totalLocations: integer     // Number of locations on the map
+    locationsVisited: integer   // Locations the party has visited
+    townsRested: integer        // Number of town rests taken
+    ambushesSurvived: integer   // Night ambushes survived without hero deaths
+    expMultiplier: decimal      // Story XP multiplier (applied to enemy expReward)
+    finalDestinationReached: boolean  // Whether the party reached the end
+    explorationBonus: integer   // Accumulated exploration bonus points
+}
+
+// -----------------------------------------------------------------------------
+// MAP LOCATION COMPONENT
+// Represents a single location on the procedural map
+// -----------------------------------------------------------------------------
+
+component MapLocation {
+    locationType: string        // "town", "wilderness", "dungeon", "shrine", "ruins"
+    dangerLevel: integer        // 1-5, affects encounter difficulty
+    hasBeenVisited: boolean     // Whether the party has passed through
+    isFinalDestination: boolean // True for the journey's end point
+}
+
+// -----------------------------------------------------------------------------
+// TRAVEL STATE COMPONENT
+// Tracks the party's current travel status
+// -----------------------------------------------------------------------------
+
+component TravelState {
+    isResting: boolean          // True if the party is resting in a town
+    isTravelling: boolean       // True if the party is moving between locations
+    nightAmbushChance: decimal  // Probability of a night ambush (0.0-1.0)
+    encountersRemaining: integer // Encounters left for the current day
+}

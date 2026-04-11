@@ -35,7 +35,7 @@ import { loadRoster, saveRoster } from './storage/rosterStorage';
 import { decodeHeroFromParams } from './data/heroDescription';
 import type { SharedHeroData } from './data/heroDescription';
 import { decodeAdventureFromParams } from './data/adventureDescription';
-import type { AppScreen, AdventureDefinition, HeroDefinition, GameSnapshot, RunResult, HeroPath } from './types';
+import type { AppScreen, AdventureDefinition, HeroDefinition, GameSnapshot, RunResult, HeroPath, StoryKpis } from './types';
 import { DEFAULT_CUSTOM_SETTINGS } from './types';
 
 // ── Leave-run confirmation modal ──────────────────────────────────────────────
@@ -95,6 +95,7 @@ export default function App() {
   const [runResult, setRunResult] = useState<RunResult | null>(null);
   const [allRuns, setAllRuns] = useState<RunResult[]>([]);
   const [heroPaths, setHeroPaths] = useState<HeroPath[]>([]);
+  const [storyKpis, setStoryKpis] = useState<StoryKpis | undefined>(undefined);
   const [loadingMessage] = useState('Running simulation…');
   const [error, setError] = useState<string | null>(null);
   // Shared hero decoded from URL params (consumed once roster opens)
@@ -263,9 +264,11 @@ export default function App() {
         adventure.mode,
         adventure.customSettings ?? DEFAULT_CUSTOM_SETTINGS,
         adventure.environmentSettings,
+        adventure.runType ?? 'fight',
       );
       setSnapshots(result.snapshots);
       setHeroPaths(result.heroPaths);
+      setStoryKpis(result.storyKpis);
       setScreen('run-ready');
     } catch (e) {
       console.error('[App] Quick play simulation error:', e);
@@ -307,9 +310,11 @@ export default function App() {
         selectedAdventure.mode,
         selectedAdventure.customSettings ?? DEFAULT_CUSTOM_SETTINGS,
         selectedAdventure.environmentSettings,
+        selectedAdventure.runType ?? 'fight',
       );
       setSnapshots(result.snapshots);
       setHeroPaths(result.heroPaths);
+      setStoryKpis(result.storyKpis);
       setScreen('run-ready');
     } catch (e) {
       console.error('[App] Simulation error:', e);
@@ -338,6 +343,7 @@ export default function App() {
       mode: selectedAdventure?.mode ?? 'normal',
       customSettings: selectedAdventure?.mode === 'custom' ? selectedAdventure.customSettings : undefined,
       adventure: selectedAdventure ?? undefined,
+      storyKpis: storyKpis,
     };
     setRunResult(enrichedResult);
     await saveRun(enrichedResult);
@@ -368,7 +374,7 @@ export default function App() {
     }
 
     setScreen('results');
-  }, [selectedHeroes, selectedAdventure]);
+  }, [selectedHeroes, selectedAdventure, storyKpis]);
 
   function playAgain() {
     setScreen('adventure-select');
@@ -393,9 +399,11 @@ export default function App() {
         selectedAdventure.mode,
         selectedAdventure.customSettings ?? DEFAULT_CUSTOM_SETTINGS,
         selectedAdventure.environmentSettings,
+        selectedAdventure.runType ?? 'fight',
       );
       setSnapshots(result.snapshots);
       setHeroPaths(result.heroPaths);
+      setStoryKpis(result.storyKpis);
       setScreen('run-ready');
     } catch (e) {
       console.error('[App] Rerun simulation error:', e);
@@ -576,6 +584,7 @@ export default function App() {
           heroes={selectedHeroes}
           heroPaths={heroPaths}
           onComplete={onBattleComplete}
+          runType={selectedAdventure?.runType ?? 'fight'}
         />
       </>
     );

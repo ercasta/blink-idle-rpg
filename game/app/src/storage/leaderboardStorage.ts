@@ -71,6 +71,7 @@ export async function updateLeaderboard(run: RunResult): Promise<LeaderboardUpda
     timestamp: run.timestamp ?? Date.now(),
     heroNames: run.heroes?.map(h => h.name) ?? [],
     victory: run.victory,
+    runType: run.adventure?.runType ?? 'fight',
   };
 
   // Merge with existing entries (replace same runId if already present)

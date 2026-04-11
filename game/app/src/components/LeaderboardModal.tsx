@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import type { AdventureDefinition, AdventureLeaderboard } from '../types';
+import { useEffect, useMemo, useState } from 'react';
+import type { AdventureDefinition, AdventureLeaderboard, RunType } from '../types';
 import { TrophyIcon } from './icons';
 import { loadLeaderboard } from '../storage/leaderboardStorage';
 
@@ -18,6 +18,7 @@ interface LeaderboardModalProps {
 
 export function LeaderboardModal({ adventure, onClose, highlightRunId }: LeaderboardModalProps) {
   const [leaderboard, setLeaderboard] = useState<AdventureLeaderboard | null>(null);
+  const [activeTab, setActiveTab] = useState<RunType>(adventure.runType ?? 'fight');
 
   useEffect(() => {
     loadLeaderboard(adventure.id).then(setLeaderboard);
@@ -30,6 +31,19 @@ export function LeaderboardModal({ adventure, onClose, highlightRunId }: Leaderb
   }, [onClose]);
 
   const RANK_MEDALS: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' };
+
+  // Split entries by run type
+  const fightEntries = useMemo(() =>
+    (leaderboard?.entries ?? []).filter(e => (e.runType ?? 'fight') === 'fight'),
+    [leaderboard],
+  );
+  const storyEntries = useMemo(() =>
+    (leaderboard?.entries ?? []).filter(e => e.runType === 'story'),
+    [leaderboard],
+  );
+
+  const hasBothTypes = fightEntries.length > 0 && storyEntries.length > 0;
+  const entries = activeTab === 'story' ? storyEntries : fightEntries;
 
   return (
     <div
@@ -49,14 +63,40 @@ export function LeaderboardModal({ adventure, onClose, highlightRunId }: Leaderb
           </div>
         </div>
 
+        {/* Fight / Story tabs — shown when entries exist for both types */}
+        {hasBothTypes && (
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => setActiveTab('fight')}
+              className={`py-1.5 rounded-lg text-xs font-semibold transition-colors border ${
+                activeTab === 'fight'
+                  ? 'bg-red-800 text-red-200 border-transparent'
+                  : 'bg-stone-700 border-stone-600 text-stone-300 hover:border-stone-400'
+              }`}
+            >
+              ⚔️ Fight ({fightEntries.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('story')}
+              className={`py-1.5 rounded-lg text-xs font-semibold transition-colors border ${
+                activeTab === 'story'
+                  ? 'bg-blue-800 text-blue-200 border-transparent'
+                  : 'bg-stone-700 border-stone-600 text-stone-300 hover:border-stone-400'
+              }`}
+            >
+              📖 Story ({storyEntries.length})
+            </button>
+          </div>
+        )}
+
         {/* Entries */}
-        {!leaderboard || leaderboard.entries.length === 0 ? (
+        {entries.length === 0 ? (
           <p className="text-stone-500 text-sm text-center py-6">
             No runs recorded yet.<br />Complete an adventure to appear here!
           </p>
         ) : (
           <div className="flex flex-col gap-2">
-            {leaderboard.entries.map((entry, i) => {
+            {entries.map((entry, i) => {
               const rank = i + 1;
               const medal = RANK_MEDALS[rank];
               return (
@@ -79,6 +119,9 @@ export function LeaderboardModal({ adventure, onClose, highlightRunId }: Leaderb
                       </span>
                       {entry.victory && (
                         <span className="text-xs text-green-400">✓ Victory</span>
+                      )}
+                      {entry.runType === 'story' && (
+                        <span className="text-xs text-blue-400">📖</span>
                       )}
                     </div>
                     {entry.heroNames.length > 0 && (

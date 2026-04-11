@@ -49,6 +49,9 @@ function RunCard({
       : run.mode === 'hard'
       ? <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500 inline-block"/>Hard</span>
       : <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block"/>Normal</span>;
+  const runTypeBadge = (run.adventure?.runType ?? 'fight') === 'story'
+    ? <span className="inline-flex items-center gap-1 text-blue-300">📖 Story</span>
+    : null;
   const heroNames = (run.heroes ?? []).map(h => h.name).join(', ') || '—';
 
   return (
@@ -60,6 +63,7 @@ function RunCard({
             {run.finalScore.toLocaleString()} pts
           </span>
           <span className="text-stone-500 text-xs ml-2">{modeBadge}</span>
+          {runTypeBadge && <span className="text-xs ml-2">{runTypeBadge}</span>}
         </div>
         <span className="text-stone-500 text-xs">{formatDate(run.timestamp)}</span>
       </div>

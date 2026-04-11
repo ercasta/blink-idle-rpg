@@ -8,7 +8,7 @@
  * mirroring the hero share-link pattern in heroDescription.ts.
  */
 
-import type { AdventureDefinition, GameMode, HeroClass, CustomModeSettings, EnvironmentSettings } from '../types';
+import type { AdventureDefinition, GameMode, HeroClass, CustomModeSettings, EnvironmentSettings, RunType } from '../types';
 import { DEFAULT_CUSTOM_SETTINGS, DEFAULT_ENVIRONMENT_SETTINGS } from '../types';
 
 // ── Difficulty prose ─────────────────────────────────────────────────────────
@@ -216,12 +216,14 @@ function getEnvironmentSentence(env?: EnvironmentSettings): string {
  * Includes an optional environment paragraph when noteworthy settings are detected.
  */
 export function generateAdventureDescription(
-  adventure: Pick<AdventureDefinition, 'mode' | 'customSettings' | 'requiredHeroCount' | 'allowedClasses' | 'name' | 'environmentSettings'>,
+  adventure: Pick<AdventureDefinition, 'mode' | 'customSettings' | 'requiredHeroCount' | 'allowedClasses' | 'name' | 'environmentSettings' | 'runType'>,
 ): string {
   // Use a simple stable hash of the adventure name as a seed so the same
   // name always produces the same variant of sentences.
   let seed = 0;
   for (let i = 0; i < adventure.name.length; i++) seed += adventure.name.charCodeAt(i);
+
+  const runType = adventure.runType ?? 'fight';
 
   const p1 = getDifficultyOpening(adventure.mode, seed) + '. ' +
     getDifficultyBody(adventure.mode, adventure.customSettings);
@@ -230,9 +232,15 @@ export function generateAdventureDescription(
 
   const envSentence = getEnvironmentSentence(adventure.environmentSettings);
 
+  const storyParagraph = runType === 'story'
+    ? 'This is a Story Mode adventure — a 30-day journey through a procedurally generated map. ' +
+      'The party will travel between locations, vote on destinations, and encounter enemies along the way.'
+    : '';
+
   const p3 = getFlavourCloser(adventure.mode, seed);
 
   const paragraphs = [p1, p2];
+  if (storyParagraph) paragraphs.push(storyParagraph);
   if (envSentence) paragraphs.push(envSentence);
   paragraphs.push(p3);
   return paragraphs.join('\n\n');
@@ -274,6 +282,10 @@ export function encodeAdventureToParams(adv: AdventureDefinition): URLSearchPara
   params.set('m', adv.mode);
   params.set('c', String(adv.requiredHeroCount));
   params.set('cl', adv.allowedClasses.join(','));
+  // Run type — only encode if story (fight is the default)
+  if (adv.runType === 'story') {
+    params.set('rt', 's');
+  }
   if (adv.mode === 'custom' && adv.customSettings) {
     // hp = heroPenaltyPct, wp = wipeoutPenaltyPct, em = expMultiplierPct, ed = encounterDifficultyPct
     params.set('hp', String(adv.customSettings.heroPenaltyPct));
@@ -320,6 +332,10 @@ export function decodeAdventureFromParams(params: URLSearchParams): AdventureDef
     .filter(c => HERO_CLASSES_ALL.includes(c as HeroClass)) as HeroClass[];
   if (allowedClasses.length === 0) return null;
 
+  // Decode run type (rt=s → story, default → fight)
+  const rtRaw = params.get('rt');
+  const runType: RunType = rtRaw === 's' ? 'story' : 'fight';
+
   let customSettings: CustomModeSettings | undefined;
   if (mode === 'custom') {
     // hp = heroPenaltyPct, wp = wipeoutPenaltyPct, em = expMultiplierPct, ed = encounterDifficultyPct
@@ -363,6 +379,7 @@ export function decodeAdventureFromParams(params: URLSearchParams): AdventureDef
     requiredHeroCount,
     allowedClasses,
     environmentSettings,
+    runType,
     description: '',
   };
   adv.description = generateAdventureDescription(adv);
