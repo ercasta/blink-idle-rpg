@@ -86,12 +86,19 @@ There are two location types:
 The map is generated deterministically from a **seed** computed from the adventure's traits:
 
 ```
-mapSeed = hash(adventureName + mode + requiredHeroCount + sortedAllowedClasses
-               + environmentSettings.physicalPct + environmentSettings.magicalPct
-               + environmentSettings.firePct + environmentSettings.waterPct
-               + environmentSettings.windPct + environmentSettings.earthPct
-               + environmentSettings.lightPct + environmentSettings.darknessPct)
+mapSeed = hash(adventureName + "|" + mode + "|" + str(requiredHeroCount) + "|"
+               + sortedAllowedClasses.join(",") + "|"
+               + str(environmentSettings.physicalPct) + "|"
+               + str(environmentSettings.magicalPct) + "|"
+               + str(environmentSettings.firePct) + "|"
+               + str(environmentSettings.waterPct) + "|"
+               + str(environmentSettings.windPct) + "|"
+               + str(environmentSettings.earthPct) + "|"
+               + str(environmentSettings.lightPct) + "|"
+               + str(environmentSettings.darknessPct))
 ```
+
+All values are converted to strings with a `|` delimiter before hashing. The `hash` function is a simple integer hash (e.g., DJB2 or FNV-1a) producing a 32-bit unsigned integer.
 
 Using `mapSeed` as the PRNG seed, the generator produces:
 
@@ -145,7 +152,7 @@ Terrain is selected based on the adventure's dominant environment element (highe
 
 ### Voting Mechanism
 
-At each decision point (start of day, when the party must choose a destination), each hero **votes** on the next location. The party takes the action with the most votes. Ties are broken by the hero with the highest `trait_co` (order trait — the most orderly hero is the tiebreaker).
+At each decision point (start of day, when the party must choose a destination), each hero **votes** on the next location. The party takes the action with the most votes. Ties are broken by the hero with the highest `trait_co` (order trait — the most orderly hero is the tiebreaker). If multiple heroes share the highest `trait_co`, the hero with the lowest entity ID decides (deterministic ordering).
 
 ### Hero Voting Preferences
 
@@ -203,10 +210,10 @@ greedScore =
 ```
 
 ##### Noise
-Small trait-seeded noise to break perfect symmetry:
+Small deterministic noise seeded per hero-location-day to break symmetry. Uses the run's seeded PRNG:
 
 ```
-noise = hash(hero.id, d.id, currentDay) % 100 / 200.0   // [0, 0.5)
+noise = seeded_random(hero.id, d.id, currentDay) × 0.5   // [0, 0.5)
 ```
 
 ### Decision Types
@@ -241,6 +248,8 @@ encounterChance = 0.15 + (dangerRating × 0.10)
 
 A PRNG roll determines whether an encounter occurs. When it does, the encounter uses the **same combat rules** as fight mode:
 - Enemy tier is based on the current day: `tier = clamp(floor(currentDay / 5) + 1, 1, 6)`.
+  - Days 1–4: Tier 1, Days 5–9: Tier 2, Days 10–14: Tier 3, Days 15–19: Tier 4, Days 20–24: Tier 5, Days 25–30: Tier 6.
+  - The tier-6 plateau in the final 5 days is intentional — it provides the climactic difficulty ramp where the final boss awaits.
 - Enemy count matches party size ± 1.
 - Between-encounter full healing still applies (each travel encounter is self-contained).
 - XP, scoring, and death penalties apply normally.
@@ -270,10 +279,12 @@ If the preferred pool is empty for the current tier, the standard tier pool is u
 When the party camps in the wilderness, there is a **15% base chance** of a night ambush:
 
 ```
-ambushChance = 0.15 + (locationDangerAvg × 0.05)
+ambushChance = min(0.40, 0.15 + (locationDangerAvg × 0.05))
 ```
 
-Where `locationDangerAvg` is the average danger rating of all routes connected to that location. Ambush encounters use the same combat rules but heroes start at 75% HP (they were resting). A successful defense awards bonus XP (+25%).
+Where `locationDangerAvg` is the average danger rating of all routes connected to that location. The cap of 40% ensures ambushes remain an occasional threat, not a certainty. At the maximum danger rating of 5, ambush chance reaches the 40% cap.
+
+Ambush encounters use the same combat rules but heroes start at **75% of maximum HP** (they were resting, not fully alert). A successful defense awards bonus XP (+25%).
 
 ---
 
@@ -592,7 +603,7 @@ These rules describe the logical flow. They will be implemented as BRL `rule` bl
 1. Find all routes from the current location.
 2. For each hero, compute preference scores for each reachable destination.
 3. Each hero votes for their top-scored destination.
-4. Tally votes. Break ties using the hero with highest `trait_co`.
+4. Tally votes. Break ties using the hero with highest `trait_co` (secondary: lowest entity ID).
 5. Emit narrative about the vote (Level 2): who voted for what, who won.
 6. Schedule `VoteResolved` with the winning destination.
 
@@ -663,7 +674,7 @@ These rules describe the logical flow. They will be implemented as BRL `rule` bl
 
 ### `night_ambush` — on `NightAmbush`
 
-1. Heroes start at 75% current HP.
+1. Set all heroes' HP to 75% of their maximum HP (ambush catches them resting).
 2. Spawn encounter (same rules as travel encounter).
 3. Emit ambush narrative (Level 2).
 4. On combat end:
