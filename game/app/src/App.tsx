@@ -588,6 +588,7 @@ export default function App() {
           <LeaderboardModal
             adventure={leaderboardAdventure}
             onClose={() => setLeaderboardAdventure(null)}
+            highlightRunId={runResult.id}
           />
         )}
         <ResultsScreen

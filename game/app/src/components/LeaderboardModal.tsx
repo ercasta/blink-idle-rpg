@@ -12,9 +12,11 @@ function formatDate(timestamp: number): string {
 interface LeaderboardModalProps {
   adventure: AdventureDefinition;
   onClose: () => void;
+  /** Run ID to highlight in the leaderboard. If omitted, no entry is highlighted. */
+  highlightRunId?: string;
 }
 
-export function LeaderboardModal({ adventure, onClose }: LeaderboardModalProps) {
+export function LeaderboardModal({ adventure, onClose, highlightRunId }: LeaderboardModalProps) {
   const [leaderboard, setLeaderboard] = useState<AdventureLeaderboard | null>(null);
 
   useEffect(() => {
@@ -61,7 +63,7 @@ export function LeaderboardModal({ adventure, onClose }: LeaderboardModalProps) 
                 <div
                   key={entry.runId}
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border ${
-                    rank === 1
+                    highlightRunId !== undefined && entry.runId === highlightRunId
                       ? 'bg-amber-900/30 border-amber-700'
                       : 'bg-stone-700/50 border-stone-700'
                   }`}
