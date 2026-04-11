@@ -9,7 +9,7 @@
  * doc/game-design/adventure-design.md.
  */
 
-import type { EnvironmentSettings, AdventureDefinition } from '../types';
+import type { AdventureDefinition } from '../types';
 import { DEFAULT_ENVIRONMENT_SETTINGS } from '../types';
 
 // ── Deterministic PRNG (splitmix32) ─────────────────────────────────────────
@@ -916,10 +916,6 @@ export function simulateQuestProgress(
   seed: number,
   totalEncounters: number,
   locationsVisited: number,
-  totalLocations: number,
-  _townsRested: number,
-  _finalDestinationReached: boolean,
-  _env: EnvironmentSettings,
 ): QuestSimResult {
   const quest = generateAdventureQuest(seed);
   const rng = new Rng(seed + 0x12345); // Offset seed for simulation randomness
@@ -929,8 +925,9 @@ export function simulateQuestProgress(
   let sideEventsCompleted = 0;
 
   // Simulate milestone progression based on day/encounters
-  const encountersPerDay = Math.max(1, Math.ceil(totalEncounters / 30));
   const locationsPerDay = Math.max(0.3, locationsVisited / 30);
+  // Use totalEncounters to modulate event trigger chances
+  const encounterIntensity = Math.min(1.0, totalEncounters / 120);
 
   // Activate first milestone on day 1
   if (quest.milestones.length > 0) {
@@ -954,13 +951,13 @@ export function simulateQuestProgress(
 
         let triggerChance = 0;
         if (event.triggerType === 'town_visit') {
-          triggerChance = locationsVisitedSoFar > milestone.targetLayer ? 0.4 : 0.2;
+          triggerChance = (locationsVisitedSoFar > milestone.targetLayer ? 0.4 : 0.2) * (0.5 + 0.5 * encounterIntensity);
         } else if (event.triggerType === 'travel_segment') {
-          triggerChance = 0.3 + progressFraction * 0.3;
+          triggerChance = (0.3 + progressFraction * 0.3) * (0.5 + 0.5 * encounterIntensity);
         } else if (event.triggerType === 'location_enter') {
-          triggerChance = locationsVisitedSoFar >= milestone.targetLayer ? 0.35 : 0.15;
+          triggerChance = (locationsVisitedSoFar >= milestone.targetLayer ? 0.35 : 0.15) * (0.5 + 0.5 * encounterIntensity);
         } else {
-          triggerChance = 0.25 + progressFraction * 0.2;
+          triggerChance = (0.25 + progressFraction * 0.2) * (0.5 + 0.5 * encounterIntensity);
         }
 
         // Trigger check

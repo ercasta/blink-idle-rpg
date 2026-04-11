@@ -390,5 +390,70 @@
     },
     "runs": 3,
     "seedStart": 3200
+  },
+  {
+    "id": "adventure_balanced_fire",
+    "name": "Adventure — Balanced Party in Fire Environment",
+    "description": "Adventure-style scenario: balanced 4-hero party in a high-fire environment. Simulates a story-mode adventure where the quest system would generate fire-themed content.",
+    "party": ["Warrior", "Mage", "Cleric", "Ranger"],
+    "mode": "custom",
+    "customSettings": {
+      "heroPenaltyPct": 0,
+      "wipeoutPenaltyPct": 0,
+      "expMultiplierPct": 50,
+      "encounterDifficultyPct": -50
+    },
+    "environmentSettings": {
+      "physicalPct": 30,
+      "magicalPct": 30,
+      "firePct": 80,
+      "waterPct": 10,
+      "windPct": 10,
+      "earthPct": 10,
+      "lightPct": 10,
+      "darknessPct": 20
+    },
+    "runs": 3,
+    "seedStart": 4000
+  },
+  {
+    "id": "adventure_full_dark",
+    "name": "Adventure — Full Party in Darkness Environment",
+    "description": "Adventure-style scenario: full 6-hero party in a high-darkness environment. Simulates a dark-themed adventure with varied elemental resistances.",
+    "party": ["Warrior", "Mage", "Cleric", "Ranger", "Paladin", "Rogue"],
+    "mode": "custom",
+    "customSettings": {
+      "heroPenaltyPct": 0,
+      "wipeoutPenaltyPct": 0,
+      "expMultiplierPct": 50,
+      "encounterDifficultyPct": -50
+    },
+    "environmentSettings": {
+      "physicalPct": 20,
+      "magicalPct": 40,
+      "firePct": 10,
+      "waterPct": 10,
+      "windPct": 10,
+      "earthPct": 10,
+      "lightPct": 10,
+      "darknessPct": 80
+    },
+    "runs": 3,
+    "seedStart": 4100
+  },
+  {
+    "id": "adventure_solo_rogue_hard",
+    "name": "Adventure — Solo Rogue Hard Mode",
+    "description": "Adventure-style hard mode with a solo rogue. Tests the most challenging adventure configuration.",
+    "party": ["Rogue"],
+    "mode": "custom",
+    "customSettings": {
+      "heroPenaltyPct": 25,
+      "wipeoutPenaltyPct": 25,
+      "expMultiplierPct": 50,
+      "encounterDifficultyPct": 25
+    },
+    "runs": 3,
+    "seedStart": 4200
   }
 ]

@@ -979,8 +979,7 @@ function _runStoryMode(
   if (adventure) {
     const adventureSeed = computeAdventureSeed(adventure);
     const questResult = simulateQuestProgress(
-      adventureSeed, totalEncounters, locationsVisited, totalLocations,
-      townsRested, finalDestinationReached, env,
+      adventureSeed, totalEncounters, locationsVisited,
     );
     questScore = questResult.totalQuestScore;
     lastSnapshot.score += questScore;

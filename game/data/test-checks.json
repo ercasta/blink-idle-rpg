@@ -294,5 +294,38 @@
     "description": "A full 6-hero party in story mode should kill more enemies than a 2-hero duo. Validates that party size matters even in story mode.",
     "type": "mean_kills_greater",
     "params": { "scenarioA": "story_full_party", "scenarioB": "story_duo" }
+  },
+  {
+    "id": "adventure_scenarios_kills_positive",
+    "name": "Adventure scenarios defeat at least one enemy per run",
+    "description": "All adventure-themed scenarios should defeat enemies. Validates that adventure configurations produce viable combat encounters.",
+    "type": "kills_positive",
+    "params": {
+      "scenarios": [
+        "adventure_balanced_fire",
+        "adventure_full_dark",
+        "adventure_solo_rogue_hard"
+      ]
+    }
+  },
+  {
+    "id": "adventure_scenarios_score_consistent",
+    "name": "Adventure scenario score totals equal sum of sub-components",
+    "description": "Score consistency check for adventure-style runs. Score.total must equal the sum of all positive sub-components minus all penalties.",
+    "type": "score_consistent",
+    "params": {
+      "scenarios": [
+        "adventure_balanced_fire",
+        "adventure_full_dark",
+        "adventure_solo_rogue_hard"
+      ]
+    }
+  },
+  {
+    "id": "adventure_full_party_beats_solo",
+    "name": "Adventure full party kills more than solo rogue",
+    "description": "A full 6-hero party in an adventure scenario should kill more enemies than a solo rogue, even in harder conditions.",
+    "type": "mean_kills_greater",
+    "params": { "scenarioA": "adventure_full_dark", "scenarioB": "adventure_solo_rogue_hard" }
   }
 ]
