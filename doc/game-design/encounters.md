@@ -180,3 +180,4 @@ Attached to: the `game_state` entity.
 - Game modes may modify the encounter loop by changing `SpawnConfig` values (e.g., more frequent bosses, faster tier progression).
 - Future extension: **elite encounters** (mid-boss mini-bosses) inserted between regular boss encounters.
 - Future extension: **optional encounters** with higher difficulty but score multipliers, selectable by the player.
+- **Story Mode** offers an alternative encounter structure where encounters are triggered during travel between map locations. See [story-mode.md](story-mode.md) for full details.
