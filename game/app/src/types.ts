@@ -196,6 +196,9 @@ export interface AdventureDefinition {
   environmentSettings?: EnvironmentSettings;
   /** Run type: 'fight' (classic 3000-encounter) or 'story' (30-day journey). Defaults to 'fight'. */
   runType?: RunType;
+  /** Optional adventure seed for deterministic quest generation.
+   *  If omitted, a seed is computed from the adventure's configuration. */
+  seed?: number;
 }
 
 export interface GameModeDefinition {
