@@ -61,3 +61,26 @@ component TravelState {
     nightAmbushChance: decimal  // Probability of a night ambush (0.0-1.0)
     encountersRemaining: integer // Encounters left for the current day
 }
+
+// -----------------------------------------------------------------------------
+// NARRATIVE LOGGING COMPONENTS
+// Story mode narrative log — tracks textual messages at 3 verbosity levels.
+//
+// Level 1 (Headlines):  Major events (day start/end, arrivals, boss encounters)
+// Level 2 (Standard):   Decisions, encounters, travel, hero preferences
+// Level 3 (Detailed):   Combat actions, effects, individual votes, terrain
+//
+// These components are only used in story mode. The UI filters entries by the
+// player's chosen verbosity level.
+// -----------------------------------------------------------------------------
+
+component NarrativeEntry {
+    day: integer                // Day the message was generated (1-based)
+    hour: integer               // Hour within the day (0-11)
+    level: integer              // Verbosity level: 1=Headlines, 2=Standard, 3=Detailed
+    text: string                // The narrative message text
+}
+
+component NarrativeLog {
+    entryCount: integer         // Number of entries in the log
+}

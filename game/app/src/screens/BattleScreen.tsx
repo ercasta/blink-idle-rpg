@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { GameSnapshot, HeroDefinition, RunResult, HeroPath, RunType } from '../types';
+import type { GameSnapshot, HeroDefinition, RunResult, HeroPath, RunType, NarrativeEntry, NarrativeLevel } from '../types';
 import { ClassIcon, CrossedSwordsIcon, TrophyIcon, SkipIcon } from '../components/icons';
 import { heroSummary } from '../data/traits';
 
@@ -13,6 +13,8 @@ interface BattleScreenProps {
   onComplete: (result: RunResult) => void;
   /** Run type: fight or story. Affects display labels. */
   runType?: RunType;
+  /** Narrative log entries (story mode only). */
+  narrativeLog?: NarrativeEntry[];
 }
 
 function buildResult(snapshots: GameSnapshot[], heroPaths: HeroPath[]): RunResult {
@@ -57,10 +59,12 @@ function ProgressBar({ value, max }: { value: number; max: number }) {
   );
 }
 
-export function BattleScreen({ snapshots, prevSnapshots = [], heroes, heroPaths, onComplete, runType = 'fight' }: BattleScreenProps) {
+export function BattleScreen({ snapshots, prevSnapshots = [], heroes, heroPaths, onComplete, runType = 'fight', narrativeLog = [] }: BattleScreenProps) {
   const [stepIndex, setStepIndex] = useState(0);
   const [done, setDone] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [verbosity, setVerbosity] = useState<NarrativeLevel>(2);
+  const logEndRef = useRef<HTMLDivElement | null>(null);
 
   const totalSteps = snapshots.length;
   const current = snapshots[stepIndex] ?? snapshots[0];
@@ -160,6 +164,17 @@ export function BattleScreen({ snapshots, prevSnapshots = [], heroes, heroPaths,
         </div>
       </div>
 
+      {/* Narrative Log (story mode only) */}
+      {runType === 'story' && narrativeLog.length > 0 && (
+        <NarrativeLogPanel
+          entries={narrativeLog}
+          currentDay={Math.min(stepIndex + 1, totalSteps)}
+          verbosity={verbosity}
+          onVerbosityChange={setVerbosity}
+          logEndRef={logEndRef}
+        />
+      )}
+
       {/* Skip button */}
       {!done && (
         <button
@@ -194,6 +209,84 @@ function KpiCard({
       <p className={`text-lg font-bold ${accent ? 'text-amber-400' : 'text-stone-100'}`}>
         {value}
       </p>
+    </div>
+  );
+}
+
+// ── Narrative Log Panel ─────────────────────────────────────────────────────
+
+const VERBOSITY_LABELS: Record<NarrativeLevel, string> = {
+  1: 'Headlines',
+  2: 'Standard',
+  3: 'Detailed',
+};
+
+function NarrativeLogPanel({
+  entries,
+  currentDay,
+  verbosity,
+  onVerbosityChange,
+  logEndRef,
+}: {
+  entries: NarrativeEntry[];
+  currentDay: number;
+  verbosity: NarrativeLevel;
+  onVerbosityChange: (level: NarrativeLevel) => void;
+  logEndRef: React.RefObject<HTMLDivElement | null>;
+}) {
+  // Filter entries by verbosity level and current day
+  const visible = entries.filter(e => e.level <= verbosity && e.day <= currentDay);
+
+  // Auto-scroll to bottom when new entries appear
+  useEffect(() => {
+    logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [visible.length, logEndRef]);
+
+  return (
+    <div className="bg-stone-800 border border-blue-800/50 rounded-xl p-4 mb-5">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-sm font-semibold text-blue-300 uppercase tracking-widest">
+          📖 Story Log
+        </h2>
+        <div className="flex gap-1">
+          {([1, 2, 3] as NarrativeLevel[]).map(level => (
+            <button
+              key={level}
+              onClick={() => onVerbosityChange(level)}
+              className={`px-2 py-0.5 text-xs rounded-lg transition-colors ${
+                verbosity === level
+                  ? 'bg-blue-700 text-blue-100'
+                  : 'bg-stone-700 text-stone-400 hover:bg-stone-600'
+              }`}
+              title={VERBOSITY_LABELS[level]}
+            >
+              {VERBOSITY_LABELS[level]}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="max-h-48 overflow-y-auto text-xs space-y-1 scrollbar-thin">
+        {visible.length === 0 && (
+          <p className="text-stone-500 italic">The journey begins…</p>
+        )}
+        {visible.map((entry, i) => (
+          <NarrativeLogEntry key={i} entry={entry} />
+        ))}
+        <div ref={logEndRef} />
+      </div>
+    </div>
+  );
+}
+
+function NarrativeLogEntry({ entry }: { entry: NarrativeEntry }) {
+  const levelStyles: Record<NarrativeLevel, string> = {
+    1: 'text-amber-300 font-semibold',
+    2: 'text-stone-200',
+    3: 'text-stone-400 italic',
+  };
+  return (
+    <div className={`${levelStyles[entry.level]} leading-relaxed`}>
+      {entry.text}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { RunResult, HeroPath, HeroDefinition } from '../types';
+import type { RunResult, HeroPath, HeroDefinition, NarrativeEntry, NarrativeLevel } from '../types';
 import { CrossedSwordsIcon, RepeatIcon, PlayIcon, DownloadIcon, StarIcon, TrophyIcon } from '../components/icons';
 import { heroSummary } from '../data/traits';
 
@@ -15,6 +15,8 @@ interface ResultsScreenProps {
   onHome: () => void;
   onToggleFavorite?: (id: string) => void;
   onViewLeaderboard?: () => void;
+  /** Narrative log entries (story mode only). */
+  narrativeLog?: NarrativeEntry[];
 }
 
 function Row({ label, value, delta, lowerIsBetter }: { label: string; value: string | number; delta?: number | null; lowerIsBetter?: boolean }) {
@@ -34,9 +36,11 @@ function Row({ label, value, delta, lowerIsBetter }: { label: string; value: str
   );
 }
 
-export function ResultsScreen({ result, prevResult, leaderboardPosition, isNewBest, onPlayAgain, onRerun, onHome, onToggleFavorite, onViewLeaderboard }: ResultsScreenProps) {
+export function ResultsScreen({ result, prevResult, leaderboardPosition, isNewBest, onPlayAgain, onRerun, onHome, onToggleFavorite, onViewLeaderboard, narrativeLog = [] }: ResultsScreenProps) {
   const { finalScore, enemiesDefeated, playerDeaths, bossesDefeated, heroPaths } = result;
   const [expandedHero, setExpandedHero] = useState<string | null>(null);
+  const [verbosity, setVerbosity] = useState<NarrativeLevel>(2);
+  const [showFullLog, setShowFullLog] = useState(false);
 
   const scoreDelta = prevResult != null ? finalScore - prevResult.finalScore : null;
 
@@ -116,6 +120,50 @@ export function ResultsScreen({ result, prevResult, leaderboardPosition, isNewBe
           <Row label="Ambushes Survived" value={result.storyKpis.ambushesSurvived} />
           <Row label="Final Destination" value={result.storyKpis.finalDestinationReached ? '✓ Reached' : '✗ Not reached'} />
           <Row label="Exploration Bonus" value={`+${result.storyKpis.explorationBonus.toLocaleString()} pts`} />
+        </div>
+      )}
+
+      {/* Narrative Log (story mode only) */}
+      {narrativeLog.length > 0 && (
+        <div className="bg-blue-900/20 border border-blue-800 rounded-xl px-5 py-3 mb-6">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs text-blue-300 uppercase tracking-widest font-semibold">📖 Story Log</p>
+            <div className="flex gap-1">
+              {([1, 2, 3] as NarrativeLevel[]).map(level => (
+                <button
+                  key={level}
+                  onClick={() => setVerbosity(level)}
+                  className={`px-2 py-0.5 text-xs rounded-lg transition-colors ${
+                    verbosity === level
+                      ? 'bg-blue-700 text-blue-100'
+                      : 'bg-stone-700 text-stone-400 hover:bg-stone-600'
+                  }`}
+                >
+                  {level === 1 ? 'Headlines' : level === 2 ? 'Standard' : 'Detailed'}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className={`${showFullLog ? '' : 'max-h-64'} overflow-y-auto text-xs space-y-1 scrollbar-thin`}>
+            {narrativeLog.filter(e => e.level <= verbosity).map((entry, i) => (
+              <div
+                key={i}
+                className={`leading-relaxed ${
+                  entry.level === 1 ? 'text-amber-300 font-semibold' :
+                  entry.level === 3 ? 'text-stone-400 italic' :
+                  'text-stone-200'
+                }`}
+              >
+                {entry.text}
+              </div>
+            ))}
+          </div>
+          <button
+            onClick={() => setShowFullLog(!showFullLog)}
+            className="mt-2 text-xs text-blue-400 hover:text-blue-300 transition-colors"
+          >
+            {showFullLog ? '▲ Collapse' : '▼ Show full log'}
+          </button>
         </div>
       )}
 
