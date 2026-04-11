@@ -1,0 +1,132 @@
+// =============================================================================
+// BLINK IDLE RPG — ADVENTURE QUEST SYSTEM (COMPONENTS)
+// =============================================================================
+// Defines the ECS components for the adventure quest system described in
+// doc/game-design/adventure-design.md. These components model objectives,
+// milestones, events, slot bindings, bail-out timers, and quest scoring.
+//
+// At this stage the quest logic runs in TypeScript (adventureQuest.ts) rather
+// than as compiled BRL rules. These component declarations serve as the
+// canonical schema and will be compiled into the WASM engine when the quest
+// rules are migrated to BRL.
+// =============================================================================
+
+// ─── Core quest state ───────────────────────────────────────────────────────
+
+component AdventureState {
+    seed: integer                   // Deterministic seed for quest generation
+    objectiveId: string             // Which objective template was drawn
+    objectiveTitle: string          // Resolved objective title
+    objectiveDescription: string    // Resolved objective description
+    objectiveWinCondition: string   // Condition key to check for completion
+    currentMilestoneIndex: integer  // Index of the currently active milestone
+    milestonesCompleted: integer    // Count of milestones completed so far
+    adventureComplete: boolean      // True once the objective is met
+}
+
+// ─── Quest milestone ────────────────────────────────────────────────────────
+
+component QuestMilestone {
+    milestoneId: string             // Template ID this milestone came from
+    milestoneIndex: integer         // 0-based index in the quest chain
+    title: string                   // Resolved milestone title
+    description: string             // Resolved milestone description
+    completionType: string          // "npc_talked", "item_found", "area_cleared", etc.
+    completionKey: string           // Key used to mark completion
+    targetLayer: integer            // Map layer where this milestone is expected
+    bailoutDay: integer             // Days after activation before bail-out triggers
+    bailoutDescription: string      // Narrative text when bail-out fires
+    isActive: boolean               // True when this is the current milestone
+    isCompleted: boolean            // True once completed (normal or bail-out)
+    completedViaBailout: boolean    // True if completed via bail-out path
+    activationDay: integer          // Day the milestone became active
+}
+
+// ─── Quest event ────────────────────────────────────────────────────────────
+
+component QuestEvent {
+    eventId: string                 // Template ID this event came from
+    title: string                   // Resolved event title
+    description: string             // Resolved event description
+    isKeyEvent: boolean             // True for milestone-critical events
+    triggerType: string             // "location_enter", "town_visit", "travel_segment"
+    triggerLocation: string         // "wilderness", "town", "any"
+    rewardType: string              // "quest_item", "quest_info", "score_bonus", "stat_buff"
+    narrativeOnTrigger: string      // Narrative text when event triggers
+    narrativeOnComplete: string     // Narrative text when event completes
+    difficultyModifier: integer     // Adjusts encounter difficulty for combat events
+    isTriggered: boolean            // True once trigger conditions are met
+    isCompleted: boolean            // True once the event is resolved
+    succeeded: boolean              // True if the event outcome was positive
+    triggeredDay: integer           // Day the event was triggered (0 = not yet)
+    completedDay: integer           // Day the event was completed (0 = not yet)
+}
+
+// ─── Slot binding ───────────────────────────────────────────────────────────
+
+component SlotBinding {
+    slotName: string                // e.g. "npc_name", "item_name", "villain_name"
+    slotValue: string               // e.g. "Eldara", "Sunstone Amulet", "Malachar"
+}
+
+// ─── Bail-out timer ─────────────────────────────────────────────────────────
+
+component BailoutTimer {
+    milestoneIndex: integer         // Which milestone this timer belongs to
+    triggerDay: integer             // Day on which bail-out fires
+    hasTriggered: boolean           // True once the bail-out has fired
+}
+
+// ─── Active event rule (guard for custom rules) ─────────────────────────────
+
+component ActiveEventRule {
+    ruleId: string                  // Custom rule identifier
+    eventId: string                 // Which event activated this rule
+    isActive: boolean               // True while the custom rule should fire
+}
+
+// ─── Event outcome ──────────────────────────────────────────────────────────
+
+component EventOutcome {
+    eventId: string                 // Which event this outcome belongs to
+    succeeded: boolean              // Whether the event was successful
+    rewardType: string              // "quest_item", "quest_info", "score_bonus", "stat_buff"
+    rewardValue: string             // Specific reward identifier or amount
+}
+
+// ─── Quest inventory ────────────────────────────────────────────────────────
+
+component QuestInventory {
+    itemKeys: string                // Comma-separated list of quest item keys
+    infoKeys: string                // Comma-separated list of quest info keys
+}
+
+// ─── Quest scoring ──────────────────────────────────────────────────────────
+
+component QuestScore {
+    milestoneBonus: integer         // Sum of milestone completion bonuses
+    sideEventBonus: integer         // Sum of side event bonuses
+    objectiveBonus: integer         // Objective completion bonus
+    allNormalBonus: integer         // Bonus for no bail-outs
+    questItemBonus: integer         // Quest item collection bonus
+    totalQuestScore: integer        // Sum of all quest bonuses
+}
+
+// =============================================================================
+// ADVENTURE EVENTS
+// =============================================================================
+// These are the events that drive the quest system lifecycle. They are
+// scheduled and consumed by the quest rules (currently in TypeScript).
+// =============================================================================
+
+event AdventureCompose {}
+event MilestoneActivated { milestoneIndex: integer }
+event MilestoneCompleted { milestoneIndex: integer, viaBailout: boolean }
+event QuestEventTriggered { eventId: string }
+event QuestEventCompleted { eventId: string, succeeded: boolean }
+event BailoutTriggered { milestoneIndex: integer }
+event ObjectiveCompleted {}
+event QuestItemAcquired { itemKey: string }
+event QuestInfoAcquired { infoKey: string }
+event CustomRuleActivated { ruleId: string }
+event CustomRuleDeactivated { ruleId: string }

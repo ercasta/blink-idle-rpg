@@ -12,6 +12,8 @@
 import type { GameSnapshot, HeroDefinition, GameMode, HeroPath, CustomModeSettings, EnvironmentSettings, DamageCategory, Element, RunType, StoryKpis, NarrativeEntry, NarrativeLevel } from '../types';
 import { DEFAULT_ENVIRONMENT_SETTINGS } from '../types';
 import { simulateHeroPath, getSkillName, deriveDamageCategory, deriveDamageElement, deriveResistances, computeLinePreferenceScore } from '../data/traits';
+import { computeAdventureSeed, simulateQuestProgress, generateQuestNarrative } from '../data/adventureQuest';
+import type { AdventureDefinition } from '../types';
 
 // ── Hero stats per class ────────────────────────────────────────────────────
 
@@ -205,6 +207,7 @@ export async function runSimulation(
   customSettings?: CustomModeSettings,
   environmentSettings?: EnvironmentSettings,
   runType: RunType = 'fight',
+  adventure?: AdventureDefinition,
 ): Promise<{ snapshots: GameSnapshot[]; heroPaths: HeroPath[]; storyKpis?: StoryKpis; narrativeLog?: NarrativeEntry[] }> {
   const mod = await loadWasmModule();
   if (!mod) {
@@ -221,7 +224,7 @@ export async function runSimulation(
   const game = mod.BlinkWasmGame.with_seed(seed);
   try {
     if (runType === 'story') {
-      const result = _runStoryMode(game, selectedHeroes, mode, customSettings, environmentSettings, seed);
+      const result = _runStoryMode(game, selectedHeroes, mode, customSettings, environmentSettings, seed, adventure);
 
       const heroPaths: HeroPath[] = selectedHeroes.map(hero => {
         const maxLevel = result.snapshots.length > 0
@@ -700,6 +703,7 @@ function _runStoryMode(
   customSettings?: CustomModeSettings,
   environmentSettings?: EnvironmentSettings,
   seed?: bigint,
+  adventure?: AdventureDefinition,
 ): { snapshots: GameSnapshot[]; storyKpis: StoryKpis; narrativeLog: NarrativeEntry[] } {
   // Use the same entity setup as fight mode, but with story-specific config
   game.init_static();
@@ -966,6 +970,22 @@ function _runStoryMode(
   const lastSnapshot = snapshots[snapshots.length - 1];
   lastSnapshot.score += explorationBonus;
 
+  // ── Adventure quest integration ───────────────────────────────────────
+  // If we have an adventure definition (story mode), generate and simulate
+  // the quest, then weave quest narrative into the story log and add quest
+  // score bonuses.
+  let questScore = 0;
+  let questNarrative: NarrativeEntry[] = [];
+  if (adventure) {
+    const adventureSeed = computeAdventureSeed(adventure);
+    const questResult = simulateQuestProgress(
+      adventureSeed, totalEncounters, locationsVisited,
+    );
+    questScore = questResult.totalQuestScore;
+    lastSnapshot.score += questScore;
+    questNarrative = generateQuestNarrative(questResult);
+  }
+
   const storyKpis: StoryKpis = {
     currentDay: STORY_TOTAL_DAYS,
     locationsVisited,
@@ -973,15 +993,19 @@ function _runStoryMode(
     townsRested,
     ambushesSurvived,
     finalDestinationReached,
-    explorationBonus,
+    explorationBonus: explorationBonus + questScore,
   };
 
   // Generate narrative log — deterministic from seed + heroes + game outcome
-  const narrativeLog = _generateNarrativeLog(
+  const baseNarrativeLog = _generateNarrativeLog(
     selectedHeroes, seedNum, totalEncounters,
     locationsVisited, totalLocations, townsRested, ambushesSurvived,
     finalDestinationReached, env,
   );
+
+  // Merge quest narrative entries into the base log, sorted by day/hour
+  const narrativeLog = [...baseNarrativeLog, ...questNarrative]
+    .sort((a, b) => a.day - b.day || a.hour - b.hour);
 
   return { snapshots, storyKpis, narrativeLog };
 }

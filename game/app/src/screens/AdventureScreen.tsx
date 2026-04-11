@@ -17,6 +17,7 @@ import type { AdventureDefinition, GameMode, HeroClass, CustomModeSettings, Envi
 import { DEFAULT_CUSTOM_SETTINGS, DEFAULT_ENVIRONMENT_SETTINGS } from '../types';
 import { generateAdventureDescription, encodeAdventureToParams, decodeAdventureFromParams } from '../data/adventureDescription';
 import { generateRandomAdventure, randomAdventureName } from '../data/adventures';
+import { MAX_SEED_VALUE } from '../data/adventureQuest';
 import { ClassIcon, MapIcon, HeroesIcon, DiceIcon, PhysicalIcon, MagicalIcon, FireIcon, WaterIcon, WindIcon, EarthIcon, LightIcon, DarknessIcon, TrashIcon, ImportIcon } from '../components/icons';
 
 const ALL_CLASSES: HeroClass[] = ['Warrior', 'Mage', 'Ranger', 'Paladin', 'Rogue', 'Cleric'];
@@ -51,6 +52,7 @@ interface AdventureDraft {
   allowedClasses: HeroClass[];
   environmentSettings: EnvironmentSettings;
   runType: RunType;
+  seed?: number;                    // optional adventure seed
 }
 
 function draftToDefinition(draft: AdventureDraft): AdventureDefinition {
@@ -63,6 +65,7 @@ function draftToDefinition(draft: AdventureDraft): AdventureDefinition {
     allowedClasses: draft.allowedClasses,
     environmentSettings: draft.environmentSettings,
     runType: draft.runType,
+    seed: draft.seed,
     description: generateAdventureDescription({
       name: draft.name,
       mode: draft.mode,
@@ -85,6 +88,7 @@ function adventureToDraft(adv: AdventureDefinition): AdventureDraft {
     allowedClasses: adv.allowedClasses,
     environmentSettings: adv.environmentSettings ?? { ...DEFAULT_ENVIRONMENT_SETTINGS },
     runType: adv.runType ?? 'fight',
+    seed: adv.seed,
   };
 }
 
@@ -97,6 +101,7 @@ function defaultDraft(): AdventureDraft {
     allowedClasses: [...ALL_CLASSES],
     environmentSettings: { ...DEFAULT_ENVIRONMENT_SETTINGS },
     runType: 'fight',
+    seed: undefined,
   };
 }
 
@@ -649,6 +654,50 @@ export function AdventureScreen({
                 : 'Classic mode — 3000 encounters of escalating combat. Race for the highest score.'}
             </p>
           </div>
+
+          {/* Adventure Seed (story mode only) */}
+          {draft.runType === 'story' && (
+            <div className="bg-stone-800 border border-stone-700 rounded-xl p-4">
+              <label className="block text-xs text-stone-400 mb-1">Adventure Seed</label>
+              <p className="text-xs text-blue-300 mb-2">
+                The seed determines the quest objectives, milestones, and narrative. Leave blank for an auto-generated seed based on adventure settings.
+              </p>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  value={draft.seed ?? ''}
+                  onChange={e => {
+                    const v = e.target.value.trim();
+                    setDraft(prev => ({
+                      ...prev,
+                      seed: v === '' ? undefined : Math.max(0, Math.min(MAX_SEED_VALUE, parseInt(v, 10) || 0)),
+                    }));
+                  }}
+                  placeholder="Auto (from settings)"
+                  className="flex-1 bg-stone-700 border border-stone-600 rounded-lg px-3 py-2 text-stone-100 text-sm focus:outline-none focus:border-blue-500"
+                />
+                <button
+                  onClick={() => setDraft(prev => ({
+                    ...prev,
+                    seed: Math.floor(Math.random() * (MAX_SEED_VALUE + 1)),
+                  }))}
+                  className="py-2 px-3 rounded-lg bg-stone-700 hover:bg-stone-600 text-stone-200 text-xs font-medium transition-colors border border-stone-600"
+                  title="Generate random seed"
+                >
+                  🎲
+                </button>
+                {draft.seed !== undefined && (
+                  <button
+                    onClick={() => setDraft(prev => ({ ...prev, seed: undefined }))}
+                    className="py-2 px-3 rounded-lg bg-stone-700 hover:bg-stone-600 text-stone-400 hover:text-stone-200 text-xs font-medium transition-colors border border-stone-600"
+                    title="Clear seed (use auto)"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Difficulty / Mode */}
           <div className="bg-stone-800 border border-stone-700 rounded-xl p-4">

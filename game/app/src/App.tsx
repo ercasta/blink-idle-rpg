@@ -266,6 +266,7 @@ export default function App() {
         adventure.customSettings ?? DEFAULT_CUSTOM_SETTINGS,
         adventure.environmentSettings,
         adventure.runType ?? 'fight',
+        adventure.runType === 'story' ? adventure : undefined,
       );
       setSnapshots(result.snapshots);
       setHeroPaths(result.heroPaths);
@@ -313,6 +314,7 @@ export default function App() {
         selectedAdventure.customSettings ?? DEFAULT_CUSTOM_SETTINGS,
         selectedAdventure.environmentSettings,
         selectedAdventure.runType ?? 'fight',
+        selectedAdventure.runType === 'story' ? selectedAdventure : undefined,
       );
       setSnapshots(result.snapshots);
       setHeroPaths(result.heroPaths);
@@ -403,6 +405,7 @@ export default function App() {
         selectedAdventure.customSettings ?? DEFAULT_CUSTOM_SETTINGS,
         selectedAdventure.environmentSettings,
         selectedAdventure.runType ?? 'fight',
+        selectedAdventure.runType === 'story' ? selectedAdventure : undefined,
       );
       setSnapshots(result.snapshots);
       setHeroPaths(result.heroPaths);

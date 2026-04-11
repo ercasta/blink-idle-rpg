@@ -307,6 +307,10 @@ export function encodeAdventureToParams(adv: AdventureDefinition): URLSearchPara
       params.set('env', envEntries.join(','));
     }
   }
+  // Seed — only encode if explicitly set
+  if (adv.seed !== undefined && adv.seed !== null) {
+    params.set('sd', String(adv.seed));
+  }
   return params;
 }
 
@@ -371,6 +375,10 @@ export function decodeAdventureFromParams(params: URLSearchParams): AdventureDef
     }
   }
 
+  // Decode seed (optional)
+  const sdRaw = params.get('sd');
+  const seed = sdRaw ? parseInt(sdRaw, 10) : undefined;
+
   const adv: AdventureDefinition = {
     id: `adventure-${crypto.randomUUID()}`,
     name,
@@ -380,6 +388,7 @@ export function decodeAdventureFromParams(params: URLSearchParams): AdventureDef
     allowedClasses,
     environmentSettings,
     runType,
+    seed: (seed !== undefined && !isNaN(seed)) ? seed : undefined,
     description: '',
   };
   adv.description = generateAdventureDescription(adv);
