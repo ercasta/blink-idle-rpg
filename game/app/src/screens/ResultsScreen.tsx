@@ -1,15 +1,20 @@
 import { useState } from 'react';
 import type { RunResult, HeroPath, HeroDefinition } from '../types';
-import { CrossedSwordsIcon, RepeatIcon, PlayIcon, DownloadIcon, StarIcon } from '../components/icons';
+import { CrossedSwordsIcon, RepeatIcon, PlayIcon, DownloadIcon, StarIcon, TrophyIcon } from '../components/icons';
 import { heroSummary } from '../data/traits';
 
 interface ResultsScreenProps {
   result: RunResult;
   prevResult?: RunResult | null;
+  /** 1-based leaderboard position, or null if outside top 10 */
+  leaderboardPosition?: number | null;
+  /** True if this run achieved a new best score for the adventure */
+  isNewBest?: boolean;
   onPlayAgain: () => void;
   onRerun: () => void;
   onHome: () => void;
   onToggleFavorite?: (id: string) => void;
+  onViewLeaderboard?: () => void;
 }
 
 function Row({ label, value, delta, lowerIsBetter }: { label: string; value: string | number; delta?: number | null; lowerIsBetter?: boolean }) {
@@ -29,7 +34,7 @@ function Row({ label, value, delta, lowerIsBetter }: { label: string; value: str
   );
 }
 
-export function ResultsScreen({ result, prevResult, onPlayAgain, onRerun, onHome, onToggleFavorite }: ResultsScreenProps) {
+export function ResultsScreen({ result, prevResult, leaderboardPosition, isNewBest, onPlayAgain, onRerun, onHome, onToggleFavorite, onViewLeaderboard }: ResultsScreenProps) {
   const { finalScore, enemiesDefeated, playerDeaths, bossesDefeated, heroPaths } = result;
   const [expandedHero, setExpandedHero] = useState<string | null>(null);
 
@@ -45,6 +50,8 @@ export function ResultsScreen({ result, prevResult, onPlayAgain, onRerun, onHome
     a.click();
     URL.revokeObjectURL(url);
   }
+
+  const hasAdventure = Boolean(result.adventure);
 
   return (
     <div className="flex flex-col min-h-screen bg-stone-900 text-stone-100 px-4 py-8">
@@ -67,6 +74,28 @@ export function ResultsScreen({ result, prevResult, onPlayAgain, onRerun, onHome
         </p>
         {prevResult != null && scoreDelta === 0 && (
           <p className="text-xs text-stone-500 mt-1">↔ same score as previous run</p>
+        )}
+
+        {/* New best record celebration */}
+        {isNewBest && (
+          <div className="mt-3 flex items-center justify-center gap-2 text-amber-300 bg-amber-900/30 border border-amber-700 rounded-xl px-4 py-2">
+            <TrophyIcon size={18} className="text-amber-400"/>
+            <span className="font-bold text-sm">🎉 New Best Record!</span>
+          </div>
+        )}
+
+        {/* Leaderboard position */}
+        {hasAdventure && leaderboardPosition !== undefined && (
+          <div className="mt-2">
+            {leaderboardPosition !== null ? (
+              <p className="text-sm font-semibold text-stone-300">
+                <TrophyIcon size={14} className="inline text-amber-400 mr-1"/>
+                Leaderboard: <span className="text-amber-400">#{leaderboardPosition}</span>
+              </p>
+            ) : (
+              <p className="text-sm text-stone-500">Leaderboard: not qualified (outside top 10)</p>
+            )}
+          </div>
         )}
       </div>
 
@@ -116,6 +145,15 @@ export function ResultsScreen({ result, prevResult, onPlayAgain, onRerun, onHome
         >
           <span className="inline-flex items-center gap-2"><PlayIcon size={16}/> Play Again (new setup)</span>
         </button>
+        {/* Leaderboard button */}
+        {hasAdventure && onViewLeaderboard && (
+          <button
+            onClick={onViewLeaderboard}
+            className="w-full py-3 rounded-xl bg-stone-700 hover:bg-stone-600 text-stone-100 font-bold transition-colors border border-stone-600"
+          >
+            <span className="inline-flex items-center gap-2"><TrophyIcon size={16}/> View Leaderboard</span>
+          </button>
+        )}
         {/* Favorite + Download row */}
         {result.id && (
           <div className="flex gap-3">

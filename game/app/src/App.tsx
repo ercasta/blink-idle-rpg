@@ -25,10 +25,12 @@ import { ResultsScreen } from './screens/ResultsScreen';
 import { RunHistoryScreen } from './screens/RunHistoryScreen';
 import { LoadingScreen } from './screens/LoadingScreen';
 import { RunReadyScreen } from './screens/RunReadyScreen';
+import { LeaderboardModal } from './components/LeaderboardModal';
 import { runSimulation } from './engine/WasmSimEngine';
 import { generateRandomAdventure, generateRandomPartyForAdventure } from './data/adventures';
 import { loadAdventures, saveAdventures } from './storage/adventureStorage';
 import { loadAllRuns, saveRun, toggleFavorite, deleteRun, importRun } from './storage/runStorage';
+import { updateLeaderboard, loadLeaderboard } from './storage/leaderboardStorage';
 import { loadRoster, saveRoster } from './storage/rosterStorage';
 import { decodeHeroFromParams } from './data/heroDescription';
 import type { SharedHeroData } from './data/heroDescription';
@@ -112,6 +114,10 @@ export default function App() {
   const prevRunRef = useRef<RunResult | null>(null);
   // Leave-run confirmation modal visibility
   const [showLeaveModal, setShowLeaveModal] = useState(false);
+  // Leaderboard state: which adventure to show the leaderboard for, and run result data
+  const [leaderboardAdventure, setLeaderboardAdventure] = useState<AdventureDefinition | null>(null);
+  const [leaderboardPosition, setLeaderboardPosition] = useState<number | null | undefined>(undefined);
+  const [isNewBest, setIsNewBest] = useState(false);
 
   // Load all runs, roster, and adventures from IndexedDB on first mount
   useEffect(() => {
@@ -219,6 +225,14 @@ export default function App() {
     setScreen('adventure-select');
   }
 
+  /** Find the best previous run for an adventure (by leaderboard top entry), used for battle comparison. */
+  async function getBestRunForAdventure(adventure: AdventureDefinition, allRuns: RunResult[]): Promise<RunResult | null> {
+    const leaderboard = await loadLeaderboard(adventure.id);
+    if (leaderboard.entries.length === 0) return null;
+    const bestRunId = leaderboard.entries[0].runId;
+    return allRuns.find(r => r.id === bestRunId) ?? null;
+  }
+
   const quickPlay = useCallback(async () => {
     // Ensure at least one adventure exists; create a random one if needed
     const currentAdventures = await loadAdventures();
@@ -241,8 +255,9 @@ export default function App() {
 
     try {
       const runs = await loadAllRuns();
-      prevRunRef.current = runs[0] ?? null;
-      setPrevSnapshots(runs[0]?.snapshots ?? []);
+      const bestRun = await getBestRunForAdventure(adventure, runs);
+      prevRunRef.current = bestRun;
+      setPrevSnapshots(bestRun?.snapshots ?? []);
       const result = await runSimulation(
         randomHeroes,
         adventure.mode,
@@ -284,8 +299,9 @@ export default function App() {
       if (!selectedAdventure) throw new Error('No adventure selected');
 
       const runs = await loadAllRuns();
-      prevRunRef.current = runs[0] ?? null;
-      setPrevSnapshots(runs[0]?.snapshots ?? []);
+      const bestRun = await getBestRunForAdventure(selectedAdventure, runs);
+      prevRunRef.current = bestRun;
+      setPrevSnapshots(bestRun?.snapshots ?? []);
       const result = await runSimulation(
         heroes,
         selectedAdventure.mode,
@@ -307,6 +323,8 @@ export default function App() {
     if (replayingRunRef.current) {
       setRunResult(replayingRunRef.current);
       replayingRunRef.current = null;
+      setLeaderboardPosition(undefined);
+      setIsNewBest(false);
       setScreen('results');
       return;
     }
@@ -324,6 +342,16 @@ export default function App() {
     setRunResult(enrichedResult);
     await saveRun(enrichedResult);
     loadAllRuns().then(setAllRuns);
+
+    // Update leaderboard for this adventure
+    if (selectedAdventure) {
+      const lbResult = await updateLeaderboard(enrichedResult);
+      setLeaderboardPosition(lbResult.position);
+      setIsNewBest(lbResult.isNewBest);
+    } else {
+      setLeaderboardPosition(undefined);
+      setIsNewBest(false);
+    }
 
     // Increment adventuresPlayed for each hero that participated in this run
     if (selectedHeroes.length > 0) {
@@ -357,8 +385,9 @@ export default function App() {
 
     try {
       const runs = await loadAllRuns();
-      prevRunRef.current = runs[0] ?? null;
-      setPrevSnapshots(runs[0]?.snapshots ?? []);
+      const bestRun = await getBestRunForAdventure(selectedAdventure, runs);
+      prevRunRef.current = bestRun;
+      setPrevSnapshots(bestRun?.snapshots ?? []);
       const result = await runSimulation(
         selectedHeroes,
         selectedAdventure.mode,
@@ -441,23 +470,41 @@ export default function App() {
 
   if (screen === 'adventure-manager') {
     return (
-      <AdventureScreen
-        adventures={adventures}
-        onAdventuresChange={handleAdventuresChange}
-        onBack={goHome}
-      />
+      <>
+        {leaderboardAdventure && (
+          <LeaderboardModal
+            adventure={leaderboardAdventure}
+            onClose={() => setLeaderboardAdventure(null)}
+          />
+        )}
+        <AdventureScreen
+          adventures={adventures}
+          onAdventuresChange={handleAdventuresChange}
+          onViewLeaderboard={setLeaderboardAdventure}
+          onBack={goHome}
+        />
+      </>
     );
   }
 
   if (screen === 'adventure-select') {
     return (
-      <AdventureSelectScreen
-        adventures={adventures}
-        onSelect={onAdventureSelected}
-        onJoinAdventure={handleJoinAdventure}
-        onManageAdventures={() => setScreen('adventure-manager')}
-        onBack={goHome}
-      />
+      <>
+        {leaderboardAdventure && (
+          <LeaderboardModal
+            adventure={leaderboardAdventure}
+            onClose={() => setLeaderboardAdventure(null)}
+          />
+        )}
+        <AdventureSelectScreen
+          adventures={adventures}
+          onSelect={onAdventureSelected}
+          onJoinAdventure={handleJoinAdventure}
+          onManageAdventures={() => setScreen('adventure-manager')}
+          onViewLeaderboard={setLeaderboardAdventure}
+          onBack={goHome}
+        />
+      </>
     );
   }
 
@@ -536,14 +583,25 @@ export default function App() {
 
   if (screen === 'results' && runResult) {
     return (
-      <ResultsScreen
-        result={runResult}
-        prevResult={replayingRunRef.current ? null : prevRunRef.current}
-        onPlayAgain={playAgain}
-        onRerun={rerun}
-        onHome={goHome}
-        onToggleFavorite={runResult.id ? handleToggleFavorite : undefined}
-      />
+      <>
+        {leaderboardAdventure && (
+          <LeaderboardModal
+            adventure={leaderboardAdventure}
+            onClose={() => setLeaderboardAdventure(null)}
+          />
+        )}
+        <ResultsScreen
+          result={runResult}
+          prevResult={prevRunRef.current}
+          leaderboardPosition={leaderboardPosition}
+          isNewBest={isNewBest}
+          onPlayAgain={playAgain}
+          onRerun={rerun}
+          onHome={goHome}
+          onToggleFavorite={runResult.id ? handleToggleFavorite : undefined}
+          onViewLeaderboard={runResult.adventure ? () => setLeaderboardAdventure(runResult.adventure ?? null) : undefined}
+        />
+      </>
     );
   }
 

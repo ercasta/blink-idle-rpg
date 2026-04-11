@@ -423,6 +423,7 @@ function OverwriteConfirmModal({
 interface AdventureScreenProps {
   adventures: AdventureDefinition[];
   onAdventuresChange: (adventures: AdventureDefinition[]) => void;
+  onViewLeaderboard: (adventure: AdventureDefinition) => void;
   onBack: () => void;
 }
 
@@ -431,6 +432,7 @@ type ScreenView = 'list' | 'create' | 'edit';
 export function AdventureScreen({
   adventures,
   onAdventuresChange,
+  onViewLeaderboard,
   onBack,
 }: AdventureScreenProps) {
   const [view, setView] = useState<ScreenView>('list');
@@ -587,6 +589,18 @@ export function AdventureScreen({
             ←
           </button>
           <h1 className="text-xl font-bold">{view === 'create' ? 'Create Adventure' : 'Edit Adventure'}</h1>
+          {view === 'edit' && draft.id && (
+            <button
+              onClick={() => {
+                const adv = adventures.find(a => a.id === draft.id);
+                if (adv) onViewLeaderboard(adv);
+              }}
+              className="ml-auto py-1.5 px-3 rounded-lg bg-stone-700 hover:bg-stone-600 text-amber-400 hover:text-amber-300 text-xs font-medium transition-colors"
+              title="View leaderboard"
+            >
+              🏆 Leaderboard
+            </button>
+          )}
         </div>
 
         <div className="flex flex-col gap-4 flex-1 overflow-y-auto">
@@ -836,6 +850,13 @@ export function AdventureScreen({
                   className="flex-1 py-1.5 rounded-lg bg-stone-700 hover:bg-stone-600 text-stone-200 text-xs font-medium transition-colors"
                 >
                   📤 Share
+                </button>
+                <button
+                  onClick={() => onViewLeaderboard(adv)}
+                  className="py-1.5 px-3 rounded-lg bg-stone-700 hover:bg-stone-600 text-amber-400 hover:text-amber-300 text-xs font-medium transition-colors"
+                  title="View leaderboard"
+                >
+                  🏆
                 </button>
                 <button
                   onClick={() => deleteAdventure(adv.id)}

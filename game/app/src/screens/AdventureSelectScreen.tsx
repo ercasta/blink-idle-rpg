@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import type { AdventureDefinition, HeroClass } from '../types';
 import { decodeAdventureFromParams } from '../data/adventureDescription';
-import { ClassIcon, MapIcon, HeroesIcon } from '../components/icons';
+import { ClassIcon, MapIcon, HeroesIcon, TrophyIcon } from '../components/icons';
 
 const ALL_CLASSES: HeroClass[] = ['Warrior', 'Mage', 'Ranger', 'Paladin', 'Rogue', 'Cleric'];
 
@@ -21,6 +21,7 @@ interface AdventureSelectScreenProps {
   onSelect: (adventure: AdventureDefinition) => void;
   onJoinAdventure: (adventure: AdventureDefinition) => void;
   onManageAdventures: () => void;
+  onViewLeaderboard: (adventure: AdventureDefinition) => void;
   onBack: () => void;
 }
 
@@ -133,6 +134,7 @@ export function AdventureSelectScreen({
   onSelect,
   onJoinAdventure,
   onManageAdventures,
+  onViewLeaderboard,
   onBack,
 }: AdventureSelectScreenProps) {
   const [showJoin, setShowJoin] = useState(false);
@@ -179,25 +181,37 @@ export function AdventureSelectScreen({
           {/* Adventure list */}
           <div className="flex flex-col gap-3 flex-1">
             {adventures.map((adv) => (
-              <button
+              <div
                 key={adv.id}
-                onClick={() => onSelect(adv)}
-                className="w-full text-left bg-stone-800 hover:bg-stone-700 rounded-xl p-4 transition-colors border border-stone-700 hover:border-amber-600"
+                className="w-full bg-stone-800 rounded-xl border border-stone-700 overflow-hidden"
               >
-                <div className="flex items-start justify-between gap-2 mb-1">
-                  <span className="font-bold text-base leading-tight">{adv.name}</span>
-                  <span className={`shrink-0 text-xs px-2 py-0.5 rounded-full font-semibold ${MODE_BADGE[adv.mode] ?? ''}`}>
-                    {MODE_LABEL[adv.mode] ?? adv.mode}
-                  </span>
+                <button
+                  onClick={() => onSelect(adv)}
+                  className="w-full text-left hover:bg-stone-700 p-4 transition-colors hover:border-amber-600"
+                >
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <span className="font-bold text-base leading-tight">{adv.name}</span>
+                    <span className={`shrink-0 text-xs px-2 py-0.5 rounded-full font-semibold ${MODE_BADGE[adv.mode] ?? ''}`}>
+                      {MODE_LABEL[adv.mode] ?? adv.mode}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 mb-2 text-xs text-stone-400">
+                    <span className="inline-flex items-center gap-1"><HeroesIcon size={13}/> {adv.requiredHeroCount} {adv.requiredHeroCount === 1 ? 'hero' : 'heroes'}</span>
+                    <ClassPips classes={adv.allowedClasses} />
+                  </div>
+                  <p className="text-xs text-stone-400 leading-relaxed line-clamp-2">
+                    {adv.description.split('\n\n')[0]}
+                  </p>
+                </button>
+                <div className="px-4 pb-3 pt-0">
+                  <button
+                    onClick={e => { e.stopPropagation(); onViewLeaderboard(adv); }}
+                    className="text-xs text-stone-500 hover:text-amber-400 inline-flex items-center gap-1 transition-colors"
+                  >
+                    <TrophyIcon size={12}/> Leaderboard
+                  </button>
                 </div>
-                <div className="flex items-center gap-3 mb-2 text-xs text-stone-400">
-                  <span className="inline-flex items-center gap-1"><HeroesIcon size={13}/> {adv.requiredHeroCount} {adv.requiredHeroCount === 1 ? 'hero' : 'heroes'}</span>
-                  <ClassPips classes={adv.allowedClasses} />
-                </div>
-                <p className="text-xs text-stone-400 leading-relaxed line-clamp-2">
-                  {adv.description.split('\n\n')[0]}
-                </p>
-              </button>
+              </div>
             ))}
           </div>
 

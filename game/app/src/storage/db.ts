@@ -5,12 +5,14 @@
  *   v1 – single 'data' key-value store (roster + runs bundled under one key)
  *   v2 – adds 'runs' object store (keyPath: 'id') for individual run records;
  *         migrates the old 'recent-runs' array from the 'data' store.
+ *   v3 – adds 'leaderboard' object store (keyPath: 'adventureId') for per-adventure leaderboards.
  */
 
 export const DB_NAME = 'blink-rpg';
-export const DB_VERSION = 2;
+export const DB_VERSION = 3;
 export const DATA_STORE = 'data';
 export const RUNS_STORE = 'runs';
+export const LEADERBOARD_STORE = 'leaderboard';
 
 export function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -51,6 +53,11 @@ export function openDB(): Promise<IDBDatabase> {
             }
           };
         }
+      }
+
+      // Create the leaderboard store (v3+)
+      if (!db.objectStoreNames.contains(LEADERBOARD_STORE)) {
+        db.createObjectStore(LEADERBOARD_STORE, { keyPath: 'adventureId' });
       }
     };
 
