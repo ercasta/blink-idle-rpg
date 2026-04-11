@@ -820,6 +820,10 @@ Story mode runs are stored in run history like fight mode runs. The `NarrativeLo
 | `story-narrative.brl` | Narrative template banks and text generation rules |
 | `story-encounters.brl` | Story mode encounter triggering and terrain-based enemy selection |
 | `story-scoring.brl` | Story mode scoring bonuses and final score computation |
+| `story-adventure.brl` | Adventure quest components and composition rules (see [adventure-design.md](adventure-design.md)) |
+| `story-adventure-templates.brl` | Objective, milestone, and event template entities |
+| `story-adventure-pools.brl` | NPC, villain, item, location, and creature pool entities |
+| `story-adventure-rules.brl` | Custom event rules (duel, search, etc.) |
 
 These files will be compiled alongside the existing `classic-rpg.brl` rules. Story mode rules are guarded by a `StoryConfig` component check — they only fire when the run is in story mode.
 
@@ -838,3 +842,17 @@ These files will be compiled alongside the existing `classic-rpg.brl` rules. Sto
   - **Branching events**: Random events during travel (find treasure, rescue NPC, discover shortcut).
   - **Weather system**: Weather effects that modify travel time and encounter difficulty.
   - **Party morale**: A morale component affected by decisions and outcomes, influencing voting weights.
+
+---
+
+## Adventure Quest System
+
+Story mode includes an **adventure quest system** that layers objectives,
+milestones, events, and NPC interactions on top of the map/travel structure
+described above. The quest system adds narrative variety — each seed generates
+a unique quest with goals (rescue an NPC, retrieve an artifact, defeat a
+villain), 3–4 sequential milestones with bail-out mechanisms, and pluggable
+slots for NPCs, items, and locations.
+
+Full design details are in
+[`adventure-design.md`](adventure-design.md).

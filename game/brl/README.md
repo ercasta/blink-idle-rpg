@@ -17,6 +17,10 @@ Blink Rule Language (BRL) source files for the game.  BRL is used for both
 | `scenario-normal.brl` | Normal difficulty configuration (canonical balanced values) |
 | `scenario-hard.brl` | Hard difficulty overrides |
 | `story-mode.brl` | Story mode components (StoryConfig, MapLocation, TravelState) — extends classic-rpg.brl |
+| `story-adventure.brl` | Adventure quest components (`AdventureState`, `QuestMilestone`, etc.) and composition rules — *planned* |
+| `story-adventure-templates.brl` | Objective, milestone, and event template entities — *planned* |
+| `story-adventure-pools.brl` | NPC, villain, item, location, and creature pool entities — *planned* |
+| `story-adventure-rules.brl` | Custom event rules (duel, search, etc.) — *planned* |
 | `test-heroes.brl` | Two hero entities (Warrior + Mage) used by the test harness only |
 
 ---

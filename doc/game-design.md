@@ -311,3 +311,14 @@ generated map. Key differences:
 Story mode uses the same scoring system with additional bonuses for exploration,
 town rests, and ambush survival. Full design details are in
 [`doc/game-design/story-mode.md`](doc/game-design/story-mode.md).
+
+### Adventure Quest System
+
+Each story mode run follows a seed-generated **quest** with an objective (rescue
+an NPC, retrieve an artifact, defeat a villain), 3–4 sequential milestones, and
+events within each milestone. Pluggable slots fill in NPC names, items, and
+locations from extensible pools. Bail-out mechanisms ensure the adventure always
+progresses even if the party's trait-driven decisions miss key locations. Custom
+BRL rules can modify combat or grant special conditions for specific events.
+Full design details are in
+[`doc/game-design/adventure-design.md`](doc/game-design/adventure-design.md).
