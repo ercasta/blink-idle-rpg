@@ -365,7 +365,11 @@ function pickSkill(
  */
 export function getSkillName(skillId: string, heroClass: HeroClass): string {
   const tree = CLASS_SKILL_TREES[heroClass];
-  return tree.find(s => s.id === skillId)?.name ?? skillId;
+  const found = tree.find(s => s.id === skillId)?.name;
+  if (found) return found;
+  // Skill ID not in the tree — format it as a proper display name by replacing
+  // underscores with spaces and capitalizing the first letter of each word.
+  return skillId.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 }
 
 // ── Full hero path simulation ───────────────────────────────────────────────
