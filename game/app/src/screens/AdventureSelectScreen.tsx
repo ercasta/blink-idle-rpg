@@ -205,7 +205,7 @@ export function AdventureSelectScreen({
                 </button>
                 <div className="px-4 pb-3 pt-0">
                   <button
-                    onClick={e => { e.stopPropagation(); onViewLeaderboard(adv); }}
+                    onClick={() => onViewLeaderboard(adv)}
                     className="text-xs text-stone-500 hover:text-amber-400 inline-flex items-center gap-1 transition-colors"
                   >
                     <TrophyIcon size={12}/> Leaderboard
