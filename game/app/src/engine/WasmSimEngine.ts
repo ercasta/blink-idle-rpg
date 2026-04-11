@@ -9,7 +9,7 @@
  *   • Accepts runtime data (heroes, enemies, config) via create_entity/add_component
  */
 
-import type { GameSnapshot, HeroDefinition, GameMode, HeroPath, CustomModeSettings, EnvironmentSettings, DamageCategory, Element, RunType, StoryKpis } from '../types';
+import type { GameSnapshot, HeroDefinition, GameMode, HeroPath, CustomModeSettings, EnvironmentSettings, DamageCategory, Element, RunType, StoryKpis, NarrativeEntry, NarrativeLevel } from '../types';
 import { DEFAULT_ENVIRONMENT_SETTINGS } from '../types';
 import { simulateHeroPath, getSkillName, deriveDamageCategory, deriveDamageElement, deriveResistances, computeLinePreferenceScore } from '../data/traits';
 
@@ -205,7 +205,7 @@ export async function runSimulation(
   customSettings?: CustomModeSettings,
   environmentSettings?: EnvironmentSettings,
   runType: RunType = 'fight',
-): Promise<{ snapshots: GameSnapshot[]; heroPaths: HeroPath[]; storyKpis?: StoryKpis }> {
+): Promise<{ snapshots: GameSnapshot[]; heroPaths: HeroPath[]; storyKpis?: StoryKpis; narrativeLog?: NarrativeEntry[] }> {
   const mod = await loadWasmModule();
   if (!mod) {
     throw new Error(
@@ -244,7 +244,7 @@ export async function runSimulation(
         return { heroName: hero.name, heroClass: hero.heroClass, entries, finalStats };
       });
 
-      return { snapshots: result.snapshots, heroPaths, storyKpis: result.storyKpis };
+      return { snapshots: result.snapshots, heroPaths, storyKpis: result.storyKpis, narrativeLog: result.narrativeLog };
     }
 
     // Fight mode (original)
@@ -700,7 +700,7 @@ function _runStoryMode(
   customSettings?: CustomModeSettings,
   environmentSettings?: EnvironmentSettings,
   seed?: bigint,
-): { snapshots: GameSnapshot[]; storyKpis: StoryKpis } {
+): { snapshots: GameSnapshot[]; storyKpis: StoryKpis; narrativeLog: NarrativeEntry[] } {
   // Use the same entity setup as fight mode, but with story-specific config
   game.init_static();
 
@@ -976,5 +976,291 @@ function _runStoryMode(
     explorationBonus,
   };
 
-  return { snapshots, storyKpis };
+  // Generate narrative log — deterministic from seed + heroes + game outcome
+  const narrativeLog = _generateNarrativeLog(
+    selectedHeroes, seedNum, totalEncounters,
+    locationsVisited, totalLocations, townsRested, ambushesSurvived,
+    finalDestinationReached, env,
+  );
+
+  return { snapshots, storyKpis, narrativeLog };
+}
+
+// ── Story mode narrative log generation ─────────────────────────────────────
+
+/** Location name banks indexed by dominant element. */
+const LOCATION_NAMES: Record<string, string[]> = {
+  fire:      ['Ember Hollow', 'Ashfall Pass', 'Cindervale', 'Scorched Basin', 'Blazeheart', 'Firewatch'],
+  water:     ['Mistshore', 'Tidecrest', 'Deepwell', 'Glimmer Falls', 'Shorebreak', 'Coral Reach'],
+  wind:      ['Galeridge', 'Stormcrest', 'Whispering Heights', 'Zephyr Crossing', 'Windhollow', 'Skyreach'],
+  earth:     ['Ironhold', 'Stonecradle', 'Deeproot', 'Boulder Arch', 'Granite Rest', 'Mosswall'],
+  light:     ['Dawnspire', 'Solace Crossing', 'Radiant Glade', 'Luminary Rest', 'Brightfield', 'Sunhaven'],
+  darkness:  ['Duskhollow', 'Shadowmere', 'Nightveil', "Murk's End", 'Gloomwatch', 'Ebonreach'],
+  physical:  ['Crossroads', 'Thornfield', 'Rustvale', 'Old Bridge', 'Millhaven', 'Dustgate'],
+  magical:   ['Arcane Bluff', 'Spellhaven', 'Runestone Ridge', 'Glyphwatch', 'Enchant Ford', 'Starfall'],
+};
+
+const TERRAIN_TYPES = ['forest', 'mountain', 'swamp', 'plains', 'ruins', 'cave'] as const;
+type TerrainType = typeof TERRAIN_TYPES[number];
+
+const TERRAIN_DESC: Record<TerrainType, string> = {
+  forest:   'dense woodland',
+  mountain: 'rocky highland passes',
+  swamp:    'marshy lowlands',
+  plains:   'open grasslands',
+  ruins:    'ancient crumbling structures',
+  cave:     'dark underground passages',
+};
+
+/** Deterministic hash for narrative seeding. */
+function _narrativeHash(a: number, b: number, c: number): number {
+  let h = (a * 2654435761 + b * 2246822519 + c * 3266489909) >>> 0;
+  h = ((h ^ (h >> 16)) * 2246822507) >>> 0;
+  h = ((h ^ (h >> 13)) * 3266489909) >>> 0;
+  return (h ^ (h >> 16)) >>> 0;
+}
+
+/** Pick one item from an array using a deterministic hash. */
+function _pickOne<T>(arr: T[], seed: number): T {
+  return arr[seed % arr.length];
+}
+
+/** Get the dominant element from environment settings. */
+function _dominantElement(env: EnvironmentSettings): string {
+  const elements: [string, number][] = [
+    ['fire', env.firePct], ['water', env.waterPct], ['wind', env.windPct],
+    ['earth', env.earthPct], ['light', env.lightPct], ['darkness', env.darknessPct],
+  ];
+  elements.sort((a, b) => b[1] - a[1]);
+  if (elements[0][1] <= 15) {
+    return env.magicalPct > env.physicalPct ? 'magical' : 'physical';
+  }
+  return elements[0][0];
+}
+
+/** Generate location names for the story map. */
+function _generateLocationNames(seedNum: number, count: number, env: EnvironmentSettings): string[] {
+  const dominant = _dominantElement(env);
+  const bank = LOCATION_NAMES[dominant] ?? LOCATION_NAMES['physical'];
+  const allNames = [...bank, ...LOCATION_NAMES['physical'], ...LOCATION_NAMES['magical']];
+  const names: string[] = [];
+  const used = new Set<string>();
+  for (let i = 0; i < count; i++) {
+    const h = _narrativeHash(seedNum, i, 42);
+    let name = allNames[h % allNames.length];
+    let attempt = 0;
+    while (used.has(name) && attempt < 50) {
+      attempt++;
+      name = allNames[_narrativeHash(seedNum, i, 42 + attempt) % allNames.length];
+    }
+    if (used.has(name)) name = `${name} ${i + 1}`;
+    used.add(name);
+    names.push(name);
+  }
+  return names;
+}
+
+/**
+ * Generate a complete narrative log for a story mode run.
+ *
+ * All text is generated deterministically from the seed, hero names, and game
+ * outcome — no PRNG state is needed beyond what can be reconstructed from
+ * these inputs.
+ */
+function _generateNarrativeLog(
+  heroes: HeroDefinition[],
+  seedNum: number,
+  totalEncounters: number,
+  locationsVisited: number,
+  totalLocations: number,
+  townsRested: number,
+  ambushesSurvived: number,
+  finalDestinationReached: boolean,
+  env: EnvironmentSettings,
+): NarrativeEntry[] {
+  const log: NarrativeEntry[] = [];
+  const heroNames = heroes.map(h => h.name);
+  const locationNames = _generateLocationNames(seedNum, totalLocations, env);
+  const startLocation = locationNames[0];
+  const finalLocation = locationNames[locationNames.length - 1];
+
+  function emit(day: number, hour: number, level: NarrativeLevel, text: string) {
+    log.push({ day, hour, level, text });
+  }
+
+  // ── Day 1 opening ─────────────────────────────────────────────────────
+  emit(1, 0, 1, `The adventure begins at ${startLocation}. The party prepares for a 30-day journey.`);
+  emit(1, 0, 2, `The party gathers at the ${startLocation} tavern. Their destination: ${finalLocation}.`);
+  emit(1, 0, 3, `${heroNames.join(', ')} check their equipment and study the map. The road ahead is long.`);
+
+  // Track which locations have been visited, encounters per day, etc.
+  let encountersRemaining = totalEncounters;
+  let locationsLeft = locationsVisited - 1; // -1 for start
+  let townsLeft = townsRested;
+  let ambushesLeft = ambushesSurvived;
+  let currentLocationIdx = 0;
+
+  for (let day = 1; day <= STORY_TOTAL_DAYS; day++) {
+    const dayHash = _narrativeHash(seedNum, day, 0);
+    const terrain = TERRAIN_TYPES[dayHash % TERRAIN_TYPES.length];
+    const terrainDesc = TERRAIN_DESC[terrain];
+
+    // Day start (skip day 1, already emitted)
+    if (day > 1) {
+      emit(day, 0, 1, `Day ${day} begins.`);
+    }
+
+    // ── Decision / Voting ───────────────────────────────────────────────
+    // Pick next destination based on deterministic hash
+    const shouldTravel = locationsLeft > 0 && day < STORY_TOTAL_DAYS;
+    if (shouldTravel) {
+      const nextLocIdx = Math.min(currentLocationIdx + 1, locationNames.length - 1);
+      const nextLocation = locationNames[nextLocIdx];
+
+      // Each hero proposes a destination based on traits
+      const heroProposals: string[] = [];
+      for (let hi = 0; hi < heroes.length; hi++) {
+        const hero = heroes[hi];
+        const h = _narrativeHash(seedNum, day, hi + 100);
+        // Cautious heroes (high rc) propose towns/safe routes
+        // Risky heroes (low rc) propose dangerous wilderness
+        const isCautious = hero.traits.rc > 0;
+        const isOffensive = hero.traits.od < 0;
+
+        if (isCautious && townsLeft > 0 && h % 3 === 0) {
+          // Propose a safe town
+          const townIdx = _narrativeHash(seedNum, day, hi + 200) % locationNames.length;
+          const townName = locationNames[townIdx];
+          heroProposals.push(`${hero.name} proposes to retreat to ${townName} and heal`);
+        } else if (isOffensive) {
+          heroProposals.push(`${hero.name} proposes to push toward ${nextLocation} through the ${terrainDesc}`);
+        } else {
+          heroProposals.push(`${hero.name} proposes to head for ${nextLocation}`);
+        }
+      }
+
+      // Level 2: Show each hero's preference
+      for (const proposal of heroProposals) {
+        emit(day, 0, 2, proposal);
+      }
+
+      // Party decision
+      emit(day, 1, 2, `The party decides to travel toward ${nextLocation}.`);
+      emit(day, 1, 3, `The path leads through ${terrainDesc}. Travel will take several hours.`);
+
+      currentLocationIdx = nextLocIdx;
+      locationsLeft--;
+
+      // ── Travel & Encounters ─────────────────────────────────────────
+      const travelHours = 2 + (dayHash % 5); // 2-6 hours
+      const encountersToday = Math.min(encountersRemaining,
+        Math.max(0, 1 + (dayHash % 4))); // 1-4 encounters
+
+      emit(day, 1, 2, `The party sets out from ${locationNames[Math.max(0, currentLocationIdx - 1)]} toward ${nextLocation}, following the ${terrain} road.`);
+      emit(day, 1, 3, `The route will take approximately ${travelHours} hours.`);
+
+      let hour = 2;
+      for (let enc = 0; enc < encountersToday && encountersRemaining > 0; enc++) {
+        const encHash = _narrativeHash(seedNum, day, enc + 300);
+        const enemyIdx = encHash % ENEMY_TEMPLATES.length;
+        const enemy = ENEMY_TEMPLATES[enemyIdx];
+        const enemyCount = Math.max(1, heroes.length + (encHash % 3) - 1);
+
+        // Encounter notification
+        emit(day, hour, 2, `The party encounters ${enemyCount} ${enemy.name}${enemyCount > 1 ? 's' : ''}!`);
+
+        // Combat details — hero actions
+        for (let hi = 0; hi < heroes.length; hi++) {
+          const hero = heroes[hi];
+          const actionHash = _narrativeHash(seedNum, day * 100 + enc, hi + 400);
+          const skills = CLASS_SKILLS[hero.heroClass] ?? ['basic_attack'];
+          const skillIdx = actionHash % skills.length;
+          const skillKey = skills[skillIdx];
+          const skillName = getSkillName(skillKey, hero.heroClass);
+
+          emit(day, hour, 3, `${hero.name} uses ${skillName}.`);
+
+          // Effect descriptions
+          const effectHash = _narrativeHash(seedNum, day * 100 + enc, hi + 500);
+          const effects = [
+            `The enemy staggers from the blow.`,
+            `The attack lands with devastating force.`,
+            `A critical hit!`,
+            `The enemy is weakened.`,
+            `The enemy is knocked back.`,
+          ];
+          if (effectHash % 3 === 0) {
+            emit(day, hour, 3, _pickOne(effects, effectHash));
+          }
+        }
+
+        // Combat outcome
+        const killed = enemyCount;
+        const xp = enemy.exp * enemyCount;
+        emit(day, hour, 3, `The party defeats the ${enemy.name}${enemyCount > 1 ? 's' : ''}. ${killed} enem${killed > 1 ? 'ies' : 'y'} slain, ${xp} XP earned.`);
+
+        encountersRemaining -= enemyCount;
+        hour++;
+      }
+
+      // Arrival
+      emit(day, hour, 1, `Day ${day} — The party arrives at ${nextLocation}.`);
+
+      // Town rest or camp
+      const isTown = townsLeft > 0 && dayHash % 3 === 0;
+      if (isTown) {
+        townsLeft--;
+        emit(day, hour + 1, 2, `The party rests at the ${nextLocation} tavern. All wounds are healed.`);
+        emit(day, hour + 1, 3, `A warm meal and a soft bed restore the party to full strength.`);
+      } else {
+        emit(day, hour + 1, 2, `The party sets up camp as night falls.`);
+
+        // Night ambush chance
+        if (ambushesLeft > 0 && dayHash % 5 === 0) {
+          ambushesLeft--;
+          const ambushHash = _narrativeHash(seedNum, day, 600);
+          const ambushEnemy = ENEMY_TEMPLATES[ambushHash % ENEMY_TEMPLATES.length];
+          const ambushCount = Math.max(1, heroes.length - 1);
+
+          emit(day, hour + 2, 2, `The night watch spots movement! ${ambushCount} ${ambushEnemy.name}${ambushCount > 1 ? 's' : ''} attack the camp.`);
+
+          for (let hi = 0; hi < heroes.length; hi++) {
+            const hero = heroes[hi];
+            const skills = CLASS_SKILLS[hero.heroClass] ?? ['basic_attack'];
+            const sh = _narrativeHash(seedNum, day, hi + 700);
+            const skillName = getSkillName(skills[sh % skills.length], hero.heroClass);
+            emit(day, hour + 2, 3, `${hero.name} scrambles awake and uses ${skillName}.`);
+          }
+
+          emit(day, hour + 2, 3, `The party fends off the ambush. +100 bonus points.`);
+        } else {
+          const watchHero = heroes[dayHash % heroes.length];
+          emit(day, hour + 1, 3, `${watchHero.name} volunteers for first watch. The night passes without incident.`);
+        }
+      }
+    } else {
+      // Rest day or final day
+      if (day === STORY_TOTAL_DAYS) {
+        emit(day, 0, 2, `The final day of the journey.`);
+      } else {
+        emit(day, 0, 2, `The party rests and recuperates.`);
+      }
+    }
+
+    // Day summary
+    const dayEncounters = Math.max(0, Math.min(4, _narrativeHash(seedNum, day, 800) % 5));
+    emit(day, 11, 1, `Day ${day} ends. ${dayEncounters > 0 ? `${dayEncounters} encounters fought.` : 'A quiet day.'}`);
+  }
+
+  // ── Journey end ───────────────────────────────────────────────────────
+  if (finalDestinationReached) {
+    emit(STORY_TOTAL_DAYS, 11, 1, `The party reaches ${finalLocation}! The journey ends in triumph.`);
+    emit(STORY_TOTAL_DAYS, 11, 2, `After 30 days of travel, the heroes stand victorious at ${finalLocation}.`);
+    emit(STORY_TOTAL_DAYS, 11, 3, `${heroNames.join(', ')} raise their weapons in celebration. ${locationsVisited} locations explored, ${totalEncounters} enemies defeated.`);
+  } else {
+    emit(STORY_TOTAL_DAYS, 11, 1, `The journey ends. The party did not reach ${finalLocation}.`);
+    emit(STORY_TOTAL_DAYS, 11, 2, `After 30 days, the heroes' strength was not enough to complete the journey.`);
+  }
+
+  return log;
 }

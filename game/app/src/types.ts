@@ -248,6 +248,21 @@ export type AppScreen =
 
 // ── Story mode types ────────────────────────────────────────────────────────
 
+/** Verbosity level for narrative log entries in story mode. */
+export type NarrativeLevel = 1 | 2 | 3;
+
+/** A single entry in the story mode narrative log. */
+export interface NarrativeEntry {
+  /** Day the message was generated (1-based). */
+  day: number;
+  /** Hour within the day (0-based). */
+  hour: number;
+  /** Verbosity level: 1=Headlines, 2=Standard, 3=Detailed. */
+  level: NarrativeLevel;
+  /** The narrative message text. */
+  text: string;
+}
+
 /** Story mode KPIs — tracked during a story run. */
 export interface StoryKpis {
   /** Current day (1-based, max 30) */
