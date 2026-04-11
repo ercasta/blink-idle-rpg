@@ -204,6 +204,28 @@ export interface RunConfig {
   customSettings?: CustomModeSettings;
 }
 
+/** A single entry in an adventure leaderboard. */
+export interface LeaderboardEntry {
+  /** The ID of the run this entry belongs to. */
+  runId: string;
+  /** Final score for this run. */
+  score: number;
+  /** Unix timestamp (ms) when the run completed. */
+  timestamp: number;
+  /** Display names of the heroes used in this run. */
+  heroNames: string[];
+  /** Whether the run ended in victory. */
+  victory: boolean;
+}
+
+/** Per-adventure leaderboard (top 10 runs by score). */
+export interface AdventureLeaderboard {
+  /** The ID of the adventure this leaderboard belongs to. */
+  adventureId: string;
+  /** Ordered list of best runs, sorted by score descending (max 10 entries). */
+  entries: LeaderboardEntry[];
+}
+
 export type AppScreen =
   | 'home'
   | 'roster'
