@@ -282,4 +282,6 @@ export interface StoryKpis {
   finalDestinationReached: boolean;
   /** Total exploration bonus points */
   explorationBonus: number;
+  /** Early completion bonus (days saved × points per day), if quest completed early */
+  earlyCompletionBonus?: number;
 }
