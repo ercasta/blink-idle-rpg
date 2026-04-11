@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { RunResult, HeroPath, HeroDefinition, NarrativeEntry, NarrativeLevel } from '../types';
-import { CrossedSwordsIcon, RepeatIcon, PlayIcon, DownloadIcon, StarIcon, TrophyIcon } from '../components/icons';
+import { CrossedSwordsIcon, RepeatIcon, PlayIcon, DownloadIcon, StarIcon, TrophyIcon, ExpandIcon, ShrinkIcon } from '../components/icons';
 import { heroSummary } from '../data/traits';
 
 interface ResultsScreenProps {
@@ -125,46 +125,92 @@ export function ResultsScreen({ result, prevResult, leaderboardPosition, isNewBe
 
       {/* Narrative Log (story mode only) */}
       {narrativeLog.length > 0 && (
-        <div className="bg-blue-900/20 border border-blue-800 rounded-xl px-5 py-3 mb-6">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs text-blue-300 uppercase tracking-widest font-semibold">📖 Story Log</p>
-            <div className="flex gap-1">
-              {([1, 2, 3] as NarrativeLevel[]).map(level => (
+        <>
+          {showFullLog && (
+            <div className="fixed inset-0 z-50 bg-stone-900 flex flex-col">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-blue-800/50">
+                <p className="text-xs text-blue-300 uppercase tracking-widest font-semibold">📖 Story Log</p>
+                <div className="flex gap-1 items-center">
+                  {([1, 2, 3] as NarrativeLevel[]).map(level => (
+                    <button
+                      key={level}
+                      onClick={() => setVerbosity(level)}
+                      className={`px-2 py-0.5 text-xs rounded-lg transition-colors ${
+                        verbosity === level
+                          ? 'bg-blue-700 text-blue-100'
+                          : 'bg-stone-700 text-stone-400 hover:bg-stone-600'
+                      }`}
+                    >
+                      {level === 1 ? 'Headlines' : level === 2 ? 'Standard' : 'Detailed'}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => setShowFullLog(false)}
+                    className="ml-1 p-0.5 text-stone-400 hover:text-blue-300 transition-colors"
+                    title="Exit fullscreen"
+                  >
+                    <ShrinkIcon size={14} />
+                  </button>
+                </div>
+              </div>
+              <div className="flex-1 overflow-y-auto px-4 py-3 text-xs space-y-1 scrollbar-thin">
+                {narrativeLog.filter(e => e.level <= verbosity).map((entry, i) => (
+                  <div
+                    key={i}
+                    className={`leading-relaxed ${
+                      entry.level === 1 ? 'text-amber-300 font-semibold' :
+                      entry.level === 3 ? 'text-stone-400 italic' :
+                      'text-stone-200'
+                    }`}
+                  >
+                    {entry.text}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="bg-blue-900/20 border border-blue-800 rounded-xl px-5 py-3 mb-6">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs text-blue-300 uppercase tracking-widest font-semibold">📖 Story Log</p>
+              <div className="flex gap-1 items-center">
+                {([1, 2, 3] as NarrativeLevel[]).map(level => (
+                  <button
+                    key={level}
+                    onClick={() => setVerbosity(level)}
+                    className={`px-2 py-0.5 text-xs rounded-lg transition-colors ${
+                      verbosity === level
+                        ? 'bg-blue-700 text-blue-100'
+                        : 'bg-stone-700 text-stone-400 hover:bg-stone-600'
+                    }`}
+                  >
+                    {level === 1 ? 'Headlines' : level === 2 ? 'Standard' : 'Detailed'}
+                  </button>
+                ))}
                 <button
-                  key={level}
-                  onClick={() => setVerbosity(level)}
-                  className={`px-2 py-0.5 text-xs rounded-lg transition-colors ${
-                    verbosity === level
-                      ? 'bg-blue-700 text-blue-100'
-                      : 'bg-stone-700 text-stone-400 hover:bg-stone-600'
+                  onClick={() => setShowFullLog(true)}
+                  className="ml-1 p-0.5 text-stone-400 hover:text-blue-300 transition-colors"
+                  title="Fullscreen log"
+                >
+                  <ExpandIcon size={14} />
+                </button>
+              </div>
+            </div>
+            <div className="max-h-64 overflow-y-auto text-xs space-y-1 scrollbar-thin">
+              {narrativeLog.filter(e => e.level <= verbosity).map((entry, i) => (
+                <div
+                  key={i}
+                  className={`leading-relaxed ${
+                    entry.level === 1 ? 'text-amber-300 font-semibold' :
+                    entry.level === 3 ? 'text-stone-400 italic' :
+                    'text-stone-200'
                   }`}
                 >
-                  {level === 1 ? 'Headlines' : level === 2 ? 'Standard' : 'Detailed'}
-                </button>
+                  {entry.text}
+                </div>
               ))}
             </div>
           </div>
-          <div className={`${showFullLog ? '' : 'max-h-64'} overflow-y-auto text-xs space-y-1 scrollbar-thin`}>
-            {narrativeLog.filter(e => e.level <= verbosity).map((entry, i) => (
-              <div
-                key={i}
-                className={`leading-relaxed ${
-                  entry.level === 1 ? 'text-amber-300 font-semibold' :
-                  entry.level === 3 ? 'text-stone-400 italic' :
-                  'text-stone-200'
-                }`}
-              >
-                {entry.text}
-              </div>
-            ))}
-          </div>
-          <button
-            onClick={() => setShowFullLog(!showFullLog)}
-            className="mt-2 text-xs text-blue-400 hover:text-blue-300 transition-colors"
-          >
-            {showFullLog ? '▲ Collapse' : '▼ Show full log'}
-          </button>
-        </div>
+        </>
       )}
 
       {/* Hero Paths */}

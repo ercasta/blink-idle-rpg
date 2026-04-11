@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { GameSnapshot, HeroDefinition, RunResult, HeroPath, RunType, NarrativeEntry, NarrativeLevel } from '../types';
-import { ClassIcon, CrossedSwordsIcon, TrophyIcon, SkipIcon } from '../components/icons';
+import { ClassIcon, CrossedSwordsIcon, TrophyIcon, SkipIcon, ExpandIcon, ShrinkIcon } from '../components/icons';
 import { heroSummary } from '../data/traits';
 
 const STEP_INTERVAL_MS = 1000; // 1 second per checkpoint step
@@ -234,6 +234,7 @@ function NarrativeLogPanel({
   onVerbosityChange: (level: NarrativeLevel) => void;
   logEndRef: React.RefObject<HTMLDivElement | null>;
 }) {
+  const [fullscreen, setFullscreen] = useState(false);
   // Filter entries by verbosity level and current day
   const visible = entries.filter(e => e.level <= verbosity && e.day <= currentDay);
 
@@ -242,37 +243,70 @@ function NarrativeLogPanel({
     logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [visible.length, logEndRef]);
 
+  const controls = (
+    <div className="flex gap-1 items-center">
+      {([1, 2, 3] as NarrativeLevel[]).map(level => (
+        <button
+          key={level}
+          onClick={() => onVerbosityChange(level)}
+          className={`px-2 py-0.5 text-xs rounded-lg transition-colors ${
+            verbosity === level
+              ? 'bg-blue-700 text-blue-100'
+              : 'bg-stone-700 text-stone-400 hover:bg-stone-600'
+          }`}
+          title={VERBOSITY_LABELS[level]}
+        >
+          {VERBOSITY_LABELS[level]}
+        </button>
+      ))}
+      <button
+        onClick={() => setFullscreen(f => !f)}
+        className="ml-1 p-0.5 text-stone-400 hover:text-blue-300 transition-colors"
+        title={fullscreen ? 'Exit fullscreen' : 'Fullscreen log'}
+      >
+        {fullscreen ? <ShrinkIcon size={14} /> : <ExpandIcon size={14} />}
+      </button>
+    </div>
+  );
+
+  const logContent = (
+    <>
+      {visible.length === 0 && (
+        <p className="text-stone-500 italic">The journey begins…</p>
+      )}
+      {visible.map((entry, i) => (
+        <NarrativeLogEntry key={i} entry={entry} />
+      ))}
+      <div ref={logEndRef} />
+    </>
+  );
+
+  if (fullscreen) {
+    return (
+      <div className="fixed inset-0 z-50 bg-stone-900 flex flex-col">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-blue-800/50">
+          <h2 className="text-sm font-semibold text-blue-300 uppercase tracking-widest">
+            📖 Story Log
+          </h2>
+          {controls}
+        </div>
+        <div className="flex-1 overflow-y-auto px-4 py-3 text-xs space-y-1 scrollbar-thin">
+          {logContent}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-stone-800 border border-blue-800/50 rounded-xl p-4 mb-5">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-sm font-semibold text-blue-300 uppercase tracking-widest">
           📖 Story Log
         </h2>
-        <div className="flex gap-1">
-          {([1, 2, 3] as NarrativeLevel[]).map(level => (
-            <button
-              key={level}
-              onClick={() => onVerbosityChange(level)}
-              className={`px-2 py-0.5 text-xs rounded-lg transition-colors ${
-                verbosity === level
-                  ? 'bg-blue-700 text-blue-100'
-                  : 'bg-stone-700 text-stone-400 hover:bg-stone-600'
-              }`}
-              title={VERBOSITY_LABELS[level]}
-            >
-              {VERBOSITY_LABELS[level]}
-            </button>
-          ))}
-        </div>
+        {controls}
       </div>
       <div className="max-h-48 overflow-y-auto text-xs space-y-1 scrollbar-thin">
-        {visible.length === 0 && (
-          <p className="text-stone-500 italic">The journey begins…</p>
-        )}
-        {visible.map((entry, i) => (
-          <NarrativeLogEntry key={i} entry={entry} />
-        ))}
-        <div ref={logEndRef} />
+        {logContent}
       </div>
     </div>
   );
