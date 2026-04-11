@@ -17,6 +17,7 @@ import type { AdventureDefinition, GameMode, HeroClass, CustomModeSettings, Envi
 import { DEFAULT_CUSTOM_SETTINGS, DEFAULT_ENVIRONMENT_SETTINGS } from '../types';
 import { generateAdventureDescription, encodeAdventureToParams, decodeAdventureFromParams } from '../data/adventureDescription';
 import { generateRandomAdventure, randomAdventureName } from '../data/adventures';
+import { MAX_SEED_VALUE } from '../data/adventureQuest';
 import { ClassIcon, MapIcon, HeroesIcon, DiceIcon, PhysicalIcon, MagicalIcon, FireIcon, WaterIcon, WindIcon, EarthIcon, LightIcon, DarknessIcon, TrashIcon, ImportIcon } from '../components/icons';
 
 const ALL_CLASSES: HeroClass[] = ['Warrior', 'Mage', 'Ranger', 'Paladin', 'Rogue', 'Cleric'];
@@ -669,7 +670,7 @@ export function AdventureScreen({
                     const v = e.target.value.trim();
                     setDraft(prev => ({
                       ...prev,
-                      seed: v === '' ? undefined : Math.max(0, Math.min(4294967295, parseInt(v, 10) || 0)),
+                      seed: v === '' ? undefined : Math.max(0, Math.min(MAX_SEED_VALUE, parseInt(v, 10) || 0)),
                     }));
                   }}
                   placeholder="Auto (from settings)"
@@ -678,7 +679,7 @@ export function AdventureScreen({
                 <button
                   onClick={() => setDraft(prev => ({
                     ...prev,
-                    seed: Math.floor(Math.random() * 4294967296),
+                    seed: Math.floor(Math.random() * (MAX_SEED_VALUE + 1)),
                   }))}
                   className="py-2 px-3 rounded-lg bg-stone-700 hover:bg-stone-600 text-stone-200 text-xs font-medium transition-colors border border-stone-600"
                   title="Generate random seed"

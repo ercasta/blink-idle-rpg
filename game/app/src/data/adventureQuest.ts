@@ -832,7 +832,9 @@ export function generateAdventureQuest(seed: number): AdventureQuest {
 
   // 7. Build milestone and event structures
   const milestones: QuestMilestone[] = selectedMilestones.map((tmpl, idx) => {
-    const targetLayer = 1 + Math.floor(idx * 3.0 / milestoneCount);
+    const targetLayer = milestoneCount <= 1
+      ? 1
+      : 1 + Math.round(idx * 2.0 / (milestoneCount - 1));
     const events: QuestEvent[] = milestoneEvents[idx].map(evtTmpl => ({
       eventId: evtTmpl.eventId,
       title: resolveSlots(rng.pickVariant(evtTmpl.title), bindings),
@@ -895,6 +897,17 @@ export const QUEST_ITEM_BONUS = 25;
 
 // ── Quest simulation (deterministic from seed + game data) ──────────────────
 
+/** Seed offset to separate quest generation randomness from simulation randomness. */
+const SIMULATION_SEED_OFFSET = 0x12345;
+/** Minimum locations-per-day rate for trigger calculations. */
+const MIN_LOCATIONS_PER_DAY = 0.3;
+/** Total days in story mode (matches engine constant). */
+const STORY_TOTAL_DAYS = 30;
+/** Expected max encounters for encounter intensity scaling. */
+const EXPECTED_MAX_ENCOUNTERS = 120;
+/** Maximum seed value (32-bit unsigned). */
+export const MAX_SEED_VALUE = 4294967295;
+
 /** Result of simulating quest progress during a story run. */
 export interface QuestSimResult {
   quest: AdventureQuest;
@@ -918,16 +931,16 @@ export function simulateQuestProgress(
   locationsVisited: number,
 ): QuestSimResult {
   const quest = generateAdventureQuest(seed);
-  const rng = new Rng(seed + 0x12345); // Offset seed for simulation randomness
+  const rng = new Rng(seed + SIMULATION_SEED_OFFSET);
 
   let totalQuestScore = 0;
   let bailoutCount = 0;
   let sideEventsCompleted = 0;
 
   // Simulate milestone progression based on day/encounters
-  const locationsPerDay = Math.max(0.3, locationsVisited / 30);
+  const locationsPerDay = Math.max(MIN_LOCATIONS_PER_DAY, locationsVisited / STORY_TOTAL_DAYS);
   // Use totalEncounters to modulate event trigger chances
-  const encounterIntensity = Math.min(1.0, totalEncounters / 120);
+  const encounterIntensity = Math.min(1.0, totalEncounters / EXPECTED_MAX_ENCOUNTERS);
 
   // Activate first milestone on day 1
   if (quest.milestones.length > 0) {
@@ -935,7 +948,7 @@ export function simulateQuestProgress(
     quest.milestones[0].activationDay = 1;
   }
 
-  for (let day = 1; day <= 30; day++) {
+  for (let day = 1; day <= STORY_TOTAL_DAYS; day++) {
     // Check each active milestone
     for (const milestone of quest.milestones) {
       if (!milestone.isActive || milestone.isCompleted) continue;
