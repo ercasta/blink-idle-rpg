@@ -700,7 +700,9 @@ export function RosterScreen({ roster, onRosterChange, onBack, sharedHero }: Ros
             <p className="text-sm text-center">No heroes match your filters.</p>
           </div>
         )}
-        {filteredRoster.map((hero) => (
+        {filteredRoster.map((hero) => {
+          const adventuresPlayed = hero.adventuresPlayed ?? 0;
+          return (
           <div key={hero.id} className="flex gap-2">
             <div className="flex-1 bg-stone-800 border border-stone-700 rounded-xl p-4">
               <div className="flex items-center gap-3">
@@ -715,7 +717,7 @@ export function RosterScreen({ roster, onRosterChange, onBack, sharedHero }: Ros
                   </div>
                   <p className="text-xs text-stone-400 mt-0.5">{hero.role}</p>
                   <p className="text-xs text-stone-600 mt-0.5">
-                    {(hero.adventuresPlayed ?? 0)} adventure{(hero.adventuresPlayed ?? 0) !== 1 ? 's' : ''} played
+                    {adventuresPlayed} adventure{adventuresPlayed !== 1 ? 's' : ''} played
                   </p>
                 </div>
               </div>
@@ -762,7 +764,8 @@ export function RosterScreen({ roster, onRosterChange, onBack, sharedHero }: Ros
               </button>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

@@ -175,6 +175,7 @@ export function PartySelectScreen({ roster, adventure, onStart, onBack, onManage
             {filteredRoster.map((hero) => {
               const isSelected = selected.includes(hero.id);
               const isDisabled = !isSelected && selected.length >= maxParty;
+              const adventuresPlayed = hero.adventuresPlayed ?? 0;
               return (
                 <button
                   key={hero.id}
@@ -203,7 +204,7 @@ export function PartySelectScreen({ roster, adventure, onStart, onBack, onManage
                       </div>
                       <p className="text-xs text-stone-400 mt-0.5">{hero.role}</p>
                       <p className="text-xs text-stone-600 mt-0.5">
-                        {(hero.adventuresPlayed ?? 0)} adventure{(hero.adventuresPlayed ?? 0) !== 1 ? 's' : ''} played
+                        {adventuresPlayed} adventure{adventuresPlayed !== 1 ? 's' : ''} played
                       </p>
                       <p className="text-xs text-stone-500 mt-1 leading-relaxed">{hero.description}</p>
                     </div>
