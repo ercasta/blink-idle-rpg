@@ -631,16 +631,57 @@ function _pickEnemyElement(env: EnvironmentSettings, templateIndex: number): Ele
 
 /**
  * Story mode experience multiplier.
- * Story mode has ~60-120 encounters vs fight mode's 3000. To keep hero
- * progression meaningful, XP rewards are boosted by this factor.
+ * Story mode has ~60-120 encounters (30 days × 2-4 encounters/day via
+ * STORY_CHECKPOINT_KILLS) vs fight mode's 3000. To keep hero progression
+ * meaningful, XP rewards are boosted by this factor.
  */
 const STORY_EXP_MULTIPLIER = 25;
 
-/**
- * Story mode constants.
- */
+/** Number of days in a story mode journey. Each day produces one snapshot. */
 const STORY_TOTAL_DAYS = 30;
-const STORY_CHECKPOINT_KILLS = 4; // Record a checkpoint every N kills (targeting ~30 snapshots)
+
+/**
+ * Checkpoint interval for story mode: record a snapshot every N kills.
+ * With STORY_TOTAL_DAYS = 30, this produces ~30 snapshots from ~60-120
+ * total encounters (30 checkpoints × 4 kills/checkpoint = 120 max).
+ */
+const STORY_CHECKPOINT_KILLS = 4;
+
+// ── Story mode scoring constants ────────────────────────────────────────────
+
+/** Map has 12 + (seed % LOCATION_VARIETY) locations, i.e. 12-18. */
+const STORY_MIN_LOCATIONS = 12;
+const STORY_LOCATION_VARIETY = 7;
+
+/** Points awarded for each unique location visited. */
+const STORY_POINTS_PER_LOCATION = 50;
+
+/** Fraction of encounters that translate into one location visit. */
+const STORY_ENCOUNTERS_PER_LOCATION = 8;
+
+/** Minimum locations visited regardless of encounters. */
+const STORY_MIN_VISITED = 3;
+
+/** Fraction of visited locations that are towns (for rest bonus). */
+const STORY_TOWN_REST_RATIO = 0.35;
+
+/** One ambush survived per this many encounters. */
+const STORY_ENCOUNTERS_PER_AMBUSH = 20;
+
+/** Threshold: if locationsVisited / totalLocations ≥ this, award completion bonus. */
+const STORY_EXPLORATION_THRESHOLD = 0.8;
+
+/** Bonus points for visiting ≥ 80% of the map. */
+const STORY_EXPLORATION_COMPLETION_BONUS = 200;
+
+/** Points per town rest. */
+const STORY_POINTS_PER_TOWN_REST = 25;
+
+/** Points per ambush survived without hero deaths. */
+const STORY_POINTS_PER_AMBUSH = 100;
+
+/** Bonus for reaching the final destination. */
+const STORY_FINAL_DESTINATION_BONUS = 500;
 
 /**
  * Run a story-mode simulation.
@@ -902,16 +943,18 @@ function _runStoryMode(
 
   // Generate deterministic story KPIs based on seed and game outcome
   const seedNum = seed ? Number(seed & 0xFFFFFFFFn) : 0;
-  const totalLocations = 12 + (seedNum % 7); // 12-18
-  const locationsVisited = Math.min(totalLocations, Math.max(3, Math.floor(totalEncounters / 8) + 3));
-  const townsRested = Math.max(1, Math.floor(locationsVisited * 0.35));
-  const ambushesSurvived = Math.max(0, Math.floor(totalEncounters / 20));
+  const totalLocations = STORY_MIN_LOCATIONS + (seedNum % STORY_LOCATION_VARIETY);
+  const locationsVisited = Math.min(totalLocations,
+    Math.max(STORY_MIN_VISITED, Math.floor(totalEncounters / STORY_ENCOUNTERS_PER_LOCATION) + STORY_MIN_VISITED));
+  const townsRested = Math.max(1, Math.floor(locationsVisited * STORY_TOWN_REST_RATIO));
+  const ambushesSurvived = Math.max(0, Math.floor(totalEncounters / STORY_ENCOUNTERS_PER_AMBUSH));
   const finalDestinationReached = (finalGs['victory'] as boolean) ?? false;
-  const explorationBonus = locationsVisited * 50 +
-    (locationsVisited / totalLocations >= 0.8 ? 200 : 0) +
-    townsRested * 25 +
-    ambushesSurvived * 100 +
-    (finalDestinationReached ? 500 : 0);
+  const explorationBonus =
+    locationsVisited * STORY_POINTS_PER_LOCATION +
+    (locationsVisited / totalLocations >= STORY_EXPLORATION_THRESHOLD ? STORY_EXPLORATION_COMPLETION_BONUS : 0) +
+    townsRested * STORY_POINTS_PER_TOWN_REST +
+    ambushesSurvived * STORY_POINTS_PER_AMBUSH +
+    (finalDestinationReached ? STORY_FINAL_DESTINATION_BONUS : 0);
 
   // Pad to exactly 30 snapshots (one per day) if we have fewer
   while (snapshots.length < STORY_TOTAL_DAYS) {
