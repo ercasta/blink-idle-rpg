@@ -28,6 +28,7 @@ Blink Idle RPG is an **idle simulation RPG** in which:
 | [scoring.md](scoring.md) | Score system, KPIs, and scoring components |
 | [game-modes.md](game-modes.md) | Game modes and their scoring rule configurations |
 | [simulation.md](simulation.md) | Playtesting harness: parallel runs, KPIs, balance tooling |
+| [story-mode.md](story-mode.md) | Story Mode: virtual map, travel, party voting, narrative system |
 
 ## Component Naming Convention
 

@@ -288,3 +288,26 @@ React UI → select party → create entities → run simulation → snapshots
                                                                 ↓
                                               Results screen
 ```
+
+---
+
+## Story Mode (Alternative Run Type)
+
+In addition to the standard 3000-encounter fight mode, players can run an
+adventure in **Story Mode** — a 30-day simulated journey through a procedurally
+generated map. Key differences:
+
+- **Virtual map**: A graph of 12–18 locations (towns and wilderness) connected
+  by routes with travel times and danger ratings.
+- **Party decisions**: Heroes vote on where to go next, driven by their traits.
+  Cautious heroes prefer safe towns; risky heroes seek dangerous wilderness.
+- **Travel encounters**: Encounters occur probabilistically during travel,
+  using the same combat rules as fight mode.
+- **Narrative log**: A textual story is generated at three verbosity levels,
+  viewable during playback and on the results screen.
+- **Deterministic generation**: The map and all decisions are seeded from the
+  adventure's traits, ensuring reproducibility.
+
+Story mode uses the same scoring system with additional bonuses for exploration,
+town rests, and ambush survival. Full design details are in
+[`doc/game-design/story-mode.md`](doc/game-design/story-mode.md).
