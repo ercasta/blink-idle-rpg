@@ -76,6 +76,10 @@ export interface HeroDefinition {
     wisdom: number;
   };
   traits: HeroTraits;
+  /** Whether the player has starred this hero as a favourite */
+  favourite?: boolean;
+  /** Total number of adventures this hero has participated in */
+  adventuresPlayed?: number;
 }
 
 /** A single entry in a hero's progression path log. */

@@ -26,7 +26,12 @@ const QR_SIZE = 30;
 const ICON_TEXT_VERTICAL_OFFSET = 0.65;
 
 function getHeroShareUrl(hero: HeroDefinition): string {
-  const params = encodeHeroToParams({ name: hero.name, heroClass: hero.heroClass, traits: hero.traits });
+  const params = encodeHeroToParams({
+    name: hero.name,
+    heroClass: hero.heroClass,
+    traits: hero.traits,
+    adventuresPlayed: hero.adventuresPlayed,
+  });
   const base = window.location.origin + window.location.pathname;
   return `${base}?${params.toString()}`;
 }

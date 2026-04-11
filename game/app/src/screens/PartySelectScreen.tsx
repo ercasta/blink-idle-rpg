@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { HeroDefinition, HeroClass, AdventureDefinition } from '../types';
-import { ClassIcon, HeroesIcon, PlayIcon } from '../components/icons';
+import { ClassIcon, HeroesIcon, PlayIcon, StarIcon } from '../components/icons';
 
 const ALL_CLASSES: HeroClass[] = ['Warrior', 'Mage', 'Ranger', 'Paladin', 'Rogue', 'Cleric'];
 
@@ -20,6 +20,8 @@ export function PartySelectScreen({ roster, adventure, onStart, onBack, onManage
   const [selected, setSelected] = useState<string[]>([]);
   const [filterName, setFilterName] = useState('');
   const [filterClass, setFilterClass] = useState<HeroClass | ''>('');
+  const [filterFavourites, setFilterFavourites] = useState(false);
+  const [sortBy, setSortBy] = useState<'name' | 'adventures'>('name');
 
   function toggle(id: string) {
     setSelected(prev => {
@@ -38,12 +40,20 @@ export function PartySelectScreen({ roster, adventure, onStart, onBack, onManage
   }
 
   // Filter roster by adventure's allowed classes, then by user filters
-  const filteredRoster = roster.filter(hero => {
-    if (!allowedClasses.includes(hero.heroClass)) return false;
-    const nameMatch = hero.name.toLowerCase().includes(filterName.toLowerCase());
-    const classMatch = filterClass === '' || hero.heroClass === filterClass;
-    return nameMatch && classMatch;
-  });
+  const filteredRoster = roster
+    .filter(hero => {
+      if (!allowedClasses.includes(hero.heroClass)) return false;
+      const nameMatch = hero.name.toLowerCase().includes(filterName.toLowerCase());
+      const classMatch = filterClass === '' || hero.heroClass === filterClass;
+      const favMatch = !filterFavourites || hero.favourite === true;
+      return nameMatch && classMatch && favMatch;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'adventures') {
+        return (b.adventuresPlayed ?? 0) - (a.adventuresPlayed ?? 0);
+      }
+      return a.name.localeCompare(b.name);
+    });
 
   // The roster heroes that match the adventure's class restriction
   const eligibleRosterCount = roster.filter(h => allowedClasses.includes(h.heroClass)).length;
@@ -131,6 +141,28 @@ export function PartySelectScreen({ roster, adventure, onStart, onBack, onManage
                 </button>
               ))}
             </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setFilterFavourites(f => !f)}
+                className={`flex-1 inline-flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                  filterFavourites
+                    ? 'bg-amber-700 border-amber-500 text-stone-100'
+                    : 'bg-stone-800 border-stone-600 text-stone-400 hover:border-stone-400'
+                }`}
+              >
+                <StarIcon size={12} filled={filterFavourites}/> Favourites
+              </button>
+              <button
+                onClick={() => setSortBy(s => s === 'adventures' ? 'name' : 'adventures')}
+                className={`flex-1 inline-flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                  sortBy === 'adventures'
+                    ? 'bg-amber-700 border-amber-500 text-stone-100'
+                    : 'bg-stone-800 border-stone-600 text-stone-400 hover:border-stone-400'
+                }`}
+              >
+                Sort: {sortBy === 'adventures' ? 'Adventures ↓' : 'Name A–Z'}
+              </button>
+            </div>
           </div>
 
           {/* Hero grid */}
@@ -160,6 +192,9 @@ export function PartySelectScreen({ roster, adventure, onStart, onBack, onManage
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-bold">{hero.name}</span>
                         <span className="text-xs text-stone-400">{hero.heroClass}</span>
+                        {hero.favourite && (
+                          <StarIcon size={12} filled className="text-amber-400"/>
+                        )}
                         {isSelected && (
                           <span className="ml-auto text-xs bg-amber-700 px-2 py-0.5 rounded-full text-stone-100">
                             ✓ Selected
@@ -167,6 +202,9 @@ export function PartySelectScreen({ roster, adventure, onStart, onBack, onManage
                         )}
                       </div>
                       <p className="text-xs text-stone-400 mt-0.5">{hero.role}</p>
+                      <p className="text-xs text-stone-600 mt-0.5">
+                        {(hero.adventuresPlayed ?? 0)} adventure{(hero.adventuresPlayed ?? 0) !== 1 ? 's' : ''} played
+                      </p>
                       <p className="text-xs text-stone-500 mt-1 leading-relaxed">{hero.description}</p>
                     </div>
                   </div>

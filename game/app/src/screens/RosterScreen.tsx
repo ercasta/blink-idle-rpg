@@ -8,7 +8,7 @@ import type { SharedHeroData } from '../data/heroDescription';
 import { loadSkillCatalog } from '../data/skillCatalog';
 import type { SkillEntry } from '../data/skillCatalog';
 import { printHeroFigurine } from '../utils/heroFigurine';
-import { ClassIcon, HeroesIcon, DiceIcon, CrystalIcon, SkillTypeIcon, TrashIcon } from '../components/icons';
+import { ClassIcon, HeroesIcon, DiceIcon, CrystalIcon, SkillTypeIcon, TrashIcon, StarIcon } from '../components/icons';
 
 const ALL_CLASSES: HeroClass[] = ['Warrior', 'Mage', 'Ranger', 'Paladin', 'Rogue', 'Cleric'];
 
@@ -25,7 +25,12 @@ const CLASS_ROLES: Record<HeroClass, string> = {
 // ── Hero sharing helpers ──────────────────────────────────────────────────────
 
 function getHeroShareUrl(hero: HeroDefinition): string {
-  const params = encodeHeroToParams({ name: hero.name, heroClass: hero.heroClass, traits: hero.traits });
+  const params = encodeHeroToParams({
+    name: hero.name,
+    heroClass: hero.heroClass,
+    traits: hero.traits,
+    adventuresPlayed: hero.adventuresPlayed,
+  });
   const base = window.location.origin + window.location.pathname;
   return `${base}?${params.toString()}`;
 }
@@ -249,6 +254,8 @@ export function RosterScreen({ roster, onRosterChange, onBack, sharedHero }: Ros
   const [view, setView] = useState<RosterView>(() => (sharedHero ? 'create' : 'list'));
   const [filterName, setFilterName] = useState('');
   const [filterClass, setFilterClass] = useState<HeroClass | ''>('');
+  const [filterFavourites, setFilterFavourites] = useState(false);
+  const [sortBy, setSortBy] = useState<'name' | 'adventures'>('name');
   const [editingHero, setEditingHero] = useState<HeroDefinition | null>(null);
   // For create: a new hero being configured before adding
   const [draftHero, setDraftHero] = useState<HeroDefinition | null>(() => {
@@ -298,6 +305,10 @@ export function RosterScreen({ roster, onRosterChange, onBack, sharedHero }: Ros
 
   function deleteHero(id: string) {
     onRosterChange(roster.filter(h => h.id !== id));
+  }
+
+  function toggleFavourite(id: string) {
+    onRosterChange(roster.map(h => h.id === id ? { ...h, favourite: !h.favourite } : h));
   }
 
   function openCreate() {
@@ -571,11 +582,19 @@ export function RosterScreen({ roster, onRosterChange, onBack, sharedHero }: Ros
 
   // ── Hero list ────────────────────────────────────────────────────────────
 
-  const filteredRoster = roster.filter(hero => {
-    const nameMatch = hero.name.toLowerCase().includes(filterName.toLowerCase());
-    const classMatch = filterClass === '' || hero.heroClass === filterClass;
-    return nameMatch && classMatch;
-  });
+  const filteredRoster = roster
+    .filter(hero => {
+      const nameMatch = hero.name.toLowerCase().includes(filterName.toLowerCase());
+      const classMatch = filterClass === '' || hero.heroClass === filterClass;
+      const favMatch = !filterFavourites || hero.favourite === true;
+      return nameMatch && classMatch && favMatch;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'adventures') {
+        return (b.adventuresPlayed ?? 0) - (a.adventuresPlayed ?? 0);
+      }
+      return a.name.localeCompare(b.name);
+    });
 
   return (
     <div className="flex flex-col min-h-screen bg-stone-900 text-stone-100 px-4 py-6">
@@ -633,6 +652,28 @@ export function RosterScreen({ roster, onRosterChange, onBack, sharedHero }: Ros
               </button>
             ))}
           </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setFilterFavourites(f => !f)}
+              className={`flex-1 inline-flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                filterFavourites
+                  ? 'bg-amber-700 border-amber-500 text-stone-100'
+                  : 'bg-stone-800 border-stone-600 text-stone-400 hover:border-stone-400'
+              }`}
+            >
+              <StarIcon size={12} filled={filterFavourites}/> Favourites
+            </button>
+            <button
+              onClick={() => setSortBy(s => s === 'adventures' ? 'name' : 'adventures')}
+              className={`flex-1 inline-flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                sortBy === 'adventures'
+                  ? 'bg-amber-700 border-amber-500 text-stone-100'
+                  : 'bg-stone-800 border-stone-600 text-stone-400 hover:border-stone-400'
+              }`}
+            >
+              Sort: {sortBy === 'adventures' ? 'Adventures ↓' : 'Name A–Z'}
+            </button>
+          </div>
         </div>
       )}
 
@@ -668,8 +709,14 @@ export function RosterScreen({ roster, onRosterChange, onBack, sharedHero }: Ros
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-bold">{hero.name}</span>
                     <span className="text-xs text-stone-400">{hero.heroClass}</span>
+                    {hero.favourite && (
+                      <StarIcon size={12} filled className="text-amber-400"/>
+                    )}
                   </div>
                   <p className="text-xs text-stone-400 mt-0.5">{hero.role}</p>
+                  <p className="text-xs text-stone-600 mt-0.5">
+                    {(hero.adventuresPlayed ?? 0)} adventure{(hero.adventuresPlayed ?? 0) !== 1 ? 's' : ''} played
+                  </p>
                 </div>
               </div>
               {/* Hero description */}
@@ -681,6 +728,17 @@ export function RosterScreen({ roster, onRosterChange, onBack, sharedHero }: Ros
             </div>
             {/* Action buttons */}
             <div className="flex flex-col gap-2">
+              <button
+                onClick={() => toggleFavourite(hero.id)}
+                className={`flex-1 px-3 bg-stone-800 border rounded-xl transition-colors ${
+                  hero.favourite
+                    ? 'border-amber-500 text-amber-400 hover:border-amber-400'
+                    : 'border-stone-700 text-stone-400 hover:border-amber-500 hover:text-amber-400'
+                }`}
+                title={hero.favourite ? 'Remove from favourites' : 'Add to favourites'}
+              >
+                <StarIcon size={18} filled={hero.favourite}/>
+              </button>
               <button
                 onClick={() => openEditTraits(hero)}
                 className="flex-1 px-3 bg-stone-800 border border-stone-700 hover:border-stone-500 rounded-xl text-lg transition-colors"
