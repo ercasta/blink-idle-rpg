@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { GameSnapshot, HeroDefinition, RunResult, HeroPath } from '../types';
+import type { GameSnapshot, HeroDefinition, RunResult, HeroPath, RunType } from '../types';
 import { ClassIcon, CrossedSwordsIcon, TrophyIcon, SkipIcon } from '../components/icons';
 import { heroSummary } from '../data/traits';
 
@@ -11,6 +11,8 @@ interface BattleScreenProps {
   heroes: HeroDefinition[];
   heroPaths: HeroPath[];
   onComplete: (result: RunResult) => void;
+  /** Run type: fight or story. Affects display labels. */
+  runType?: RunType;
 }
 
 function buildResult(snapshots: GameSnapshot[], heroPaths: HeroPath[]): RunResult {
@@ -55,7 +57,7 @@ function ProgressBar({ value, max }: { value: number; max: number }) {
   );
 }
 
-export function BattleScreen({ snapshots, prevSnapshots = [], heroes, heroPaths, onComplete }: BattleScreenProps) {
+export function BattleScreen({ snapshots, prevSnapshots = [], heroes, heroPaths, onComplete, runType = 'fight' }: BattleScreenProps) {
   const [stepIndex, setStepIndex] = useState(0);
   const [done, setDone] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -106,11 +108,11 @@ export function BattleScreen({ snapshots, prevSnapshots = [], heroes, heroPaths,
           {done
             ? current.victory
               ? <span className="inline-flex items-center gap-2"><TrophyIcon size={22}/> Victory!</span>
-              : <span className="inline-flex items-center gap-2"><CrossedSwordsIcon size={22}/> Run Completed</span>
-            : <span className="inline-flex items-center gap-2"><CrossedSwordsIcon size={22}/> Battle in Progress</span>}
+              : <span className="inline-flex items-center gap-2"><CrossedSwordsIcon size={22}/> {runType === 'story' ? 'Journey Completed' : 'Run Completed'}</span>
+            : <span className="inline-flex items-center gap-2"><CrossedSwordsIcon size={22}/> {runType === 'story' ? 'Journey in Progress' : 'Battle in Progress'}</span>}
         </h1>
         <span className="text-stone-400 text-sm">
-          Step {Math.min(stepIndex + 1, totalSteps)} / {totalSteps}
+          {runType === 'story' ? `Day ${Math.min(stepIndex + 1, totalSteps)} / ${totalSteps}` : `Step ${Math.min(stepIndex + 1, totalSteps)} / ${totalSteps}`}
         </span>
       </div>
 

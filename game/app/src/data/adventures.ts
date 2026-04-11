@@ -2,7 +2,7 @@
  * Random adventure generation and default adventure data.
  */
 
-import type { AdventureDefinition, GameMode, HeroClass, HeroDefinition, EnvironmentSettings } from '../types';
+import type { AdventureDefinition, GameMode, HeroClass, HeroDefinition, EnvironmentSettings, RunType } from '../types';
 import { DEFAULT_ENVIRONMENT_SETTINGS } from '../types';
 import { generateAdventureDescription } from './adventureDescription';
 import { generateRandomHero } from './heroes';
@@ -68,6 +68,7 @@ function randomEnvironment(): EnvironmentSettings {
 /**
  * Generate a random adventure with randomised difficulty and party requirements.
  * Biased toward normal/easy modes for a good first experience.
+ * ~20% chance of generating a story mode adventure.
  */
 export function generateRandomAdventure(): AdventureDefinition {
   const modes: GameMode[] = ['normal', 'normal', 'easy', 'hard'];
@@ -86,6 +87,9 @@ export function generateRandomAdventure(): AdventureDefinition {
     allowedClasses = shuffle(ALL_CLASSES).slice(0, count);
   }
 
+  // ~20% chance of story mode
+  const runType: RunType = Math.random() < 0.2 ? 'story' : 'fight';
+
   const name = randomAdventureName();
   const environmentSettings = randomEnvironment();
 
@@ -96,6 +100,7 @@ export function generateRandomAdventure(): AdventureDefinition {
     requiredHeroCount,
     allowedClasses,
     environmentSettings,
+    runType,
   };
 
   return {

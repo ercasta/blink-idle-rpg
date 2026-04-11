@@ -9,7 +9,7 @@
  *   • Accepts runtime data (heroes, enemies, config) via create_entity/add_component
  */
 
-import type { GameSnapshot, HeroDefinition, GameMode, HeroPath, CustomModeSettings, EnvironmentSettings, DamageCategory, Element } from '../types';
+import type { GameSnapshot, HeroDefinition, GameMode, HeroPath, CustomModeSettings, EnvironmentSettings, DamageCategory, Element, RunType, StoryKpis } from '../types';
 import { DEFAULT_ENVIRONMENT_SETTINGS } from '../types';
 import { simulateHeroPath, getSkillName, deriveDamageCategory, deriveDamageElement, deriveResistances, computeLinePreferenceScore } from '../data/traits';
 
@@ -193,6 +193,9 @@ function buildCustomConfig(settings: CustomModeSettings) {
  * config), runs the full simulation, and returns an array of GameSnapshots
  * plus hero progression paths.
  *
+ * For story mode, the same combat engine is used but with fewer encounters
+ * (30 days × ~2-4 encounters/day ≈ 60-120 total) and an experience multiplier.
+ *
  * Throws if the WASM module is not available.
  * Build it with: npm run build:wasm && npm run install:wasm
  */
@@ -201,7 +204,8 @@ export async function runSimulation(
   mode: GameMode,
   customSettings?: CustomModeSettings,
   environmentSettings?: EnvironmentSettings,
-): Promise<{ snapshots: GameSnapshot[]; heroPaths: HeroPath[] }> {
+  runType: RunType = 'fight',
+): Promise<{ snapshots: GameSnapshot[]; heroPaths: HeroPath[]; storyKpis?: StoryKpis }> {
   const mod = await loadWasmModule();
   if (!mod) {
     throw new Error(
@@ -216,6 +220,34 @@ export async function runSimulation(
   const seed = (BigInt(seedBytes[0]) << 32n) | BigInt(seedBytes[1]);
   const game = mod.BlinkWasmGame.with_seed(seed);
   try {
+    if (runType === 'story') {
+      const result = _runStoryMode(game, selectedHeroes, mode, customSettings, environmentSettings, seed);
+
+      const heroPaths: HeroPath[] = selectedHeroes.map(hero => {
+        const maxLevel = result.snapshots.length > 0
+          ? (result.snapshots[result.snapshots.length - 1].heroLevels[hero.name] ?? 10)
+          : 10;
+        const entries = simulateHeroPath(hero.heroClass, hero.traits, Math.max(maxLevel, 5));
+        const finalStats = { str: hero.stats.strength, dex: hero.stats.dexterity, int: hero.stats.intelligence, con: hero.stats.constitution, wis: hero.stats.wisdom };
+        for (const entry of entries) {
+          finalStats.str += entry.statsGained.str;
+          finalStats.dex += entry.statsGained.dex;
+          finalStats.int += entry.statsGained.int;
+          finalStats.con += entry.statsGained.con;
+          finalStats.wis += entry.statsGained.wis;
+        }
+        for (const entry of entries) {
+          if (entry.skillChosen) {
+            entry.skillChosen = `${entry.skillChosen} (${getSkillName(entry.skillChosen, hero.heroClass)})`;
+          }
+        }
+        return { heroName: hero.name, heroClass: hero.heroClass, entries, finalStats };
+      });
+
+      return { snapshots: result.snapshots, heroPaths, storyKpis: result.storyKpis };
+    }
+
+    // Fight mode (original)
     const snapshots = _runWithWasm(game, selectedHeroes, mode, customSettings, environmentSettings);
 
     // Simulate hero progression paths using the trait system
@@ -593,4 +625,314 @@ function _pickEnemyElement(env: EnvironmentSettings, templateIndex: number): Ele
   // Deterministic pick from candidates
   const pickIdx = Math.floor(_pseudoRoll(templateIndex, 7) * candidates.length);
   return candidates[pickIdx];
+}
+
+// ── Story mode simulation ───────────────────────────────────────────────────
+
+/**
+ * Story mode experience multiplier.
+ * Story mode has ~60-120 encounters vs fight mode's 3000. To keep hero
+ * progression meaningful, XP rewards are boosted by this factor.
+ */
+const STORY_EXP_MULTIPLIER = 25;
+
+/**
+ * Story mode constants.
+ */
+const STORY_TOTAL_DAYS = 30;
+const STORY_CHECKPOINT_KILLS = 4; // Record a checkpoint every N kills (targeting ~30 snapshots)
+
+/**
+ * Run a story-mode simulation.
+ *
+ * Reuses the fight-mode WASM combat engine but wraps it in a 30-day
+ * journey structure. Each day, the party travels and may encounter enemies.
+ * The number of encounters is much lower (~60-120) but XP is multiplied
+ * to keep hero progression meaningful.
+ *
+ * Produces 30 snapshots (one per day) for consistent battle screen playback.
+ */
+function _runStoryMode(
+  game: BlinkWasmGame,
+  selectedHeroes: HeroDefinition[],
+  mode: GameMode,
+  customSettings?: CustomModeSettings,
+  environmentSettings?: EnvironmentSettings,
+  seed?: bigint,
+): { snapshots: GameSnapshot[]; storyKpis: StoryKpis } {
+  // Use the same entity setup as fight mode, but with story-specific config
+  game.init_static();
+
+  const cfg = mode === 'custom'
+    ? buildCustomConfig(customSettings ?? { heroPenaltyPct: 0, wipeoutPenaltyPct: 0, expMultiplierPct: 0, encounterDifficultyPct: 0 })
+    : (MODE_CONFIGS[mode] ?? MODE_CONFIGS.normal);
+
+  // Story mode applies a higher exp multiplier to compensate for fewer encounters
+  const baseExpMult = mode === 'custom' && customSettings
+    ? 1 + customSettings.expMultiplierPct / 100
+    : 1;
+  const expMult = baseExpMult * STORY_EXP_MULTIPLIER;
+
+  const env = environmentSettings ?? DEFAULT_ENVIRONMENT_SETTINGS;
+
+  // Assign heroes to front/back line (same as fight mode)
+  const heroScores = selectedHeroes.map((h, i) => ({
+    index: i,
+    score: computeLinePreferenceScore(h.traits),
+  }));
+  heroScores.sort((a, b) => b.score - a.score);
+  const frontCount = Math.ceil(selectedHeroes.length / 2);
+  const heroLines: ('front' | 'back')[] = new Array(selectedHeroes.length);
+  heroScores.forEach((hs, rank) => {
+    heroLines[hs.index] = rank < frontCount ? 'front' : 'back';
+  });
+
+  // Create hero entities (same as fight mode)
+  selectedHeroes.forEach((hero, i) => {
+    const heroId = i + 1;
+    const heroClass = hero.heroClass;
+    const skills = CLASS_SKILLS[heroClass] ?? ['basic_attack', '', '', ''];
+    const baseHp  = CLASS_BASE_HP[heroClass]    ?? 100;
+    const baseDmg = CLASS_BASE_DAMAGE[heroClass] ?? 15;
+    const baseDef = CLASS_BASE_DEFENSE[heroClass] ?? 5;
+    const baseSpd = CLASS_ATTACK_SPEED[heroClass] ?? 1.0;
+
+    const conBonus = Math.floor((hero.stats.constitution - 10) * 5);
+    const intBonus = Math.floor((hero.stats.intelligence - 10) * 3);
+    const strBonus = Math.floor((hero.stats.strength - 10) * 2);
+    const dexBonus = (hero.stats.dexterity - 10) * 0.05;
+    const wisBonus = Math.floor((hero.stats.wisdom - 10) * 5);
+
+    const maxHp      = Math.max(50,  baseHp  + conBonus);
+    let   damage     = Math.max(5,   baseDmg + strBonus + intBonus);
+    let   defense    = Math.max(0,   baseDef + Math.floor(hero.stats.constitution - 10));
+    const attackSpeed = Math.max(0.3, baseSpd + dexBonus);
+    const maxMana    = Math.max(50,  100 + wisBonus);
+    const critChance = Math.min(0.5, 0.05 + hero.stats.dexterity * 0.01);
+
+    if (heroLines[i] === 'front') {
+      damage = Math.round(damage * 1.25);
+    } else {
+      defense = Math.round(defense * 1.25);
+    }
+
+    const dmgCategory = deriveDamageCategory(hero.traits);
+    const dmgElement  = deriveDamageElement(hero.traits);
+    const resistances = deriveResistances(hero.traits);
+
+    game.create_entity(heroId);
+    game.add_component(heroId, 'Character', JSON.stringify({
+      name: hero.name, class: hero.heroClass, level: 1, experience: 0, experienceToLevel: 100,
+    }));
+    game.add_component(heroId, 'Health', JSON.stringify({ current: maxHp,   max: maxHp }));
+    game.add_component(heroId, 'Mana',   JSON.stringify({ current: maxMana, max: maxMana }));
+    game.add_component(heroId, 'Stats', JSON.stringify({
+      strength: hero.stats.strength, dexterity: hero.stats.dexterity,
+      intelligence: hero.stats.intelligence, constitution: hero.stats.constitution,
+      wisdom: hero.stats.wisdom,
+    }));
+    game.add_component(heroId, 'Combat', JSON.stringify({
+      damage, defense, attackSpeed, critChance, critMultiplier: 1.5,
+    }));
+    game.add_component(heroId, 'DamageType', JSON.stringify({
+      category: dmgCategory, element: dmgElement,
+    }));
+    game.add_component(heroId, 'Resistance', JSON.stringify(resistances));
+    game.add_component(heroId, 'Target', JSON.stringify({ entity: 0 }));
+    game.add_component(heroId, 'Team',   JSON.stringify({ id: 'player', isPlayer: true }));
+    game.add_component(heroId, 'Skills', JSON.stringify({
+      skill1: skills[0], skill2: skills[1], skill3: skills[2], skill4: skills[3], skillPoints: 0,
+    }));
+    game.add_component(heroId, 'Buffs', JSON.stringify({
+      damageBonus: 0, defenseBonus: 0, hasteBonus: 0.0, shieldAmount: 0, regenAmount: 0,
+    }));
+    game.add_component(heroId, 'SkillCooldown', JSON.stringify({
+      skill1Cooldown: 0.0, skill2Cooldown: 0.0, skill3Cooldown: 0.0, skill4Cooldown: 0.0,
+    }));
+  });
+
+  // Create enemy templates with story exp multiplier
+  for (let ti = 0; ti < ENEMY_TEMPLATES.length; ti++) {
+    const tmpl = ENEMY_TEMPLATES[ti];
+    const enemyCategory: DamageCategory =
+      _pseudoRoll(ti, 0) < env.magicalPct / 100 ? 'magical' : 'physical';
+    const enemyElement = _pickEnemyElement(env, ti);
+    const enemyResist = {
+      physical:  _pseudoRoll(ti, 10) < env.physicalPct  / 100 ? 75 : 0,
+      magical:   _pseudoRoll(ti, 11) < env.magicalPct   / 100 ? 75 : 0,
+      fire:      _pseudoRoll(ti, 12) < env.firePct      / 100 ? 75 : 0,
+      water:     _pseudoRoll(ti, 13) < env.waterPct     / 100 ? 75 : 0,
+      wind:      _pseudoRoll(ti, 14) < env.windPct      / 100 ? 75 : 0,
+      earth:     _pseudoRoll(ti, 15) < env.earthPct     / 100 ? 75 : 0,
+      light:     _pseudoRoll(ti, 16) < env.lightPct     / 100 ? 75 : 0,
+      darkness:  _pseudoRoll(ti, 17) < env.darknessPct  / 100 ? 75 : 0,
+    };
+    const enemyLine = ti % 2 === 0 || tmpl.boss ? 'front' : 'back';
+    const enemyDmg = enemyLine === 'front' ? Math.round(tmpl.dmg * 1.25) : tmpl.dmg;
+    const enemyDef = enemyLine === 'back' ? Math.round(Math.floor(tmpl.tier * 2) * 1.25) : Math.floor(tmpl.tier * 2);
+
+    game.create_entity(tmpl.id);
+    game.add_component(tmpl.id, 'Character', JSON.stringify({
+      name: tmpl.name, class: tmpl.boss ? 'Boss' : 'Monster',
+      level: tmpl.tier, experience: 0, experienceToLevel: 999,
+    }));
+    game.add_component(tmpl.id, 'Health', JSON.stringify({ current: tmpl.hp, max: tmpl.hp }));
+    game.add_component(tmpl.id, 'Mana',   JSON.stringify({ current: 0, max: 0 }));
+    game.add_component(tmpl.id, 'Stats',  JSON.stringify({
+      strength: 8, dexterity: 8, intelligence: 4, constitution: 8, wisdom: 4,
+    }));
+    game.add_component(tmpl.id, 'Combat', JSON.stringify({
+      damage: enemyDmg, defense: enemyDef,
+      attackSpeed: tmpl.spd, critChance: 0.05, critMultiplier: 1.5,
+    }));
+    game.add_component(tmpl.id, 'DamageType', JSON.stringify({
+      category: enemyCategory, element: enemyElement,
+    }));
+    game.add_component(tmpl.id, 'Resistance', JSON.stringify(enemyResist));
+    game.add_component(tmpl.id, 'Target', JSON.stringify({ entity: 0 }));
+    game.add_component(tmpl.id, 'Team',   JSON.stringify({ id: 'enemy', isPlayer: false }));
+    game.add_component(tmpl.id, 'Enemy',  JSON.stringify({
+      tier: tmpl.tier, isBoss: tmpl.boss, expReward: Math.round(tmpl.exp * expMult), wave: tmpl.tier, name: tmpl.name,
+    }));
+    game.add_component(tmpl.id, 'EnemyTemplate', JSON.stringify({ isTemplate: true }));
+    game.add_component(tmpl.id, 'Buffs', JSON.stringify({
+      damageBonus: 0, defenseBonus: 0, hasteBonus: 0.0, shieldAmount: 0, regenAmount: 0,
+    }));
+    if (tmpl.boss) {
+      game.add_component(tmpl.id, 'FinalBoss', JSON.stringify({ isFinalBoss: true }));
+    }
+  }
+
+  // Game state entity — use fewer encounters per checkpoint for story mode
+  game.create_entity(99);
+  game.add_component(99, 'GameState', JSON.stringify({
+    currentWave: 1, enemiesDefeated: 0, playerDeaths: 0,
+    bossDefeated: false, gameOver: false, victory: false,
+    retargetingActive: false, currentTier: 1, waveInTier: 1, bossSpawned: false,
+    encounterCount: 0, enemiesAlive: 0, nextBossThreshold: 0,
+  }));
+  game.add_component(99, 'SpawnConfig', JSON.stringify({
+    bossEveryKills: cfg.bossEveryKills,
+    tierProgressionKills: cfg.tierProgressionKills,
+    maxTier: 6, wavesPerTier: 3,
+    healthScaleRate: cfg.healthScaleRate,
+    damageScaleRate: cfg.damageScaleRate,
+    initialEnemyCount: cfg.initialEnemyCount,
+  }));
+  // Story mode checkpoints: target ~30 snapshots from ~60-120 encounters
+  game.add_component(99, 'ProgressTracker', JSON.stringify({
+    checkpointInterval: STORY_CHECKPOINT_KILLS,
+    checkpointsReached: 0,
+    totalCheckpoints: STORY_TOTAL_DAYS,
+  }));
+
+  // Run stats
+  game.create_entity(98);
+  game.add_component(98, 'RunStats', JSON.stringify({
+    simulationTime: 0.0, retreatCount: 0, retreatPenalty: 0.0,
+    deathPenalty: 0.0, totalTime: 0.0, canFlee: true, lastFleeTime: -999.0,
+  }));
+
+  // Flee config
+  game.create_entity(97);
+  game.add_component(97, 'FleeConfig', JSON.stringify({
+    retreatTimePenalty: cfg.retreatTimePenalty,
+    deathTimePenaltyMultiplier: cfg.deathTimePenaltyMultiplier,
+    fleeCooldown: cfg.fleeCooldown,
+  }));
+
+  // Score + ScoringRules
+  game.create_entity(96);
+  game.add_component(96, 'ScoringRules', JSON.stringify({
+    pointsPerKill: cfg.pointsPerKill,
+    pointsPerWave: cfg.pointsPerWave,
+    pointsPerBoss: cfg.pointsPerBoss,
+    pointsLostPerDeath: cfg.pointsLostPerDeath,
+    pointsLostPerRetreat: cfg.pointsLostPerRetreat,
+    pointsLostPerPenaltySecond: cfg.pointsLostPerPenaltySecond,
+    timeBonusPoints: cfg.timeBonusPoints,
+    timeBonusInterval: cfg.timeBonusInterval,
+  }));
+  game.add_component(96, 'Score', JSON.stringify({
+    total: 0, killScore: 0, waveScore: 0, bossScore: 0, speedBonus: 0,
+    deathPenaltyTotal: 0, retreatPenaltyTotal: 0, timePenaltyTotal: 0,
+    bossesDefeated: 0, wavesCompleted: 0,
+  }));
+
+  // Environment config
+  game.create_entity(95);
+  game.add_component(95, 'EnvironmentConfig', JSON.stringify(env));
+
+  // Run the simulation (same engine as fight mode)
+  game.schedule_event('GameStart', 0.0);
+
+  const snapshots: GameSnapshot[] = [];
+  let prevCheckpoints = 0;
+  const MAX_STEPS = 2_000_000;
+  let totalSteps = 0;
+
+  while (game.has_events() && totalSteps < MAX_STEPS) {
+    const batch = Math.min(500, MAX_STEPS - totalSteps);
+    game.run_steps(batch);
+    totalSteps += batch;
+
+    const tracker = JSON.parse(game.get_component(99, 'ProgressTracker')) as {
+      checkpointsReached: number;
+      totalCheckpoints: number;
+    };
+    if (tracker.checkpointsReached > prevCheckpoints) {
+      for (let i = prevCheckpoints; i < tracker.checkpointsReached; i++) {
+        snapshots.push(_captureSnapshot(game, snapshots.length + 1, selectedHeroes));
+      }
+      prevCheckpoints = tracker.checkpointsReached;
+    }
+
+    const gs = JSON.parse(game.get_component(99, 'GameState')) as {
+      gameOver: boolean; victory: boolean;
+    };
+    if (gs.gameOver) break;
+  }
+
+  // Final snapshot
+  snapshots.push(_captureSnapshot(game, snapshots.length + 1, selectedHeroes));
+
+  // Compute story KPIs from final game state
+  const finalGs = JSON.parse(game.get_component(99, 'GameState')) as Record<string, unknown>;
+  const finalScore = JSON.parse(game.get_component(96, 'Score')) as Record<string, unknown>;
+  const totalEncounters = (finalGs['enemiesDefeated'] as number) ?? 0;
+
+  // Generate deterministic story KPIs based on seed and game outcome
+  const seedNum = seed ? Number(seed & 0xFFFFFFFFn) : 0;
+  const totalLocations = 12 + (seedNum % 7); // 12-18
+  const locationsVisited = Math.min(totalLocations, Math.max(3, Math.floor(totalEncounters / 8) + 3));
+  const townsRested = Math.max(1, Math.floor(locationsVisited * 0.35));
+  const ambushesSurvived = Math.max(0, Math.floor(totalEncounters / 20));
+  const finalDestinationReached = (finalGs['victory'] as boolean) ?? false;
+  const explorationBonus = locationsVisited * 50 +
+    (locationsVisited / totalLocations >= 0.8 ? 200 : 0) +
+    townsRested * 25 +
+    ambushesSurvived * 100 +
+    (finalDestinationReached ? 500 : 0);
+
+  // Pad to exactly 30 snapshots (one per day) if we have fewer
+  while (snapshots.length < STORY_TOTAL_DAYS) {
+    const last = snapshots[snapshots.length - 1];
+    snapshots.push({ ...last, step: snapshots.length + 1 });
+  }
+
+  // Apply story bonuses to the final score
+  const lastSnapshot = snapshots[snapshots.length - 1];
+  lastSnapshot.score += explorationBonus;
+
+  const storyKpis: StoryKpis = {
+    currentDay: STORY_TOTAL_DAYS,
+    locationsVisited,
+    totalLocations,
+    townsRested,
+    ambushesSurvived,
+    finalDestinationReached,
+    explorationBonus,
+  };
+
+  return { snapshots, storyKpis };
 }

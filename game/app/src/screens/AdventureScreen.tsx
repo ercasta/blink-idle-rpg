@@ -13,7 +13,7 @@
 
 import { useState, useMemo, useEffect, useRef } from 'react';
 import QRCode from 'qrcode';
-import type { AdventureDefinition, GameMode, HeroClass, CustomModeSettings, EnvironmentSettings } from '../types';
+import type { AdventureDefinition, GameMode, HeroClass, CustomModeSettings, EnvironmentSettings, RunType } from '../types';
 import { DEFAULT_CUSTOM_SETTINGS, DEFAULT_ENVIRONMENT_SETTINGS } from '../types';
 import { generateAdventureDescription, encodeAdventureToParams, decodeAdventureFromParams } from '../data/adventureDescription';
 import { generateRandomAdventure, randomAdventureName } from '../data/adventures';
@@ -50,6 +50,7 @@ interface AdventureDraft {
   requiredHeroCount: number;
   allowedClasses: HeroClass[];
   environmentSettings: EnvironmentSettings;
+  runType: RunType;
 }
 
 function draftToDefinition(draft: AdventureDraft): AdventureDefinition {
@@ -61,6 +62,7 @@ function draftToDefinition(draft: AdventureDraft): AdventureDefinition {
     requiredHeroCount: draft.requiredHeroCount,
     allowedClasses: draft.allowedClasses,
     environmentSettings: draft.environmentSettings,
+    runType: draft.runType,
     description: generateAdventureDescription({
       name: draft.name,
       mode: draft.mode,
@@ -68,6 +70,7 @@ function draftToDefinition(draft: AdventureDraft): AdventureDefinition {
       requiredHeroCount: draft.requiredHeroCount,
       allowedClasses: draft.allowedClasses,
       environmentSettings: draft.environmentSettings,
+      runType: draft.runType,
     }),
   };
 }
@@ -81,6 +84,7 @@ function adventureToDraft(adv: AdventureDefinition): AdventureDraft {
     requiredHeroCount: adv.requiredHeroCount,
     allowedClasses: adv.allowedClasses,
     environmentSettings: adv.environmentSettings ?? { ...DEFAULT_ENVIRONMENT_SETTINGS },
+    runType: adv.runType ?? 'fight',
   };
 }
 
@@ -92,6 +96,7 @@ function defaultDraft(): AdventureDraft {
     requiredHeroCount: 4,
     allowedClasses: [...ALL_CLASSES],
     environmentSettings: { ...DEFAULT_ENVIRONMENT_SETTINGS },
+    runType: 'fight',
   };
 }
 
@@ -617,6 +622,33 @@ export function AdventureScreen({
             />
           </div>
 
+          {/* Run Type Toggle */}
+          <div className="bg-stone-800 border border-stone-700 rounded-xl p-4">
+            <label className="block text-xs text-stone-400 mb-2">Run Type</label>
+            <div className="grid grid-cols-2 gap-2">
+              {(['fight', 'story'] as RunType[]).map(rt => (
+                <button
+                  key={rt}
+                  onClick={() => setDraft(prev => ({ ...prev, runType: rt }))}
+                  className={`py-2 rounded-lg text-xs font-semibold transition-colors border ${
+                    draft.runType === rt
+                      ? rt === 'fight'
+                        ? 'bg-red-800 text-red-200 border-transparent'
+                        : 'bg-blue-800 text-blue-200 border-transparent'
+                      : 'bg-stone-700 border-stone-600 text-stone-300 hover:border-stone-400'
+                  }`}
+                >
+                  {rt === 'fight' ? '⚔️ Fight Mode' : '📖 Story Mode'}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-stone-500 mt-2">
+              {draft.runType === 'story'
+                ? 'A 30-day journey through a procedural map. Heroes vote on destinations and encounter enemies along the way.'
+                : 'Classic mode — 3000 encounters of escalating combat. Race for the highest score.'}
+            </p>
+          </div>
+
           {/* Difficulty / Mode */}
           <div className="bg-stone-800 border border-stone-700 rounded-xl p-4">
             <label className="block text-xs text-stone-400 mb-2">Difficulty</label>
@@ -822,9 +854,16 @@ export function AdventureScreen({
             >
               <div className="flex items-start justify-between gap-2 mb-1">
                 <span className="font-bold text-base leading-tight">{adv.name}</span>
-                <span className={`shrink-0 text-xs px-2 py-0.5 rounded-full font-semibold ${MODE_BADGE[adv.mode] ?? ''}`}>
-                  {MODE_LABEL[adv.mode]}
-                </span>
+                <div className="flex gap-1.5 shrink-0">
+                  {(adv.runType ?? 'fight') === 'story' && (
+                    <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-blue-800 text-blue-200">
+                      📖 Story
+                    </span>
+                  )}
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${MODE_BADGE[adv.mode] ?? ''}`}>
+                    {MODE_LABEL[adv.mode]}
+                  </span>
+                </div>
               </div>
               <div className="flex flex-wrap items-center gap-3 mb-2 text-xs text-stone-400">
                 <span className="inline-flex items-center gap-1"><HeroesIcon size={13}/> {adv.requiredHeroCount} {adv.requiredHeroCount === 1 ? 'hero' : 'heroes'}</span>
