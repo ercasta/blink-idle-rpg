@@ -894,6 +894,8 @@ export const QUEST_OBJECTIVE_BONUS = 300;
 export const QUEST_ALL_NORMAL_BONUS = 200;
 /** Points per quest item collected. */
 export const QUEST_ITEM_BONUS = 25;
+/** Bonus points per day remaining when objective is completed ahead of schedule. */
+export const QUEST_EARLY_COMPLETION_POINTS_PER_DAY = 50;
 
 // ── Quest simulation (deterministic from seed + game data) ──────────────────
 
@@ -916,6 +918,8 @@ export interface QuestSimResult {
   bailoutCount: number;
   sideEventsCompleted: number;
   objectiveCompleted: boolean;
+  /** Day (1-based) on which the objective was completed, if applicable. */
+  objectiveCompletionDay?: number;
 }
 
 /**
@@ -1022,9 +1026,21 @@ export function simulateQuestProgress(
 
   // Check objective completion
   const allMilestonesComplete = quest.milestones.every(m => m.isCompleted);
+  let objectiveCompletionDay: number | undefined;
   if (allMilestonesComplete) {
     quest.isComplete = true;
     totalQuestScore += QUEST_OBJECTIVE_BONUS;
+
+    // Determine the day the objective was completed (day after last milestone's key event)
+    const lastMilestone = quest.milestones[quest.milestones.length - 1];
+    if (lastMilestone) {
+      const lastKeyCompletionDay = lastMilestone.completedViaBailout
+        ? lastMilestone.activationDay + lastMilestone.bailoutDay
+        : lastMilestone.events
+            .filter(e => e.isKeyEvent)
+            .reduce((max, e) => Math.max(max, e.completedDay), lastMilestone.activationDay + 1);
+      objectiveCompletionDay = Math.min(lastKeyCompletionDay + 1, STORY_TOTAL_DAYS);
+    }
 
     // Bonus for no bail-outs
     if (bailoutCount === 0) {
@@ -1043,6 +1059,7 @@ export function simulateQuestProgress(
     bailoutCount,
     sideEventsCompleted,
     objectiveCompleted: quest.isComplete,
+    objectiveCompletionDay,
   };
 }
 
@@ -1062,13 +1079,18 @@ import type { NarrativeEntry, NarrativeLevel } from '../types';
  * Generate quest-related narrative entries to weave into the story log.
  * These entries are interleaved with the base story narrative based on
  * the quest simulation results.
+ *
+ * @param maxDay - Only emit entries up to and including this day (defaults to
+ *   STORY_TOTAL_DAYS). Used when the run ends early due to objective completion.
  */
-export function generateQuestNarrative(questResult: QuestSimResult): NarrativeEntry[] {
+export function generateQuestNarrative(questResult: QuestSimResult, maxDay: number = STORY_TOTAL_DAYS): NarrativeEntry[] {
   const entries: NarrativeEntry[] = [];
   const quest = questResult.quest;
 
   function emit(day: number, hour: number, level: NarrativeLevel, text: string) {
-    entries.push({ day, hour, level, text });
+    if (day <= maxDay) {
+      entries.push({ day, hour, level, text });
+    }
   }
 
   // Objective introduction (day 1)
@@ -1125,14 +1147,25 @@ export function generateQuestNarrative(questResult: QuestSimResult): NarrativeEn
     const completionDay = lastMilestone
       ? (lastMilestone.completedViaBailout
           ? lastMilestone.activationDay + lastMilestone.bailoutDay
-          : Math.max(...lastMilestone.events.filter(e => e.isKeyEvent).map(e => e.completedDay), lastMilestone.activationDay + 1))
+          : lastMilestone.events
+              .filter(e => e.isKeyEvent)
+              .reduce((max, e) => Math.max(max, e.completedDay), lastMilestone.activationDay + 1))
       : 30;
 
-    emit(Math.min(completionDay + 1, 30), 0, 1,
+    const objectiveDay = Math.min(completionDay + 1, 30);
+    emit(objectiveDay, 0, 1,
       `🎉 Objective Complete: ${quest.objectiveTitle}! (+${QUEST_OBJECTIVE_BONUS} points)`);
     if (questResult.bailoutCount === 0) {
-      emit(Math.min(completionDay + 1, 30), 0, 2,
+      emit(objectiveDay, 0, 2,
         `🌟 All milestones completed without bail-outs! (+${QUEST_ALL_NORMAL_BONUS} bonus points)`);
+    }
+
+    // Early completion bonus if objective finished before the final day
+    if (questResult.objectiveCompletionDay !== undefined && questResult.objectiveCompletionDay < STORY_TOTAL_DAYS) {
+      const daysRemaining = STORY_TOTAL_DAYS - questResult.objectiveCompletionDay;
+      const earlyBonus = daysRemaining * QUEST_EARLY_COMPLETION_POINTS_PER_DAY;
+      emit(objectiveDay, 1, 1,
+        `⚡ Mission accomplished ${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} ahead of schedule! (+${earlyBonus} early completion bonus)`);
     }
   }
 

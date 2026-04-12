@@ -12,7 +12,7 @@
 import type { GameSnapshot, HeroDefinition, GameMode, HeroPath, CustomModeSettings, EnvironmentSettings, DamageCategory, Element, RunType, StoryKpis, NarrativeEntry, NarrativeLevel } from '../types';
 import { DEFAULT_ENVIRONMENT_SETTINGS } from '../types';
 import { simulateHeroPath, getSkillName, deriveDamageCategory, deriveDamageElement, deriveResistances, computeLinePreferenceScore } from '../data/traits';
-import { computeAdventureSeed, simulateQuestProgress, generateQuestNarrative } from '../data/adventureQuest';
+import { computeAdventureSeed, simulateQuestProgress, generateQuestNarrative, QUEST_EARLY_COMPLETION_POINTS_PER_DAY } from '../data/adventureQuest';
 import type { AdventureDefinition } from '../types';
 
 // ── Hero stats per class ────────────────────────────────────────────────────
@@ -944,6 +944,8 @@ function _runStoryMode(
   // Compute story KPIs from final game state
   const finalGs = JSON.parse(game.get_component(99, 'GameState')) as Record<string, unknown>;
   const totalEncounters = (finalGs['enemiesDefeated'] as number) ?? 0;
+  const gameOver = (finalGs['gameOver'] as boolean) ?? false;
+  const victoryFromEngine = (finalGs['victory'] as boolean) ?? false;
 
   // Generate deterministic story KPIs based on seed and game outcome
   const seedNum = seed ? Number(seed & 0xFFFFFFFFn) : 0;
@@ -952,7 +954,35 @@ function _runStoryMode(
     Math.max(STORY_MIN_VISITED, Math.floor(totalEncounters / STORY_ENCOUNTERS_PER_LOCATION) + STORY_MIN_VISITED));
   const townsRested = Math.max(1, Math.floor(locationsVisited * STORY_TOWN_REST_RATIO));
   const ambushesSurvived = Math.max(0, Math.floor(totalEncounters / STORY_ENCOUNTERS_PER_AMBUSH));
-  const finalDestinationReached = (finalGs['victory'] as boolean) ?? false;
+
+  // ── Adventure quest integration ───────────────────────────────────────
+  // Compute quest result before finalising finalDestinationReached so that
+  // quest completion can contribute to that flag.
+  let questScore = 0;
+  let questObjectiveCompleted = false;
+  let objectiveCompletionDay = STORY_TOTAL_DAYS;
+  // Defer narrative generation until completionDay is known (see below).
+  let pendingQuestResult: ReturnType<typeof simulateQuestProgress> | null = null;
+
+  if (adventure) {
+    const adventureSeed = computeAdventureSeed(adventure);
+    pendingQuestResult = simulateQuestProgress(
+      adventureSeed, totalEncounters, locationsVisited,
+    );
+    questScore = pendingQuestResult.totalQuestScore;
+    questObjectiveCompleted = pendingQuestResult.objectiveCompleted;
+    if (pendingQuestResult.objectiveCompletionDay !== undefined) {
+      objectiveCompletionDay = pendingQuestResult.objectiveCompletionDay;
+    }
+  }
+
+  // "Final destination reached": quest objective completed, engine victory,
+  // OR party survived the full run having explored enough of the map.
+  const finalDestinationReached =
+    questObjectiveCompleted ||
+    victoryFromEngine ||
+    (!gameOver && locationsVisited / totalLocations >= STORY_EXPLORATION_THRESHOLD);
+
   const explorationBonus =
     locationsVisited * STORY_POINTS_PER_LOCATION +
     (locationsVisited / totalLocations >= STORY_EXPLORATION_THRESHOLD ? STORY_EXPLORATION_COMPLETION_BONUS : 0) +
@@ -960,47 +990,51 @@ function _runStoryMode(
     ambushesSurvived * STORY_POINTS_PER_AMBUSH +
     (finalDestinationReached ? STORY_FINAL_DESTINATION_BONUS : 0);
 
-  // Pad to exactly 30 snapshots (one per day) if we have fewer
-  while (snapshots.length < STORY_TOTAL_DAYS) {
+  // ── Early completion ──────────────────────────────────────────────────
+  // If the quest objective was completed before day 30, truncate the run to
+  // the completion day and award a proportional time bonus.
+  let completionDay = STORY_TOTAL_DAYS;
+  let earlyCompletionBonus = 0;
+
+  if (questObjectiveCompleted && objectiveCompletionDay < STORY_TOTAL_DAYS) {
+    completionDay = objectiveCompletionDay;
+    const daysRemaining = STORY_TOTAL_DAYS - completionDay;
+    earlyCompletionBonus = daysRemaining * QUEST_EARLY_COMPLETION_POINTS_PER_DAY;
+  }
+
+  // Now that completionDay is known, generate quest narrative capped to that day.
+  const questNarrative: NarrativeEntry[] = pendingQuestResult
+    ? generateQuestNarrative(pendingQuestResult, completionDay)
+    : [];
+
+  // Pad to exactly completionDay snapshots (one per day) if we have fewer
+  while (snapshots.length < completionDay) {
     const last = snapshots[snapshots.length - 1];
     snapshots.push({ ...last, step: snapshots.length + 1 });
   }
+  // Truncate any excess snapshots beyond the completion day
+  snapshots.splice(completionDay);
 
-  // Apply story bonuses to the final score
+  // Apply all bonuses to the final score
   const lastSnapshot = snapshots[snapshots.length - 1];
-  lastSnapshot.score += explorationBonus;
-
-  // ── Adventure quest integration ───────────────────────────────────────
-  // If we have an adventure definition (story mode), generate and simulate
-  // the quest, then weave quest narrative into the story log and add quest
-  // score bonuses.
-  let questScore = 0;
-  let questNarrative: NarrativeEntry[] = [];
-  if (adventure) {
-    const adventureSeed = computeAdventureSeed(adventure);
-    const questResult = simulateQuestProgress(
-      adventureSeed, totalEncounters, locationsVisited,
-    );
-    questScore = questResult.totalQuestScore;
-    lastSnapshot.score += questScore;
-    questNarrative = generateQuestNarrative(questResult);
-  }
+  lastSnapshot.score += explorationBonus + questScore + earlyCompletionBonus;
 
   const storyKpis: StoryKpis = {
-    currentDay: STORY_TOTAL_DAYS,
+    currentDay: completionDay,
     locationsVisited,
     totalLocations,
     townsRested,
     ambushesSurvived,
     finalDestinationReached,
     explorationBonus: explorationBonus + questScore,
+    ...(earlyCompletionBonus > 0 ? { earlyCompletionBonus } : {}),
   };
 
   // Generate narrative log — deterministic from seed + heroes + game outcome
   const baseNarrativeLog = _generateNarrativeLog(
     selectedHeroes, seedNum, totalEncounters,
     locationsVisited, totalLocations, townsRested, ambushesSurvived,
-    finalDestinationReached, env,
+    finalDestinationReached, env, completionDay,
   );
 
   // Merge quest narrative entries into the base log, sorted by day/hour
@@ -1101,6 +1135,7 @@ function _generateNarrativeLog(
   ambushesSurvived: number,
   finalDestinationReached: boolean,
   env: EnvironmentSettings,
+  completionDay: number = STORY_TOTAL_DAYS,
 ): NarrativeEntry[] {
   const log: NarrativeEntry[] = [];
   const heroNames = heroes.map(h => h.name);
@@ -1124,7 +1159,7 @@ function _generateNarrativeLog(
   let ambushesLeft = ambushesSurvived;
   let currentLocationIdx = 0;
 
-  for (let day = 1; day <= STORY_TOTAL_DAYS; day++) {
+  for (let day = 1; day <= completionDay; day++) {
     const dayHash = _narrativeHash(seedNum, day, 0);
     const terrain = TERRAIN_TYPES[dayHash % TERRAIN_TYPES.length];
     const terrainDesc = TERRAIN_DESC[terrain];
@@ -1264,7 +1299,7 @@ function _generateNarrativeLog(
       }
     } else {
       // Rest day or final day
-      if (day === STORY_TOTAL_DAYS) {
+      if (day === completionDay) {
         emit(day, 0, 2, `The final day of the journey.`);
       } else {
         emit(day, 0, 2, `The party rests and recuperates.`);
@@ -1277,13 +1312,19 @@ function _generateNarrativeLog(
   }
 
   // ── Journey end ───────────────────────────────────────────────────────
-  if (finalDestinationReached) {
-    emit(STORY_TOTAL_DAYS, 11, 1, `The party reaches ${finalLocation}! The journey ends in triumph.`);
-    emit(STORY_TOTAL_DAYS, 11, 2, `After 30 days of travel, the heroes stand victorious at ${finalLocation}.`);
-    emit(STORY_TOTAL_DAYS, 11, 3, `${heroNames.join(', ')} raise their weapons in celebration. ${locationsVisited} locations explored, ${totalEncounters} enemies defeated.`);
+  const isEarlyCompletion = completionDay < STORY_TOTAL_DAYS;
+  if (finalDestinationReached && isEarlyCompletion) {
+    const daysRemaining = STORY_TOTAL_DAYS - completionDay;
+    emit(completionDay, 11, 1, `🏆 Mission complete! The party has achieved their goal with ${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} to spare!`);
+    emit(completionDay, 11, 2, `${heroNames.join(', ')} have accomplished the mission ahead of schedule.`);
+    emit(completionDay, 11, 3, `${locationsVisited} locations explored, ${totalEncounters} enemies defeated. An exceptional performance.`);
+  } else if (finalDestinationReached) {
+    emit(completionDay, 11, 1, `The party reaches ${finalLocation}! The journey ends in triumph.`);
+    emit(completionDay, 11, 2, `After ${completionDay} day${completionDay !== 1 ? 's' : ''} of travel, the heroes stand victorious at ${finalLocation}.`);
+    emit(completionDay, 11, 3, `${heroNames.join(', ')} raise their weapons in celebration. ${locationsVisited} locations explored, ${totalEncounters} enemies defeated.`);
   } else {
-    emit(STORY_TOTAL_DAYS, 11, 1, `The journey ends. The party did not reach ${finalLocation}.`);
-    emit(STORY_TOTAL_DAYS, 11, 2, `After 30 days, the heroes' strength was not enough to complete the journey.`);
+    emit(completionDay, 11, 1, `The journey ends. The party did not reach ${finalLocation}.`);
+    emit(completionDay, 11, 2, `After ${completionDay} day${completionDay !== 1 ? 's' : ''}, the heroes' strength was not enough to complete the journey.`);
   }
 
   return log;

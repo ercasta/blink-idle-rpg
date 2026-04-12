@@ -120,6 +120,9 @@ export function ResultsScreen({ result, prevResult, leaderboardPosition, isNewBe
           <Row label="Ambushes Survived" value={result.storyKpis.ambushesSurvived} />
           <Row label="Final Destination" value={result.storyKpis.finalDestinationReached ? '✓ Reached' : '✗ Not reached'} />
           <Row label="Exploration Bonus" value={`+${result.storyKpis.explorationBonus.toLocaleString()} pts`} />
+          {result.storyKpis.earlyCompletionBonus != null && result.storyKpis.earlyCompletionBonus > 0 && (
+            <Row label="⚡ Early Completion" value={`+${result.storyKpis.earlyCompletionBonus.toLocaleString()} pts`} />
+          )}
         </div>
       )}
 
