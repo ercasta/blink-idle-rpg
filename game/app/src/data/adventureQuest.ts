@@ -11,6 +11,8 @@
 
 import type { AdventureDefinition, HeroDefinition, HeroTraits } from '../types';
 import { DEFAULT_ENVIRONMENT_SETTINGS } from '../types';
+import { WORLD_NPCS, selectWorldMap } from './worldData';
+import type { WorldNpc } from './worldData';
 
 // ── Deterministic PRNG (splitmix32) ─────────────────────────────────────────
 
@@ -505,7 +507,7 @@ const EVENT_TEMPLATES: readonly EventTemplate[] = [
   },
 ];
 
-// ── NPC pool ────────────────────────────────────────────────────────────────
+// ── NPC pool (derived from World NPCs) ──────────────────────────────────────
 
 interface NpcEntry {
   name: string;
@@ -514,28 +516,13 @@ interface NpcEntry {
   greeting: string;
 }
 
-const NPC_POOL: readonly NpcEntry[] = [
-  { name: 'Eldara', role: 'sage', personality: 'mysterious', greeting: 'I have been expecting you, travellers.' },
-  { name: 'Brother Marek', role: 'healer', personality: 'kind', greeting: 'Welcome, friends. How can I ease your burden?' },
-  { name: 'Captain Voss', role: 'guard captain', personality: 'gruff', greeting: 'State your business. Quickly.' },
-  { name: 'Lira Swiftfoot', role: 'scout', personality: 'anxious', greeting: 'You should not be here. It\'s not safe.' },
-  { name: 'Theron the Grey', role: 'scholar', personality: 'stoic', greeting: 'Knowledge is both weapon and shield.' },
-  { name: 'Mira Coalhand', role: 'blacksmith', personality: 'gruff', greeting: 'Need something fixed? Or broken?' },
-  { name: 'Senna Brightleaf', role: 'herbalist', personality: 'kind', greeting: 'Nature provides all the remedies one needs.' },
-  { name: 'Darvok Ironjaw', role: 'mercenary', personality: 'stoic', greeting: 'Gold talks. Everything else walks.' },
-  { name: 'Pip Thistlewick', role: 'innkeeper', personality: 'kind', greeting: 'Come in, come in! Warm ale and a warm fire await!' },
-  { name: 'Zara Nightwhisper', role: 'spy', personality: 'mysterious', greeting: 'I know why you\'re here. The question is — do you?' },
-  { name: 'Father Aldric', role: 'priest', personality: 'kind', greeting: 'The light watches over all who seek it.' },
-  { name: 'Kessa Dunewood', role: 'ranger', personality: 'stoic', greeting: 'The wilds speak to those who listen.' },
-  { name: 'Grint Ashborn', role: 'miner', personality: 'gruff', greeting: 'Down in the deep, we learn what\'s real.' },
-  { name: 'Lyssa Moonveil', role: 'enchantress', personality: 'mysterious', greeting: 'The veil between worlds is thin tonight.' },
-  { name: 'Rowan Flint', role: 'caravan master', personality: 'anxious', greeting: 'You\'ve come to help? Please say you have.' },
-  { name: 'Dagna Stonehelm', role: 'weaponsmith', personality: 'gruff', greeting: 'If you\'re buying, make it quick.' },
-  { name: 'Fenwick Holloway', role: 'diplomat', personality: 'kind', greeting: 'Let us speak calmly and find common ground.' },
-  { name: 'Shara Embervine', role: 'alchemist', personality: 'mysterious', greeting: 'Every potion tells a story. What\'s yours?' },
-  { name: 'Old Tormund', role: 'fisherman', personality: 'stoic', greeting: 'The river takes and gives in equal measure.' },
-  { name: 'Ylva Icemere', role: 'huntress', personality: 'gruff', greeting: 'Track, kill, survive. Simple.' },
-];
+/** Convert world NPCs to quest NPC entries. */
+const NPC_POOL: readonly NpcEntry[] = WORLD_NPCS.map((npc: WorldNpc) => ({
+  name: npc.name,
+  role: npc.role.replace(/_/g, ' '),
+  personality: npc.personality,
+  greeting: npc.greeting,
+}));
 
 // ── Villain pool ────────────────────────────────────────────────────────────
 
@@ -583,13 +570,7 @@ const ITEM_POOL: readonly ItemEntry[] = [
   { name: 'Hearthstone Shard', origin: 'A fragment of the world\'s first hearth' },
 ];
 
-// ── Location / creature / misc pools ────────────────────────────────────────
-
-const LOCATION_FLAVOUR_POOL = [
-  'the Sunken Crypt', 'Ashveil Tower', 'the Shattered Hall', 'Blackmoss Cavern',
-  'the Hollow Spire', 'Greywater Depths', 'the Ruined Chapel', 'Thornkeep Ruins',
-  'the Echoing Mines', 'Silverwind Shrine', 'the Charred Pit', 'Moonfall Cloister',
-];
+// ── Location / creature / misc pools (derived from World data) ──────────────
 
 const CREATURE_POOL = [
   'Razorback Wyvern', 'Shadowstalker', 'Iron Golem', 'Venomfang Spider',
@@ -635,11 +616,6 @@ const INSCRIPTION_POOL = [
 const CARGO_POOL = [
   'medical supplies', 'weapons and armour', 'sacred relics',
   'rare herbs', 'gold and silver', 'ancient texts',
-];
-
-const DESTINATION_POOL = [
-  'Silverhold', 'the Northern Refuge', 'Port Ashwind', 'the Mountain Keep',
-  'Dawnspire Citadel', 'the Free City', 'the Eastern Frontier', 'Haven\'s Edge',
 ];
 
 // ── Hero encounter templates ────────────────────────────────────────────────
@@ -1586,17 +1562,29 @@ export function generateAdventureQuest(
   // 5. Collect required slots and draw values
   const bindings: Record<string, string> = {};
 
-  // Draw NPC
-  const npc = NPC_POOL[rng.next() % NPC_POOL.length];
+  // NPC role exclusivity tracking (per world-design.md)
+  const usedNpcNames = new Set<string>();
+
+  // Draw NPC (with exclusivity — skip already-used NPCs)
+  const npcIdx = rng.next() % NPC_POOL.length;
+  const npc = NPC_POOL[npcIdx];
+  usedNpcNames.add(npc.name);
   bindings['npc_name'] = npc.name;
   bindings['npc_role'] = npc.role;
   bindings['npc_personality'] = npc.personality;
 
-  // Draw a second NPC for quest_giver
-  const npc2 = NPC_POOL[rng.next() % NPC_POOL.length];
+  // Draw a second NPC for quest_giver (ensure different from first NPC)
+  let npc2Idx = rng.next() % NPC_POOL.length;
+  let npc2 = NPC_POOL[npc2Idx];
+  // Try to avoid reusing the same NPC
+  for (let attempt = 0; attempt < 5 && usedNpcNames.has(npc2.name); attempt++) {
+    npc2Idx = rng.next() % NPC_POOL.length;
+    npc2 = NPC_POOL[npc2Idx];
+  }
+  usedNpcNames.add(npc2.name);
   bindings['quest_giver'] = npc2.name;
 
-  // Draw villain
+  // Draw villain (from VILLAIN_POOL — separate namespace, no exclusivity conflict)
   const villain = VILLAIN_POOL[rng.next() % VILLAIN_POOL.length];
   bindings['villain_name'] = villain.name;
   bindings['villain_title'] = villain.title;
@@ -1608,10 +1596,13 @@ export function generateAdventureQuest(
   bindings['item_name'] = item.name;
   bindings['item_origin'] = item.origin;
 
-  // Draw location flavour
-  bindings['dungeon_name'] = rng.pick(LOCATION_FLAVOUR_POOL);
-  bindings['ruin_name'] = rng.pick(LOCATION_FLAVOUR_POOL);
-  bindings['location_name'] = rng.pick(LOCATION_FLAVOUR_POOL);
+  // Draw location flavour — use world location names
+  // Select a submap for this seed to assign locations to quest slots
+  const worldMap = selectWorldMap(seed, 12);
+  const mapLocationNames = worldMap.locations.map(l => l.name);
+  bindings['dungeon_name'] = rng.pick(mapLocationNames);
+  bindings['ruin_name'] = rng.pick(mapLocationNames);
+  bindings['location_name'] = rng.pick(mapLocationNames);
 
   // Draw creature
   bindings['creature_name'] = rng.pick(CREATURE_POOL);
@@ -1619,22 +1610,29 @@ export function generateAdventureQuest(
   // Draw enemy type
   bindings['enemy_name'] = rng.pick(ENEMY_NAME_POOL);
 
-  // Draw rival (reuse NPC pool)
-  const rival = NPC_POOL[rng.next() % NPC_POOL.length];
+  // Draw rival (reuse NPC pool, with exclusivity)
+  let rivalIdx = rng.next() % NPC_POOL.length;
+  let rival = NPC_POOL[rivalIdx];
+  // Try to avoid reusing NPCs already assigned to quest roles
+  for (let attempt = 0; attempt < 5 && usedNpcNames.has(rival.name); attempt++) {
+    rivalIdx = rng.next() % NPC_POOL.length;
+    rival = NPC_POOL[rivalIdx];
+  }
+  usedNpcNames.add(rival.name);
   bindings['rival_name'] = rival.name;
 
-  // Draw miscellaneous slots
+  // Draw miscellaneous slots — use world location names for location-based slots
   bindings['curse_name'] = rng.pick(CURSE_POOL);
-  bindings['cursed_location'] = rng.pick(LOCATION_FLAVOUR_POOL);
+  bindings['cursed_location'] = rng.pick(mapLocationNames);
   bindings['portal_name'] = rng.pick(PORTAL_POOL);
-  bindings['portal_location'] = rng.pick(LOCATION_FLAVOUR_POOL);
+  bindings['portal_location'] = rng.pick(mapLocationNames);
   bindings['seal_item'] = rng.pick(ITEM_POOL).name;
   bindings['riddle_name'] = rng.pick(RIDDLE_POOL);
   bindings['threat_name'] = rng.pick(THREAT_POOL);
   bindings['info_name'] = rng.pick(INFO_POOL);
   bindings['inscription_name'] = rng.pick(INSCRIPTION_POOL);
   bindings['cargo_desc'] = rng.pick(CARGO_POOL);
-  bindings['destination_name'] = rng.pick(DESTINATION_POOL);
+  bindings['destination_name'] = rng.pick(mapLocationNames);
 
   // 6. Resolve all template text
   const resolvedObjectiveTitle = resolveSlots(rng.pickVariant(objective.title), bindings);
