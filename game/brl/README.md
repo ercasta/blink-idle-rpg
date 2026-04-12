@@ -21,6 +21,8 @@ Blink Rule Language (BRL) source files for the game.  BRL is used for both
 | `story-adventure-templates.brl` | Objective, milestone, and event template entities — *planned* |
 | `story-adventure-pools.brl` | NPC, villain, item, location, and creature pool entities — *planned* |
 | `story-adventure-rules.brl` | Custom event rules (duel, search, etc.) — *planned* |
+| `story-world.brl` | World system components (`WorldLocation`, `WorldPath`, `WorldNpc`, `HeroArrivalComment`, `LocationBuff`, `BlockingEncounter`, `NpcRoleAssignment`) — see [world-design.md](../../doc/game-design/world-design.md) |
+| `story-world-data.brl` | World entity data: 15 named locations, 25 paths, 20 NPCs, 40 hero arrival comments, 6 blocking encounters |
 | `adventure-expansion-set-1.brl` | Adventure expansion set 1: 30 hero-matched encounter templates (class + trait), matching rules, buff system |
 | `test-heroes.brl` | Two hero entities (Warrior + Mage) used by the test harness only |
 

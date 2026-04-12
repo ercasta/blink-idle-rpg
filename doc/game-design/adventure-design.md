@@ -334,6 +334,14 @@ component NpcPool {
 }
 ```
 
+> **World system integration**: With the world system (see
+> [world-design.md](world-design.md)), NPCs are drawn from `WorldNpc` entities
+> that include location binding, role eligibility flags, and character
+> descriptions. The `NpcPool` component is superseded by `WorldNpc` but
+> remains for backward compatibility. During adventure composition, `WorldNpc`
+> entities are filtered by location availability and role exclusivity before
+> being assigned to pluggable slots.
+
 When an NPC is drawn, their `personality` influences narrative tone. For
 example, a `gruff` NPC's dialogue uses curt phrasing ("Speak. What do you
 want?"), while a `kind` NPC uses warmer text ("Welcome, travellers! How can I
@@ -1024,6 +1032,8 @@ The composition algorithm discovers pools dynamically using
 | `story-adventure-templates.brl` | All `ObjectiveTemplate`, `MilestoneTemplate`, `EventTemplate` entities |
 | `story-adventure-pools.brl` | All pool entities (`NpcPool`, `VillainPool`, `ItemPool`, etc.) |
 | `story-adventure-rules.brl` | Custom event rules (duel, search, etc.) |
+| `story-world.brl` | World system components (`WorldLocation`, `WorldPath`, `WorldNpc`, etc.) — see [world-design.md](world-design.md) |
+| `story-world-data.brl` | World entity data: named locations, paths, NPCs, hero comments, blocking encounters |
 
 ### Adding New Content
 
@@ -1050,7 +1060,12 @@ let obj_new: id = new entity {
 
 #### Adding a New NPC
 
-1. Add a new entity with `NpcPool` in `story-adventure-pools.brl`:
+1. **Preferred**: Add a new entity with `WorldNpc` in `story-world-data.brl`
+   (see [world-design.md](world-design.md#adding-a-new-world-npc)). This
+   places the NPC in the persistent world with location binding and role
+   eligibility.
+
+2. **Legacy**: Add a new entity with `NpcPool` in `story-adventure-pools.brl`:
 
 ```brl
 let npc_new: id = new entity {
@@ -1251,6 +1266,15 @@ to add new content without modifying any rules:
 | New custom event rule | `story-adventure-rules.brl` | (BRL rule) | Yes (add rule) |
 | New bail-out type | `story-adventure-templates.brl` | Update `MilestoneTemplate` | No |
 | New hero encounter | `adventure-expansion-set-1.brl` | `HeroEncounterTemplate` | No |
+| New world location | `story-world-data.brl` | `WorldLocation` | No |
+| New world path | `story-world-data.brl` | `WorldPath` | No |
+| New world NPC | `story-world-data.brl` | `WorldNpc` | No |
+| New hero comment | `story-world-data.brl` | `HeroArrivalComment` | No |
+| New blocking encounter | `story-world-data.brl` | `BlockingEncounter` | No |
+
+> **World system**: For the full world extension guide including adding
+> locations, paths, NPCs, hero comments, and blocking encounters, see
+> [world-design.md — Extension Guide](world-design.md#extension-guide).
 
 The general pattern is:
 1. **Data = entities with template/pool components**. Add new entities to extend content.
@@ -1319,8 +1343,11 @@ If the party doesn't visit a town by day 4 (Milestone 1 has 3-day bail-out):
 
 1. **Adventure vs. Map**: The adventure system generates **quest structure**
    (objectives, milestones, events). It does not generate the map — that is
-   handled by the existing story mode map generation. The two systems are
-   connected by milestone-to-layer mapping and event trigger conditions.
+   handled by the existing story mode map generation. With the **world system**
+   (see [world-design.md](world-design.md)), the map is selected from a
+   persistent set of named locations and paths rather than generated
+   procedurally. The two systems are connected by milestone-to-location
+   mapping and event trigger conditions.
 
 2. **Event triggering is opportunistic**: Quest events trigger when conditions
    are met naturally through story mode exploration. The party does not receive
@@ -1353,3 +1380,10 @@ If the party doesn't visit a town by day 4 (Milestone 1 has 3-day bail-out):
 8. **The quest overlay is lightweight**: The adventure system adds ~10
    components, ~10 events, and ~10 rules. It hooks into existing story mode
    events rather than replacing them.
+
+9. **World integration**: The adventure composition algorithm is designed to
+   work with the world system (see [world-design.md](world-design.md)).
+   NPCs are drawn from the world pool with location awareness and role
+   exclusivity. Milestones target specific world locations. Blocking encounters
+   on world paths halt travel until resolved. Location-based buffs/debuffs
+   and hero arrival comments add depth to world exploration.

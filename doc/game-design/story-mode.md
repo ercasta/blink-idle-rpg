@@ -824,6 +824,8 @@ Story mode runs are stored in run history like fight mode runs. The `NarrativeLo
 | `story-adventure-templates.brl` | Objective, milestone, and event template entities |
 | `story-adventure-pools.brl` | NPC, villain, item, location, and creature pool entities |
 | `story-adventure-rules.brl` | Custom event rules (duel, search, etc.) |
+| `story-world.brl` | World system components (`WorldLocation`, `WorldPath`, `WorldNpc`, etc.) — see [world-design.md](world-design.md) |
+| `story-world-data.brl` | World entity data: named locations, paths, NPCs, hero comments, blocking encounters |
 
 These files will be compiled alongside the existing `classic-rpg.brl` rules. Story mode rules are guarded by a `StoryConfig` component check — they only fire when the run is in story mode.
 
@@ -838,10 +840,31 @@ These files will be compiled alongside the existing `classic-rpg.brl` rules. Sto
 - **Hero personality shines**: The voting system makes hero traits visible in a new way — a reckless rogue might drag the party into danger, while a cautious paladin argues for the safe route. This creates emergent stories.
 - **Balance target**: Story mode should produce scores in the same general range as fight mode for the same difficulty. Initial playtesting should compare mean scores and adjust encounter frequency / bonus values accordingly.
 - **Future extensions**:
-  - **Named NPCs** in towns that give quests (bonus encounters with extra rewards).
-  - **Branching events**: Random events during travel (find treasure, rescue NPC, discover shortcut).
   - **Weather system**: Weather effects that modify travel time and encounter difficulty.
   - **Party morale**: A morale component affected by decisions and outcomes, influencing voting weights.
+
+---
+
+## World System
+
+Story mode is built on a **persistent world** of named locations, paths, and
+NPCs. Instead of generating anonymous locations from word banks, adventures
+select a subset of world locations and place authored NPCs within them. This
+creates a consistent setting that players recognise across multiple runs.
+
+Key features:
+- **Named locations** with authored descriptions (shown at verbosity level 3)
+  and elemental affinity that affects combat via buffs/debuffs.
+- **Named NPCs** bound to specific locations, assignable to adventure roles
+  (ally, villain, quest-giver) with role exclusivity enforcement.
+- **Typed paths** (imperial road, mountain pass, forest trail, etc.) that
+  determine travel time, danger, and encounter types.
+- **Blocking encounters** that halt travel until resolved, fixing the
+  inconsistency where blocking enemies do not actually stop the party.
+- **Hero arrival comments** based on class/traits reacting to location elements
+  (shown at verbosity level 3).
+
+Full design details are in [`world-design.md`](world-design.md).
 
 ---
 
