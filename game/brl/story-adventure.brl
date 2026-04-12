@@ -109,7 +109,15 @@ component QuestScore {
     objectiveBonus: integer         // Objective completion bonus
     allNormalBonus: integer         // Bonus for no bail-outs
     questItemBonus: integer         // Quest item collection bonus
+    heroEncounterBonus: integer     // Sum of hero-matched encounter bonuses
     totalQuestScore: integer        // Sum of all quest bonuses
+}
+
+// ─── Hero-matched encounter state (see adventure-expansion-set-1.brl) ───────
+
+component HeroEncounterState {
+    totalEncounters: integer        // Total hero encounters triggered this adventure
+    totalBuffsGranted: integer      // Total buffs granted from hero encounters
 }
 
 // =============================================================================

@@ -1,0 +1,796 @@
+// =============================================================================
+// BLINK IDLE RPG — ADVENTURE EXPANSION SET 1
+// =============================================================================
+// Extends the adventure quest system with hero-matched encounters: events
+// that are particularly well-suited for specific hero classes or trait
+// polarizations. When triggered, the system selects the "best match" hero
+// from the party and generates narrative text explaining why that hero's
+// class or traits were instrumental in the encounter's success.
+//
+// These encounters may appear as part of the core quest (key events inside
+// milestones) or as random side encounters. They always grant a buff that
+// lasts for the rest of the adventure. All content uses pluggable slots
+// so it can reference actual adventure content (NPC names, items, locations).
+//
+// Design goals:
+//   - At least 30 hero-matched encounter templates
+//   - 6 class-specific encounters (one per class)
+//   - 24 trait-polarization encounters (two per trait axis: one per pole)
+//   - At least 5 hero encounters per adventure run
+//   - Deterministic hero selection based on adventure seed
+//   - Narrative highlighting of why the hero was chosen
+//   - Stat buffs granted as encounter rewards
+// =============================================================================
+
+// ─── Hero Encounter Components ──────────────────────────────────────────────
+
+// Defines a hero-matched encounter template. The matching system uses
+// preferredClass and/or traitAxis + traitPolarity to find the best hero.
+component HeroEncounterTemplate {
+    encounterId: string             // Unique identifier, e.g. "warrior_hold_the_line"
+    category: string                // "class" or "trait"
+    title: string                   // Display title with slot tokens
+    description: string             // Narrative passage with slot tokens
+    preferredClass: string          // Required class ("" if trait-based)
+    traitAxis: string               // Trait axis key, e.g. "pm", "od" ("" if class-based)
+    traitPolarity: string           // "positive" or "negative" ("" if class-based)
+    triggerType: string             // "location_enter", "travel_segment", "camp_night", "town_visit"
+    triggerLocation: string         // "wilderness", "town", "dungeon", "any"
+    isKeyEvent: boolean             // Can be used as milestone key event
+    buffType: string                // "attack", "defense", "speed", "crit", "healing", "xp"
+    buffAmount: integer             // Buff magnitude (percentage bonus, e.g. 10 = +10%)
+    narrativeOnMatch: string        // Why the hero was a good match (slot tokens allowed)
+    narrativeOnComplete: string     // Completion narrative
+    difficultyModifier: integer     // Encounter difficulty adjustment (-2 to +2)
+}
+
+// Tracks an active hero encounter buff granted by a completed encounter.
+component HeroEncounterBuff {
+    encounterId: string             // Which encounter granted this buff
+    heroName: string                // Name of the hero who earned the buff
+    buffType: string                // "attack", "defense", "speed", "crit", "healing", "xp"
+    buffAmount: integer             // Magnitude of the buff (percentage)
+    isActive: boolean               // True while buff is in effect
+}
+
+// Records the outcome of a hero-matched encounter for narrative purposes.
+component HeroEncounterOutcome {
+    encounterId: string             // Which encounter this outcome belongs to
+    heroName: string                // Name of the matched hero
+    heroClass: string               // Class of the matched hero
+    matchReason: string             // Why the hero was chosen (narrative text)
+    buffGranted: string             // Description of the buff granted
+    day: integer                    // Day the encounter occurred
+}
+
+// ─── Hero Encounter Events ──────────────────────────────────────────────────
+
+event HeroEncounterTriggered { encounterId: string, heroName: string }
+event HeroEncounterCompleted { encounterId: string, heroName: string, buffType: string, buffAmount: integer }
+event HeroEncounterBuffApplied { heroName: string, buffType: string, buffAmount: integer }
+
+// ─── Hero Encounter Rules ───────────────────────────────────────────────────
+
+// Rule: When a hero encounter triggers, find the best-matching hero,
+// generate the narrative highlight, and schedule completion.
+rule hero_encounter_trigger on HeroEncounterTriggered(evt: id) {
+    let heroes: list = entities having Character
+    let encounter_id: string = evt.HeroEncounterTriggered.encounterId
+    let matched_hero: string = evt.HeroEncounterTriggered.heroName
+
+    // Create the encounter outcome record
+    let outcome: id = new entity {
+        HeroEncounterOutcome {
+            encounterId: encounter_id
+            heroName: matched_hero
+            heroClass: ""
+            matchReason: ""
+            buffGranted: ""
+            day: 0
+        }
+    }
+
+    // Schedule completion
+    let complete: id = schedule HeroEncounterCompleted {
+        encounterId: encounter_id
+        heroName: matched_hero
+        buffType: "attack"
+        buffAmount: 10
+    }
+}
+
+// Rule: When a hero encounter completes, apply the buff to the party.
+rule hero_encounter_complete on HeroEncounterCompleted(evt: id) {
+    let hero_name: string = evt.HeroEncounterCompleted.heroName
+    let buff_type: string = evt.HeroEncounterCompleted.buffType
+    let buff_amount: integer = evt.HeroEncounterCompleted.buffAmount
+    let encounter_id: string = evt.HeroEncounterCompleted.encounterId
+
+    // Create the buff entity
+    let buff: id = new entity {
+        HeroEncounterBuff {
+            encounterId: encounter_id
+            heroName: hero_name
+            buffType: buff_type
+            buffAmount: buff_amount
+            isActive: true
+        }
+    }
+
+    // Schedule buff application
+    let applied: id = schedule HeroEncounterBuffApplied {
+        heroName: hero_name
+        buffType: buff_type
+        buffAmount: buff_amount
+    }
+}
+
+// =============================================================================
+// HERO-MATCHED ENCOUNTER TEMPLATES
+// =============================================================================
+// 30 encounters organized as:
+//   - 6 class-specific encounters (one per class)
+//   - 24 trait-polarization encounters (one per pole of each of 12 trait axes)
+//
+// Each encounter uses pluggable slots for adventure content references.
+// The matching system selects the best hero based on class or trait values.
+// =============================================================================
+
+// ─── CLASS-SPECIFIC ENCOUNTERS (6) ──────────────────────────────────────────
+
+// 1. Warrior — Hold the Line
+let enc_warrior_hold: id = new entity {
+    HeroEncounterTemplate {
+        encounterId: "warrior_hold_the_line"
+        category: "class"
+        title: "Hold the Line at {dungeon_name}"
+        description: "A narrow pass near {dungeon_name} is about to be overrun. Only a warrior's strength and discipline can hold long enough for the party to prepare."
+        preferredClass: "Warrior"
+        traitAxis: ""
+        traitPolarity: ""
+        triggerType: "travel_segment"
+        triggerLocation: "wilderness"
+        isKeyEvent: false
+        buffType: "defense"
+        buffAmount: 12
+        narrativeOnMatch: "{hero_name} plants their feet, raises their shield, and bellows a war cry. The enemy wave crashes against them — and breaks. A warrior born and bred."
+        narrativeOnComplete: "The pass holds. The party pushes forward with renewed confidence, their defenses bolstered by the warrior's stand."
+        difficultyModifier: 1
+    }
+}
+
+// 2. Mage — Arcane Resonance
+let enc_mage_resonance: id = new entity {
+    HeroEncounterTemplate {
+        encounterId: "mage_arcane_resonance"
+        category: "class"
+        title: "The Arcane Wards of {location_name}"
+        description: "Ancient arcane wards block the path through {location_name}. Only someone fluent in magical theory can unravel them safely."
+        preferredClass: "Mage"
+        traitAxis: ""
+        traitPolarity: ""
+        triggerType: "location_enter"
+        triggerLocation: "any"
+        isKeyEvent: false
+        buffType: "attack"
+        buffAmount: 10
+        narrativeOnMatch: "{hero_name} traces the ward patterns with practiced fingers, recognizing the sigil structure immediately. The wards dissolve in a cascade of harmless sparks. Only a true mage could have done that."
+        narrativeOnComplete: "The residual arcane energy infuses the party, sharpening their strikes for the battles ahead."
+        difficultyModifier: 0
+    }
+}
+
+// 3. Ranger — Track the Hidden Path
+let enc_ranger_track: id = new entity {
+    HeroEncounterTemplate {
+        encounterId: "ranger_hidden_path"
+        category: "class"
+        title: "The Hidden Trail to {destination_name}"
+        description: "The road is destroyed. Somewhere in this wilderness, a hidden game trail leads to {destination_name}, but only a skilled tracker can find it."
+        preferredClass: "Ranger"
+        traitAxis: ""
+        traitPolarity: ""
+        triggerType: "travel_segment"
+        triggerLocation: "wilderness"
+        isKeyEvent: false
+        buffType: "speed"
+        buffAmount: 15
+        narrativeOnMatch: "{hero_name} kneels beside a barely-visible track, brushes aside dead leaves, and nods. 'This way.' A ranger's eyes miss nothing in the wild."
+        narrativeOnComplete: "The hidden path saves the party hours of travel. Their pace quickens with a new sense of urgency."
+        difficultyModifier: 0
+    }
+}
+
+// 4. Paladin — Trial of Devotion
+let enc_paladin_devotion: id = new entity {
+    HeroEncounterTemplate {
+        encounterId: "paladin_trial_devotion"
+        category: "class"
+        title: "The Shrine of {npc_name}"
+        description: "A sacred shrine dedicated to {npc_name}'s patron deity radiates protective light. Only one who has sworn holy vows can receive its blessing."
+        preferredClass: "Paladin"
+        traitAxis: ""
+        traitPolarity: ""
+        triggerType: "location_enter"
+        triggerLocation: "any"
+        isKeyEvent: false
+        buffType: "healing"
+        buffAmount: 15
+        narrativeOnMatch: "{hero_name} kneels before the shrine, recites an oath of devotion, and the light intensifies. The shrine recognizes a true paladin's faith."
+        narrativeOnComplete: "Divine warmth spreads through the party. Wounds close a little faster, spirits lift. The paladin's devotion protects them all."
+        difficultyModifier: 0
+    }
+}
+
+// 5. Rogue — Steal the Plans
+let enc_rogue_plans: id = new entity {
+    HeroEncounterTemplate {
+        encounterId: "rogue_steal_plans"
+        category: "class"
+        title: "Infiltrate {villain_name}'s Camp"
+        description: "{villain_name}'s scouts have made camp nearby. Their orders contain critical intelligence — but stealing them requires stealth and quick hands."
+        preferredClass: "Rogue"
+        traitAxis: ""
+        traitPolarity: ""
+        triggerType: "camp_night"
+        triggerLocation: "any"
+        isKeyEvent: false
+        buffType: "crit"
+        buffAmount: 10
+        narrativeOnMatch: "{hero_name} slips into the enemy camp like a shadow, lifts the orders from under the captain's nose, and returns without a sound. Only a rogue could pull that off."
+        narrativeOnComplete: "The stolen plans reveal enemy weaknesses. The party's strikes become more precise and deadly."
+        difficultyModifier: 0
+    }
+}
+
+// 6. Cleric — Consecrate the Ground
+let enc_cleric_consecrate: id = new entity {
+    HeroEncounterTemplate {
+        encounterId: "cleric_consecrate_ground"
+        category: "class"
+        title: "The Defiled Graveyard near {location_name}"
+        description: "Restless dead stir in a desecrated graveyard near {location_name}. A holy ritual could put them to rest — but only a true servant of the divine can perform it."
+        preferredClass: "Cleric"
+        traitAxis: ""
+        traitPolarity: ""
+        triggerType: "location_enter"
+        triggerLocation: "wilderness"
+        isKeyEvent: false
+        buffType: "defense"
+        buffAmount: 10
+        narrativeOnMatch: "{hero_name} raises their holy symbol and chants the Rite of Passing. The restless spirits sigh and fade. A cleric's calling answered."
+        narrativeOnComplete: "The consecrated ground emanates a protective aura. The party feels safer, their resolve strengthened."
+        difficultyModifier: 0
+    }
+}
+
+// ─── TRAIT-POLARIZATION ENCOUNTERS (24) ─────────────────────────────────────
+// Two encounters per trait axis: one for the negative pole, one for positive.
+
+// --- pm axis: Physical (negative) vs Magical (positive) ---
+
+// 7. Physical (pm negative): Brute Force Gate
+let enc_trait_pm_neg: id = new entity {
+    HeroEncounterTemplate {
+        encounterId: "trait_physical_gate"
+        category: "trait"
+        title: "The Sealed Gate of {dungeon_name}"
+        description: "A massive iron gate blocks the entrance to {dungeon_name}. No key exists — only raw physical might can force it open."
+        preferredClass: ""
+        traitAxis: "pm"
+        traitPolarity: "negative"
+        triggerType: "location_enter"
+        triggerLocation: "wilderness"
+        isKeyEvent: false
+        buffType: "attack"
+        buffAmount: 8
+        narrativeOnMatch: "{hero_name} grips the gate bars and heaves with all their might. Metal groans and bends. Their physical prowess makes the impossible look easy."
+        narrativeOnComplete: "The gate yields. Raw strength has opened the way, and the party's morale — and striking power — surges."
+        difficultyModifier: 1
+    }
+}
+
+// 8. Magical (pm positive): Mana Spring
+let enc_trait_pm_pos: id = new entity {
+    HeroEncounterTemplate {
+        encounterId: "trait_magical_spring"
+        category: "trait"
+        title: "The Mana Spring at {location_name}"
+        description: "A shimmering spring of raw mana bubbles up from the earth at {location_name}. Only someone attuned to magical forces can safely harness its energy."
+        preferredClass: ""
+        traitAxis: "pm"
+        traitPolarity: "positive"
+        triggerType: "location_enter"
+        triggerLocation: "any"
+        isKeyEvent: false
+        buffType: "attack"
+        buffAmount: 10
+        narrativeOnMatch: "{hero_name} extends a hand over the spring and channels its energy with practiced ease. Their magical attunement lets them draw power without risk."
+        narrativeOnComplete: "The mana spring's energy courses through the party, amplifying their attacks with arcane resonance."
+        difficultyModifier: 0
+    }
+}
+
+// --- od axis: Offensive (negative) vs Defensive (positive) ---
+
+// 9. Offensive (od negative): Press the Attack
+let enc_trait_od_neg: id = new entity {
+    HeroEncounterTemplate {
+        encounterId: "trait_offensive_charge"
+        category: "trait"
+        title: "Ambush at the {dungeon_name} Bridge"
+        description: "Enemy forces guard a critical bridge near {dungeon_name}. A daring aggressive charge could scatter them before they organize."
+        preferredClass: ""
+        traitAxis: "od"
+        traitPolarity: "negative"
+        triggerType: "travel_segment"
+        triggerLocation: "wilderness"
+        isKeyEvent: false
+        buffType: "attack"
+        buffAmount: 12
+        narrativeOnMatch: "{hero_name} leads the charge without hesitation, striking hard and fast. Their offensive instincts turn a dangerous standoff into a rout."
+        narrativeOnComplete: "The bridge is taken. The party's aggressive momentum carries forward, their attacks sharper than ever."
+        difficultyModifier: 1
+    }
+}
+
+// 10. Defensive (od positive): Shield Wall
+let enc_trait_od_pos: id = new entity {
+    HeroEncounterTemplate {
+        encounterId: "trait_defensive_wall"
+        category: "trait"
+        title: "Protect the Caravan at {destination_name}"
+        description: "A caravan bound for {destination_name} is under attack. Someone must organize the defense and hold until reinforcements arrive."
+        preferredClass: ""
+        traitAxis: "od"
+        traitPolarity: "positive"
+        triggerType: "travel_segment"
+        triggerLocation: "any"
+        isKeyEvent: false
+        buffType: "defense"
+        buffAmount: 12
+        narrativeOnMatch: "{hero_name} takes command of the defense, positioning defenders and shoring up weak points. Their defensive instincts are flawless."
+        narrativeOnComplete: "The caravan is saved. The grateful merchants share supplies, and the party's defensive posture is strengthened."
+        difficultyModifier: 1
+    }
+}
+
+// --- sa axis: Supportive (negative) vs Attacker (positive) ---
+
+// 11. Supportive (sa negative): Heal the Wounded
+let enc_trait_sa_neg: id = new entity {
+    HeroEncounterTemplate {
+        encounterId: "trait_supportive_heal"
+        category: "trait"
+        title: "The Wounded of {location_name}"
+        description: "The people of {location_name} have been hit by a raid. Many are wounded and need tending. A compassionate, supportive soul could make all the difference."
+        preferredClass: ""
+        traitAxis: "sa"
+        traitPolarity: "negative"
+        triggerType: "town_visit"
+        triggerLocation: "town"
+        isKeyEvent: false
+        buffType: "healing"
+        buffAmount: 12
+        narrativeOnMatch: "{hero_name} moves among the wounded with gentle hands and quiet words of comfort. Their supportive nature brings hope where there was none."
+        narrativeOnComplete: "The grateful townsfolk share their best healing salves. The party's recovery abilities are enhanced."
+        difficultyModifier: 0
+    }
+}
+
+// 12. Attacker (sa positive): Slay the Champion
+let enc_trait_sa_pos: id = new entity {
+    HeroEncounterTemplate {
+        encounterId: "trait_attacker_champion"
+        category: "trait"
+        title: "Challenge of the {creature_name}"
+        description: "A fearsome {creature_name} has claimed this territory. Defeating it requires a fighter's killer instinct — someone who lives to attack."
+        preferredClass: ""
+        traitAxis: "sa"
+        traitPolarity: "positive"
+        triggerType: "travel_segment"
+        triggerLocation: "wilderness"
+        isKeyEvent: false
+        buffType: "attack"
+        buffAmount: 10
+        narrativeOnMatch: "{hero_name} steps forward eagerly, weapon raised. Their aggressive fighting spirit is exactly what's needed. Strike first, strike hard."
+        narrativeOnComplete: "The {creature_name} falls. The party's offensive power grows, fueled by the thrill of the kill."
+        difficultyModifier: 2
+    }
+}
+
+// --- rc axis: Risky (negative) vs Cautious (positive) ---
+
+// 13. Risky (rc negative): Leap of Faith
+let enc_trait_rc_neg: id = new entity {
+    HeroEncounterTemplate {
+        encounterId: "trait_risky_leap"
+        category: "trait"
+        title: "The Chasm near {dungeon_name}"
+        description: "A deep chasm splits the path. A crumbling bridge offers passage, but it could collapse at any moment. Only someone bold enough to take the risk can cross first and secure the far side."
+        preferredClass: ""
+        traitAxis: "rc"
+        traitPolarity: "negative"
+        triggerType: "travel_segment"
+        triggerLocation: "wilderness"
+        isKeyEvent: false
+        buffType: "speed"
+        buffAmount: 10
+        narrativeOnMatch: "{hero_name} doesn't hesitate — they sprint across the crumbling bridge as stones fall into the void. A risk-taker through and through."
+        narrativeOnComplete: "The crossing is secured. The party's boldness is rewarded with faster progress through the treacherous terrain."
+        difficultyModifier: 1
+    }
+}
+
+// 14. Cautious (rc positive): Read the Signs
+let enc_trait_rc_pos: id = new entity {
+    HeroEncounterTemplate {
+        encounterId: "trait_cautious_signs"
+        category: "trait"
+        title: "The Trapped Corridor of {dungeon_name}"
+        description: "The corridor ahead is lined with ancient traps. Rushing through would be suicide. Someone with a cautious eye must spot the triggers."
+        preferredClass: ""
+        traitAxis: "rc"
+        traitPolarity: "positive"
+        triggerType: "location_enter"
+        triggerLocation: "any"
+        isKeyEvent: false
+        buffType: "defense"
+        buffAmount: 10
+        narrativeOnMatch: "{hero_name} examines every flagstone, every wall groove, with painstaking patience. Their caution saves the party from a dozen hidden traps."
+        narrativeOnComplete: "The corridor is navigated safely. The party's careful approach leaves them better protected against future hazards."
+        difficultyModifier: 0
+    }
+}
+
+// --- fw axis: Fire (negative) vs Water (positive) ---
+
+// 15. Fire (fw negative): Quench the Flame Barrier
+let enc_trait_fw_neg: id = new entity {
+    HeroEncounterTemplate {
+        encounterId: "trait_fire_barrier"
+        category: "trait"
+        title: "The Flame Barrier at {location_name}"
+        description: "A wall of magical fire blocks the path. Someone with an affinity for fire magic might be able to command the flames to part."
+        preferredClass: ""
+        traitAxis: "fw"
+        traitPolarity: "negative"
+        triggerType: "location_enter"
+        triggerLocation: "any"
+        isKeyEvent: false
+        buffType: "attack"
+        buffAmount: 8
+        narrativeOnMatch: "{hero_name} steps toward the inferno without flinching. They raise a hand and the flames bend to their will, parting like a curtain. Fire recognizes fire."
+        narrativeOnComplete: "The flames leave an ember-glow on the party's weapons. Attacks burn hotter in the encounters ahead."
+        difficultyModifier: 0
+    }
+}
+
+// 16. Water (fw positive): Calm the Flood
+let enc_trait_fw_pos: id = new entity {
+    HeroEncounterTemplate {
+        encounterId: "trait_water_flood"
+        category: "trait"
+        title: "The Flooded Passage near {dungeon_name}"
+        description: "Rising waters have flooded the only route through. Someone with a deep connection to water could calm the current and create safe passage."
+        preferredClass: ""
+        traitAxis: "fw"
+        traitPolarity: "positive"
+        triggerType: "travel_segment"
+        triggerLocation: "any"
+        isKeyEvent: false
+        buffType: "healing"
+        buffAmount: 8
+        narrativeOnMatch: "{hero_name} kneels at the water's edge and places both palms on the surface. The raging current stills. Water answers to its own."
+        narrativeOnComplete: "The calmed waters leave the party refreshed. A soothing energy enhances their natural recovery."
+        difficultyModifier: 0
+    }
+}
+
+// --- we axis: Wind (negative) vs Earth (positive) ---
+
+// 17. Wind (we negative): Ride the Storm
+let enc_trait_we_neg: id = new entity {
+    HeroEncounterTemplate {
+        encounterId: "trait_wind_storm"
+        category: "trait"
+        title: "The Storm above {location_name}"
+        description: "A violent storm rages, blocking all travel. Someone attuned to wind and weather could navigate through the eye of the storm."
+        preferredClass: ""
+        traitAxis: "we"
+        traitPolarity: "negative"
+        triggerType: "travel_segment"
+        triggerLocation: "wilderness"
+        isKeyEvent: false
+        buffType: "speed"
+        buffAmount: 12
+        narrativeOnMatch: "{hero_name} reads the wind like an open book, guiding the party through gaps in the tempest. Wind is their element."
+        narrativeOnComplete: "The storm passes. The party travels faster now, carried by favorable winds."
+        difficultyModifier: 0
+    }
+}
+
+// 18. Earth (we positive): Clear the Landslide
+let enc_trait_we_pos: id = new entity {
+    HeroEncounterTemplate {
+        encounterId: "trait_earth_landslide"
+        category: "trait"
+        title: "The Landslide at {dungeon_name}"
+        description: "A massive landslide blocks the mountain pass. Someone with an affinity for earth and stone could find the weak points and clear a path."
+        preferredClass: ""
+        traitAxis: "we"
+        traitPolarity: "positive"
+        triggerType: "location_enter"
+        triggerLocation: "wilderness"
+        isKeyEvent: false
+        buffType: "defense"
+        buffAmount: 10
+        narrativeOnMatch: "{hero_name} places a hand against the rubble and feels the stone's grain. With precise strikes at key stress points, the blockage crumbles. Earth speaks to earth."
+        narrativeOnComplete: "The cleared path reveals mineral deposits. The party's armor and resilience benefit from the earth's gift."
+        difficultyModifier: 0
+    }
+}
+
+// --- ld axis: Light (negative) vs Darkness (positive) ---
+
+// 19. Light (ld negative): Purify the Corruption
+let enc_trait_ld_neg: id = new entity {
+    HeroEncounterTemplate {
+        encounterId: "trait_light_purify"
+        category: "trait"
+        title: "The Corrupted Shrine near {location_name}"
+        description: "A once-holy shrine near {location_name} has been corrupted by dark magic. Someone aligned with the light could purify it and restore its power."
+        preferredClass: ""
+        traitAxis: "ld"
+        traitPolarity: "negative"
+        triggerType: "location_enter"
+        triggerLocation: "any"
+        isKeyEvent: false
+        buffType: "healing"
+        buffAmount: 10
+        narrativeOnMatch: "{hero_name} channels radiant energy into the shrine. The corruption burns away like morning mist. Their connection to the light is undeniable."
+        narrativeOnComplete: "The purified shrine bathes the party in restorative light. Healing comes easier in the days ahead."
+        difficultyModifier: 0
+    }
+}
+
+// 20. Darkness (ld positive): Navigate the Shadow Realm
+let enc_trait_ld_pos: id = new entity {
+    HeroEncounterTemplate {
+        encounterId: "trait_darkness_shadow"
+        category: "trait"
+        title: "The Shadow Passage beneath {dungeon_name}"
+        description: "A shortcut through the shadow realm lies beneath {dungeon_name}. Only someone comfortable in darkness can guide the party safely through."
+        preferredClass: ""
+        traitAxis: "ld"
+        traitPolarity: "positive"
+        triggerType: "location_enter"
+        triggerLocation: "any"
+        isKeyEvent: false
+        buffType: "crit"
+        buffAmount: 8
+        narrativeOnMatch: "{hero_name} steps into the darkness without fear. Where others see only void, they see paths and shapes. Darkness is their ally."
+        narrativeOnComplete: "Emerging from the shadow realm, the party carries a predator's edge. Their strikes find vital points more easily."
+        difficultyModifier: 0
+    }
+}
+
+// --- co axis: Chaos (negative) vs Order (positive) ---
+
+// 21. Chaos (co negative): Turn the Tide
+let enc_trait_co_neg: id = new entity {
+    HeroEncounterTemplate {
+        encounterId: "trait_chaos_tide"
+        category: "trait"
+        title: "The Chaotic Battlefield near {location_name}"
+        description: "A three-way battle rages near {location_name}. In the confusion, someone who thrives in chaos could turn the situation to the party's advantage."
+        preferredClass: ""
+        traitAxis: "co"
+        traitPolarity: "negative"
+        triggerType: "travel_segment"
+        triggerLocation: "any"
+        isKeyEvent: false
+        buffType: "crit"
+        buffAmount: 10
+        narrativeOnMatch: "{hero_name} dives into the melee, weaving between factions, exploiting every opening. Where others see chaos, they see opportunity."
+        narrativeOnComplete: "The battlefield clears. The party emerges with spoils and sharper instincts. Chaos favored the bold."
+        difficultyModifier: 1
+    }
+}
+
+// 22. Order (co positive): Organize the Militia
+let enc_trait_co_pos: id = new entity {
+    HeroEncounterTemplate {
+        encounterId: "trait_order_militia"
+        category: "trait"
+        title: "Rally the People of {destination_name}"
+        description: "The people of {destination_name} are panicked and disorganized. Someone with a talent for order and structure could form them into a functioning militia."
+        preferredClass: ""
+        traitAxis: "co"
+        traitPolarity: "positive"
+        triggerType: "town_visit"
+        triggerLocation: "town"
+        isKeyEvent: false
+        buffType: "defense"
+        buffAmount: 10
+        narrativeOnMatch: "{hero_name} takes charge, assigning roles and drilling formations with calm authority. Order from chaos — their natural gift."
+        narrativeOnComplete: "The militia holds. Grateful citizens provide the party with reinforced equipment, bolstering their defenses."
+        difficultyModifier: 0
+    }
+}
+
+// --- sh axis: Sly (negative) vs Honorable (positive) ---
+
+// 23. Sly (sh negative): Poison the Supply
+let enc_trait_sh_neg: id = new entity {
+    HeroEncounterTemplate {
+        encounterId: "trait_sly_poison"
+        category: "trait"
+        title: "Sabotage {villain_name}'s Supplies"
+        description: "{villain_name}'s forward camp stores supplies for the next assault. A cunning, sly operative could sabotage them without being detected."
+        preferredClass: ""
+        traitAxis: "sh"
+        traitPolarity: "negative"
+        triggerType: "camp_night"
+        triggerLocation: "any"
+        isKeyEvent: false
+        buffType: "attack"
+        buffAmount: 10
+        narrativeOnMatch: "{hero_name} moves through the shadows, tainting rations and dulling blades. No honor in it — but devastating effectiveness. A sly mind at work."
+        narrativeOnComplete: "The sabotage weakens the enemy for future battles. The party's attacks hit harder against debilitated foes."
+        difficultyModifier: 0
+    }
+}
+
+// 24. Honorable (sh positive): Champion's Challenge
+let enc_trait_sh_pos: id = new entity {
+    HeroEncounterTemplate {
+        encounterId: "trait_honor_challenge"
+        category: "trait"
+        title: "The Honor Duel at {location_name}"
+        description: "An enemy captain offers single combat at {location_name}. An honorable response could earn respect — and valuable information — from the enemy ranks."
+        preferredClass: ""
+        traitAxis: "sh"
+        traitPolarity: "positive"
+        triggerType: "location_enter"
+        triggerLocation: "any"
+        isKeyEvent: false
+        buffType: "xp"
+        buffAmount: 15
+        narrativeOnMatch: "{hero_name} steps forward and accepts the duel with a formal salute. Their sense of honor earns the respect of friend and foe alike."
+        narrativeOnComplete: "The duel is won fairly. The defeated captain shares intelligence, and the party gains invaluable experience."
+        difficultyModifier: 1
+    }
+}
+
+// --- rm axis: Range (negative) vs Melee (positive) ---
+
+// 25. Range (rm negative): Sniper's Perch
+let enc_trait_rm_neg: id = new entity {
+    HeroEncounterTemplate {
+        encounterId: "trait_range_sniper"
+        category: "trait"
+        title: "Overwatch at the {dungeon_name} Pass"
+        description: "Enemy scouts patrol the pass below {dungeon_name}. A skilled ranged combatant could pick them off from the high ground without alerting the main force."
+        preferredClass: ""
+        traitAxis: "rm"
+        traitPolarity: "negative"
+        triggerType: "travel_segment"
+        triggerLocation: "wilderness"
+        isKeyEvent: false
+        buffType: "attack"
+        buffAmount: 10
+        narrativeOnMatch: "{hero_name} takes position on the ridge, nocking an arrow with practiced ease. Each shot finds its mark. At range, they are untouchable."
+        narrativeOnComplete: "The scouts fall before they can raise the alarm. The party's ranged precision carries forward into future encounters."
+        difficultyModifier: 0
+    }
+}
+
+// 26. Melee (rm positive): Break Through
+let enc_trait_rm_pos: id = new entity {
+    HeroEncounterTemplate {
+        encounterId: "trait_melee_break"
+        category: "trait"
+        title: "The Barricade at {location_name}"
+        description: "A fortified barricade blocks the road to {location_name}. Arrows and spells bounce off. Someone must close the distance and break through in close combat."
+        preferredClass: ""
+        traitAxis: "rm"
+        traitPolarity: "positive"
+        triggerType: "location_enter"
+        triggerLocation: "any"
+        isKeyEvent: false
+        buffType: "attack"
+        buffAmount: 10
+        narrativeOnMatch: "{hero_name} charges the barricade with a devastating roar, weapon swinging in wide arcs. In melee range, they are a force of nature."
+        narrativeOnComplete: "The barricade splinters. Close-quarters dominance gives the party an edge in the fights to come."
+        difficultyModifier: 1
+    }
+}
+
+// --- ai axis: Absorb (negative) vs Inflict (positive) ---
+
+// 27. Absorb (ai negative): Endure the Storm
+let enc_trait_ai_neg: id = new entity {
+    HeroEncounterTemplate {
+        encounterId: "trait_absorb_storm"
+        category: "trait"
+        title: "The Elemental Bombardment at {location_name}"
+        description: "A magical bombardment rains down on the party's position at {location_name}. Someone who can absorb punishment must shield the group."
+        preferredClass: ""
+        traitAxis: "ai"
+        traitPolarity: "negative"
+        triggerType: "travel_segment"
+        triggerLocation: "any"
+        isKeyEvent: false
+        buffType: "defense"
+        buffAmount: 12
+        narrativeOnMatch: "{hero_name} stands firm as magical energy crashes against them. They absorb blow after blow, shielding the party. A living wall."
+        narrativeOnComplete: "The bombardment ends. The party's resilience is reinforced by the defender's example."
+        difficultyModifier: 1
+    }
+}
+
+// 28. Inflict (ai positive): Strike the Weak Point
+let enc_trait_ai_pos: id = new entity {
+    HeroEncounterTemplate {
+        encounterId: "trait_inflict_strike"
+        category: "trait"
+        title: "The {creature_name}'s Lair"
+        description: "A massive {creature_name} guards a critical passage. It seems invincible — unless someone can spot and exploit its weakness."
+        preferredClass: ""
+        traitAxis: "ai"
+        traitPolarity: "positive"
+        triggerType: "location_enter"
+        triggerLocation: "wilderness"
+        isKeyEvent: false
+        buffType: "crit"
+        buffAmount: 10
+        narrativeOnMatch: "{hero_name} studies the beast with predator's eyes, then strikes at the gap between armor plates. Maximum damage, minimum effort. Born to inflict pain."
+        narrativeOnComplete: "The beast falls, revealing the passage beyond. The party's critical strike ability is honed by the lesson."
+        difficultyModifier: 2
+    }
+}
+
+// --- af axis: Area (negative) vs Focus (positive) ---
+
+// 29. Area (af negative): Scatter the Horde
+let enc_trait_af_neg: id = new entity {
+    HeroEncounterTemplate {
+        encounterId: "trait_area_scatter"
+        category: "trait"
+        title: "The {enemy_name} Horde at {location_name}"
+        description: "A vast horde of {enemy_name} blocks the way. Individual combat is futile — someone must unleash devastating area attacks to scatter them."
+        preferredClass: ""
+        traitAxis: "af"
+        traitPolarity: "negative"
+        triggerType: "travel_segment"
+        triggerLocation: "any"
+        isKeyEvent: false
+        buffType: "attack"
+        buffAmount: 8
+        narrativeOnMatch: "{hero_name} unleashes a sweeping attack that catches dozens of enemies at once. Their talent for area devastation turns the tide."
+        narrativeOnComplete: "The horde scatters. The party pushes through, their area combat tactics refined for the battles ahead."
+        difficultyModifier: 1
+    }
+}
+
+// 30. Focus (af positive): Duel the Lieutenant
+let enc_trait_af_pos: id = new entity {
+    HeroEncounterTemplate {
+        encounterId: "trait_focus_duel"
+        category: "trait"
+        title: "Duel {villain_name}'s Lieutenant"
+        description: "{villain_name}'s most dangerous lieutenant challenges the party to single combat. Only someone with razor-sharp focus on a single target can prevail."
+        preferredClass: ""
+        traitAxis: "af"
+        traitPolarity: "positive"
+        triggerType: "location_enter"
+        triggerLocation: "any"
+        isKeyEvent: false
+        buffType: "crit"
+        buffAmount: 12
+        narrativeOnMatch: "{hero_name} locks eyes with the lieutenant and tunes out everything else. One target, total focus. The duel ends in a single devastating exchange."
+        narrativeOnComplete: "The lieutenant falls. The party's ability to focus fire on priority targets is sharpened."
+        difficultyModifier: 2
+    }
+}
