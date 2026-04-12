@@ -98,11 +98,16 @@ component LocationBuff {
 // A special encounter on a path or at a location entrance that halts travel
 // until resolved. Addresses the inconsistency where blocking enemies do not
 // actually stop the party.
+//
+// Matching: a blocking encounter triggers on a path if pathId matches or if
+// matchPathType matches the path's pathType. For location-based encounters,
+// matchLocationId is checked. At least one matching field must be non-empty.
 
 component BlockingEncounter {
     blockingId: string              // Unique ID, e.g. "troll_bridge"
-    pathId: string                  // Path where this can trigger ("" if location-based)
-    locationId: string              // Location where this can trigger ("" if path-based)
+    pathId: string                  // Specific path ID to trigger on ("" for type-based or location-based)
+    matchPathType: string           // Path type to match, e.g. "river_crossing,marsh_track" ("" for specific path or location)
+    locationId: string              // Specific location ID to trigger on entry ("" if path-based)
     encounterType: string           // "combat", "social", "puzzle"
     description: string             // Narrative description of the blockage
     resolutionType: string          // "defeat", "persuade", "solve", "pay_toll"

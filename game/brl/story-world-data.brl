@@ -1415,6 +1415,7 @@ blocking_troll_bridge = new entity {
     BlockingEncounter {
         blockingId: "troll_bridge"
         pathId: ""
+        matchPathType: "river_crossing,marsh_track"
         locationId: ""
         encounterType: "combat"
         description: "A massive river troll emerges from beneath the bridge, blocking the crossing."
@@ -1432,6 +1433,7 @@ blocking_bandit_toll = new entity {
     BlockingEncounter {
         blockingId: "bandit_toll"
         pathId: ""
+        matchPathType: "imperial_road"
         locationId: ""
         encounterType: "social"
         description: "A group of bandits has set up a roadblock, demanding payment for passage."
@@ -1449,6 +1451,7 @@ blocking_rockslide = new entity {
     BlockingEncounter {
         blockingId: "rockslide"
         pathId: ""
+        matchPathType: "mountain_pass"
         locationId: ""
         encounterType: "puzzle"
         description: "A fresh rockslide has completely blocked the narrow mountain pass."
@@ -1466,6 +1469,7 @@ blocking_haunted_crossing = new entity {
     BlockingEncounter {
         blockingId: "haunted_crossing"
         pathId: ""
+        matchPathType: "marsh_track"
         locationId: ""
         encounterType: "combat"
         description: "Restless spirits rise from the marsh, barring passage through the swamp."
@@ -1483,7 +1487,8 @@ blocking_guardian_gate = new entity {
     BlockingEncounter {
         blockingId: "guardian_gate"
         pathId: ""
-        locationId: ""
+        matchPathType: ""
+        locationId: "obsidian_reach,sunken_crypt"
         encounterType: "combat"
         description: "An ancient stone guardian blocks the entrance to a fortified location."
         resolutionType: "defeat"
@@ -1500,6 +1505,7 @@ blocking_enchanted_wall = new entity {
     BlockingEncounter {
         blockingId: "enchanted_wall"
         pathId: ""
+        matchPathType: "underground_tunnel"
         locationId: ""
         encounterType: "puzzle"
         description: "A shimmering magical barrier seals the tunnel ahead."

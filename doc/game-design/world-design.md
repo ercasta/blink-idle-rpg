@@ -532,8 +532,9 @@ travelling.
 | Property | Type | Description |
 |----------|------|-------------|
 | `blockingId` | string | Unique identifier |
-| `pathId` | string | Path where this encounter can trigger (or `""` for location entry) |
-| `locationId` | string | Location where this encounter can trigger (or `""` for path) |
+| `pathId` | string | Specific path where this encounter can trigger (or `""` for type-based matching) |
+| `matchPathType` | string | Comma-separated path types to match, e.g. `"mountain_pass,underground_tunnel"` (or `""` for specific path or location) |
+| `locationId` | string | Comma-separated location IDs where this encounter can trigger on entry (or `""` for path-based) |
 | `encounterType` | string | `"combat"`, `"social"`, `"puzzle"` |
 | `description` | string | Narrative description of the blockage |
 | `resolutionType` | string | How to resolve: `"defeat"`, `"persuade"`, `"solve"`, `"pay_toll"` |
@@ -564,8 +565,9 @@ When a blocking encounter triggers during travel:
 ```brl
 component BlockingEncounter {
     blockingId: string
-    pathId: string
-    locationId: string
+    pathId: string               // Specific path ID ("" for type-based or location-based)
+    matchPathType: string        // Comma-separated path types, e.g. "mountain_pass" ("" for specific)
+    locationId: string           // Comma-separated location IDs ("" if path-based)
     encounterType: string
     description: string
     resolutionType: string
@@ -578,16 +580,23 @@ component BlockingEncounter {
 }
 ```
 
+A blocking encounter matches if:
+- `pathId` matches the current path ID, **or**
+- `matchPathType` contains the current path's `pathType`, **or**
+- `locationId` contains the current location ID (for entry blocking).
+
+At least one of `pathId`, `matchPathType`, or `locationId` must be non-empty.
+
 ### Built-In Blocking Encounters
 
-| ID | Path/Location | Type | Description |
-|----|--------------|------|-------------|
-| `troll_bridge` | river crossings | combat | A river troll demands tribute or blood |
-| `bandit_toll` | imperial roads | social/combat | Bandits set up a toll checkpoint |
-| `rockslide` | mountain passes | puzzle | A rockslide blocks the narrow pass |
-| `haunted_crossing` | marsh tracks | combat | Restless spirits bar passage through the marsh |
-| `guardian_gate` | dungeon/fortress entries | combat | An ancient guardian protects the entrance |
-| `enchanted_wall` | underground tunnels | puzzle | A magical barrier seals the tunnel |
+| ID | Match | Type | Description |
+|----|-------|------|-------------|
+| `troll_bridge` | paths: `river_crossing`, `marsh_track` | combat | A river troll demands tribute or blood |
+| `bandit_toll` | paths: `imperial_road` | social/combat | Bandits set up a toll checkpoint |
+| `rockslide` | paths: `mountain_pass` | puzzle | A rockslide blocks the narrow pass |
+| `haunted_crossing` | paths: `marsh_track` | combat | Restless spirits bar passage through the marsh |
+| `guardian_gate` | locations: `obsidian_reach`, `sunken_crypt` | combat | An ancient guardian protects the entrance |
+| `enchanted_wall` | paths: `underground_tunnel` | puzzle | A magical barrier seals the tunnel |
 
 ### Narrative Example
 
@@ -828,8 +837,9 @@ One entity per blocking encounter template (defined in `story-world-data.brl`).
 | Field | Type | Description |
 |-------|------|-------------|
 | `blockingId` | string | Unique identifier |
-| `pathId` | string | Path where this can trigger |
-| `locationId` | string | Location where this can trigger |
+| `pathId` | string | Specific path to trigger on |
+| `matchPathType` | string | Comma-separated path types to match |
+| `locationId` | string | Comma-separated location IDs to trigger on |
 | `encounterType` | string | `"combat"`, `"social"`, `"puzzle"` |
 | `description` | string | Narrative description |
 | `resolutionType` | string | `"defeat"`, `"persuade"`, `"solve"`, `"pay_toll"` |
@@ -1130,6 +1140,7 @@ crystal_guardian = new entity {
     BlockingEncounter {
         blockingId: "crystal_guardian"
         pathId: "ironhold_crystal"
+        matchPathType: ""
         locationId: ""
         encounterType: "combat"
         description: "A crystalline golem stands sentinel at the cavern entrance, its eyes glowing with ancient magic."
