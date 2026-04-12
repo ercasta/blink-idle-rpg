@@ -1,0 +1,146 @@
+// =============================================================================
+// BLINK IDLE RPG — WORLD SYSTEM (COMPONENTS)
+// =============================================================================
+// Defines the ECS components for the world system described in
+// doc/game-design/world-design.md. These components model the persistent
+// world: named locations, paths between them, NPCs bound to locations,
+// hero arrival comments, location-based buffs, blocking encounters, and
+// NPC role exclusivity.
+//
+// World data (the actual locations, paths, NPCs, comments, and encounters)
+// is defined in story-world-data.brl. This file contains only the component
+// and event schema.
+//
+// At this stage the world logic runs in TypeScript. These component
+// declarations serve as the canonical schema and will be compiled into the
+// WASM engine when the world rules are migrated to BRL.
+// =============================================================================
+
+// ─── World location ─────────────────────────────────────────────────────────
+// A named, authored location in the persistent world. Adventures select a
+// subset of these to form the adventure map.
+
+component WorldLocation {
+    locationId: string              // Unique ID, e.g. "ironhold"
+    name: string                    // Display name, e.g. "Ironhold"
+    locationType: string            // "town", "wilderness", "dungeon", "shrine", "ruins", "fortress"
+    region: string                  // World region, e.g. "northern_highlands"
+    description: string             // 2-4 sentence description (shown at verbosity level 3)
+    elementalAffinity: string       // "fire", "water", "wind", "earth", "light", "darkness", "neutral"
+    dangerLevel: integer            // Base danger rating (1-5)
+    tags: string                    // Comma-separated tags, e.g. "mountain,cold,ancient"
+}
+
+// ─── World path ─────────────────────────────────────────────────────────────
+// A connection between two world locations. Path type determines travel time
+// modifiers, danger modifiers, and encounter flavour.
+
+component WorldPath {
+    pathId: string                  // Unique ID, e.g. "ashfall_to_ironhold"
+    fromLocationId: string          // Origin world location ID
+    toLocationId: string            // Destination world location ID
+    pathType: string                // "imperial_road", "mountain_pass", "forest_trail", "coastal_path", "underground_tunnel", "river_crossing", "marsh_track"
+    travelHours: integer            // Base travel time in hours (2-8)
+    dangerRating: integer           // Base danger rating (1-5)
+    description: string             // 1-2 sentence path description for narrative
+    encounterTags: string           // Comma-separated tags for encounter filtering
+    bidirectional: boolean          // Whether travel is possible in both directions
+}
+
+// ─── World NPC ──────────────────────────────────────────────────────────────
+// A named, authored NPC in the persistent world. NPCs are bound to specific
+// locations and can be assigned adventure roles (ally, villain, quest-giver).
+
+component WorldNpc {
+    npcId: string                   // Unique ID, e.g. "eldara"
+    name: string                    // Display name, e.g. "Eldara"
+    role: string                    // Primary role: "sage", "merchant", "guard_captain", "healer", etc.
+    personality: string             // "gruff", "kind", "mysterious", "anxious", "stoic"
+    homeLocationId: string          // Primary home location ID
+    additionalLocationIds: string   // Comma-separated additional location IDs (empty if single-location)
+    greeting: string                // Short greeting line for narrative
+    description: string             // 1-2 sentence character description
+    canBeVillain: boolean           // Whether this NPC can be assigned a villain role
+    canBeAlly: boolean              // Whether this NPC can be assigned an ally role
+    canBeQuestGiver: boolean        // Whether this NPC can be assigned a quest-giver role
+}
+
+// ─── Hero arrival comment ───────────────────────────────────────────────────
+// A comment template that a hero may speak when arriving at a location.
+// Comments are triggered by class or trait affinity with the location's
+// elemental properties. Shown at verbosity level 3.
+
+component HeroArrivalComment {
+    commentId: string               // Unique ID, e.g. "cleric_darkness_negative"
+    triggerClass: string            // Hero class that triggers this comment ("" if trait-based)
+    triggerTrait: string            // Trait axis that triggers this comment ("" if class-based)
+    triggerPolarity: string         // "positive" or "negative" ("" if class-based)
+    elementalAffinity: string       // Location element this comment reacts to
+    locationTags: string            // Comma-separated location tags (any match triggers)
+    comment: string                 // Comment text with {hero_name} placeholder
+    sentiment: string               // "positive", "negative", "neutral"
+}
+
+// ─── Location buff ──────────────────────────────────────────────────────────
+// Temporary buff or debuff applied to a hero based on interaction between
+// the location's elemental affinity and the hero's traits. Active while the
+// party is at the location.
+
+component LocationBuff {
+    heroName: string                // Which hero is affected
+    locationId: string              // Which location triggered this
+    statAffected: string            // "attack", "defense", "speed", "crit", "healing"
+    magnitude: integer              // Percentage modifier (positive = buff, negative = debuff)
+    isActive: boolean               // True while the party is at this location
+}
+
+// ─── Blocking encounter ─────────────────────────────────────────────────────
+// A special encounter on a path or at a location entrance that halts travel
+// until resolved. Addresses the inconsistency where blocking enemies do not
+// actually stop the party.
+//
+// Matching: a blocking encounter triggers on a path if pathId matches or if
+// matchPathType matches the path's pathType. For location-based encounters,
+// matchLocationId is checked. At least one matching field must be non-empty.
+
+component BlockingEncounter {
+    blockingId: string              // Unique ID, e.g. "troll_bridge"
+    pathId: string                  // Specific path ID to trigger on ("" for type-based or location-based)
+    matchPathType: string           // Path type to match, e.g. "river_crossing,marsh_track" ("" for specific path or location)
+    locationId: string              // Specific location ID to trigger on entry ("" if path-based)
+    encounterType: string           // "combat", "social", "puzzle"
+    description: string             // Narrative description of the blockage
+    resolutionType: string          // "defeat", "persuade", "solve", "pay_toll"
+    enemies: string                 // Comma-separated enemy types (for combat encounters)
+    difficultyModifier: integer     // Difficulty adjustment
+    narrativeOnBlock: string        // Text when the party is blocked
+    narrativeOnResolve: string      // Text when the block is resolved
+    triggerChance: decimal          // Probability of triggering per traversal (0.0-1.0)
+    isResolved: boolean             // Whether resolved this adventure
+}
+
+// ─── NPC role assignment ────────────────────────────────────────────────────
+// Tracks which NPCs have been assigned which roles during adventure
+// composition. Used to enforce role exclusivity — an NPC assigned as "ally"
+// cannot later be assigned as "villain" in the same adventure.
+
+component NpcRoleAssignment {
+    npcId: string                   // World NPC ID
+    role: string                    // Assigned role: "ally", "villain", "quest_giver", "captive", "traitor", "bystander"
+    adventureSeed: integer          // Which adventure this assignment belongs to
+}
+
+// =============================================================================
+// WORLD EVENTS
+// =============================================================================
+// Events that drive the world system lifecycle. These integrate with the
+// existing story mode events (TravelArrival, TravelSegment, etc.).
+// =============================================================================
+
+event LocationDescriptionShown { locationId: string }
+event HeroCommentTriggered { heroName: string, locationId: string, commentId: string }
+event LocationBuffApplied { heroName: string, locationId: string, statAffected: string, magnitude: integer }
+event LocationBuffRemoved { heroName: string, locationId: string }
+event BlockingEncounterTriggered { blockingId: string, pathId: string }
+event BlockingEncounterResolved { blockingId: string, succeeded: boolean }
+event NpcRoleAssigned { npcId: string, role: string }
