@@ -14,6 +14,8 @@ import { DEFAULT_ENVIRONMENT_SETTINGS } from '../types';
 import { simulateHeroPath, getSkillName, deriveDamageCategory, deriveDamageElement, deriveResistances, computeLinePreferenceScore } from '../data/traits';
 import { computeAdventureSeed, simulateQuestProgress, generateQuestNarrative, QUEST_EARLY_COMPLETION_POINTS_PER_DAY } from '../data/adventureQuest';
 import type { AdventureDefinition } from '../types';
+import { selectWorldMap, findPath, selectArrivalComments, findBlockingEncounters, PATH_TYPE_DESCRIPTIONS } from '../data/worldData';
+import type { WorldLocation, WorldPath } from '../data/worldData';
 
 // ── Hero stats per class ────────────────────────────────────────────────────
 
@@ -1046,30 +1048,6 @@ function _runStoryMode(
 
 // ── Story mode narrative log generation ─────────────────────────────────────
 
-/** Location name banks indexed by dominant element. */
-const LOCATION_NAMES: Record<string, string[]> = {
-  fire:      ['Ember Hollow', 'Ashfall Pass', 'Cindervale', 'Scorched Basin', 'Blazeheart', 'Firewatch'],
-  water:     ['Mistshore', 'Tidecrest', 'Deepwell', 'Glimmer Falls', 'Shorebreak', 'Coral Reach'],
-  wind:      ['Galeridge', 'Stormcrest', 'Whispering Heights', 'Zephyr Crossing', 'Windhollow', 'Skyreach'],
-  earth:     ['Ironhold', 'Stonecradle', 'Deeproot', 'Boulder Arch', 'Granite Rest', 'Mosswall'],
-  light:     ['Dawnspire', 'Solace Crossing', 'Radiant Glade', 'Luminary Rest', 'Brightfield', 'Sunhaven'],
-  darkness:  ['Duskhollow', 'Shadowmere', 'Nightveil', "Murk's End", 'Gloomwatch', 'Ebonreach'],
-  physical:  ['Crossroads', 'Thornfield', 'Rustvale', 'Old Bridge', 'Millhaven', 'Dustgate'],
-  magical:   ['Arcane Bluff', 'Spellhaven', 'Runestone Ridge', 'Glyphwatch', 'Enchant Ford', 'Starfall'],
-};
-
-const TERRAIN_TYPES = ['forest', 'mountain', 'swamp', 'plains', 'ruins', 'cave'] as const;
-type TerrainType = typeof TERRAIN_TYPES[number];
-
-const TERRAIN_DESC: Record<TerrainType, string> = {
-  forest:   'dense woodland',
-  mountain: 'rocky highland passes',
-  swamp:    'marshy lowlands',
-  plains:   'open grasslands',
-  ruins:    'ancient crumbling structures',
-  cave:     'dark underground passages',
-};
-
 /** Deterministic hash for narrative seeding. */
 function _narrativeHash(a: number, b: number, c: number): number {
   let h = (a * 2654435761 + b * 2246822519 + c * 3266489909) >>> 0;
@@ -1083,43 +1061,32 @@ function _pickOne<T>(arr: T[], seed: number): T {
   return arr[seed % arr.length];
 }
 
-/** Get the dominant element from environment settings. */
-function _dominantElement(env: EnvironmentSettings): string {
-  const elements: [string, number][] = [
-    ['fire', env.firePct], ['water', env.waterPct], ['wind', env.windPct],
-    ['earth', env.earthPct], ['light', env.lightPct], ['darkness', env.darknessPct],
-  ];
-  elements.sort((a, b) => b[1] - a[1]);
-  if (elements[0][1] <= 15) {
-    return env.magicalPct > env.physicalPct ? 'magical' : 'physical';
-  }
-  return elements[0][0];
-}
-
-/** Generate location names for the story map. */
-function _generateLocationNames(seedNum: number, count: number, env: EnvironmentSettings): string[] {
-  const dominant = _dominantElement(env);
-  const bank = LOCATION_NAMES[dominant] ?? LOCATION_NAMES['physical'];
-  const allNames = [...bank, ...LOCATION_NAMES['physical'], ...LOCATION_NAMES['magical']];
-  const names: string[] = [];
-  const used = new Set<string>();
-  for (let i = 0; i < count; i++) {
-    const h = _narrativeHash(seedNum, i, 42);
-    let name = allNames[h % allNames.length];
-    let attempt = 0;
-    while (used.has(name) && attempt < 50) {
-      attempt++;
-      name = allNames[_narrativeHash(seedNum, i, 42 + attempt) % allNames.length];
-    }
-    if (used.has(name)) name = `${name} (${names.length + 1})`;
-    used.add(name);
-    names.push(name);
-  }
-  return names;
+/**
+ * Select world locations for a story map using the persistent world data.
+ *
+ * Replaces the procedural _generateLocationNames() with world-based map
+ * selection per doc/game-design/world-design.md "Map Selection".
+ */
+function _selectWorldLocations(seedNum: number, count: number): {
+  locations: WorldLocation[];
+  paths: WorldPath[];
+  locationNames: string[];
+} {
+  const { locations, paths } = selectWorldMap(seedNum, count);
+  return {
+    locations,
+    paths,
+    locationNames: locations.map(l => l.name),
+  };
 }
 
 /**
  * Generate a complete narrative log for a story mode run.
+ *
+ * Uses the persistent world data (locations, paths, NPCs, hero arrival
+ * comments, blocking encounters) to generate narratively rich text.
+ * Location descriptions are shown at level 3, hero arrival comments at
+ * level 3, and path descriptions at level 3.
  *
  * All text is generated deterministically from the seed, hero names, and game
  * outcome — no PRNG state is needed beyond what can be reconstructed from
@@ -1134,12 +1101,16 @@ function _generateNarrativeLog(
   townsRested: number,
   ambushesSurvived: number,
   finalDestinationReached: boolean,
-  env: EnvironmentSettings,
+  _env: EnvironmentSettings,
   completionDay: number = STORY_TOTAL_DAYS,
 ): NarrativeEntry[] {
   const log: NarrativeEntry[] = [];
   const heroNames = heroes.map(h => h.name);
-  const locationNames = _generateLocationNames(seedNum, totalLocations, env);
+
+  // Select world locations for this adventure's map
+  const worldMap = _selectWorldLocations(seedNum, totalLocations);
+  const locationNames = worldMap.locationNames;
+  const worldLocations = worldMap.locations;
   const startLocation = locationNames[0];
   const finalLocation = locationNames[locationNames.length - 1];
 
@@ -1152,6 +1123,11 @@ function _generateNarrativeLog(
   emit(1, 0, 2, `The party gathers at the ${startLocation} tavern. Their destination: ${finalLocation}.`);
   emit(1, 0, 3, `${heroNames.join(', ')} check their equipment and study the map. The road ahead is long.`);
 
+  // Show starting location description at level 3
+  if (worldLocations[0]) {
+    emit(1, 0, 3, worldLocations[0].description);
+  }
+
   // Track which locations have been visited, encounters per day, etc.
   let encountersRemaining = totalEncounters;
   let locationsLeft = locationsVisited - 1; // -1 for start
@@ -1161,8 +1137,6 @@ function _generateNarrativeLog(
 
   for (let day = 1; day <= completionDay; day++) {
     const dayHash = _narrativeHash(seedNum, day, 0);
-    const terrain = TERRAIN_TYPES[dayHash % TERRAIN_TYPES.length];
-    const terrainDesc = TERRAIN_DESC[terrain];
 
     // Day start (skip day 1, already emitted)
     if (day > 1) {
@@ -1175,6 +1149,16 @@ function _generateNarrativeLog(
     if (shouldTravel) {
       const nextLocIdx = Math.min(currentLocationIdx + 1, locationNames.length - 1);
       const nextLocation = locationNames[nextLocIdx];
+      const nextWorldLoc = worldLocations[nextLocIdx];
+      const prevWorldLoc = worldLocations[currentLocationIdx];
+
+      // Find the world path between current and next location
+      const travelPath = prevWorldLoc && nextWorldLoc
+        ? findPath(prevWorldLoc.locationId, nextWorldLoc.locationId)
+        : undefined;
+      const terrainDesc = travelPath
+        ? (PATH_TYPE_DESCRIPTIONS[travelPath.pathType] ?? travelPath.pathType)
+        : 'the road ahead';
 
       // Each hero proposes a destination based on traits
       const heroProposals: string[] = [];
@@ -1187,12 +1171,12 @@ function _generateNarrativeLog(
         const isOffensive = hero.traits.od < 0;
 
         if (isCautious && townsLeft > 0 && h % 3 === 0) {
-          // Propose a safe town
+          // Propose a safe town — look for a town in the selected locations
           const townIdx = _narrativeHash(seedNum, day, hi + 200) % locationNames.length;
           const townName = locationNames[townIdx];
           heroProposals.push(`${hero.name} proposes to retreat to ${townName} and heal`);
         } else if (isOffensive) {
-          heroProposals.push(`${hero.name} proposes to push toward ${nextLocation} through the ${terrainDesc}`);
+          heroProposals.push(`${hero.name} proposes to push toward ${nextLocation} through ${terrainDesc}`);
         } else {
           heroProposals.push(`${hero.name} proposes to head for ${nextLocation}`);
         }
@@ -1205,19 +1189,45 @@ function _generateNarrativeLog(
 
       // Party decision
       emit(day, 1, 2, `The party decides to travel toward ${nextLocation}.`);
-      emit(day, 1, 3, `The path leads through ${terrainDesc}. Travel will take several hours.`);
+      if (travelPath) {
+        emit(day, 1, 3, `The path leads through ${terrainDesc}. Travel will take approximately ${travelPath.travelHours} hours.`);
+      } else {
+        emit(day, 1, 3, `The path leads through ${terrainDesc}. Travel will take several hours.`);
+      }
 
       const prevLocation = locationNames[currentLocationIdx];
       currentLocationIdx = nextLocIdx;
       locationsLeft--;
 
       // ── Travel & Encounters ─────────────────────────────────────────
-      const travelHours = 2 + (dayHash % 5); // 2-6 hours
+      const travelHours = travelPath ? travelPath.travelHours : (2 + (dayHash % 5));
       const encountersToday = Math.min(encountersRemaining,
         Math.max(0, 1 + (dayHash % 4))); // 1-4 encounters
 
-      emit(day, 1, 2, `The party sets out from ${prevLocation} toward ${nextLocation}, following the ${terrain} road.`);
-      emit(day, 1, 3, `The route will take approximately ${travelHours} hours.`);
+      emit(day, 1, 2, `The party sets out from ${prevLocation} toward ${nextLocation}, following ${terrainDesc}.`);
+      // Show path description at level 3
+      if (travelPath) {
+        emit(day, 1, 3, travelPath.description);
+      } else {
+        emit(day, 1, 3, `The route will take approximately ${travelHours} hours.`);
+      }
+
+      // ── Blocking encounter check ────────────────────────────────────
+      if (travelPath) {
+        const blockingEncs = findBlockingEncounters(
+          travelPath.pathType, travelPath.pathId,
+          nextWorldLoc?.locationId,
+        );
+        if (blockingEncs.length > 0) {
+          const blockHash = _narrativeHash(seedNum, day, 900);
+          const blocking = blockingEncs[blockHash % blockingEncs.length];
+          if ((blockHash % 100) / 100 < blocking.triggerChance) {
+            emit(day, 2, 2, `⚠️ ${blocking.description}`);
+            emit(day, 2, 3, blocking.narrativeOnBlock);
+            emit(day, 2, 3, blocking.narrativeOnResolve);
+          }
+        }
+      }
 
       let hour = 2;
       for (let enc = 0; enc < encountersToday && encountersRemaining > 0; enc++) {
@@ -1265,8 +1275,33 @@ function _generateNarrativeLog(
       // Arrival
       emit(day, hour, 1, `Day ${day} — The party arrives at ${nextLocation}.`);
 
+      // Show location description at level 3
+      if (nextWorldLoc) {
+        emit(day, hour, 3, nextWorldLoc.description);
+      }
+
+      // ── Hero arrival comments (level 3, ~60% trigger rate) ──────────
+      if (nextWorldLoc) {
+        const commentHash = _narrativeHash(seedNum, day, 850);
+        if (commentHash % 100 < 60) { // 60% trigger rate
+          // Pick the best-matching hero for a comment
+          const heroIdx = commentHash % heroes.length;
+          const hero = heroes[heroIdx];
+          const traitMap: Record<string, number> = {};
+          for (const key of Object.keys(hero.traits)) {
+            traitMap[key] = hero.traits[key as keyof typeof hero.traits];
+          }
+          const comments = selectArrivalComments(hero.heroClass, traitMap, nextWorldLoc);
+          if (comments.length > 0) {
+            const selectedComment = comments[0];
+            const commentText = selectedComment.comment.replace('{hero_name}', hero.name);
+            emit(day, hour, 3, commentText);
+          }
+        }
+      }
+
       // Town rest or camp
-      const isTown = townsLeft > 0 && dayHash % 3 === 0;
+      const isTown = townsLeft > 0 && (nextWorldLoc?.locationType === 'town' || dayHash % 3 === 0);
       if (isTown) {
         townsLeft--;
         emit(day, hour + 1, 2, `The party rests at the ${nextLocation} tavern. All wounds are healed.`);
