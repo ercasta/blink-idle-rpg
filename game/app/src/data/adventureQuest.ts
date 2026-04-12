@@ -1403,26 +1403,21 @@ function selectHeroEncounters(
     }
   }
 
-  // Ensure we have at least 5 (relax matching if needed)
+  // Ensure we have at least 5 (relax matching — assign any hero even without a match)
   if (selected.length < 5) {
     for (const enc of shuffled) {
       if (selected.length >= 5) break;
       if (usedEncounterIds.has(enc.encounterId)) continue;
-      // Use first hero that at least partially matches
-      for (const hero of heroes) {
-        const { score, reason } = scoreHeroForEncounter(hero, enc);
-        if (score >= 0) {
-          selected.push({
-            encounter: enc,
-            heroName: hero.name,
-            heroClass: hero.heroClass,
-            matchScore: Math.max(1, score),
-            matchReason: reason || `${hero.name} steps forward to face this challenge.`,
-          });
-          usedEncounterIds.add(enc.encounterId);
-          break;
-        }
-      }
+      // Pick the first available hero (no trait/class requirement)
+      const hero = heroes[0];
+      selected.push({
+        encounter: enc,
+        heroName: hero.name,
+        heroClass: hero.heroClass,
+        matchScore: 1,
+        matchReason: `${hero.name} steps forward to face this challenge.`,
+      });
+      usedEncounterIds.add(enc.encounterId);
     }
   }
 
@@ -1686,8 +1681,8 @@ export function generateAdventureQuest(
   // 8. Select hero-matched encounters (if party heroes are provided)
   const heroEncounters: QuestHeroEncounter[] = [];
   if (heroes && heroes.length > 0) {
-    const heroEncRng = new Rng(seed + 0xBEEF);  // Separate RNG stream for hero encounters
-    const matches = selectHeroEncounters(heroEncRng, heroes, bindings);
+    const heroEncounterRng = new Rng(seed + 0xBEEF);  // Separate RNG stream for hero encounters
+    const matches = selectHeroEncounters(heroEncounterRng, heroes, bindings);
 
     // Distribute encounters across the adventure days (spread evenly)
     const daySpacing = Math.max(2, Math.floor(STORY_TOTAL_DAYS / (matches.length + 1)));
