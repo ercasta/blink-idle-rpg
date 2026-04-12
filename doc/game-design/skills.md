@@ -1209,7 +1209,7 @@ For each of the 4 classes that currently have 16-skill trees (Warrior, Mage, Rog
 | `doc/game-design/characters.md` | Update skill point and max level references |
 | `doc/game-design/character-traits.md` | No changes needed (scoring formula is generic) |
 | `game/brl/skill-catalog.brl` | Full rewrite with 216 skills |
-| `game/app/public/game-files/skill-catalog.brl` | Mirror of above |
+| `game/app/public/game-files/skill-catalog.brl` | Auto-copied from above by `npm run copy-game-files` |
 | `game/app/src/data/skillCatalog.ts` | Update parser and `SkillEntry` interface |
 | BRL rule files (skill selection, combat skills) | Update level cap, add level scaling, add L5 bonus checks |
 | BRL component definitions | Add `SkillLevel` component; update `SkillEffect`, `PassiveSkill` |
