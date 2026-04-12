@@ -1,8 +1,9 @@
 /**
  * Skill Catalog — extracts skill descriptions embedded in the BRL skill-catalog file.
  *
- * The skill descriptions live in `public/game-files/skill-catalog.brl` as entities
- * carrying a `SkillInfo` component.  This module fetches that file at runtime and
+ * The skill descriptions are served from `public/game-files/skill-catalog.brl`,
+ * which is auto-copied from the canonical source at `game/brl/skill-catalog.brl`
+ * by `npm run copy-game-files`.  This module fetches that file at runtime and
  * parses out the descriptions using a lightweight regex approach, so the authoritative
  * source of truth always remains the BRL file itself.
  *
