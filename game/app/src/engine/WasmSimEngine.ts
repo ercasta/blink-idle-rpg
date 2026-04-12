@@ -967,7 +967,7 @@ function _runStoryMode(
   if (adventure) {
     const adventureSeed = computeAdventureSeed(adventure);
     pendingQuestResult = simulateQuestProgress(
-      adventureSeed, totalEncounters, locationsVisited,
+      adventureSeed, totalEncounters, locationsVisited, selectedHeroes,
     );
     questScore = pendingQuestResult.totalQuestScore;
     questObjectiveCompleted = pendingQuestResult.objectiveCompleted;

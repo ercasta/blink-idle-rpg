@@ -315,10 +315,17 @@ town rests, and ambush survival. Full design details are in
 ### Adventure Quest System
 
 Each story mode run follows a seed-generated **quest** with an objective (rescue
-an NPC, retrieve an artifact, defeat a villain), 3–4 sequential milestones, and
+an NPC, retrieve an artifact, defeat a villain), 5–6 sequential milestones, and
 events within each milestone. Pluggable slots fill in NPC names, items, and
 locations from extensible pools. Bail-out mechanisms ensure the adventure always
 progresses even if the party's trait-driven decisions miss key locations. Custom
 BRL rules can modify combat or grant special conditions for specific events.
+
+Additionally, each adventure includes 5–7 **hero-matched encounters** — events
+tailored to specific hero classes or trait polarizations. The system selects the
+best-matching hero from the party, highlights why their abilities were decisive,
+and grants the party a buff for the rest of the adventure. These encounters are
+defined in `adventure-expansion-set-1.brl`.
+
 Full design details are in
 [`doc/game-design/adventure-design.md`](doc/game-design/adventure-design.md).

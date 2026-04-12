@@ -65,16 +65,19 @@ The adventure composition system works in layers:
 ```
 Seed
  └─► Objective (1 per adventure)
-      └─► Milestones (3–4 per adventure, sequential)
+      └─► Milestones (5–6 per adventure, sequential)
            └─► Events (2–3 per milestone)
                 └─► Pluggable Slots (NPCs, items, locations filled from pools)
+ └─► Hero Encounters (5–7 per adventure, matched to party)
+      └─► Best-match hero selection (by class or trait polarization)
+           └─► Buff reward + narrative highlight
 ```
 
 **Flow at runtime:**
 
 1. On `StoryStart`, the adventure seed is computed from adventure traits.
 2. The composition algorithm draws an **objective** from the objective pool.
-3. It draws 3–4 **milestones** compatible with the objective, ordered sequentially.
+3. It draws 5–6 **milestones** compatible with the objective, ordered sequentially.
 4. For each milestone, it draws 2–3 **events** that the party encounters during
    travel. Completing event requirements unlocks the milestone.
 5. **Pluggable slots** (NPC names, item names, characteristics) are filled from
@@ -114,12 +117,13 @@ All random choices during adventure composition use the runtime's deterministic
 fixed order:
 
 1. Draw objective index
-2. Draw milestone count (3 or 4)
+2. Draw milestone count (5 or 6)
 3. For each milestone: draw milestone template index
 4. For each milestone: draw event count (2 or 3), then event template indices
 5. Draw NPC pool entries (names, traits)
 6. Draw item pool entries (names, descriptions)
 7. Draw descriptive passage variants
+8. Draw hero-matched encounters (using separate RNG stream seeded with offset)
 
 This fixed ordering ensures determinism — the same seed always produces the
 same adventure regardless of execution timing.
@@ -168,7 +172,7 @@ having `ObjectiveTemplate`.
 
 ## Milestones
 
-A **milestone** is a major quest checkpoint. The adventure has 3–4 milestones
+A **milestone** is a major quest checkpoint. The adventure has 5–6 milestones
 arranged sequentially. Each milestone must be completed before the next one
 activates. Milestones are tied to specific locations on the map — completing
 them often requires visiting a particular location or achieving a condition
@@ -226,10 +230,12 @@ Each milestone is mapped to a **target map layer** based on its position:
 
 | Milestone Position | Target Map Layer | Typical Day Range |
 |-------------------|-----------------|-------------------|
-| 1st (of 3–4) | Layer 1 | Days 1–8 |
-| 2nd (of 3–4) | Layer 2 | Days 6–16 |
-| 3rd (of 3–4) | Layer 3 | Days 14–24 |
-| 4th (if present) | Layer 3–4 | Days 20–30 |
+| 1st (of 5–6) | Layer 1 | Days 1–6 |
+| 2nd (of 5–6) | Layer 1–2 | Days 4–12 |
+| 3rd (of 5–6) | Layer 2 | Days 8–18 |
+| 4th (of 5–6) | Layer 2–3 | Days 12–22 |
+| 5th (of 5–6) | Layer 3 | Days 18–28 |
+| 6th (if present) | Layer 3–4 | Days 22–30 |
 
 The bail-out day is computed relative to the milestone's activation day:
 `bailoutTriggerDay = milestoneActivationDay + milestoneTemplate.bailoutDay`.
@@ -781,7 +787,7 @@ Attached to: the game-state entity (alongside `StoryConfig`).
 | `objectiveTitle` | string | Resolved title text |
 | `objectiveDescription` | string | Resolved description text |
 | `objectiveWinCondition` | string | Win condition type |
-| `totalMilestones` | integer | Number of milestones (3 or 4) |
+| `totalMilestones` | integer | Number of milestones (5 or 6) |
 | `currentMilestoneIndex` | integer | Index of the currently active milestone (0-based) |
 | `milestonesCompleted` | integer | Number of milestones completed |
 | `adventureComplete` | boolean | Whether the objective has been achieved |
@@ -1143,6 +1149,90 @@ The `totalQuestScore` is added to the final score in the existing
 
 ---
 
+## Hero-Matched Encounters (Expansion Set 1)
+
+The adventure expansion system adds **hero-matched encounters** — events that
+are particularly well-suited for specific hero classes or trait polarizations.
+When a hero encounter triggers, the system selects the "best match" hero from
+the party and generates narrative text explaining *why* that hero's class or
+traits were instrumental in the encounter's success. Completing a hero encounter
+grants a **stat buff** for the rest of the adventure.
+
+### Design Goals
+
+- **30 hero-matched encounter templates**: 6 class-specific (one per class) +
+  24 trait-polarization (one per pole of each of 12 trait axes).
+- **At least 5 hero encounters per adventure** run, deterministically selected.
+- **Best-match hero selection**: The hero with the highest match score is chosen.
+  For class encounters, only heroes of the required class match. For trait
+  encounters, the hero with the most extreme trait value in the correct polarity
+  wins.
+- **Narrative highlighting**: Each encounter includes text explaining why the
+  chosen hero's abilities were decisive (e.g., "The shrine recognizes a true
+  paladin's faith").
+- **Buff rewards**: Each completed encounter grants a party-wide buff (attack,
+  defense, speed, crit, healing, or XP) that lasts for the rest of the adventure.
+- **Pluggable slots**: All encounter text uses the same `{slot_name}` system as
+  other adventure content.
+
+### BRL Components
+
+Defined in `adventure-expansion-set-1.brl`:
+
+| Component | Description |
+|-----------|-------------|
+| `HeroEncounterTemplate` | Template for a class- or trait-matched encounter |
+| `HeroEncounterBuff` | Active buff granted by a completed encounter |
+| `HeroEncounterOutcome` | Narrative record of a completed encounter |
+
+### Hero Matching Algorithm
+
+```
+For each encounter template:
+  If category == "class":
+    Score = 100 if hero.class matches preferredClass, else 0
+  If category == "trait":
+    If traitPolarity == "negative":
+      Score = max(0, -hero.traits[traitAxis])   // more negative = better
+    If traitPolarity == "positive":
+      Score = max(0, hero.traits[traitAxis])     // more positive = better
+
+  Best match = hero with highest score
+```
+
+### Encounter Selection
+
+The composition algorithm selects 5–7 hero encounters per adventure:
+
+1. **First pass**: Select one encounter per hero to ensure party coverage.
+2. **Second pass**: Fill remaining slots with the best-matching encounters.
+3. **Distribution**: Encounters are spread evenly across the 30-day adventure.
+
+### Scoring
+
+| Bonus | Points | Condition |
+|-------|--------|-----------|
+| Hero encounter completed | +100 | Completing a hero-matched encounter |
+
+### Buff Types
+
+| Buff | Effect |
+|------|--------|
+| `attack` | +N% damage for the party |
+| `defense` | +N% defense for the party |
+| `speed` | +N% attack speed for the party |
+| `crit` | +N% critical hit chance for the party |
+| `healing` | +N% healing effectiveness |
+| `xp` | +N% experience gain |
+
+### Extensibility
+
+New hero encounters are added by declaring new entities with a
+`HeroEncounterTemplate` component in `adventure-expansion-set-1.brl` (or
+additional expansion files). No rule changes are needed.
+
+---
+
 ## Extensibility Guide
 
 The adventure system is designed for easy extension. Here is a summary of how
@@ -1160,6 +1250,7 @@ to add new content without modifying any rules:
 | New creature | `story-adventure-pools.brl` | `CreaturePool` | No |
 | New custom event rule | `story-adventure-rules.brl` | (BRL rule) | Yes (add rule) |
 | New bail-out type | `story-adventure-templates.brl` | Update `MilestoneTemplate` | No |
+| New hero encounter | `adventure-expansion-set-1.brl` | `HeroEncounterTemplate` | No |
 
 The general pattern is:
 1. **Data = entities with template/pool components**. Add new entities to extend content.
