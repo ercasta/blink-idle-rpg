@@ -84,3 +84,36 @@ enemy_compendium = new entity {
         entries: []
     }
 }
+
+// Scoring rules for Easy mode (see doc/game-design/game-modes.md)
+let scoring_entity: id = new entity {
+    ScoringRules {
+        pointsPerKill: 5
+        pointsPerWave: 25
+        pointsPerBoss: 250
+        pointsLostPerDeath: 50
+        pointsLostPerRetreat: 25
+        pointsLostPerPenaltySecond: 1
+        timeBonusPoints: 500
+        timeBonusInterval: 15.0d
+    }
+    Score {
+        total: 0
+        killScore: 0
+        waveScore: 0
+        bossScore: 0
+        speedBonus: 0
+        deathPenaltyTotal: 0
+        retreatPenaltyTotal: 0
+        timePenaltyTotal: 0
+        bossesDefeated: 0
+        wavesCompleted: 0
+    }
+    GameMode {
+        id: "easy"
+        name: "Casual Adventure"
+        description: "A relaxed journey perfect for newcomers. Lower enemy spawn rates, easier progression, and reduced penalties."
+        difficulty: "Easy"
+        hasVictoryCondition: true
+    }
+}

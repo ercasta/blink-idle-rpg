@@ -16,6 +16,10 @@ import { computeAdventureSeed, simulateQuestProgress, generateQuestNarrative, QU
 import type { AdventureDefinition } from '../types';
 import { selectWorldMap, findPath, selectArrivalComments, findBlockingEncounters, PATH_TYPE_DESCRIPTIONS } from '../data/worldData';
 import type { WorldLocation, WorldPath } from '../data/worldData';
+import { loadEnemyTemplates } from '../data/enemyData';
+import type { EnemyTemplate } from '../data/enemyData';
+import { loadScenarioConfigs } from '../data/scenarioData';
+import type { ModeConfig } from '../data/scenarioData';
 
 // ── Hero stats per class ────────────────────────────────────────────────────
 
@@ -45,55 +49,34 @@ const CLASS_ATTACK_SPEED: Record<string, number> = {
 };
 
 // ── Game mode spawn configs ─────────────────────────────────────────────────
+// Mode configs are now loaded from BRL scenario files at runtime via
+// loadScenarioConfigs() in scenarioData.ts.  The hardcoded fallback below
+// is used only when BRL files are unavailable (e.g. unit tests).
 
-const MODE_CONFIGS: Record<Exclude<GameMode, 'custom'>, {
-  bossEveryKills: number; tierProgressionKills: number;
-  healthScaleRate: number; damageScaleRate: number; initialEnemyCount: number;
-  retreatTimePenalty: number; deathTimePenaltyMultiplier: number; fleeCooldown: number;
-  pointsPerKill: number; pointsPerWave: number; pointsPerBoss: number;
-  pointsLostPerDeath: number; pointsLostPerRetreat: number; pointsLostPerPenaltySecond: number;
-  timeBonusPoints: number; timeBonusInterval: number;
-}> = {
-  normal: {
-    bossEveryKills: 100, tierProgressionKills: 500,
-    healthScaleRate: 80, damageScaleRate: 60, initialEnemyCount: 5,
-    retreatTimePenalty: 10.0, deathTimePenaltyMultiplier: 2.0, fleeCooldown: 5.0,
-    pointsPerKill: 10, pointsPerWave: 50, pointsPerBoss: 500,
-    pointsLostPerDeath: 30, pointsLostPerRetreat: 50, pointsLostPerPenaltySecond: 2,
-    timeBonusPoints: 1000, timeBonusInterval: 10.0,
-  },
-  // Easy = all numeric parameters × 0.5 vs Normal (less intense experience overall)
-  easy: {
-    bossEveryKills: 150, tierProgressionKills: 750,
-    healthScaleRate: 40, damageScaleRate: 30, initialEnemyCount: 3,
-    retreatTimePenalty: 5.0, deathTimePenaltyMultiplier: 1.0, fleeCooldown: 5.0,
-    pointsPerKill: 5, pointsPerWave: 25, pointsPerBoss: 250,
-    pointsLostPerDeath: 15, pointsLostPerRetreat: 25, pointsLostPerPenaltySecond: 1,
-    timeBonusPoints: 500, timeBonusInterval: 15.0,
-  },
-  // Hard = all numeric parameters × 1.5 vs Normal (higher stakes, bigger rewards and penalties)
-  hard: {
-    bossEveryKills: 75, tierProgressionKills: 400,
-    healthScaleRate: 120, damageScaleRate: 90, initialEnemyCount: 7,
-    retreatTimePenalty: 15.0, deathTimePenaltyMultiplier: 3.0, fleeCooldown: 5.0,
-    pointsPerKill: 15, pointsPerWave: 75, pointsPerBoss: 750,
-    pointsLostPerDeath: 45, pointsLostPerRetreat: 75, pointsLostPerPenaltySecond: 3,
-    timeBonusPoints: 1500, timeBonusInterval: 5.0,
-  },
+const FALLBACK_NORMAL_CONFIG: ModeConfig = {
+  bossEveryKills: 100, tierProgressionKills: 500,
+  healthScaleRate: 80, damageScaleRate: 60, initialEnemyCount: 5,
+  retreatTimePenalty: 10.0, deathTimePenaltyMultiplier: 2.0, fleeCooldown: 5.0,
+  pointsPerKill: 10, pointsPerWave: 50, pointsPerBoss: 500,
+  pointsLostPerDeath: 30, pointsLostPerRetreat: 50, pointsLostPerPenaltySecond: 2,
+  timeBonusPoints: 1000, timeBonusInterval: 10.0,
 };
 
 // ── Enemy template data ─────────────────────────────────────────────────────
+// Enemy templates are now loaded from BRL enemies.brl at runtime via
+// loadEnemyTemplates() in enemyData.ts.  The hardcoded fallback below
+// is used only when BRL files are unavailable (e.g. unit tests).
 
-const ENEMY_TEMPLATES = [
-  { id: 100, tier: 1, name: 'Goblin Scout',      hp: 60,  dmg: 8,  spd: 1.0, exp: 25,  boss: false },
-  { id: 101, tier: 2, name: 'Orc Raider',        hp: 90,  dmg: 12, spd: 0.8, exp: 35,  boss: false },
-  { id: 102, tier: 2, name: 'Dark Wolf',         hp: 75,  dmg: 14, spd: 1.2, exp: 40,  boss: false },
-  { id: 103, tier: 3, name: 'Skeleton Warrior',  hp: 110, dmg: 16, spd: 0.7, exp: 50,  boss: false },
-  { id: 104, tier: 3, name: 'Dark Mage',         hp: 80,  dmg: 22, spd: 0.5, exp: 75,  boss: false },
-  { id: 105, tier: 4, name: 'Troll Berserker',   hp: 180, dmg: 22, spd: 0.6, exp: 80,  boss: false },
-  { id: 106, tier: 5, name: 'Demon Knight',      hp: 250, dmg: 30, spd: 0.7, exp: 150, boss: false },
-  { id: 107, tier: 6, name: 'Ancient Dragon',    hp: 400, dmg: 40, spd: 0.8, exp: 300, boss: false },
-  { id: 108, tier: 6, name: 'Dragon Lord Vexar', hp: 500, dmg: 40, spd: 0.8, exp: 500, boss: true  },
+const FALLBACK_ENEMY_TEMPLATES: EnemyTemplate[] = [
+  { id: 100, tier: 1, name: 'Goblin Scout',      hp: 45,  dmg: 6,  def: 2,  spd: 0.8, exp: 25,  boss: false, finalBoss: false, stats: { strength: 6, dexterity: 10, intelligence: 3, constitution: 6, wisdom: 3 }, mana: 0, critChance: 0.05, critMultiplier: 1.5 },
+  { id: 101, tier: 2, name: 'Orc Raider',        hp: 70,  dmg: 10, def: 3,  spd: 0.7, exp: 35,  boss: false, finalBoss: false, stats: { strength: 10, dexterity: 7, intelligence: 3, constitution: 10, wisdom: 3 }, mana: 0, critChance: 0.05, critMultiplier: 1.5 },
+  { id: 102, tier: 2, name: 'Dark Wolf',         hp: 55,  dmg: 11, def: 2,  spd: 1.0, exp: 40,  boss: false, finalBoss: false, stats: { strength: 8, dexterity: 14, intelligence: 3, constitution: 6, wisdom: 4 }, mana: 0, critChance: 0.08, critMultiplier: 1.5 },
+  { id: 103, tier: 3, name: 'Skeleton Warrior',  hp: 85,  dmg: 13, def: 5,  spd: 0.6, exp: 50,  boss: false, finalBoss: false, stats: { strength: 12, dexterity: 8, intelligence: 3, constitution: 10, wisdom: 3 }, mana: 0, critChance: 0.08, critMultiplier: 1.5 },
+  { id: 104, tier: 3, name: 'Dark Mage',         hp: 60,  dmg: 18, def: 3,  spd: 0.5, exp: 75,  boss: false, finalBoss: false, stats: { strength: 5, dexterity: 8, intelligence: 14, constitution: 6, wisdom: 10 }, mana: 100, critChance: 0.12, critMultiplier: 1.8 },
+  { id: 105, tier: 4, name: 'Troll Berserker',   hp: 140, dmg: 18, def: 6,  spd: 0.5, exp: 80,  boss: false, finalBoss: false, stats: { strength: 15, dexterity: 6, intelligence: 3, constitution: 15, wisdom: 3 }, mana: 0, critChance: 0.10, critMultiplier: 1.5 },
+  { id: 106, tier: 5, name: 'Demon Knight',      hp: 200, dmg: 24, def: 8,  spd: 0.6, exp: 150, boss: false, finalBoss: false, stats: { strength: 15, dexterity: 10, intelligence: 8, constitution: 14, wisdom: 6 }, mana: 50, critChance: 0.12, critMultiplier: 1.8 },
+  { id: 107, tier: 6, name: 'Ancient Dragon',    hp: 300, dmg: 30, def: 10, spd: 0.7, exp: 300, boss: true,  finalBoss: false, stats: { strength: 18, dexterity: 12, intelligence: 14, constitution: 18, wisdom: 12 }, mana: 150, critChance: 0.15, critMultiplier: 1.8 },
+  { id: 108, tier: 6, name: 'Dragon Lord Vexar', hp: 400, dmg: 35, def: 12, spd: 0.7, exp: 500, boss: true,  finalBoss: true,  stats: { strength: 20, dexterity: 12, intelligence: 16, constitution: 20, wisdom: 12 }, mana: 200, critChance: 0.15, critMultiplier: 2.0 },
 ];
 
 // ── WASM module loader ──────────────────────────────────────────────────────
@@ -168,8 +151,8 @@ async function loadWasmModule(): Promise<WasmModule | null> {
  * Derives a custom mode configuration from the normal-mode baseline by
  * applying percentage offsets supplied via the slider settings.
  */
-function buildCustomConfig(settings: CustomModeSettings) {
-  const base = MODE_CONFIGS.normal;
+function buildCustomConfig(settings: CustomModeSettings, normalConfig: ModeConfig) {
+  const base = normalConfig;
   const hpMult   = 1 + settings.heroPenaltyPct       / 100;
   const wpMult   = 1 + settings.wipeoutPenaltyPct    / 100;
   const diffMult = 1 + settings.encounterDifficultyPct / 100;
@@ -211,13 +194,24 @@ export async function runSimulation(
   runType: RunType = 'fight',
   adventure?: AdventureDefinition,
 ): Promise<{ snapshots: GameSnapshot[]; heroPaths: HeroPath[]; storyKpis?: StoryKpis; narrativeLog?: NarrativeEntry[] }> {
-  const mod = await loadWasmModule();
+  // Load WASM module and BRL game data in parallel
+  const [mod, enemyTemplates, scenarioConfigs] = await Promise.all([
+    loadWasmModule(),
+    loadEnemyTemplates(),
+    loadScenarioConfigs(),
+  ]);
+
   if (!mod) {
     throw new Error(
       'WASM engine is not available. ' +
       'Run `npm run build:wasm && npm run install:wasm` to build and install it.'
     );
   }
+
+  // Use BRL-loaded data, falling back to hardcoded defaults if BRL load failed
+  const enemies = enemyTemplates.length > 0 ? enemyTemplates : FALLBACK_ENEMY_TEMPLATES;
+  const modeConfigs = Object.keys(scenarioConfigs).length > 0 ? scenarioConfigs : { normal: FALLBACK_NORMAL_CONFIG };
+  const normalConfig = modeConfigs['normal'] ?? FALLBACK_NORMAL_CONFIG;
 
   // Use a cryptographically random seed so each run produces different outcomes.
   const seedBytes = new Uint32Array(2);
@@ -226,7 +220,7 @@ export async function runSimulation(
   const game = mod.BlinkWasmGame.with_seed(seed);
   try {
     if (runType === 'story') {
-      const result = _runStoryMode(game, selectedHeroes, mode, customSettings, environmentSettings, seed, adventure);
+      const result = _runStoryMode(game, selectedHeroes, mode, enemies, modeConfigs, normalConfig, customSettings, environmentSettings, seed, adventure);
 
       const heroPaths: HeroPath[] = selectedHeroes.map(hero => {
         const maxLevel = result.snapshots.length > 0
@@ -253,7 +247,7 @@ export async function runSimulation(
     }
 
     // Fight mode (original)
-    const snapshots = _runWithWasm(game, selectedHeroes, mode, customSettings, environmentSettings);
+    const snapshots = _runWithWasm(game, selectedHeroes, mode, enemies, modeConfigs, normalConfig, customSettings, environmentSettings);
 
     // Simulate hero progression paths using the trait system
     const heroPaths: HeroPath[] = selectedHeroes.map(hero => {
@@ -299,6 +293,9 @@ function _runWithWasm(
   game: BlinkWasmGame,
   selectedHeroes: HeroDefinition[],
   mode: GameMode,
+  enemyTemplates: EnemyTemplate[],
+  modeConfigs: Record<string, ModeConfig>,
+  normalConfig: ModeConfig,
   customSettings?: CustomModeSettings,
   environmentSettings?: EnvironmentSettings,
 ): GameSnapshot[] {
@@ -306,8 +303,8 @@ function _runWithWasm(
   game.init_static();
 
   const cfg = mode === 'custom'
-    ? buildCustomConfig(customSettings ?? { heroPenaltyPct: 0, wipeoutPenaltyPct: 0, expMultiplierPct: 0, encounterDifficultyPct: 0 })
-    : (MODE_CONFIGS[mode] ?? MODE_CONFIGS.normal);
+    ? buildCustomConfig(customSettings ?? { heroPenaltyPct: 0, wipeoutPenaltyPct: 0, expMultiplierPct: 0, encounterDifficultyPct: 0 }, normalConfig)
+    : (modeConfigs[mode] ?? normalConfig);
 
   // Exp multiplier for custom mode (applies to all enemy expReward values)
   const expMult = mode === 'custom' && customSettings
@@ -398,8 +395,8 @@ function _runWithWasm(
   // Assign damage types and resistances based on adventure environment settings.
   // Each unified slider controls BOTH the chance of dealing that damage type
   // AND the chance of resisting that damage type.
-  for (let ti = 0; ti < ENEMY_TEMPLATES.length; ti++) {
-    const tmpl = ENEMY_TEMPLATES[ti];
+  for (let ti = 0; ti < enemyTemplates.length; ti++) {
+    const tmpl = enemyTemplates[ti];
     // Derive enemy damage category from environment chances
     const enemyCategory: DamageCategory =
       _pseudoRoll(ti, 0) < env.magicalPct / 100 ? 'magical' : 'physical';
@@ -420,7 +417,7 @@ function _runWithWasm(
     // Apply front/back line buff to enemies: even-index → front (+25% dmg), odd-index → back (+25% def)
     const enemyLine = ti % 2 === 0 || tmpl.boss ? 'front' : 'back';
     const enemyDmg = enemyLine === 'front' ? Math.round(tmpl.dmg * 1.25) : tmpl.dmg;
-    const enemyDef = enemyLine === 'back' ? Math.round(Math.floor(tmpl.tier * 2) * 1.25) : Math.floor(tmpl.tier * 2);
+    const enemyDef = enemyLine === 'back' ? Math.round(tmpl.def * 1.25) : tmpl.def;
 
     game.create_entity(tmpl.id);
     game.add_component(tmpl.id, 'Character', JSON.stringify({
@@ -428,13 +425,11 @@ function _runWithWasm(
       level: tmpl.tier, experience: 0, experienceToLevel: 999,
     }));
     game.add_component(tmpl.id, 'Health', JSON.stringify({ current: tmpl.hp, max: tmpl.hp }));
-    game.add_component(tmpl.id, 'Mana',   JSON.stringify({ current: 0, max: 0 }));
-    game.add_component(tmpl.id, 'Stats',  JSON.stringify({
-      strength: 8, dexterity: 8, intelligence: 4, constitution: 8, wisdom: 4,
-    }));
+    game.add_component(tmpl.id, 'Mana',   JSON.stringify({ current: tmpl.mana, max: tmpl.mana }));
+    game.add_component(tmpl.id, 'Stats',  JSON.stringify(tmpl.stats));
     game.add_component(tmpl.id, 'Combat', JSON.stringify({
       damage: enemyDmg, defense: enemyDef,
-      attackSpeed: tmpl.spd, critChance: 0.05, critMultiplier: 1.5,
+      attackSpeed: tmpl.spd, critChance: tmpl.critChance, critMultiplier: tmpl.critMultiplier,
     }));
     game.add_component(tmpl.id, 'DamageType', JSON.stringify({
       category: enemyCategory, element: enemyElement,
@@ -449,7 +444,7 @@ function _runWithWasm(
     game.add_component(tmpl.id, 'Buffs', JSON.stringify({
       damageBonus: 0, defenseBonus: 0, hasteBonus: 0.0, shieldAmount: 0, regenAmount: 0,
     }));
-    if (tmpl.boss) {
+    if (tmpl.finalBoss) {
       game.add_component(tmpl.id, 'FinalBoss', JSON.stringify({ isFinalBoss: true }));
     }
   }
@@ -702,6 +697,9 @@ function _runStoryMode(
   game: BlinkWasmGame,
   selectedHeroes: HeroDefinition[],
   mode: GameMode,
+  enemyTemplates: EnemyTemplate[],
+  modeConfigs: Record<string, ModeConfig>,
+  normalConfig: ModeConfig,
   customSettings?: CustomModeSettings,
   environmentSettings?: EnvironmentSettings,
   seed?: bigint,
@@ -711,8 +709,8 @@ function _runStoryMode(
   game.init_static();
 
   const cfg = mode === 'custom'
-    ? buildCustomConfig(customSettings ?? { heroPenaltyPct: 0, wipeoutPenaltyPct: 0, expMultiplierPct: 0, encounterDifficultyPct: 0 })
-    : (MODE_CONFIGS[mode] ?? MODE_CONFIGS.normal);
+    ? buildCustomConfig(customSettings ?? { heroPenaltyPct: 0, wipeoutPenaltyPct: 0, expMultiplierPct: 0, encounterDifficultyPct: 0 }, normalConfig)
+    : (modeConfigs[mode] ?? normalConfig);
 
   // Story mode applies a higher exp multiplier to compensate for fewer encounters
   const baseExpMult = mode === 'custom' && customSettings
@@ -799,8 +797,8 @@ function _runStoryMode(
   });
 
   // Create enemy templates with story exp multiplier
-  for (let ti = 0; ti < ENEMY_TEMPLATES.length; ti++) {
-    const tmpl = ENEMY_TEMPLATES[ti];
+  for (let ti = 0; ti < enemyTemplates.length; ti++) {
+    const tmpl = enemyTemplates[ti];
     const enemyCategory: DamageCategory =
       _pseudoRoll(ti, 0) < env.magicalPct / 100 ? 'magical' : 'physical';
     const enemyElement = _pickEnemyElement(env, ti);
@@ -816,7 +814,7 @@ function _runStoryMode(
     };
     const enemyLine = ti % 2 === 0 || tmpl.boss ? 'front' : 'back';
     const enemyDmg = enemyLine === 'front' ? Math.round(tmpl.dmg * 1.25) : tmpl.dmg;
-    const enemyDef = enemyLine === 'back' ? Math.round(Math.floor(tmpl.tier * 2) * 1.25) : Math.floor(tmpl.tier * 2);
+    const enemyDef = enemyLine === 'back' ? Math.round(tmpl.def * 1.25) : tmpl.def;
 
     game.create_entity(tmpl.id);
     game.add_component(tmpl.id, 'Character', JSON.stringify({
@@ -824,13 +822,11 @@ function _runStoryMode(
       level: tmpl.tier, experience: 0, experienceToLevel: 999,
     }));
     game.add_component(tmpl.id, 'Health', JSON.stringify({ current: tmpl.hp, max: tmpl.hp }));
-    game.add_component(tmpl.id, 'Mana',   JSON.stringify({ current: 0, max: 0 }));
-    game.add_component(tmpl.id, 'Stats',  JSON.stringify({
-      strength: 8, dexterity: 8, intelligence: 4, constitution: 8, wisdom: 4,
-    }));
+    game.add_component(tmpl.id, 'Mana',   JSON.stringify({ current: tmpl.mana, max: tmpl.mana }));
+    game.add_component(tmpl.id, 'Stats',  JSON.stringify(tmpl.stats));
     game.add_component(tmpl.id, 'Combat', JSON.stringify({
       damage: enemyDmg, defense: enemyDef,
-      attackSpeed: tmpl.spd, critChance: 0.05, critMultiplier: 1.5,
+      attackSpeed: tmpl.spd, critChance: tmpl.critChance, critMultiplier: tmpl.critMultiplier,
     }));
     game.add_component(tmpl.id, 'DamageType', JSON.stringify({
       category: enemyCategory, element: enemyElement,
@@ -845,7 +841,7 @@ function _runStoryMode(
     game.add_component(tmpl.id, 'Buffs', JSON.stringify({
       damageBonus: 0, defenseBonus: 0, hasteBonus: 0.0, shieldAmount: 0, regenAmount: 0,
     }));
-    if (tmpl.boss) {
+    if (tmpl.finalBoss) {
       game.add_component(tmpl.id, 'FinalBoss', JSON.stringify({ isFinalBoss: true }));
     }
   }
@@ -1036,7 +1032,7 @@ function _runStoryMode(
   const baseNarrativeLog = _generateNarrativeLog(
     selectedHeroes, seedNum, totalEncounters,
     locationsVisited, totalLocations, townsRested, ambushesSurvived,
-    finalDestinationReached, env, completionDay,
+    finalDestinationReached, env, enemyTemplates, completionDay,
   );
 
   // Merge quest narrative entries into the base log, sorted by day/hour
@@ -1102,6 +1098,7 @@ function _generateNarrativeLog(
   ambushesSurvived: number,
   finalDestinationReached: boolean,
   _env: EnvironmentSettings,
+  enemyPool: EnemyTemplate[],
   completionDay: number = STORY_TOTAL_DAYS,
 ): NarrativeEntry[] {
   const log: NarrativeEntry[] = [];
@@ -1232,8 +1229,8 @@ function _generateNarrativeLog(
       let hour = 2;
       for (let enc = 0; enc < encountersToday && encountersRemaining > 0; enc++) {
         const encHash = _narrativeHash(seedNum, day, enc + 300);
-        const enemyIdx = encHash % ENEMY_TEMPLATES.length;
-        const enemy = ENEMY_TEMPLATES[enemyIdx];
+        const enemyIdx = encHash % enemyPool.length;
+        const enemy = enemyPool[enemyIdx];
         const enemyCount = Math.max(1, heroes.length + (encHash % 3) - 1);
 
         // Encounter notification
@@ -1313,7 +1310,7 @@ function _generateNarrativeLog(
         if (ambushesLeft > 0 && dayHash % 5 === 0) {
           ambushesLeft--;
           const ambushHash = _narrativeHash(seedNum, day, 600);
-          const ambushEnemy = ENEMY_TEMPLATES[ambushHash % ENEMY_TEMPLATES.length];
+          const ambushEnemy = enemyPool[ambushHash % enemyPool.length];
           const ambushCount = Math.max(1, heroes.length - 1);
 
           emit(day, hour + 2, 2, `The night watch spots movement! ${ambushCount} ${ambushEnemy.name}${ambushCount > 1 ? 's' : ''} attack the camp.`);

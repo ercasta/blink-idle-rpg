@@ -84,3 +84,36 @@ enemy_compendium = new entity {
         entries: []
     }
 }
+
+// Scoring rules for Hard mode (see doc/game-design/game-modes.md)
+let scoring_entity: id = new entity {
+    ScoringRules {
+        pointsPerKill: 15
+        pointsPerWave: 75
+        pointsPerBoss: 750
+        pointsLostPerDeath: 150
+        pointsLostPerRetreat: 75
+        pointsLostPerPenaltySecond: 3
+        timeBonusPoints: 1500
+        timeBonusInterval: 5.0d
+    }
+    Score {
+        total: 0
+        killScore: 0
+        waveScore: 0
+        bossScore: 0
+        speedBonus: 0
+        deathPenaltyTotal: 0
+        retreatPenaltyTotal: 0
+        timePenaltyTotal: 0
+        bossesDefeated: 0
+        wavesCompleted: 0
+    }
+    GameMode {
+        id: "hard"
+        name: "Nightmare Mode"
+        description: "An intense challenge for experienced players. More enemies, faster progression, and severe penalties for failure."
+        difficulty: "Hard"
+        hasVictoryCondition: true
+    }
+}
