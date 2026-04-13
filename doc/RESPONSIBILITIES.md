@@ -167,7 +167,7 @@ should **not** be migrated to BRL:
 | `gameModes.ts` | Game mode display labels | UI metadata: mode names and descriptions for selection UI |
 | `skillCatalog.ts` | Runtime BRL parser for UI display | Bridge: parses BRL skill data for UI rendering |
 | `heroes.ts` (partial) | Random hero generation, name pools | UI convenience: `generateRandomHero()`, `FIRST_NAMES[]`, `CLASS_EMOJIS` |
-| `traits.ts` (partial) | Trait axis UI labels, skill tree preview | UI preview: `TRAIT_AXES[]`, `simulateHeroPath()`, `heroSummary()` |
+| `traits.ts` (partial) | Trait axis UI labels, hero summary | UI display: `TRAIT_AXES[]`, `randomTraits()`, `heroSummary()` |
 | `worldData.ts` (partial) | Lookup helpers, arrival comment selection | Runtime indexing: `getLocationById()`, `selectArrivalComments()` |
 | All `screens/*.tsx` | React UI components | Presentation layer |
 | All `components/*.tsx` | React UI components | Presentation layer |

@@ -29,7 +29,6 @@ export interface RunResult {
   totalTime: number;        // in-game seconds
   deepestTier: number;
   deepestWave: number;
-  heroPaths: HeroPath[];
   /** Persistence metadata – present once the run has been saved or loaded */
   id?: string;
   timestamp?: number;
@@ -93,21 +92,6 @@ export interface HeroDefinition {
   favourite?: boolean;
   /** Total number of adventures this hero has participated in */
   adventuresPlayed?: number;
-}
-
-/** A single entry in a hero's progression path log. */
-export interface HeroPathEntry {
-  level: number;
-  statsGained: { str: number; dex: number; int: number; con: number; wis: number };
-  skillChosen: string | null;
-}
-
-/** Full progression path for one hero across the run. */
-export interface HeroPath {
-  heroName: string;
-  heroClass: HeroClass;
-  entries: HeroPathEntry[];
-  finalStats: { str: number; dex: number; int: number; con: number; wis: number };
 }
 
 export type GameMode = 'normal' | 'easy' | 'hard' | 'custom';

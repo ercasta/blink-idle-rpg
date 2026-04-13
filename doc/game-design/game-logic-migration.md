@@ -61,20 +61,24 @@ project's guiding principle:
 | `CLASS_BASE_GROWTH` | 68–76 | Class growth vectors `[STR, DEX, INT, CON, WIS]` |
 | `ELEMENT_THRESHOLD` | 422 | Threshold constant for element derivation |
 
-**What stays in TypeScript (presentation / UI preview):**
+**What stays in TypeScript (presentation):**
 
 | Function | Description |
 |----------|-------------|
 | `TRAIT_AXES[]` | Trait axis metadata for UI labels |
 | `randomTraits()` | Random trait generation for UI hero creation |
-| `simulateHeroPath()` | Level 1–50 progression preview for UI display |
-| `pickSkill()` / `scoreSkill()` | Skill tree simulation for UI (WASM handles actual combat) |
 | `heroSummary()` | Text formatting for UI display |
 
-**MY REVIEW**: drop the "simulateHeroPath()" feature 
+**Removed features:** `simulateHeroPath()`, `pickSkill()`, `scoreSkill()`,
+and all class skill tree data (`WARRIOR_SKILLS`, `MAGE_SKILLS`, etc.) have
+been **removed**. The hero path prediction feature was a TypeScript-only
+simulation that duplicated what the WASM engine does. Skill trees are
+defined in BRL (`skill-catalog.brl`) and the WASM engine handles actual
+skill selection during combat.
 
-**BRL extension needed:** `gaussian()` — Box-Muller transform used by
-`computeLevelUpGains()` requires `sqrt()` and `log()` which are not in BRL.
+**BRL extension needed:** `sqrt()` and `log()` — the Box-Muller transform
+used by `computeLevelUpGains()` requires these math functions. Both will be
+added as BRL built-in functions.
 See [BRL Language Extensions](#brl-language-extensions-required).
 
 ---
@@ -104,18 +108,28 @@ See [BRL Language Extensions](#brl-language-extensions-required).
 
 | Function | Description |
 |----------|-------------|
-| `resolveSlots()` | String templating for narrative text (requires string ops) |
+| `resolveSlots()` | String templating for narrative text (presentation concern) |
 | `generateQuestNarrative()` | Weaves events into narrative log for UI display |
 | URL-related helpers | Adventure sharing utilities |
-
-**BRL extensions needed:** String interpolation or slot-resolution support for
-template strings like `"Rescue the {npc_name}"`. See
-[BRL Language Extensions](#brl-language-extensions-required).
 
 **Existing BRL infrastructure:** `story-adventure.brl` already defines the ECS
 components (`AdventureState`, `QuestMilestone`, `QuestEvent`, `SlotBinding`,
 `BailoutTimer`, `QuestScore`, etc.) and events. The component schema is ready;
 only the rules and data entities need to be authored.
+
+**Design decisions:**
+- **Seed computation** moves to BRL (via `hash_string()` built-in) to guarantee
+  stable, consistent simulation across engines.
+- **String template resolution** stays in TypeScript — it is a presentation
+  concern (BRL stores template IDs and slot bindings; TypeScript resolves them).
+- **Content selection** (`shuffle`, `pick`, `filter`) — add these as BRL
+  built-in functions backed by Rust, so the composition algorithm can be
+  expressed naturally in BRL.
+
+This is the biggest migration item. Sub-phases:
+- 2a: Move content pools to BRL as entity data
+- 2b: Move composition algorithm to BRL rules
+- 2c: Move simulation/scoring to BRL rules
 
 ---
 
@@ -147,6 +161,22 @@ only the rules and data entities need to be authored.
 **Dependency:** This file is consumed by `adventureQuest.ts`. Migration should
 happen after or alongside Phase 2 so that quest composition can read world data
 from BRL entities rather than TypeScript arrays.
+
+**Approach:**
+
+Use the engine API approach: once quest logic runs inside WASM (Phase 2),
+the engine returns world data as part of its state. TypeScript reads it from
+engine output. Alternatively, parse `story-world-data.brl` at runtime (like
+`skillCatalog.ts` does for skills) and populate typed arrays.
+
+**Note on IR:** The IR JSON pipeline (`compile-brl-to-ir.js`) is not used
+by the web app at runtime — the app uses only the WASM engine, which has
+rules baked into the binary. The IR exists for test tooling and reference
+only. It is not a loading path for world data.
+
+**Also migrate:** `selectWorldMap()` — BFS subgraph selection is game logic
+(affects which locations the party visits). Move to a BRL rule triggered by a
+map generation event.
 
 ---
 
@@ -225,18 +255,14 @@ bridge between BRL data and the UI — correctly in TypeScript.
 9. Entity declarations for 6 starter heroes with trait values
 
 **TypeScript changes:**
-- `traits.ts` keeps UI-only functions (`TRAIT_AXES`, `randomTraits`, `simulateHeroPath`)
+- `traits.ts` keeps UI-only functions (`TRAIT_AXES`, `randomTraits`, `heroSummary`)
 - `heroes.ts` reads starter heroes from roster/BRL rather than hardcoding them
-- Engine wrapper calls BRL functions for stat computation during entity injection
+- Engine uses event-driven approach: inject a `ComputeStats` event, let the
+  BRL rule fire, and read the resulting component values from engine state
 
-**Potential issues:**
-- `computeLevelUpGains()` uses `gaussian()` which needs `sqrt()` + `log()`
-  → **Workaround:** Add `sqrt()` as a BRL built-in (see extensions below), or
-  keep level-up jitter in the engine's Rust runtime as a built-in function
-- Role scoring uses arrays of structs sorted by score → BRL lacks `sort()`;
-  can be done with sequential `max()` comparisons over 6 roles
-
-**MY REVIEW** add sqrt to BRL
+**BRL extensions needed for this phase:**
+- `sqrt()` and `log()` built-ins for Gaussian jitter in level-up gains
+- `sort()` built-in backed by Rust for role scoring (also useful for future features)
 
 ---
 
@@ -274,28 +300,11 @@ bridge between BRL data and the UI — correctly in TypeScript.
   (string interpolation), and orchestration calls to the WASM engine
 - Quest state is returned from the engine via its API
 
-**Potential issues:**
-- **Seed computation (`djb2Hash`):** BRL has no hash functions. The seed must
-  either be computed in TypeScript and injected as a component, or BRL needs a
-  `hash_string()` built-in. *Recommendation:* Keep seed computation in
-  TypeScript (it's input derivation, not simulation logic).
+**BRL extensions needed for this phase:**
+- `hash_string()` built-in for deterministic seed computation in BRL
+- `shuffle()`, `filter()` built-in functions backed by Rust
 
-**MY REVIEW** Seed computation must be moved to BRL, it guarantees "stable" and consistent simulation
-
-- **String template resolution:** BRL cannot do `"Rescue the {npc_name}"` →
-  `"Rescue the Eldara"`. Either add string interpolation to BRL or keep
-  template resolution in TypeScript (presentation layer).
-
-**MY REVIEW** Since this is part of presentation, it's ok to keep string interpolation in typescript
-
-- **Complex content selection:** The composition algorithm uses shuffle, pick,
-  and filter on arrays. BRL has `for`/`if`/`random()` but not `sort()` or
-  `filter()`. Selection can be done with weighted random draws.
-
-**MY REVIEW** Add these functions to BRL. They can be builtin functions.
-
-This is the biggest migration item. Consider doing
-it in sub-phases:
+This is the biggest migration item. Sub-phases:
 - 2a: Move content pools to BRL as entity data
 - 2b: Move composition algorithm to BRL rules
 - 2c: Move simulation/scoring to BRL rules
@@ -309,29 +318,13 @@ it in sub-phases:
 **Files affected:**
 - `worldData.ts` → remove data arrays; keep lookup helpers
 
-**Approach options:**
-
-1. **Engine API:** After quest logic runs inside WASM (Phase 2), the engine
-   returns world data as part of its state. TypeScript reads it from engine
-   output.
-2. **BRL parsing at runtime:** Parse `story-world-data.brl` at runtime (like
-   `skillCatalog.ts` does for skills) and populate typed arrays.
-3. **IR JSON:** Include entity data in the compiled IR JSON and load it
-   programmatically in TypeScript.
-
-**Recommended approach:** Option 3 (IR JSON). The compiler already produces IR;
-extending it to include entity data eliminates the duplication without requiring
-a full BRL parser in TypeScript.
-
-
-**MY REVIEW** Why is the compiler still producing IR? It should not, as the compiler should compile BRL to WASM and at runtime WASM code should be executed. I suspect IR is a leftover. verify my suspicion and in case remove the IR.
+**Approach:** Use the engine API. Once quest logic runs inside WASM (Phase 2),
+the engine returns world data as part of its state. Alternatively, parse
+`story-world-data.brl` at runtime (like `skillCatalog.ts` does for skills).
 
 **Also migrate:** `selectWorldMap()` — BFS subgraph selection is game logic
 (affects which locations the party visits). Move to a BRL rule triggered by a
 map generation event.
-
-**Estimated effort:** Medium. Data is already in BRL; main work is wiring up
-the runtime loading path.
 
 ---
 
@@ -355,21 +348,16 @@ The following BRL language or runtime extensions would unblock or simplify
 the migration. Each is listed with its priority and the migration phase that
 needs it.
 
-### 1. `sqrt()` Built-in Function — Phase 1
+### 1. `sqrt()` and `log()` Built-in Functions — Phase 1
 
 **Need:** `computeLevelUpGains()` uses `gaussian()` which calls `Math.sqrt()`
 and `Math.log()` via the Box-Muller transform for stat jitter.
 
-**Recommendation:** Add `sqrt(x: decimal): decimal` as a BRL built-in. The
-Rust runtime already has `f64::sqrt()`. `log()` is also needed for
-Box-Muller but could be approximated or the Gaussian could use an alternative
-algorithm (e.g. Irwin-Hall approximation using only `random()` and addition).
+**Decision:** Add both as BRL built-in functions. The Rust runtime already has
+`f64::sqrt()` and `f64::ln()`. Implementation follows the existing pattern
+of `brl_min`, `brl_max`, `brl_abs`, etc.
 
-**Workaround without extension:** Keep `computeLevelUpGains()` in TypeScript
-and inject the per-level stat gains as component data. Or approximate Gaussian
-jitter with the sum of 12 uniform randoms minus 6 (central limit theorem).
-
-**MY DECISION**: extend BRL
+**Status:** `sqrt()` implemented. `log()` to follow.
 
 ### 2. String Concatenation — Phase 2
 
@@ -377,15 +365,9 @@ jitter with the sum of 12 uniform randoms minus 6 (central limit theorem).
 must be resolved to `"Rescue the Eldara"`. BRL cannot construct strings
 dynamically.
 
-**Recommendation:** Add string concatenation operator (`+` or `concat()`)
-and/or a `replace(haystack, needle, replacement)` built-in.
-
-**Workaround without extension:** Keep slot resolution in TypeScript. BRL
-stores template IDs and slot bindings as separate components; TypeScript reads
-them and performs the string substitution for UI display. This is arguably a
-presentation concern anyway.
-
-**MY DECISION** Keep the workaround, it's a presentation concern
+**Decision:** Keep slot resolution in TypeScript. This is a presentation
+concern. BRL stores template IDs and slot bindings as separate components;
+TypeScript reads them and performs the string substitution for UI display.
 
 ### 3. `abs()` Built-in Function — Phase 1
 
@@ -395,60 +377,57 @@ with the largest magnitude.
 **Status:** Already available — `abs()` is listed in BRL built-in functions.
 No extension needed.
 
-### 4. `hash_string()` Built-in Function — Phase 2 (Optional)
+### 4. `hash_string()` Built-in Function — Phase 2
 
 **Need:** `computeAdventureSeed()` hashes the adventure configuration string
 to derive a deterministic seed.
 
-**Recommendation:** Add `hash_string(s: string): integer` as a BRL built-in.
+**Decision:** Add `hash_string(s: string): integer` as a BRL built-in.
+Seed computation must be in BRL to guarantee stable, consistent simulation
+across engines.
 
-**Workaround without extension:** Compute the seed in TypeScript and inject
-it as a component value. Seed derivation is input processing, not simulation
-logic, so this is an acceptable boundary.
+### 5. `sort()` Built-in Function — Phase 1
 
-**MY REVIEW** compute seed in BRL
+**Need:** `computeRole()` scores 6 roles and picks the highest. Also useful
+for future features (content selection, encounter matching, etc.).
 
-### 5. Array Sort / Max-K Selection — Phase 1
+**Decision:** Add `sort()` as a BRL built-in function backed by Rust's
+native sorting. No need to implement a sorting algorithm in BRL itself.
 
-**Need:** `computeRole()` scores 6 roles and picks the highest. BRL has no
-`sort()`.
+### 6. `shuffle()` and `filter()` Built-in Functions — Phase 2
 
-**Recommendation:** Not needed as a language extension. With only 6 roles,
-a sequential `max()` comparison is straightforward in BRL:
-```
-let best_score = score_tank
-let best_role = "Tank"
-if score_dps > best_score { best_score = score_dps; best_role = "DPS" }
-// ...etc
-```
+**Need:** The quest composition algorithm uses shuffle, pick, and filter
+on arrays for content selection.
 
-**MY REVIEW**: implement sorting in BRL. It might be useful for other features too. Remember to leverage underlying Rust/Wasm functions, no need to implement a sorting algorithm in BRL!
+**Decision:** Add these as BRL built-in functions backed by Rust.
 
 ---
 
 ## Engine Changes Required
 
-### 1. BRL Function Invocation from TypeScript (Phase 1)
+### 1. Event-Driven BRL Invocation (Phase 1)
 
 The WASM engine currently runs rules automatically on events. For hero stat
-computation, TypeScript needs to invoke a BRL function and read the result.
+computation, TypeScript injects a `ComputeStats` event, lets the BRL rule
+fire, and reads the resulting component values from engine state.
 
-**Options:**
-- Add an exported WASM function `call_brl_fn(name, entity_id)` that runs a
-  named BRL function and returns the modified entity state.
-- Alternatively, use an event-driven approach: inject a `ComputeStats` event,
-  let the rule fire, and read the resulting component values from the engine
-  state.
+**Decision:** Use event/component interaction only — no direct BRL function
+invocation from TypeScript.
 
-**MY REVIEW** Use the alternative approach (inject event and interact with components only)
+### 2. IR Pipeline Status
 
-### 2. Entity Data in IR JSON (Phase 3)
+The IR JSON pipeline (`tools/compile-brl-to-ir.js`, `packages/blink-compiler-ts/src/codegen.ts`)
+generates JSON IR files. However, the web app does **not** use IR at runtime —
+it uses only the WASM engine (BRL → Rust → WASM), which has rules baked into
+the binary.
 
-The IR JSON currently contains only compiled rules and component schemas.
-Entity declarations (the `entity` blocks in BRL files) should be included
-so TypeScript can load them without parsing raw BRL.
+Current IR consumers:
+- `game/brl-tests/` — integration test infrastructure
+- `game/ir/` — reference/documentation
+- `tools/simulate.js` — batch simulation tool
 
-**MY REVIEW** I don't understand why IR is still there, i suspect it's a leftover that needs to be removed.
+The IR pipeline is not a runtime dependency. World data loading (Phase 3)
+should use BRL parsing at runtime or engine API, not IR.
 
 ### 3. Seed Injection API (Phase 2)
 
@@ -463,11 +442,10 @@ already seeded; the API just needs to expose seed-setting.
 | Risk | Impact | Mitigation |
 |------|--------|------------|
 | **BRL lacks string ops** | Quest narrative generation cannot move fully to BRL | Keep slot resolution and narrative composition in TypeScript as presentation logic |
-| **BRL lacks `sqrt`/`log`** | Gaussian jitter in level-up cannot compile to BRL | Approximate with sum-of-uniforms or add `sqrt` built-in |
 | **Large migration scope** | Phase 2 touches ~2,000 lines; risk of regressions | Sub-phase approach (2a/2b/2c) with test harness validation at each step |
 | **Performance** | Moving complex algorithms to BRL/WASM may be slower than JS | Benchmark after Phase 1; WASM arithmetic is typically faster than JS |
 | **Dual maintenance during migration** | Both TypeScript and BRL versions may coexist temporarily | Each phase should fully migrate a unit; never leave half-migrated logic |
-| **World data loading path** | Removing TS world data requires a new loading mechanism | IR JSON approach (Phase 3) can be prototyped independently |
+| **World data loading path** | Removing TS world data requires a new loading mechanism | Use engine API or BRL runtime parsing (like skillCatalog.ts) |
 
 ---
 
@@ -475,9 +453,9 @@ already seeded; the API just needs to expose seed-setting.
 
 | File | Disposition | Details |
 |------|-------------|---------|
-| `traits.ts` | **Shrink** | Remove formulas → BRL; keep UI-only functions |
+| `traits.ts` | **Shrink** | Remove formulas → BRL; remove hero path simulation; keep UI-only functions |
 | `adventureQuest.ts` | **Shrink** | Remove pools + algorithms → BRL; keep narrative generation |
-| `worldData.ts` | **Shrink** | Remove data arrays → load from BRL/IR; keep lookup helpers |
+| `worldData.ts` | **Shrink** | Remove data arrays → load from engine/BRL; keep lookup helpers |
 | `heroes.ts` | **Shrink** | Remove hardcoded heroes → BRL entities; keep random generation |
 | `heroDescription.ts` | **Keep** | Pure presentation |
 | `adventureDescription.ts` | **Keep** | Pure presentation |

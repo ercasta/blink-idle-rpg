@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { GameSnapshot, HeroDefinition, RunResult, HeroPath, RunType, NarrativeEntry, NarrativeLevel } from '../types';
+import type { GameSnapshot, HeroDefinition, RunResult, RunType, NarrativeEntry, NarrativeLevel } from '../types';
 import { ClassIcon, CrossedSwordsIcon, TrophyIcon, SkipIcon, ExpandIcon, ShrinkIcon } from '../components/icons';
 import { heroSummary } from '../data/traits';
 
@@ -9,7 +9,6 @@ interface BattleScreenProps {
   snapshots: GameSnapshot[];
   prevSnapshots?: GameSnapshot[];
   heroes: HeroDefinition[];
-  heroPaths: HeroPath[];
   onComplete: (result: RunResult) => void;
   /** Run type: fight or story. Affects display labels. */
   runType?: RunType;
@@ -17,7 +16,7 @@ interface BattleScreenProps {
   narrativeLog?: NarrativeEntry[];
 }
 
-function buildResult(snapshots: GameSnapshot[], heroPaths: HeroPath[]): RunResult {
+function buildResult(snapshots: GameSnapshot[]): RunResult {
   const final = snapshots[snapshots.length - 1];
   const maxTier = Math.max(...snapshots.map(s => s.currentTier));
   const maxWave = Math.max(...snapshots.map(s => s.currentWave));
@@ -31,7 +30,6 @@ function buildResult(snapshots: GameSnapshot[], heroPaths: HeroPath[]): RunResul
     totalTime: final.simulationTime,
     deepestTier: maxTier,
     deepestWave: maxWave,
-    heroPaths,
   };
 }
 
@@ -59,7 +57,7 @@ function ProgressBar({ value, max }: { value: number; max: number }) {
   );
 }
 
-export function BattleScreen({ snapshots, prevSnapshots = [], heroes, heroPaths, onComplete, runType = 'fight', narrativeLog = [] }: BattleScreenProps) {
+export function BattleScreen({ snapshots, prevSnapshots = [], heroes, onComplete, runType = 'fight', narrativeLog = [] }: BattleScreenProps) {
   const [stepIndex, setStepIndex] = useState(0);
   const [done, setDone] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -94,14 +92,14 @@ export function BattleScreen({ snapshots, prevSnapshots = [], heroes, heroPaths,
   useEffect(() => {
     if (!done) return;
     const t = setTimeout(() => {
-      onComplete(buildResult(snapshots, heroPaths));
+      onComplete(buildResult(snapshots));
     }, 1500);
     return () => clearTimeout(t);
-  }, [done, onComplete, snapshots, heroPaths]);
+  }, [done, onComplete, snapshots]);
 
   function handleSkip() {
     if (timerRef.current) clearInterval(timerRef.current);
-    onComplete(buildResult(snapshots, heroPaths));
+    onComplete(buildResult(snapshots));
   }
 
   return (

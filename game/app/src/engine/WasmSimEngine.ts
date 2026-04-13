@@ -9,9 +9,9 @@
  *   • Accepts runtime data (heroes, enemies, config) via create_entity/add_component
  */
 
-import type { GameSnapshot, HeroDefinition, GameMode, HeroPath, CustomModeSettings, EnvironmentSettings, DamageCategory, Element, RunType, StoryKpis, NarrativeEntry, NarrativeLevel } from '../types';
+import type { GameSnapshot, HeroDefinition, GameMode, CustomModeSettings, EnvironmentSettings, DamageCategory, Element, RunType, StoryKpis, NarrativeEntry, NarrativeLevel } from '../types';
 import { DEFAULT_ENVIRONMENT_SETTINGS } from '../types';
-import { simulateHeroPath, getSkillName, deriveDamageCategory, deriveDamageElement, deriveResistances, computeLinePreferenceScore } from '../data/traits';
+import { getSkillName, deriveDamageCategory, deriveDamageElement, deriveResistances, computeLinePreferenceScore } from '../data/traits';
 import { computeAdventureSeed, simulateQuestProgress, generateQuestNarrative, QUEST_EARLY_COMPLETION_POINTS_PER_DAY } from '../data/adventureQuest';
 import type { AdventureDefinition } from '../types';
 import { selectWorldMap, findPath, selectArrivalComments, findBlockingEncounters, PATH_TYPE_DESCRIPTIONS } from '../data/worldData';
@@ -210,7 +210,7 @@ export async function runSimulation(
   environmentSettings?: EnvironmentSettings,
   runType: RunType = 'fight',
   adventure?: AdventureDefinition,
-): Promise<{ snapshots: GameSnapshot[]; heroPaths: HeroPath[]; storyKpis?: StoryKpis; narrativeLog?: NarrativeEntry[] }> {
+): Promise<{ snapshots: GameSnapshot[]; storyKpis?: StoryKpis; narrativeLog?: NarrativeEntry[] }> {
   const mod = await loadWasmModule();
   if (!mod) {
     throw new Error(
@@ -228,66 +228,13 @@ export async function runSimulation(
     if (runType === 'story') {
       const result = _runStoryMode(game, selectedHeroes, mode, customSettings, environmentSettings, seed, adventure);
 
-      const heroPaths: HeroPath[] = selectedHeroes.map(hero => {
-        const maxLevel = result.snapshots.length > 0
-          ? (result.snapshots[result.snapshots.length - 1].heroLevels[hero.name] ?? 10)
-          : 10;
-        const entries = simulateHeroPath(hero.heroClass, hero.traits, Math.max(maxLevel, 5));
-        const finalStats = { str: hero.stats.strength, dex: hero.stats.dexterity, int: hero.stats.intelligence, con: hero.stats.constitution, wis: hero.stats.wisdom };
-        for (const entry of entries) {
-          finalStats.str += entry.statsGained.str;
-          finalStats.dex += entry.statsGained.dex;
-          finalStats.int += entry.statsGained.int;
-          finalStats.con += entry.statsGained.con;
-          finalStats.wis += entry.statsGained.wis;
-        }
-        for (const entry of entries) {
-          if (entry.skillChosen) {
-            entry.skillChosen = `${entry.skillChosen} (${getSkillName(entry.skillChosen, hero.heroClass)})`;
-          }
-        }
-        return { heroName: hero.name, heroClass: hero.heroClass, entries, finalStats };
-      });
-
-      return { snapshots: result.snapshots, heroPaths, storyKpis: result.storyKpis, narrativeLog: result.narrativeLog };
+      return { snapshots: result.snapshots, storyKpis: result.storyKpis, narrativeLog: result.narrativeLog };
     }
 
     // Fight mode (original)
     const snapshots = _runWithWasm(game, selectedHeroes, mode, customSettings, environmentSettings);
 
-    // Simulate hero progression paths using the trait system
-    const heroPaths: HeroPath[] = selectedHeroes.map(hero => {
-      const maxLevel = snapshots.length > 0
-        ? (snapshots[snapshots.length - 1].heroLevels[hero.name] ?? 10)
-        : 10;
-      const entries = simulateHeroPath(hero.heroClass, hero.traits, Math.max(maxLevel, 5));
-
-      // Compute final stats (base + cumulative gains)
-      const finalStats = { str: hero.stats.strength, dex: hero.stats.dexterity, int: hero.stats.intelligence, con: hero.stats.constitution, wis: hero.stats.wisdom };
-      for (const entry of entries) {
-        finalStats.str += entry.statsGained.str;
-        finalStats.dex += entry.statsGained.dex;
-        finalStats.int += entry.statsGained.int;
-        finalStats.con += entry.statsGained.con;
-        finalStats.wis += entry.statsGained.wis;
-      }
-
-      // Annotate skill names for display
-      for (const entry of entries) {
-        if (entry.skillChosen) {
-          entry.skillChosen = `${entry.skillChosen} (${getSkillName(entry.skillChosen, hero.heroClass)})`;
-        }
-      }
-
-      return {
-        heroName: hero.name,
-        heroClass: hero.heroClass,
-        entries,
-        finalStats,
-      };
-    });
-
-    return { snapshots, heroPaths };
+    return { snapshots };
   } finally {
     game.free();
   }

@@ -35,7 +35,7 @@ import { loadRoster, saveRoster } from './storage/rosterStorage';
 import { decodeHeroFromParams } from './data/heroDescription';
 import type { SharedHeroData } from './data/heroDescription';
 import { decodeAdventureFromParams } from './data/adventureDescription';
-import type { AppScreen, AdventureDefinition, HeroDefinition, GameSnapshot, RunResult, HeroPath, StoryKpis, NarrativeEntry } from './types';
+import type { AppScreen, AdventureDefinition, HeroDefinition, GameSnapshot, RunResult, StoryKpis, NarrativeEntry } from './types';
 import { DEFAULT_CUSTOM_SETTINGS } from './types';
 
 // ── Leave-run confirmation modal ──────────────────────────────────────────────
@@ -94,7 +94,6 @@ export default function App() {
   const [prevSnapshots, setPrevSnapshots] = useState<GameSnapshot[]>([]);
   const [runResult, setRunResult] = useState<RunResult | null>(null);
   const [allRuns, setAllRuns] = useState<RunResult[]>([]);
-  const [heroPaths, setHeroPaths] = useState<HeroPath[]>([]);
   const [storyKpis, setStoryKpis] = useState<StoryKpis | undefined>(undefined);
   const [narrativeLog, setNarrativeLog] = useState<NarrativeEntry[]>([]);
   const [loadingMessage] = useState('Running simulation…');
@@ -269,7 +268,6 @@ export default function App() {
         adventure.runType === 'story' ? adventure : undefined,
       );
       setSnapshots(result.snapshots);
-      setHeroPaths(result.heroPaths);
       setStoryKpis(result.storyKpis);
       setNarrativeLog(result.narrativeLog ?? []);
       setScreen('run-ready');
@@ -317,7 +315,6 @@ export default function App() {
         selectedAdventure.runType === 'story' ? selectedAdventure : undefined,
       );
       setSnapshots(result.snapshots);
-      setHeroPaths(result.heroPaths);
       setStoryKpis(result.storyKpis);
       setNarrativeLog(result.narrativeLog ?? []);
       setScreen('run-ready');
@@ -408,7 +405,6 @@ export default function App() {
         selectedAdventure.runType === 'story' ? selectedAdventure : undefined,
       );
       setSnapshots(result.snapshots);
-      setHeroPaths(result.heroPaths);
       setStoryKpis(result.storyKpis);
       setNarrativeLog(result.narrativeLog ?? []);
       setScreen('run-ready');
@@ -424,7 +420,6 @@ export default function App() {
   function handleReplayRun(run: RunResult) {
     replayingRunRef.current = run;
     setSnapshots(run.snapshots);
-    setHeroPaths(run.heroPaths);
     setSelectedHeroes(run.heroes ?? []);
     setSelectedAdventure(run.adventure ?? null);
     setPrevSnapshots([]);
@@ -589,7 +584,6 @@ export default function App() {
           snapshots={snapshots}
           prevSnapshots={prevSnapshots}
           heroes={selectedHeroes}
-          heroPaths={heroPaths}
           onComplete={onBattleComplete}
           runType={selectedAdventure?.runType ?? 'fight'}
           narrativeLog={narrativeLog}
