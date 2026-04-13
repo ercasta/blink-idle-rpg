@@ -37,6 +37,18 @@ pub fn brl_abs(a: f64) -> f64 {
     a.abs()
 }
 
+/// Square root.
+#[inline]
+pub fn brl_sqrt(a: f64) -> f64 {
+    a.sqrt()
+}
+
+/// Natural logarithm (base e).
+#[inline]
+pub fn brl_log(a: f64) -> f64 {
+    a.ln()
+}
+
 /// Deterministic pseudo-random number generator.
 /// Uses xoshiro256** for reproducibility across JS and WASM engines.
 pub struct Rng {
@@ -129,6 +141,21 @@ mod tests {
     fn test_abs() {
         assert_eq!(brl_abs(-5.0), 5.0);
         assert_eq!(brl_abs(5.0), 5.0);
+    }
+
+    #[test]
+    fn test_sqrt() {
+        assert_eq!(brl_sqrt(9.0), 3.0);
+        assert_eq!(brl_sqrt(0.0), 0.0);
+        assert_eq!(brl_sqrt(1.0), 1.0);
+        assert!((brl_sqrt(2.0) - std::f64::consts::SQRT_2).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_log() {
+        assert_eq!(brl_log(1.0), 0.0);
+        assert!((brl_log(std::f64::consts::E) - 1.0).abs() < 1e-10);
+        assert!((brl_log(10.0) - 10.0_f64.ln()).abs() < 1e-10);
     }
 
     #[test]
