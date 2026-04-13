@@ -71,6 +71,8 @@ project's guiding principle:
 | `pickSkill()` / `scoreSkill()` | Skill tree simulation for UI (WASM handles actual combat) |
 | `heroSummary()` | Text formatting for UI display |
 
+**MY REVIEW**: drop the "simulateHeroPath()" feature 
+
 **BRL extension needed:** `gaussian()` — Box-Muller transform used by
 `computeLevelUpGains()` requires `sqrt()` and `log()` which are not in BRL.
 See [BRL Language Extensions](#brl-language-extensions-required).
@@ -234,7 +236,7 @@ bridge between BRL data and the UI — correctly in TypeScript.
 - Role scoring uses arrays of structs sorted by score → BRL lacks `sort()`;
   can be done with sequential `max()` comparisons over 6 roles
 
-**Estimated effort:** Medium. Formulas are arithmetic-heavy but straightforward.
+**MY REVIEW** add sqrt to BRL
 
 ---
 
@@ -277,14 +279,22 @@ bridge between BRL data and the UI — correctly in TypeScript.
   either be computed in TypeScript and injected as a component, or BRL needs a
   `hash_string()` built-in. *Recommendation:* Keep seed computation in
   TypeScript (it's input derivation, not simulation logic).
+
+**MY REVIEW** Seed computation must be moved to BRL, it guarantees "stable" and consistent simulation
+
 - **String template resolution:** BRL cannot do `"Rescue the {npc_name}"` →
   `"Rescue the Eldara"`. Either add string interpolation to BRL or keep
   template resolution in TypeScript (presentation layer).
+
+**MY REVIEW** Since this is part of presentation, it's ok to keep string interpolation in typescript
+
 - **Complex content selection:** The composition algorithm uses shuffle, pick,
   and filter on arrays. BRL has `for`/`if`/`random()` but not `sort()` or
   `filter()`. Selection can be done with weighted random draws.
 
-**Estimated effort:** Large. This is the biggest migration item. Consider doing
+**MY REVIEW** Add these functions to BRL. They can be builtin functions.
+
+This is the biggest migration item. Consider doing
 it in sub-phases:
 - 2a: Move content pools to BRL as entity data
 - 2b: Move composition algorithm to BRL rules
@@ -312,6 +322,9 @@ it in sub-phases:
 **Recommended approach:** Option 3 (IR JSON). The compiler already produces IR;
 extending it to include entity data eliminates the duplication without requiring
 a full BRL parser in TypeScript.
+
+
+**MY REVIEW** Why is the compiler still producing IR? It should not, as the compiler should compile BRL to WASM and at runtime WASM code should be executed. I suspect IR is a leftover. verify my suspicion and in case remove the IR.
 
 **Also migrate:** `selectWorldMap()` — BFS subgraph selection is game logic
 (affects which locations the party visits). Move to a BRL rule triggered by a
@@ -356,6 +369,8 @@ algorithm (e.g. Irwin-Hall approximation using only `random()` and addition).
 and inject the per-level stat gains as component data. Or approximate Gaussian
 jitter with the sum of 12 uniform randoms minus 6 (central limit theorem).
 
+**MY DECISION**: extend BRL
+
 ### 2. String Concatenation — Phase 2
 
 **Need:** Quest templates use slot tokens like `"Rescue the {npc_name}"` that
@@ -369,6 +384,8 @@ and/or a `replace(haystack, needle, replacement)` built-in.
 stores template IDs and slot bindings as separate components; TypeScript reads
 them and performs the string substitution for UI display. This is arguably a
 presentation concern anyway.
+
+**MY DECISION** Keep the workaround, it's a presentation concern
 
 ### 3. `abs()` Built-in Function — Phase 1
 
@@ -389,6 +406,8 @@ to derive a deterministic seed.
 it as a component value. Seed derivation is input processing, not simulation
 logic, so this is an acceptable boundary.
 
+**MY REVIEW** compute seed in BRL
+
 ### 5. Array Sort / Max-K Selection — Phase 1
 
 **Need:** `computeRole()` scores 6 roles and picks the highest. BRL has no
@@ -402,6 +421,8 @@ let best_role = "Tank"
 if score_dps > best_score { best_score = score_dps; best_role = "DPS" }
 // ...etc
 ```
+
+**MY REVIEW**: implement sorting in BRL. It might be useful for other features too. Remember to leverage underlying Rust/Wasm functions, no need to implement a sorting algorithm in BRL!
 
 ---
 
@@ -419,11 +440,15 @@ computation, TypeScript needs to invoke a BRL function and read the result.
   let the rule fire, and read the resulting component values from the engine
   state.
 
+**MY REVIEW** Use the alternative approach (inject event and interact with components only)
+
 ### 2. Entity Data in IR JSON (Phase 3)
 
 The IR JSON currently contains only compiled rules and component schemas.
 Entity declarations (the `entity` blocks in BRL files) should be included
 so TypeScript can load them without parsing raw BRL.
+
+**MY REVIEW** I don't understand why IR is still there, i suspect it's a leftover that needs to be removed.
 
 ### 3. Seed Injection API (Phase 2)
 
