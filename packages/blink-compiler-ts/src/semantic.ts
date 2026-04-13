@@ -36,7 +36,7 @@ export class SemanticAnalyzer {
   
   // Built-in functions
   private builtinFunctions = new Set([
-    'min', 'max', 'floor', 'ceil', 'round', 'abs',
+    'min', 'max', 'floor', 'ceil', 'round', 'abs', 'sqrt', 'log',
     'random', 'random_range', 'len', 'list', 'get',
     'entities_having',
   ]);

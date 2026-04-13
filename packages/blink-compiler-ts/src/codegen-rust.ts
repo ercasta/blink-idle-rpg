@@ -1347,6 +1347,8 @@ export class RustCodeGenerator {
       case 'ceil': return `brl_ceil((${args[0]}) as f64)`;
       case 'round': return `brl_round((${args[0]}) as f64)`;
       case 'abs': return `brl_abs((${args[0]}) as f64)`;
+      case 'sqrt': return `brl_sqrt((${args[0]}) as f64)`;
+      case 'log': return `brl_log((${args[0]}) as f64)`;
       case 'random': return `engine.rng.random()`;
       case 'random_range': return `engine.rng.random_range(${args[0]} as f64, ${args[1]} as f64)`;
       case 'len': return `(${args[0]}).len() as i64`;

@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import type { RunResult, HeroPath, HeroDefinition, NarrativeEntry, NarrativeLevel } from '../types';
+import type { RunResult, NarrativeEntry, NarrativeLevel } from '../types';
 import { CrossedSwordsIcon, RepeatIcon, PlayIcon, DownloadIcon, StarIcon, TrophyIcon, ExpandIcon, ShrinkIcon } from '../components/icons';
-import { heroSummary } from '../data/traits';
 
 interface ResultsScreenProps {
   result: RunResult;
@@ -37,8 +36,7 @@ function Row({ label, value, delta, lowerIsBetter }: { label: string; value: str
 }
 
 export function ResultsScreen({ result, prevResult, leaderboardPosition, isNewBest, onPlayAgain, onRerun, onHome, onToggleFavorite, onViewLeaderboard, narrativeLog = [] }: ResultsScreenProps) {
-  const { finalScore, enemiesDefeated, playerDeaths, bossesDefeated, heroPaths } = result;
-  const [expandedHero, setExpandedHero] = useState<string | null>(null);
+  const { finalScore, enemiesDefeated, playerDeaths, bossesDefeated } = result;
   const [verbosity, setVerbosity] = useState<NarrativeLevel>(2);
   const [showFullLog, setShowFullLog] = useState(false);
 
@@ -216,31 +214,6 @@ export function ResultsScreen({ result, prevResult, leaderboardPosition, isNewBe
         </>
       )}
 
-      {/* Hero Paths */}
-      {heroPaths && heroPaths.length > 0 && (
-        <div className="mb-6">
-          <h2 className="text-sm font-semibold text-stone-400 uppercase tracking-widest mb-3">
-            Hero Paths
-          </h2>
-          <div className="flex flex-col gap-2">
-            {heroPaths.map(path => {
-              const matchingHero = result.heroes?.find(h => h.name === path.heroName);
-              return (
-              <HeroPathCard
-                key={path.heroName}
-                path={path}
-                hero={matchingHero}
-                expanded={expandedHero === path.heroName}
-                onToggle={() => setExpandedHero(
-                  expandedHero === path.heroName ? null : path.heroName
-                )}
-              />
-              );
-            })}
-          </div>
-        </div>
-      )}
-
       {/* Actions */}
       <div className="flex flex-col gap-3">
         <button
@@ -296,58 +269,6 @@ export function ResultsScreen({ result, prevResult, leaderboardPosition, isNewBe
           ← Back to Home
         </button>
       </div>
-    </div>
-  );
-}
-
-// ── Hero Path Card ──────────────────────────────────────────────────────────
-
-function HeroPathCard({
-  path,
-  hero,
-  expanded,
-  onToggle,
-}: {
-  path: HeroPath;
-  hero?: HeroDefinition;
-  expanded: boolean;
-  onToggle: () => void;
-}) {
-  const { heroName, heroClass, entries } = path;
-  const summary = hero ? heroSummary(hero.heroClass, hero.traits, hero.linePreference) : heroClass;
-  const skillEntries = entries.filter(e => e.skillChosen);
-
-  return (
-    <div className="bg-stone-800 border border-stone-700 rounded-xl overflow-hidden">
-      <button
-        onClick={onToggle}
-        className="w-full text-left px-4 py-3 flex items-center justify-between hover:bg-stone-700/50 transition-colors"
-      >
-        <div>
-          <span className="font-bold">{heroName}</span>
-          <span className="text-xs text-stone-400 ml-2">{summary}</span>
-        </div>
-        <span className="text-stone-500 text-sm">{expanded ? '▲' : '▼'}</span>
-      </button>
-
-      {expanded && (
-        <div className="px-4 pb-4 border-t border-stone-700">
-          {/* Skills learned */}
-          {skillEntries.length > 0 && (
-            <div className="mt-3">
-              <h3 className="text-xs text-stone-400 uppercase tracking-wider mb-2">Skills Learned</h3>
-              <div className="flex flex-col gap-1">
-                {skillEntries.map((entry, i) => (
-                  <div key={i} className="flex items-center gap-2 text-xs">
-                    <span className="text-stone-500 font-mono w-8">Lv{entry.level}</span>
-                    <span className="text-stone-200">{entry.skillChosen}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }
