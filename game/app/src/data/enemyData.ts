@@ -111,7 +111,7 @@ export async function loadEnemyTemplates(): Promise<EnemyTemplate[]> {
       templateCache = templates;
       return templates;
     } catch (err) {
-      console.error('Failed to load enemy templates from BRL:', err);
+      console.error('Failed to load enemy templates from enemies.brl:', err);
       // Return empty array — engine will fail gracefully
       templateCache = [];
       return templateCache;

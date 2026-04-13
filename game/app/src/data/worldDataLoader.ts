@@ -185,7 +185,7 @@ export async function loadWorldData(): Promise<WorldDataSet> {
       worldDataCache = data;
       return data;
     } catch (err) {
-      console.error('Failed to load world data from BRL:', err);
+      console.error('Failed to load world data from story-world-data.brl:', err);
       // Return empty dataset — caller must handle gracefully
       worldDataCache = {
         locations: [],
