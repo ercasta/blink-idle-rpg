@@ -81,6 +81,11 @@ created at runtime from the player's party selection in the React app
 Lyra/Mage) **for the test harness only** so `npm run test:harness` can run a
 fully playable simulation without the React app.
 
+**Planned migration (Phase 1):** Hero stat computation formulas
+(`computeBaseStats`, `deriveDamageCategory`, `deriveResistances`, etc.)
+and 6 starter hero definitions will move from TypeScript to BRL.
+See [game-logic-migration.md](../../doc/game-design/game-logic-migration.md).
+
 ### Game state and scoring
 
 Defined in `game/brl/scenario-*.brl` (or `game-config.brl` for defaults).

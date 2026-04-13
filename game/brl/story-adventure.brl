@@ -8,7 +8,8 @@
 // At this stage the quest logic runs in TypeScript (adventureQuest.ts) rather
 // than as compiled BRL rules. These component declarations serve as the
 // canonical schema and will be compiled into the WASM engine when the quest
-// rules are migrated to BRL.
+// rules are migrated to BRL.  See doc/game-design/game-logic-migration.md
+// (Phase 2) for the migration plan.
 // =============================================================================
 
 // ─── Core quest state ───────────────────────────────────────────────────────
