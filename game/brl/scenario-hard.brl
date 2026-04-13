@@ -28,7 +28,7 @@ scenario_info = new entity {
 flee_config = new entity {
     FleeConfig {
         retreatTimePenalty: 15.0d          // 15 seconds (up from 10)
-        deathTimePenaltyMultiplier: 7.0d   // 7x = 105 seconds (up from 5x = 50)
+        deathTimePenaltyMultiplier: 3.0d   // 3x = 45 seconds (up from 2x = 20)
         fleeCooldown: 5.0d                 // Same as normal
     }
 }
@@ -56,8 +56,8 @@ game_state = new entity {
         tierProgressionKills: 400         // Tier progression every 400 encounters
         maxTier: 6                        // Same max tier
         wavesPerTier: 300                 // Same waves per tier
-        healthScaleRate: 300              // 50% faster health scaling (up from 200)
-        damageScaleRate: 450              // 50% faster damage scaling (up from 300)
+        healthScaleRate: 120              // 50% faster health scaling (up from 80)
+        damageScaleRate: 90               // 50% faster damage scaling (up from 60)
         initialEnemyCount: 7              // Fallback enemy count (overridden by party size at runtime)
     }
     ProgressTracker {
@@ -91,7 +91,7 @@ let scoring_entity: id = new entity {
         pointsPerKill: 15
         pointsPerWave: 75
         pointsPerBoss: 750
-        pointsLostPerDeath: 150
+        pointsLostPerDeath: 45
         pointsLostPerRetreat: 75
         pointsLostPerPenaltySecond: 3
         timeBonusPoints: 1500
