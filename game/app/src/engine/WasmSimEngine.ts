@@ -14,7 +14,7 @@ import { DEFAULT_ENVIRONMENT_SETTINGS } from '../types';
 import { simulateHeroPath, getSkillName, deriveDamageCategory, deriveDamageElement, deriveResistances, computeLinePreferenceScore } from '../data/traits';
 import { computeAdventureSeed, simulateQuestProgress, generateQuestNarrative, QUEST_EARLY_COMPLETION_POINTS_PER_DAY } from '../data/adventureQuest';
 import type { AdventureDefinition } from '../types';
-import { selectWorldMap, findPath, selectArrivalComments, findBlockingEncounters, PATH_TYPE_DESCRIPTIONS } from '../data/worldData';
+import { selectWorldMap, findPath, selectArrivalComments, findBlockingEncounters, PATH_TYPE_DESCRIPTIONS, initWorldData } from '../data/worldData';
 import type { WorldLocation, WorldPath } from '../data/worldData';
 import { loadEnemyTemplates } from '../data/enemyData';
 import type { EnemyTemplate } from '../data/enemyData';
@@ -199,6 +199,7 @@ export async function runSimulation(
     loadWasmModule(),
     loadEnemyTemplates(),
     loadScenarioConfigs(),
+    initWorldData(),  // Populates world data from BRL (returns void)
   ]);
 
   if (!mod) {
