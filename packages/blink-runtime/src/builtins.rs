@@ -37,13 +37,14 @@ pub fn brl_abs(a: f64) -> f64 {
     a.abs()
 }
 
-/// Square root.
+/// Square root. Returns NaN for negative inputs (IEEE 754).
 #[inline]
 pub fn brl_sqrt(a: f64) -> f64 {
     a.sqrt()
 }
 
-/// Natural logarithm (base e).
+/// Natural logarithm (base e). Returns NaN for negative inputs,
+/// -infinity for zero (IEEE 754).
 #[inline]
 pub fn brl_log(a: f64) -> f64 {
     a.ln()

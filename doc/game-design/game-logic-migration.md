@@ -357,7 +357,7 @@ and `Math.log()` via the Box-Muller transform for stat jitter.
 `f64::sqrt()` and `f64::ln()`. Implementation follows the existing pattern
 of `brl_min`, `brl_max`, `brl_abs`, etc.
 
-**Status:** `sqrt()` implemented. `log()` to follow.
+**Status:** Both `sqrt()` and `log()` implemented.
 
 ### 2. String Concatenation — Phase 2
 
