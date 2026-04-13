@@ -1,13 +1,19 @@
 /**
  * World Data — TypeScript representation of the persistent world.
  *
- * This module mirrors the BRL entity data from story-world-data.brl,
- * providing typed access to world locations, paths, NPCs, hero arrival
- * comments, and blocking encounters for use in narrative generation
+ * This module provides typed access to world locations, paths, NPCs, hero
+ * arrival comments, and blocking encounters for use in narrative generation
  * and quest composition.
+ *
+ * **BRL is the single source of truth.**  Call `initWorldData()` to load
+ * data from `story-world-data.brl` at runtime.  The hardcoded data below
+ * serves as a fallback for environments where BRL files are unavailable
+ * (e.g. unit tests).
  *
  * See doc/game-design/world-design.md for the full design specification.
  */
+
+import { loadWorldData } from './worldDataLoader';
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -75,8 +81,9 @@ export interface BlockingEncounter {
 }
 
 // ── World Locations (15) ────────────────────────────────────────────────────
+// Fallback data — overridden when initWorldData() loads from BRL.
 
-export const WORLD_LOCATIONS: readonly WorldLocation[] = [
+export let WORLD_LOCATIONS: readonly WorldLocation[] = [
   {
     locationId: 'ashfall_town', name: 'Ashfall', locationType: 'town',
     region: 'volcanic_wastes',
@@ -171,7 +178,7 @@ export const WORLD_LOCATIONS: readonly WorldLocation[] = [
 
 // ── World Paths (25) ────────────────────────────────────────────────────────
 
-export const WORLD_PATHS: readonly WorldPath[] = [
+export let WORLD_PATHS: readonly WorldPath[] = [
   { pathId: 'ashfall_ember', fromLocationId: 'ashfall_town', toLocationId: 'ember_hollow', pathType: 'imperial_road', travelHours: 3, dangerRating: 2, description: 'A well-maintained trade road cuts through the volcanic wastes, marked by obsidian mile-posts. Ash drifts across the paving stones.', encounterTags: 'volcanic,fire,bandit', bidirectional: true },
   { pathId: 'ashfall_ironhold', fromLocationId: 'ashfall_town', toLocationId: 'ironhold', pathType: 'mountain_pass', travelHours: 5, dangerRating: 3, description: 'A steep mountain trail winds upward from the volcanic lowlands into the cold heights of the northern highlands. The air thins as the path climbs.', encounterTags: 'mountain,orc,ogre', bidirectional: true },
   { pathId: 'ashfall_thornfield', fromLocationId: 'ashfall_town', toLocationId: 'thornfield', pathType: 'forest_trail', travelHours: 4, dangerRating: 2, description: 'The trail winds through scrubland that gradually gives way to dense forest. The volcanic heat fades as the canopy closes overhead.', encounterTags: 'forest,goblin,wolf', bidirectional: true },
@@ -201,7 +208,7 @@ export const WORLD_PATHS: readonly WorldPath[] = [
 
 // ── World NPCs (20) ─────────────────────────────────────────────────────────
 
-export const WORLD_NPCS: readonly WorldNpc[] = [
+export let WORLD_NPCS: readonly WorldNpc[] = [
   { npcId: 'eldara', name: 'Eldara', role: 'sage', personality: 'mysterious', homeLocationId: 'dawnspire', additionalLocationIds: 'radiant_glade', greeting: 'The stars spoke of your coming. Ask your question \u2014 but be sure you want the answer.', description: 'An ageless woman with silver hair and knowing eyes. She speaks in riddles but her counsel is always true.', canBeVillain: false, canBeAlly: true, canBeQuestGiver: true },
   { npcId: 'brother_marek', name: 'Brother Marek', role: 'healer', personality: 'kind', homeLocationId: 'dawnspire', additionalLocationIds: 'radiant_glade', greeting: 'Welcome, travellers. You look weary \u2014 sit, and let me tend to your wounds.', description: 'A gentle monk in simple robes, always with healing herbs at hand. His quiet strength has saved countless lives.', canBeVillain: false, canBeAlly: true, canBeQuestGiver: true },
   { npcId: 'captain_voss', name: 'Captain Voss', role: 'guard_captain', personality: 'gruff', homeLocationId: 'ironhold', additionalLocationIds: '', greeting: "State your business. I haven't got all day.", description: 'A scarred veteran with a no-nonsense demeanour. He runs Ironhold\'s guard with iron discipline and grudging fairness.', canBeVillain: false, canBeAlly: true, canBeQuestGiver: true },
@@ -226,7 +233,7 @@ export const WORLD_NPCS: readonly WorldNpc[] = [
 
 // ── Hero Arrival Comments (40) ──────────────────────────────────────────────
 
-export const HERO_ARRIVAL_COMMENTS: readonly HeroArrivalComment[] = [
+export let HERO_ARRIVAL_COMMENTS: readonly HeroArrivalComment[] = [
   // Class-based (18)
   { commentId: 'cleric_darkness', triggerClass: 'Cleric', triggerTrait: '', triggerPolarity: '', elementalAffinity: 'darkness', locationTags: '', comment: "{hero_name} shudders. 'I hate this darkness. The light of the divine feels so distant here.'", sentiment: 'negative' },
   { commentId: 'cleric_light', triggerClass: 'Cleric', triggerTrait: '', triggerPolarity: '', elementalAffinity: 'light', locationTags: '', comment: "{hero_name} closes their eyes and breathes deeply. 'The divine presence is strong here. We are blessed.'", sentiment: 'positive' },
@@ -273,7 +280,7 @@ export const HERO_ARRIVAL_COMMENTS: readonly HeroArrivalComment[] = [
 
 // ── Blocking Encounters (6) ─────────────────────────────────────────────────
 
-export const BLOCKING_ENCOUNTERS: readonly BlockingEncounter[] = [
+export let BLOCKING_ENCOUNTERS: readonly BlockingEncounter[] = [
   { blockingId: 'troll_bridge', pathId: '', matchPathType: 'river_crossing,marsh_track', locationId: '', encounterType: 'combat', description: 'A massive river troll emerges from beneath the bridge, blocking the crossing.', resolutionType: 'defeat', enemies: 'River Troll', difficultyModifier: 1, narrativeOnBlock: 'A massive troll rises from the river, water cascading from its hide. It bellows a challenge that echoes off the canyon walls. The bridge is impassable until the creature is dealt with.', narrativeOnResolve: 'The troll collapses with a thunderous crash, its bulk sliding into the river below. The bridge is clear.', triggerChance: 0.3 },
   { blockingId: 'bandit_toll', pathId: '', matchPathType: 'imperial_road', locationId: '', encounterType: 'social', description: 'A group of bandits has set up a roadblock, demanding payment for passage.', resolutionType: 'persuade', enemies: 'Bandit Leader,Bandit', difficultyModifier: 0, narrativeOnBlock: "Armed figures step from behind makeshift barricades. Their leader, a scarred woman in mismatched armour, raises a hand. 'Toll road, friends. Fifty gold or turn around.'", narrativeOnResolve: 'The bandits part reluctantly, allowing the party to pass. Whether through silver tongue or silver coins, the road is open.', triggerChance: 0.25 },
   { blockingId: 'rockslide', pathId: '', matchPathType: 'mountain_pass', locationId: '', encounterType: 'puzzle', description: 'A fresh rockslide has completely blocked the narrow mountain pass.', resolutionType: 'solve', enemies: '', difficultyModifier: 0, narrativeOnBlock: 'Boulders and rubble fill the pass from wall to wall. The rockslide looks recent \u2014 dust still hangs in the air. There may be a way to clear a path, but it will take strength and cleverness.', narrativeOnResolve: 'With combined effort, the party manages to shift enough rock to squeeze through. The pass is narrow but navigable.', triggerChance: 0.35 },
@@ -285,23 +292,38 @@ export const BLOCKING_ENCOUNTERS: readonly BlockingEncounter[] = [
 // ── Lookup helpers ──────────────────────────────────────────────────────────
 
 /** Index: locationId → WorldLocation */
-const _locationById = new Map<string, WorldLocation>();
-for (const loc of WORLD_LOCATIONS) _locationById.set(loc.locationId, loc);
+let _locationById = new Map<string, WorldLocation>();
 
 /** Index: npcId → WorldNpc */
-const _npcById = new Map<string, WorldNpc>();
-for (const npc of WORLD_NPCS) _npcById.set(npc.npcId, npc);
+let _npcById = new Map<string, WorldNpc>();
 
 /** Adjacency: locationId → [{neighbor, path}] */
-const _adjacency = new Map<string, { neighborId: string; path: WorldPath }[]>();
-for (const p of WORLD_PATHS) {
-  if (!_adjacency.has(p.fromLocationId)) _adjacency.set(p.fromLocationId, []);
-  _adjacency.get(p.fromLocationId)!.push({ neighborId: p.toLocationId, path: p });
-  if (p.bidirectional) {
-    if (!_adjacency.has(p.toLocationId)) _adjacency.set(p.toLocationId, []);
-    _adjacency.get(p.toLocationId)!.push({ neighborId: p.fromLocationId, path: p });
+let _adjacency = new Map<string, { neighborId: string; path: WorldPath }[]>();
+
+/**
+ * Rebuild all internal lookup indexes from the current data arrays.
+ * Called automatically at module load and again after initWorldData().
+ */
+function _rebuildIndexes() {
+  _locationById = new Map<string, WorldLocation>();
+  for (const loc of WORLD_LOCATIONS) _locationById.set(loc.locationId, loc);
+
+  _npcById = new Map<string, WorldNpc>();
+  for (const npc of WORLD_NPCS) _npcById.set(npc.npcId, npc);
+
+  _adjacency = new Map<string, { neighborId: string; path: WorldPath }[]>();
+  for (const p of WORLD_PATHS) {
+    if (!_adjacency.has(p.fromLocationId)) _adjacency.set(p.fromLocationId, []);
+    _adjacency.get(p.fromLocationId)!.push({ neighborId: p.toLocationId, path: p });
+    if (p.bidirectional) {
+      if (!_adjacency.has(p.toLocationId)) _adjacency.set(p.toLocationId, []);
+      _adjacency.get(p.toLocationId)!.push({ neighborId: p.fromLocationId, path: p });
+    }
   }
 }
+
+// Build indexes from the hardcoded fallback data at module load time
+_rebuildIndexes();
 
 export function getLocationById(id: string): WorldLocation | undefined {
   return _locationById.get(id);
@@ -507,3 +529,37 @@ export const PATH_TYPE_DESCRIPTIONS: Record<string, string> = {
   river_crossing: 'a ford across the river',
   marsh_track: 'a treacherous marsh track',
 };
+
+// ── BRL initialization ─────────────────────────────────────────────────────
+
+let _initPromise: Promise<void> | null = null;
+
+/**
+ * Load world data from the canonical BRL source (`story-world-data.brl`).
+ *
+ * After calling this function, all exported data arrays (WORLD_LOCATIONS,
+ * WORLD_PATHS, etc.) and their dependent lookup functions are backed by
+ * the BRL file data.  If the BRL file is unavailable, the hardcoded
+ * fallback data remains in place.
+ *
+ * Safe to call multiple times — subsequent calls return the cached result.
+ */
+export async function initWorldData(): Promise<void> {
+  if (_initPromise) return _initPromise;
+
+  _initPromise = (async () => {
+    const data = await loadWorldData();
+
+    // Only replace data if the BRL load returned non-empty results
+    if (data.locations.length > 0) WORLD_LOCATIONS = data.locations;
+    if (data.paths.length > 0)     WORLD_PATHS = data.paths;
+    if (data.npcs.length > 0)      WORLD_NPCS = data.npcs;
+    if (data.heroArrivalComments.length > 0) HERO_ARRIVAL_COMMENTS = data.heroArrivalComments;
+    if (data.blockingEncounters.length > 0)  BLOCKING_ENCOUNTERS = data.blockingEncounters;
+
+    // Rebuild indexes with the new data
+    _rebuildIndexes();
+  })();
+
+  return _initPromise;
+}

@@ -28,7 +28,7 @@ scenario_info = new entity {
 flee_config = new entity {
     FleeConfig {
         retreatTimePenalty: 15.0d          // 15 seconds (up from 10)
-        deathTimePenaltyMultiplier: 7.0d   // 7x = 105 seconds (up from 5x = 50)
+        deathTimePenaltyMultiplier: 3.0d   // 3x = 45 seconds (up from 2x = 20)
         fleeCooldown: 5.0d                 // Same as normal
     }
 }
@@ -56,8 +56,8 @@ game_state = new entity {
         tierProgressionKills: 400         // Tier progression every 400 encounters
         maxTier: 6                        // Same max tier
         wavesPerTier: 300                 // Same waves per tier
-        healthScaleRate: 300              // 50% faster health scaling (up from 200)
-        damageScaleRate: 450              // 50% faster damage scaling (up from 300)
+        healthScaleRate: 120              // 50% faster health scaling (up from 80)
+        damageScaleRate: 90               // 50% faster damage scaling (up from 60)
         initialEnemyCount: 7              // Fallback enemy count (overridden by party size at runtime)
     }
     ProgressTracker {
@@ -82,5 +82,38 @@ run_stats = new entity {
 enemy_compendium = new entity {
     EnemyCompendium {
         entries: []
+    }
+}
+
+// Scoring rules for Hard mode (see doc/game-design/game-modes.md)
+let scoring_entity: id = new entity {
+    ScoringRules {
+        pointsPerKill: 15
+        pointsPerWave: 75
+        pointsPerBoss: 750
+        pointsLostPerDeath: 45
+        pointsLostPerRetreat: 75
+        pointsLostPerPenaltySecond: 3
+        timeBonusPoints: 1500
+        timeBonusInterval: 5.0d
+    }
+    Score {
+        total: 0
+        killScore: 0
+        waveScore: 0
+        bossScore: 0
+        speedBonus: 0
+        deathPenaltyTotal: 0
+        retreatPenaltyTotal: 0
+        timePenaltyTotal: 0
+        bossesDefeated: 0
+        wavesCompleted: 0
+    }
+    GameMode {
+        id: "hard"
+        name: "Nightmare Mode"
+        description: "An intense challenge for experienced players. More enemies, faster progression, and severe penalties for failure."
+        difficulty: "Hard"
+        hasVictoryCondition: true
     }
 }
