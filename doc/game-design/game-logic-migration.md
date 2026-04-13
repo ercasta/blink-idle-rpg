@@ -1,6 +1,6 @@
 # Game Logic Migration Plan — TypeScript to BRL
 
-This document analyses all TypeScript code in `game/app/src/data/` that implements
+This document analyzes all TypeScript code in `game/app/src/data/` that implements
 game logic, and defines a phased migration plan to move that logic into BRL.
 
 ---
@@ -38,7 +38,7 @@ project's guiding principle:
 | `adventureDescription.ts` | ~397 | No — presentation only | — |
 | `adventures.ts` | ~133 | No — UI utilities only | — |
 | `gameModes.ts` | ~33 | No — UI metadata only | — |
-| `skillCatalog.ts` | — | No — runtime BRL parser for UI | — |
+| `skillCatalog.ts` | ~110 | No — runtime BRL parser for UI | — |
 
 ---
 
@@ -86,16 +86,11 @@ See [BRL Language Extensions](#brl-language-extensions-required).
 | `OBJECTIVE_TEMPLATES[]` | 99–154 | 6 objective templates (rescue, retrieve, defeat, etc.) |
 | `MILESTONE_TEMPLATES[]` | 171–321 | 10 milestone templates with bail-out days |
 | `EVENT_TEMPLATES[]` | 329–520 | 14 event templates (key + side events) |
-| `HERO_ENCOUNTER_TEMPLATES[]` | — | 30 hero-matched encounter templates |
-| `VILLAIN_POOL[]` | — | 10 villain name/title entries |
-| `ITEM_POOL[]` | — | 15 quest item entries |
-| `CREATURE_POOL[]` | — | 10 creature name entries |
-| `DUNGEON_POOL[]` | — | 10 dungeon name entries |
-| `NPC_ROLE_POOL[]` | — | NPC role labels |
-| `CARGO_POOL[]` | — | Caravan cargo descriptions |
-| `CURSE_POOL[]` | — | Curse name entries |
-| `PORTAL_POOL[]` | — | Portal name entries |
-| `RIDDLE_POOL[]` | — | Riddle name entries |
+| `HERO_ENCOUNTER_TEMPLATES[]` | 650–1280 | 30 hero-matched encounter templates |
+| `VILLAIN_POOL[]` | 535–553 | 10 villain name/title entries |
+| `ITEM_POOL[]` | 555–573 | 15 quest item entries |
+| `CREATURE_POOL[]` | 575–584 | 10 creature name entries |
+| Other pools | 586–620 | Curse, portal, riddle, threat, info, inscription, cargo pools |
 | `generateAdventureQuest()` | ~1495–1722 | Deterministic quest composition algorithm |
 | `simulateQuestProgress()` | ~1778–1922 | Quest simulation with milestone activation |
 | `matchHeroEncounters()` | — | Hero-class/trait encounter matching algorithm |
