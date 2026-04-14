@@ -27,6 +27,7 @@ const BRL_FILES = [
   'classic-rpg.brl',
   'enemies.brl',
   'game-config.brl',
+  'hero-classes.brl',
   'heroes.brl',
   'scenario-easy.brl',
   'scenario-normal.brl',

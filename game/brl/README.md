@@ -11,6 +11,7 @@ Blink Rule Language (BRL) source files for the game.  BRL is used for both
 |------|-------------|
 | `classic-rpg.brl` | All game rules: components, events, rules, helper functions |
 | `heroes.brl` | Hero AI behaviour functions (`select_attack_target`, `select_combat_skill`) |
+| `hero-classes.brl` | Hero class balance data: base combat stats, starting skills, growth vectors, element threshold |
 | `enemies.brl` | Enemy entity definitions (templates for each enemy type) |
 | `game-config.brl` | Default game configuration entities (game state, flee config) |
 | `scenario-easy.brl` | Easy difficulty overrides (spawn rate, scaling, penalties) |
@@ -71,11 +72,16 @@ The spawn rules in `classic-rpg.brl` read these values at runtime.
 
 ### Hero definitions
 
-**Source of truth for rules:** `game/brl/heroes.brl` (AI behaviour functions)
+**Source of truth for AI rules:** `game/brl/heroes.brl` (AI behaviour functions)
+
+**Source of truth for class balance:** `game/brl/hero-classes.brl` (base combat
+stats, starting skills, stat growth vectors, element threshold)
 
 Hero entities are **not** stored in BRL for the production game — they are
 created at runtime from the player's party selection in the React app
 (`game/app/src/engine/WasmSimEngine.ts`, `game/app/src/data/heroes.ts`).
+Class balance data is loaded from `hero-classes.brl` at runtime via
+`heroClassData.ts` using the `brlParser.ts` utility.
 
 `game/brl/test-heroes.brl` defines two hero entities (Aldric/Warrior and
 Lyra/Mage) **for the test harness only** so `npm run test:harness` can run a

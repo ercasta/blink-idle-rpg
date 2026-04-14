@@ -3,9 +3,15 @@
  *
  * Traits are 12 signed integers in [−16, 15] that drive stat growth,
  * skill selection, and AI decision weights.
+ *
+ * Game balance data (class growth vectors, element threshold) is loaded
+ * from hero-classes.brl at runtime via heroClassData.ts.  The hardcoded
+ * fallback values below are used only when BRL files are unavailable
+ * (e.g. unit tests, static hero definitions at import time).
  */
 
 import type { HeroClass, HeroTraits, HeroPathEntry, DamageCategory, Element, LinePreference, HeroRole } from '../types';
+import { getHeroClassData, getHeroBalanceConfig } from './heroClassData';
 
 // ── Trait axis metadata (for UI) ────────────────────────────────────────────
 
@@ -64,8 +70,11 @@ function gaussian(mean: number, sigma: number): number {
 }
 
 // ── Class base-growth vectors ───────────────────────────────────────────────
+// These fallback values are used when BRL data is not yet loaded (e.g.
+// during static hero definition at import time or in unit tests).
+// At runtime, the BRL-loaded values from hero-classes.brl take precedence.
 
-const CLASS_BASE_GROWTH: Record<HeroClass, [number, number, number, number, number]> = {
+const FALLBACK_CLASS_BASE_GROWTH: Record<HeroClass, [number, number, number, number, number]> = {
   // [STR, DEX, INT, CON, WIS]
   Warrior: [0.60, 0.25, 0.05, 0.55, 0.15],
   Mage:    [0.05, 0.20, 0.70, 0.10, 0.55],
@@ -74,6 +83,24 @@ const CLASS_BASE_GROWTH: Record<HeroClass, [number, number, number, number, numb
   Rogue:   [0.35, 0.65, 0.05, 0.25, 0.10],
   Cleric:  [0.10, 0.15, 0.35, 0.30, 0.70],
 };
+
+function _getClassGrowth(heroClass: HeroClass): [number, number, number, number, number] {
+  const classData = getHeroClassData();
+  if (classData) {
+    const cd = classData[heroClass];
+    if (cd) {
+      return [cd.growth.growthStr, cd.growth.growthDex, cd.growth.growthInt, cd.growth.growthCon, cd.growth.growthWis];
+    }
+  }
+  return FALLBACK_CLASS_BASE_GROWTH[heroClass];
+}
+
+const FALLBACK_ELEMENT_THRESHOLD = 5;
+
+function _getElementThreshold(): number {
+  const config = getHeroBalanceConfig();
+  return config?.elementThreshold ?? FALLBACK_ELEMENT_THRESHOLD;
+}
 
 // ── Deterministic base stats from class + traits ────────────────────────────
 
@@ -105,7 +132,7 @@ export function computeBaseStats(
   const affinity_CON =  w_od - w_ai + w_rc + w_we;
   const affinity_WIS = -w_sa + w_sh + w_co - w_ld;
 
-  const baseGrowth = CLASS_BASE_GROWTH[heroClass];
+  const baseGrowth = _getClassGrowth(heroClass);
   const affinities = [affinity_STR, affinity_DEX, affinity_INT, affinity_CON, affinity_WIS];
 
   // Combine class growth with trait affinities (deterministic, no jitter)
@@ -172,7 +199,7 @@ export function computeLevelUpGains(
   const affinity_CON =  w_od - w_ai + w_rc + w_we;
   const affinity_WIS = -w_sa + w_sh + w_co - w_ld;
 
-  const baseGrowth = CLASS_BASE_GROWTH[heroClass];
+  const baseGrowth = _getClassGrowth(heroClass);
   const affinities = [affinity_STR, affinity_DEX, affinity_INT, affinity_CON, affinity_WIS];
 
   // Step 2: Combine with class base growth
@@ -418,15 +445,16 @@ export function simulateHeroPath(
 }
 
 // ── Damage type & resistance derivation from traits ─────────────────────────
-
-const ELEMENT_THRESHOLD = 5;
+// Element threshold is loaded from hero-classes.brl at runtime.
+// Fallback value FALLBACK_ELEMENT_THRESHOLD is defined above with other
+// class balance constants.
 
 /**
  * Derive a hero's primary damage category from the pm trait.
  * Physical (pm ≤ −5), Magical (pm ≥ 5), default Physical.
  */
 export function deriveDamageCategory(traits: HeroTraits): DamageCategory {
-  return traits.pm >= ELEMENT_THRESHOLD ? 'magical' : 'physical';
+  return traits.pm >= _getElementThreshold() ? 'magical' : 'physical';
 }
 
 /**
@@ -443,7 +471,7 @@ export function deriveDamageElement(traits: HeroTraits): Element {
   let best: { element: Element; magnitude: number } = { element: 'neutral', magnitude: 0 };
   for (const axis of axes) {
     const mag = Math.abs(axis.val);
-    if (mag >= ELEMENT_THRESHOLD && mag > best.magnitude) {
+    if (mag >= _getElementThreshold() && mag > best.magnitude) {
       best = { element: axis.val < 0 ? axis.neg : axis.pos, magnitude: mag };
     }
   }
@@ -464,7 +492,7 @@ export interface ResistanceProfile {
 
 function resistValue(traitVal: number, negative: boolean): number {
   const oriented = negative ? -traitVal : traitVal;
-  return Math.max(0, Math.min(50, (oriented - ELEMENT_THRESHOLD) * 5));
+  return Math.max(0, Math.min(50, (oriented - _getElementThreshold()) * 5));
 }
 
 /**

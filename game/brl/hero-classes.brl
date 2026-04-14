@@ -1,0 +1,199 @@
+// =============================================================================
+// BLINK IDLE RPG - Hero Class Definitions
+// =============================================================================
+// This file is the single source of truth for hero class game balance data:
+// - Base combat stats per class (HP, damage, defense, attack speed)
+// - Starting skills per class
+// - Base stat growth vectors (trait → stat weights)
+// - Element threshold for damage/resistance derivation
+//
+// Previously hardcoded in WasmSimEngine.ts (CLASS_BASE_HP, CLASS_BASE_DAMAGE,
+// CLASS_BASE_DEFENSE, CLASS_ATTACK_SPEED, CLASS_SKILLS) and traits.ts
+// (CLASS_BASE_GROWTH, ELEMENT_THRESHOLD).
+//
+// Loaded at runtime by heroClassData.ts via brlParser.ts.
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// GLOBAL BALANCE CONSTANTS
+// -----------------------------------------------------------------------------
+
+hero_balance_config = new entity {
+    HeroBalanceConfig {
+        elementThreshold: 5
+    }
+}
+
+// -----------------------------------------------------------------------------
+// WARRIOR CLASS
+// -----------------------------------------------------------------------------
+
+hero_class_warrior = new entity {
+    HeroClassDef {
+        className: "Warrior"
+    }
+    HeroBaseCombat {
+        baseHp: 250
+        baseDamage: 28
+        baseDefense: 12
+        baseAttackSpeed: 0.9d
+    }
+    HeroStartingSkills {
+        skill1: "power_strike"
+        skill2: "shield_bash"
+        skill3: "defensive_stance"
+        skill4: "execute"
+    }
+    HeroGrowthVector {
+        growthStr: 0.60d
+        growthDex: 0.25d
+        growthInt: 0.05d
+        growthCon: 0.55d
+        growthWis: 0.15d
+    }
+}
+
+// -----------------------------------------------------------------------------
+// MAGE CLASS
+// -----------------------------------------------------------------------------
+
+hero_class_mage = new entity {
+    HeroClassDef {
+        className: "Mage"
+    }
+    HeroBaseCombat {
+        baseHp: 150
+        baseDamage: 35
+        baseDefense: 5
+        baseAttackSpeed: 0.6d
+    }
+    HeroStartingSkills {
+        skill1: "fireball"
+        skill2: "frost_bolt"
+        skill3: "arcane_blast"
+        skill4: "mana_shield"
+    }
+    HeroGrowthVector {
+        growthStr: 0.05d
+        growthDex: 0.20d
+        growthInt: 0.70d
+        growthCon: 0.10d
+        growthWis: 0.55d
+    }
+}
+
+// -----------------------------------------------------------------------------
+// RANGER CLASS
+// -----------------------------------------------------------------------------
+
+hero_class_ranger = new entity {
+    HeroClassDef {
+        className: "Ranger"
+    }
+    HeroBaseCombat {
+        baseHp: 140
+        baseDamage: 22
+        baseDefense: 7
+        baseAttackSpeed: 1.1d
+    }
+    HeroStartingSkills {
+        skill1: "arrow_shot"
+        skill2: "multi_shot"
+        skill3: "evade"
+        skill4: "trap"
+    }
+    HeroGrowthVector {
+        growthStr: 0.20d
+        growthDex: 0.70d
+        growthInt: 0.10d
+        growthCon: 0.25d
+        growthWis: 0.15d
+    }
+}
+
+// -----------------------------------------------------------------------------
+// PALADIN CLASS
+// -----------------------------------------------------------------------------
+
+hero_class_paladin = new entity {
+    HeroClassDef {
+        className: "Paladin"
+    }
+    HeroBaseCombat {
+        baseHp: 220
+        baseDamage: 20
+        baseDefense: 14
+        baseAttackSpeed: 0.7d
+    }
+    HeroStartingSkills {
+        skill1: "holy_strike"
+        skill2: "divine_shield"
+        skill3: "consecrate"
+        skill4: "lay_on_hands"
+    }
+    HeroGrowthVector {
+        growthStr: 0.40d
+        growthDex: 0.15d
+        growthInt: 0.10d
+        growthCon: 0.40d
+        growthWis: 0.55d
+    }
+}
+
+// -----------------------------------------------------------------------------
+// ROGUE CLASS
+// -----------------------------------------------------------------------------
+
+hero_class_rogue = new entity {
+    HeroClassDef {
+        className: "Rogue"
+    }
+    HeroBaseCombat {
+        baseHp: 130
+        baseDamage: 24
+        baseDefense: 6
+        baseAttackSpeed: 1.3d
+    }
+    HeroStartingSkills {
+        skill1: "backstab"
+        skill2: "smoke_bomb"
+        skill3: "poison_blade"
+        skill4: "shadowstep"
+    }
+    HeroGrowthVector {
+        growthStr: 0.35d
+        growthDex: 0.65d
+        growthInt: 0.05d
+        growthCon: 0.25d
+        growthWis: 0.10d
+    }
+}
+
+// -----------------------------------------------------------------------------
+// CLERIC CLASS
+// -----------------------------------------------------------------------------
+
+hero_class_cleric = new entity {
+    HeroClassDef {
+        className: "Cleric"
+    }
+    HeroBaseCombat {
+        baseHp: 180
+        baseDamage: 16
+        baseDefense: 8
+        baseAttackSpeed: 0.6d
+    }
+    HeroStartingSkills {
+        skill1: "heal"
+        skill2: "smite"
+        skill3: "divine_favor"
+        skill4: "holy_word"
+    }
+    HeroGrowthVector {
+        growthStr: 0.10d
+        growthDex: 0.15d
+        growthInt: 0.35d
+        growthCon: 0.30d
+        growthWis: 0.70d
+    }
+}

@@ -20,22 +20,28 @@ import { loadEnemyTemplates } from '../data/enemyData';
 import type { EnemyTemplate } from '../data/enemyData';
 import { loadScenarioConfigs } from '../data/scenarioData';
 import type { ModeConfig } from '../data/scenarioData';
+import { loadHeroClassData } from '../data/heroClassData';
+import type { HeroClassData } from '../data/heroClassData';
 
 // ── Hero stats per class ────────────────────────────────────────────────────
+// Hero class combat stats, skills, and growth vectors are now loaded from BRL
+// hero-classes.brl at runtime via loadHeroClassData() in heroClassData.ts.
+// The hardcoded fallbacks below are used only when BRL files are unavailable
+// (e.g. unit tests).
 
-const CLASS_BASE_HP: Record<string, number> = {
+const FALLBACK_CLASS_BASE_HP: Record<string, number> = {
   Warrior: 250, Mage: 150, Ranger: 140, Paladin: 220, Rogue: 130, Cleric: 180,
 };
 
-const CLASS_BASE_DAMAGE: Record<string, number> = {
+const FALLBACK_CLASS_BASE_DAMAGE: Record<string, number> = {
   Warrior: 28, Mage: 35, Ranger: 22, Paladin: 20, Rogue: 24, Cleric: 16,
 };
 
-const CLASS_BASE_DEFENSE: Record<string, number> = {
+const FALLBACK_CLASS_BASE_DEFENSE: Record<string, number> = {
   Warrior: 12, Mage: 5, Ranger: 7, Paladin: 14, Rogue: 6, Cleric: 8,
 };
 
-const CLASS_SKILLS: Record<string, [string, string, string, string]> = {
+const FALLBACK_CLASS_SKILLS: Record<string, [string, string, string, string]> = {
   Warrior: ['power_strike', 'shield_bash', 'defensive_stance', 'execute'],
   Mage:    ['fireball', 'frost_bolt', 'arcane_blast', 'mana_shield'],
   Ranger:  ['arrow_shot', 'multi_shot', 'evade', 'trap'],
@@ -44,9 +50,37 @@ const CLASS_SKILLS: Record<string, [string, string, string, string]> = {
   Cleric:  ['heal', 'smite', 'divine_favor', 'holy_word'],
 };
 
-const CLASS_ATTACK_SPEED: Record<string, number> = {
+const FALLBACK_CLASS_ATTACK_SPEED: Record<string, number> = {
   Warrior: 0.9, Mage: 0.6, Ranger: 1.1, Paladin: 0.7, Rogue: 1.3, Cleric: 0.6,
 };
+
+// ── Helper to resolve class data from BRL-loaded or fallback ────────────────
+
+function _getClassBaseHp(heroClass: string, classData: Record<string, HeroClassData>): number {
+  return classData[heroClass]?.combat.baseHp ?? FALLBACK_CLASS_BASE_HP[heroClass] ?? 100;
+}
+
+function _getClassBaseDamage(heroClass: string, classData: Record<string, HeroClassData>): number {
+  return classData[heroClass]?.combat.baseDamage ?? FALLBACK_CLASS_BASE_DAMAGE[heroClass] ?? 15;
+}
+
+function _getClassBaseDefense(heroClass: string, classData: Record<string, HeroClassData>): number {
+  return classData[heroClass]?.combat.baseDefense ?? FALLBACK_CLASS_BASE_DEFENSE[heroClass] ?? 5;
+}
+
+function _getClassAttackSpeed(heroClass: string, classData: Record<string, HeroClassData>): number {
+  return classData[heroClass]?.combat.baseAttackSpeed ?? FALLBACK_CLASS_ATTACK_SPEED[heroClass] ?? 1.0;
+}
+
+function _getClassSkills(heroClass: string, classData: Record<string, HeroClassData>): [string, string, string, string] {
+  const cd = classData[heroClass];
+  if (cd) {
+    // skill1 defaults to 'basic_attack' — a hero must always have at least one attack.
+    // skill2–4 default to '' (empty = no skill in that slot).
+    return [cd.skills.skill1 || 'basic_attack', cd.skills.skill2 || '', cd.skills.skill3 || '', cd.skills.skill4 || ''];
+  }
+  return FALLBACK_CLASS_SKILLS[heroClass] ?? ['basic_attack', '', '', ''];
+}
 
 // ── Game mode spawn configs ─────────────────────────────────────────────────
 // Mode configs are now loaded from BRL scenario files at runtime via
@@ -195,12 +229,13 @@ export async function runSimulation(
   adventure?: AdventureDefinition,
 ): Promise<{ snapshots: GameSnapshot[]; heroPaths: HeroPath[]; storyKpis?: StoryKpis; narrativeLog?: NarrativeEntry[] }> {
   // Load WASM module and BRL game data in parallel
-  const [mod, enemyTemplates, scenarioConfigs] = await Promise.all([
+  const [mod, enemyTemplates, scenarioConfigs, heroClassResult] = await Promise.all([
     loadWasmModule(),
     loadEnemyTemplates(),
     loadScenarioConfigs(),
+    loadHeroClassData(),
     initWorldData(),  // Populates world data from BRL (returns void)
-  ]);
+  ]) as [Awaited<ReturnType<typeof loadWasmModule>>, Awaited<ReturnType<typeof loadEnemyTemplates>>, Awaited<ReturnType<typeof loadScenarioConfigs>>, Awaited<ReturnType<typeof loadHeroClassData>>, void];
 
   if (!mod) {
     throw new Error(
@@ -213,6 +248,7 @@ export async function runSimulation(
   const enemies = enemyTemplates.length > 0 ? enemyTemplates : FALLBACK_ENEMY_TEMPLATES;
   const modeConfigs = Object.keys(scenarioConfigs).length > 0 ? scenarioConfigs : { normal: FALLBACK_NORMAL_CONFIG };
   const normalConfig = modeConfigs['normal'] ?? FALLBACK_NORMAL_CONFIG;
+  const classData = heroClassResult.classes;
 
   // Use a cryptographically random seed so each run produces different outcomes.
   const seedBytes = new Uint32Array(2);
@@ -221,7 +257,7 @@ export async function runSimulation(
   const game = mod.BlinkWasmGame.with_seed(seed);
   try {
     if (runType === 'story') {
-      const result = _runStoryMode(game, selectedHeroes, mode, enemies, modeConfigs, normalConfig, customSettings, environmentSettings, seed, adventure);
+      const result = _runStoryMode(game, selectedHeroes, mode, enemies, modeConfigs, normalConfig, customSettings, environmentSettings, seed, adventure, classData);
 
       const heroPaths: HeroPath[] = selectedHeroes.map(hero => {
         const maxLevel = result.snapshots.length > 0
@@ -248,7 +284,7 @@ export async function runSimulation(
     }
 
     // Fight mode (original)
-    const snapshots = _runWithWasm(game, selectedHeroes, mode, enemies, modeConfigs, normalConfig, customSettings, environmentSettings);
+    const snapshots = _runWithWasm(game, selectedHeroes, mode, enemies, modeConfigs, normalConfig, customSettings, environmentSettings, classData);
 
     // Simulate hero progression paths using the trait system
     const heroPaths: HeroPath[] = selectedHeroes.map(hero => {
@@ -299,6 +335,7 @@ function _runWithWasm(
   normalConfig: ModeConfig,
   customSettings?: CustomModeSettings,
   environmentSettings?: EnvironmentSettings,
+  classData: Record<string, HeroClassData> = {},
 ): GameSnapshot[] {
   // 1. Register components + intern strings (no static entities in RPG BRL)
   game.init_static();
@@ -330,11 +367,11 @@ function _runWithWasm(
   selectedHeroes.forEach((hero, i) => {
     const heroId = i + 1;
     const heroClass = hero.heroClass;
-    const skills = CLASS_SKILLS[heroClass] ?? ['basic_attack', '', '', ''];
-    const baseHp  = CLASS_BASE_HP[heroClass]    ?? 100;
-    const baseDmg = CLASS_BASE_DAMAGE[heroClass] ?? 15;
-    const baseDef = CLASS_BASE_DEFENSE[heroClass] ?? 5;
-    const baseSpd = CLASS_ATTACK_SPEED[heroClass] ?? 1.0;
+    const skills = _getClassSkills(heroClass, classData);
+    const baseHp  = _getClassBaseHp(heroClass, classData);
+    const baseDmg = _getClassBaseDamage(heroClass, classData);
+    const baseDef = _getClassBaseDefense(heroClass, classData);
+    const baseSpd = _getClassAttackSpeed(heroClass, classData);
 
     const conBonus = Math.floor((hero.stats.constitution - 10) * 5);
     const intBonus = Math.floor((hero.stats.intelligence - 10) * 3);
@@ -705,6 +742,7 @@ function _runStoryMode(
   environmentSettings?: EnvironmentSettings,
   seed?: bigint,
   adventure?: AdventureDefinition,
+  classData: Record<string, HeroClassData> = {},
 ): { snapshots: GameSnapshot[]; storyKpis: StoryKpis; narrativeLog: NarrativeEntry[] } {
   // Use the same entity setup as fight mode, but with story-specific config
   game.init_static();
@@ -737,11 +775,11 @@ function _runStoryMode(
   selectedHeroes.forEach((hero, i) => {
     const heroId = i + 1;
     const heroClass = hero.heroClass;
-    const skills = CLASS_SKILLS[heroClass] ?? ['basic_attack', '', '', ''];
-    const baseHp  = CLASS_BASE_HP[heroClass]    ?? 100;
-    const baseDmg = CLASS_BASE_DAMAGE[heroClass] ?? 15;
-    const baseDef = CLASS_BASE_DEFENSE[heroClass] ?? 5;
-    const baseSpd = CLASS_ATTACK_SPEED[heroClass] ?? 1.0;
+    const skills = _getClassSkills(heroClass, classData);
+    const baseHp  = _getClassBaseHp(heroClass, classData);
+    const baseDmg = _getClassBaseDamage(heroClass, classData);
+    const baseDef = _getClassBaseDefense(heroClass, classData);
+    const baseSpd = _getClassAttackSpeed(heroClass, classData);
 
     const conBonus = Math.floor((hero.stats.constitution - 10) * 5);
     const intBonus = Math.floor((hero.stats.intelligence - 10) * 3);
@@ -1033,7 +1071,7 @@ function _runStoryMode(
   const baseNarrativeLog = _generateNarrativeLog(
     selectedHeroes, seedNum, totalEncounters,
     locationsVisited, totalLocations, townsRested, ambushesSurvived,
-    finalDestinationReached, env, enemyTemplates, completionDay,
+    finalDestinationReached, env, enemyTemplates, completionDay, classData,
   );
 
   // Merge quest narrative entries into the base log, sorted by day/hour
@@ -1101,6 +1139,7 @@ function _generateNarrativeLog(
   _env: EnvironmentSettings,
   enemyPool: EnemyTemplate[],
   completionDay: number = STORY_TOTAL_DAYS,
+  classData: Record<string, HeroClassData> = {},
 ): NarrativeEntry[] {
   const log: NarrativeEntry[] = [];
   const heroNames = heroes.map(h => h.name);
@@ -1241,7 +1280,7 @@ function _generateNarrativeLog(
         for (let hi = 0; hi < heroes.length; hi++) {
           const hero = heroes[hi];
           const actionHash = _narrativeHash(seedNum, day * 100 + enc, hi + 400);
-          const skills = CLASS_SKILLS[hero.heroClass] ?? ['basic_attack'];
+          const skills = _getClassSkills(hero.heroClass, classData);
           const skillIdx = actionHash % skills.length;
           const skillKey = skills[skillIdx];
           const skillName = getSkillName(skillKey, hero.heroClass);
@@ -1318,7 +1357,7 @@ function _generateNarrativeLog(
 
           for (let hi = 0; hi < heroes.length; hi++) {
             const hero = heroes[hi];
-            const skills = CLASS_SKILLS[hero.heroClass] ?? ['basic_attack'];
+            const skills = _getClassSkills(hero.heroClass, classData);
             const sh = _narrativeHash(seedNum, day, hi + 700);
             const skillName = getSkillName(skills[sh % skills.length], hero.heroClass);
             emit(day, hour + 2, 3, `${hero.name} scrambles awake and uses ${skillName}.`);
