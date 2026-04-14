@@ -137,6 +137,7 @@ The following duplication has been resolved:
 | `game/brl/scenario-*.brl` | `WasmSimEngine.ts` `MODE_CONFIGS` | BRL loaded at runtime via `scenarioData.ts`; TS fallback only |
 | `game/brl/story-world-data.brl` | `worldData.ts` data arrays | BRL loaded at runtime via `worldDataLoader.ts`; TS fallback only |
 | `game/brl/hero-classes.brl` | `WasmSimEngine.ts` `CLASS_BASE_*` / `traits.ts` `CLASS_BASE_GROWTH` | BRL loaded at runtime via `heroClassData.ts`; TS fallback only |
+| `game/brl/story-adventure-templates.brl` + expansion BRLs | `adventureQuest.ts` template arrays | BRL loaded at runtime via `adventureDataLoader.ts`; TS fallback only |
 
 The two files that had diverged (`classic-rpg.brl` missing DamageType/Resistance
 components, `scenario-normal.brl` with different balance values) are now always
@@ -153,6 +154,7 @@ component data from BRL files at runtime.  Four data loader modules use it:
 | `scenarioData.ts` | `scenario-*.brl` | Mode configs (spawn, scoring, flee) |
 | `worldDataLoader.ts` | `story-world-data.brl` | Locations, paths, NPCs, comments, encounters |
 | `heroClassData.ts` | `hero-classes.brl` | Class combat stats, skills, growth vectors, element threshold |
+| `adventureDataLoader.ts` | `story-adventure-templates.brl`, `adventure-expansion-set-1.brl`, `expansion_pack_2.brl` | Objective/milestone/event templates; hero encounter templates |
 
 All four loaders are called in parallel during `runSimulation()`, alongside
 the WASM module load.  Results are cached after the first fetch.  If BRL

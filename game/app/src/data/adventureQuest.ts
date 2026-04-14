@@ -7,12 +7,18 @@
  *
  * This module implements the composition algorithm described in
  * doc/game-design/adventure-design.md.
+ *
+ * **BRL is the single source of truth.**  Call `initAdventureData()` to load
+ * objectives, milestones, events, and hero encounter templates from BRL files
+ * at runtime.  The hardcoded TypeScript arrays below serve as fallback defaults
+ * for environments where BRL files are unavailable (e.g. unit tests).
  */
 
 import type { AdventureDefinition, HeroDefinition, HeroTraits } from '../types';
 import { DEFAULT_ENVIRONMENT_SETTINGS } from '../types';
 import { WORLD_NPCS, selectWorldMap } from './worldData';
 import type { WorldNpc } from './worldData';
+import { loadAdventureData } from './adventureDataLoader';
 
 // ── Deterministic PRNG (splitmix32) ─────────────────────────────────────────
 
@@ -96,7 +102,9 @@ interface ObjectiveTemplate {
   milestoneCategories: string[];
 }
 
-const OBJECTIVE_TEMPLATES: readonly ObjectiveTemplate[] = [
+// Fallback data — overridden when initAdventureData() loads from BRL.
+// These arrays match the canonical data in story-adventure-templates.brl.
+let OBJECTIVE_TEMPLATES: readonly ObjectiveTemplate[] = [
   {
     objectiveId: 'rescue_npc',
     category: 'rescue',
@@ -151,36 +159,6 @@ const OBJECTIVE_TEMPLATES: readonly ObjectiveTemplate[] = [
     requiredSlots: ['portal_name', 'portal_location', 'seal_item'],
     milestoneCategories: ['exploration', 'combat', 'information'],
   },
-  // New objective: Spy Mission
-  {
-    objectiveId: 'spy_mission',
-    category: 'retrieve',
-    title: 'Steal the Plans from {villain_name}',
-    description: '{villain_name} holds battle plans that could doom the realm. {quest_giver} has asked the party to infiltrate, steal the plans, and return before the assault begins.|Critical intelligence sits in {villain_name}\'s stronghold. {quest_giver} needs those plans — and time is running out.',
-    winCondition: 'plans_retrieved',
-    requiredSlots: ['villain_name', 'quest_giver'],
-    milestoneCategories: ['exploration', 'social', 'information', 'combat'],
-  },
-  // New objective: Defend the Stronghold
-  {
-    objectiveId: 'defend_stronghold',
-    category: 'escort',
-    title: "Defend {npc_name}'s Stronghold",
-    description: "{villain_name}'s forces march on {npc_name}'s stronghold. The party must fortify, rally, and hold until the siege breaks.|{npc_name} cannot hold {threat_desc} alone. The party must reach the stronghold and lead its defence.",
-    winCondition: 'stronghold_held',
-    requiredSlots: ['npc_name', 'villain_name', 'threat_desc'],
-    milestoneCategories: ['combat', 'social', 'exploration', 'information'],
-  },
-  // New objective: Break the Siege
-  {
-    objectiveId: 'break_siege',
-    category: 'defeat',
-    title: 'Break the Siege of {cursed_location}',
-    description: '{villain_name} has besieged {cursed_location} for weeks. The party must disrupt the siege lines and open a route for the defenders to escape.|The people of {cursed_location} are starving. Only by breaking {villain_name}\'s siege can they be saved.',
-    winCondition: 'siege_broken',
-    requiredSlots: ['villain_name', 'cursed_location'],
-    milestoneCategories: ['combat', 'exploration', 'information', 'social'],
-  },
 ];
 
 // ── Milestone templates ─────────────────────────────────────────────────────
@@ -198,7 +176,7 @@ interface MilestoneTemplate {
   eventSlots: number;
 }
 
-const MILESTONE_TEMPLATES: readonly MilestoneTemplate[] = [
+let MILESTONE_TEMPLATES: readonly MilestoneTemplate[] = [
   {
     milestoneId: 'gather_intel',
     category: 'information',
@@ -319,58 +297,6 @@ const MILESTONE_TEMPLATES: readonly MilestoneTemplate[] = [
     compatibleObjectives: ['retrieve', 'rescue', 'defeat', 'escort'],
     eventSlots: 2,
   },
-  // New milestone: Destroy the Siege Weapon
-  {
-    milestoneId: 'destroy_siege_weapon',
-    category: 'combat',
-    title: 'Destroy the Enemy {threat_name}',
-    description: 'Enemy forces deploy a devastating siege weapon — the {threat_name}. The party must reach it and destroy it before it can be used.|The {threat_name} stands ready to tear down every defence. The party must act now.',
-    completionType: 'area_cleared',
-    completionKey: 'siege_weapon_destroyed',
-    bailoutDay: 3,
-    bailoutDescription: 'The siege weapon misfires and destroys itself in a lucky accident.',
-    compatibleObjectives: ['defeat', 'escort', 'rescue'],
-    eventSlots: 3,
-  },
-  // New milestone: Find the Hidden Passage
-  {
-    milestoneId: 'find_hidden_passage',
-    category: 'exploration',
-    title: 'Discover the Hidden Way into {dungeon_name}',
-    description: 'The main entrance to {dungeon_name} is impenetrable. Somewhere, a hidden passage must exist — the party just has to find it.|The walls of {dungeon_name} look solid, but old maps hint at a secret entrance. The party must locate it.',
-    completionType: 'item_found',
-    completionKey: 'passage_discovered',
-    bailoutDay: 3,
-    bailoutDescription: 'A captured enemy soldier reveals the hidden passage under interrogation.',
-    compatibleObjectives: ['retrieve', 'rescue', 'defeat', 'spy_mission', 'break_siege'],
-    eventSlots: 2,
-  },
-  // New milestone: Hold the Pass
-  {
-    milestoneId: 'hold_the_pass',
-    category: 'combat',
-    title: 'Hold the {threat_name} Pass',
-    description: 'Enemy forces are pushing through the {threat_name} pass. The party must hold the line long enough for the defenders to regroup.|The pass is the last defensible position. If it falls, so does everything beyond it.',
-    completionType: 'ambush_survived',
-    completionKey: 'pass_held',
-    bailoutDay: 4,
-    bailoutDescription: 'Reinforcements arrive just as the party is about to be overrun.',
-    compatibleObjectives: ['defeat', 'escort', 'defend_stronghold', 'break_siege'],
-    eventSlots: 3,
-  },
-  // New milestone: Gather Allies
-  {
-    milestoneId: 'gather_allies',
-    category: 'social',
-    title: 'Recruit {rival_name} to the Cause',
-    description: '{rival_name} commands forces that could turn the tide — but they need convincing before they will commit.|The party must win {rival_name}\'s trust and bring them into the alliance.',
-    completionType: 'npc_persuaded',
-    completionKey: 'allies_gathered',
-    bailoutDay: 3,
-    bailoutDescription: 'A shared enemy attack forces {rival_name} to fight alongside the party.',
-    compatibleObjectives: ['defeat', 'rescue', 'defend_stronghold', 'break_siege', 'escort'],
-    eventSlots: 2,
-  },
 ];
 
 // ── Event templates ─────────────────────────────────────────────────────────
@@ -389,7 +315,7 @@ interface EventTemplate {
   difficultyModifier: number;
 }
 
-const EVENT_TEMPLATES: readonly EventTemplate[] = [
+let EVENT_TEMPLATES: readonly EventTemplate[] = [
   // Key events
   {
     eventId: 'duel_rival',
@@ -729,7 +655,9 @@ interface HeroEncounterTemplate {
   difficultyModifier: number;
 }
 
-const HERO_ENCOUNTER_TEMPLATES: readonly HeroEncounterTemplate[] = [
+// Fallback data — overridden when initAdventureData() loads from BRL.
+// BRL sources: adventure-expansion-set-1.brl, expansion_pack_2.brl
+let HERO_ENCOUNTER_TEMPLATES: readonly HeroEncounterTemplate[] = [
   // ── CLASS-SPECIFIC ENCOUNTERS (6) ─────────────────────────────────────────
 
   // 1. Warrior — Hold the Line
@@ -1310,552 +1238,6 @@ const HERO_ENCOUNTER_TEMPLATES: readonly HeroEncounterTemplate[] = [
     narrativeOnComplete: 'The lieutenant falls. The party\'s ability to focus fire on priority targets is sharpened.',
     difficultyModifier: 2,
   },
-
-  // ── EXPANSION SET 2 — CLASS-SPECIFIC ENCOUNTERS (6) ───────────────────────
-
-  // 31. Warrior — Last Stand at the Bridge
-  {
-    encounterId: 'warrior_last_stand_bridge',
-    category: 'class',
-    title: 'Last Stand at the Bridge over {location_name}',
-    description: 'The only bridge to {destination_name} is threatened by an overwhelming force. A warrior must hold the crossing until the rest of the party can cross safely.',
-    preferredClass: 'Warrior',
-    traitAxis: '',
-    traitPolarity: '',
-    triggerType: 'travel_segment',
-    triggerLocation: 'wilderness',
-    isKeyEvent: true,
-    buffType: 'defense',
-    buffAmount: 15,
-    narrativeOnMatch: '{hero_name} plunges their weapon into the bridge planks, bracing for impact. \'None shall pass.\' Every inch of that bridge is territory they are sworn to defend.',
-    narrativeOnComplete: 'The bridge holds. The warrior\'s last stand becomes legend among the villagers — and the party\'s resolve is iron.',
-    difficultyModifier: 2,
-  },
-  // 32. Mage — Disrupt the Ritual
-  {
-    encounterId: 'mage_disrupt_ritual',
-    category: 'class',
-    title: 'Disrupt {villain_name}\'s Summoning Ritual',
-    description: '{villain_name} is mid-ritual, calling forth something terrible. Only a mage who understands the underlying energies can unmake the spell before it completes.',
-    preferredClass: 'Mage',
-    traitAxis: '',
-    traitPolarity: '',
-    triggerType: 'location_enter',
-    triggerLocation: 'dungeon',
-    isKeyEvent: true,
-    buffType: 'attack',
-    buffAmount: 12,
-    narrativeOnMatch: '{hero_name} reads the weave of the ritual and finds the unravelling point. They tear the spell apart from within. Only a mage could see the pattern to break.',
-    narrativeOnComplete: 'The ritual collapses in a cascade of arcane shrapnel. The residual energy crackles on the party\'s weapons.',
-    difficultyModifier: 1,
-  },
-  // 33. Ranger — Warn of Ambush
-  {
-    encounterId: 'ranger_warn_ambush',
-    category: 'class',
-    title: 'The Ambush in the {dungeon_name} Forest',
-    description: 'Enemy archers have taken position in the trees surrounding {dungeon_name}. Without warning the party in time, they will be cut down before they can react.',
-    preferredClass: 'Ranger',
-    traitAxis: '',
-    traitPolarity: '',
-    triggerType: 'travel_segment',
-    triggerLocation: 'wilderness',
-    isKeyEvent: false,
-    buffType: 'speed',
-    buffAmount: 10,
-    narrativeOnMatch: '{hero_name} freezes mid-step, one fist raised. \'They\'re in the trees. Twenty paces north.\' A ranger\'s instincts do not lie.',
-    narrativeOnComplete: 'The ambush is foiled before it starts. The party moves faster now, adrenaline and readiness pushing them forward.',
-    difficultyModifier: 0,
-  },
-  // 34. Paladin — Cure the Plague
-  {
-    encounterId: 'paladin_cure_plague',
-    category: 'class',
-    title: 'The Plague of {location_name}',
-    description: 'A magical plague has struck {location_name}. The sick are too numerous for common healers. Only a paladin channelling divine power can purge the affliction at its source.',
-    preferredClass: 'Paladin',
-    traitAxis: '',
-    traitPolarity: '',
-    triggerType: 'town_visit',
-    triggerLocation: 'town',
-    isKeyEvent: false,
-    buffType: 'healing',
-    buffAmount: 15,
-    narrativeOnMatch: '{hero_name} moves from bed to bed, laying hands on the afflicted. A warm light follows their touch. The sick breathe easier. This is what a paladin was made for.',
-    narrativeOnComplete: 'The plague recedes. Grateful townsfolk share provisions that restore the party\'s vitality through the days ahead.',
-    difficultyModifier: 0,
-  },
-  // 35. Rogue — Forge the Documents
-  {
-    encounterId: 'rogue_forge_documents',
-    category: 'class',
-    title: 'Bluff Through {villain_name}\'s Checkpoint',
-    description: '{villain_name}\'s forces control the only road. Forged travel documents could get the party through — but only someone with a rogue\'s deft hand and cool nerve could pull it off.',
-    preferredClass: 'Rogue',
-    traitAxis: '',
-    traitPolarity: '',
-    triggerType: 'travel_segment',
-    triggerLocation: 'any',
-    isKeyEvent: false,
-    buffType: 'crit',
-    buffAmount: 10,
-    narrativeOnMatch: '{hero_name} produces a flawlessly forged seal, nods to the checkpoint guard, and leads the party through without a word. Cool as a winter morning.',
-    narrativeOnComplete: 'The checkpoint is passed. The party\'s confidence in hitting gaps in enemy defences sharpens considerably.',
-    difficultyModifier: 0,
-  },
-  // 36. Cleric — Turn the Undead
-  {
-    encounterId: 'cleric_turn_undead',
-    category: 'class',
-    title: 'The Undead Rising at {dungeon_name}',
-    description: 'A tide of undead has risen near {dungeon_name}, blocking the road. Weapons slow them but cannot stop them. A cleric\'s divine channelling could scatter them entirely.',
-    preferredClass: 'Cleric',
-    traitAxis: '',
-    traitPolarity: '',
-    triggerType: 'location_enter',
-    triggerLocation: 'wilderness',
-    isKeyEvent: false,
-    buffType: 'defense',
-    buffAmount: 12,
-    narrativeOnMatch: '{hero_name} holds their holy symbol aloft and speaks words of banishment. The undead recoil and crumble. Divine power made manifest.',
-    narrativeOnComplete: 'The dead rest once more. The party walks through the silence with renewed protection, blessed by the cleric\'s power.',
-    difficultyModifier: 1,
-  },
-
-  // ── EXPANSION SET 2 — TRAIT-POLARIZATION ENCOUNTERS (24) ─────────────────
-
-  // 37. Physical (pm negative): Clear the Wreckage
-  {
-    encounterId: 'trait2_physical_wreckage',
-    category: 'trait',
-    title: 'The Wrecked Siege Engine at {location_name}',
-    description: 'A toppled siege engine blocks the road at {location_name}. No lever system remains — only raw physical force can shift the wreckage and open the way.',
-    preferredClass: '',
-    traitAxis: 'pm',
-    traitPolarity: 'negative',
-    triggerType: 'travel_segment',
-    triggerLocation: 'wilderness',
-    isKeyEvent: false,
-    buffType: 'attack',
-    buffAmount: 10,
-    narrativeOnMatch: '{hero_name} puts their shoulder to the wreckage and drives through it with sheer brute power. The road opens. Strength is sometimes the only tool needed.',
-    narrativeOnComplete: 'The obstruction cleared, the party pushes on. Physical exertion has sharpened their combat edge.',
-    difficultyModifier: 1,
-  },
-  // 38. Magical (pm positive): Seal the Ley-Line Fracture
-  {
-    encounterId: 'trait2_magical_leyline',
-    category: 'trait',
-    title: 'The Fractured Ley-Line at {dungeon_name}',
-    description: 'A ley-line fracture near {dungeon_name} is bleeding magical energy, warping the local terrain. Someone attuned to magical forces can seal the fracture before it destabilises the region.',
-    preferredClass: '',
-    traitAxis: 'pm',
-    traitPolarity: 'positive',
-    triggerType: 'location_enter',
-    triggerLocation: 'any',
-    isKeyEvent: false,
-    buffType: 'attack',
-    buffAmount: 10,
-    narrativeOnMatch: '{hero_name} presses their palms against the fracture and channels their own essence into it. The leak seals. Magical intuition made this possible.',
-    narrativeOnComplete: 'The stabilised ley-line hums with power. Arcane energy channels through the party\'s attacks.',
-    difficultyModifier: 0,
-  },
-  // 39. Offensive (od negative): Storm the Watchtower
-  {
-    encounterId: 'trait2_offensive_watchtower',
-    category: 'trait',
-    title: 'Storm the Watchtower at {dungeon_name}',
-    description: 'The watchtower at {dungeon_name} controls enemy communications. A bold, aggressive assault before reinforcements arrive is the only option.',
-    preferredClass: '',
-    traitAxis: 'od',
-    traitPolarity: 'negative',
-    triggerType: 'location_enter',
-    triggerLocation: 'wilderness',
-    isKeyEvent: false,
-    buffType: 'attack',
-    buffAmount: 10,
-    narrativeOnMatch: '{hero_name} doesn\'t wait — they charge the tower the moment it comes into sight. An offensive mind at work: strike fast, strike hard, win before the enemy can react.',
-    narrativeOnComplete: 'The tower falls quickly. The party\'s aggressive momentum carries into the next engagement.',
-    difficultyModifier: 1,
-  },
-  // 40. Defensive (od positive): Fortify the Chokepoint
-  {
-    encounterId: 'trait2_defensive_chokepoint',
-    category: 'trait',
-    title: 'Fortify the Pass to {destination_name}',
-    description: 'Enemy forces are routing toward the party\'s position. Someone with a defender\'s mindset can rapidly fortify the chokepoint and turn a rout into a trap.',
-    preferredClass: '',
-    traitAxis: 'od',
-    traitPolarity: 'positive',
-    triggerType: 'travel_segment',
-    triggerLocation: 'wilderness',
-    isKeyEvent: false,
-    buffType: 'defense',
-    buffAmount: 12,
-    narrativeOnMatch: '{hero_name} has already placed stones and debris across the choke before anyone else has even dismounted. A defensive genius, always thinking of the line to hold.',
-    narrativeOnComplete: 'The chokepoint holds. The enemy wave breaks on the improvised fortifications. The party\'s defences are hardened further.',
-    difficultyModifier: 0,
-  },
-  // 41. Supportive (sa negative): Shield the Healer
-  {
-    encounterId: 'trait2_supportive_shield_healer',
-    category: 'trait',
-    title: 'Protect {npc_name} During the Onslaught',
-    description: '{npc_name} is the party\'s only source of healing but has been singled out by the enemy. Someone focused on support must keep {npc_name} alive through the onslaught.',
-    preferredClass: '',
-    traitAxis: 'sa',
-    traitPolarity: 'negative',
-    triggerType: 'travel_segment',
-    triggerLocation: 'any',
-    isKeyEvent: false,
-    buffType: 'healing',
-    buffAmount: 12,
-    narrativeOnMatch: '{hero_name} interposes themselves between the enemy and {npc_name}, absorbing every blow aimed at the healer. Pure selfless instinct — a natural support.',
-    narrativeOnComplete: 'The healer survives and mends the party\'s wounds. Sustained by the support, the party\'s recovery rate improves for the journey ahead.',
-    difficultyModifier: 1,
-  },
-  // 42. Attacker (sa positive): Breach the Commander's Tent
-  {
-    encounterId: 'trait2_attacker_breach_tent',
-    category: 'trait',
-    title: 'Breach {villain_name}\'s Command Tent',
-    description: '{villain_name} coordinates their forces from a command tent deep in the camp. Someone focused on direct aggression must cut through the guards and reach the commander.',
-    preferredClass: '',
-    traitAxis: 'sa',
-    traitPolarity: 'positive',
-    triggerType: 'camp_night',
-    triggerLocation: 'any',
-    isKeyEvent: true,
-    buffType: 'crit',
-    buffAmount: 12,
-    narrativeOnMatch: '{hero_name} is already moving before the plan is finished. They cut through the guards in seconds and reach {villain_name}\'s position. An attacker\'s instinct: always go straight for the target.',
-    narrativeOnComplete: 'The disrupted command structure unravels enemy coordination. The party\'s precision and aggression are honed further.',
-    difficultyModifier: 2,
-  },
-  // 43. Risky (rc negative): Bet Everything
-  {
-    encounterId: 'trait2_risky_all_in',
-    category: 'trait',
-    title: 'All-In at {location_name}',
-    description: 'The enemy holds all the cards at {location_name} — unless someone is willing to stake everything on a single desperate gambit that has no margin for error.',
-    preferredClass: '',
-    traitAxis: 'rc',
-    traitPolarity: 'negative',
-    triggerType: 'location_enter',
-    triggerLocation: 'any',
-    isKeyEvent: false,
-    buffType: 'crit',
-    buffAmount: 12,
-    narrativeOnMatch: '{hero_name} grins. \'I\'ve seen worse odds.\' They commit everything to the gambit without hesitation. Risk is not something they fear — it\'s something they embrace.',
-    narrativeOnComplete: 'The gambit pays off. Fortune rewards the bold, and the party\'s ability to land devastating blows improves dramatically.',
-    difficultyModifier: 2,
-  },
-  // 44. Cautious (rc positive): Chart the Safe Route
-  {
-    encounterId: 'trait2_cautious_safe_route',
-    category: 'trait',
-    title: 'Navigate the Minefield near {dungeon_name}',
-    description: 'The approach to {dungeon_name} is riddled with hidden traps and minefields. A cautious, methodical scout must map a safe route before the party advances.',
-    preferredClass: '',
-    traitAxis: 'rc',
-    traitPolarity: 'positive',
-    triggerType: 'travel_segment',
-    triggerLocation: 'wilderness',
-    isKeyEvent: false,
-    buffType: 'defense',
-    buffAmount: 10,
-    narrativeOnMatch: '{hero_name} advances one cautious step at a time, probing the ground and marking triggers with coloured stones. Their patience is absolute. Every trap is found before it can fire.',
-    narrativeOnComplete: 'The party crosses safely. Methodical planning under pressure leaves them better protected for what lies ahead.',
-    difficultyModifier: 0,
-  },
-  // 45. Fire (fw negative): Forge the Weapon
-  {
-    encounterId: 'trait2_fire_forge_weapon',
-    category: 'trait',
-    title: 'The Volcano Forge near {location_name}',
-    description: 'A legendary weapon can be reforged in the volcano near {location_name}, but the heat is lethal to all but those with a deep fire affinity.',
-    preferredClass: '',
-    traitAxis: 'fw',
-    traitPolarity: 'negative',
-    triggerType: 'location_enter',
-    triggerLocation: 'wilderness',
-    isKeyEvent: false,
-    buffType: 'attack',
-    buffAmount: 12,
-    narrativeOnMatch: '{hero_name} steps into the heat that would incinerate anyone else, reaches into the molten forge, and works the metal bare-handed. The fire obeys them.',
-    narrativeOnComplete: 'The reforged weapon blazes with volcanic power. The party\'s strikes gain a scorching edge.',
-    difficultyModifier: 1,
-  },
-  // 46. Water (fw positive): Quench the Wildfire
-  {
-    encounterId: 'trait2_water_quench_wildfire',
-    category: 'trait',
-    title: 'The Wildfire Blocking {destination_name}',
-    description: 'A wildfire rages between the party and {destination_name}. No amount of effort can stop it — unless someone with a deep water affinity can summon rain or control a nearby stream.',
-    preferredClass: '',
-    traitAxis: 'fw',
-    traitPolarity: 'positive',
-    triggerType: 'travel_segment',
-    triggerLocation: 'wilderness',
-    isKeyEvent: false,
-    buffType: 'healing',
-    buffAmount: 10,
-    narrativeOnMatch: '{hero_name} raises their hands toward the sky and pulls moisture from the air. Rain falls in a focused torrent, quenching the fire in minutes. Water answers their call.',
-    narrativeOnComplete: 'The fire dies. Cleansed by the rain, the party travels with refreshed clarity and improved resilience.',
-    difficultyModifier: 0,
-  },
-  // 47. Wind (we negative): Signal the Allies
-  {
-    encounterId: 'trait2_wind_signal_allies',
-    category: 'trait',
-    title: 'Carry the Signal to {destination_name}',
-    description: 'Allied forces at {destination_name} need a signal to begin their assault, but no messenger can travel fast enough. Someone who commands the wind could carry the signal across impossible distance.',
-    preferredClass: '',
-    traitAxis: 'we',
-    traitPolarity: 'negative',
-    triggerType: 'travel_segment',
-    triggerLocation: 'wilderness',
-    isKeyEvent: false,
-    buffType: 'speed',
-    buffAmount: 12,
-    narrativeOnMatch: '{hero_name} cups their hands to their mouth and releases a shout carried on a crafted gust. It reaches {destination_name} in seconds. Wind carries what legs cannot.',
-    narrativeOnComplete: 'The allies respond. Coordinated timing gives the party a critical edge in what follows.',
-    difficultyModifier: 0,
-  },
-  // 48. Earth (we positive): Dig the Escape Tunnel
-  {
-    encounterId: 'trait2_earth_escape_tunnel',
-    category: 'trait',
-    title: 'Escape Through {dungeon_name}\'s Walls',
-    description: 'The party is trapped inside {dungeon_name} with no conventional exit. Someone with mastery over earth and stone could dig an escape tunnel through the wall.',
-    preferredClass: '',
-    traitAxis: 'we',
-    traitPolarity: 'positive',
-    triggerType: 'location_enter',
-    triggerLocation: 'dungeon',
-    isKeyEvent: false,
-    buffType: 'defense',
-    buffAmount: 10,
-    narrativeOnMatch: '{hero_name} presses a palm to the wall and feels the grain of the stone. With targeted strikes, the wall crumbles precisely where intended. Earth yields to those who understand it.',
-    narrativeOnComplete: 'The tunnel opens. The party escapes with their equipment intact and their confidence in difficult terrain unshaken.',
-    difficultyModifier: 0,
-  },
-  // 49. Light (ld negative): Light the Beacon
-  {
-    encounterId: 'trait2_light_beacon',
-    category: 'trait',
-    title: 'Light the Beacon at {location_name}',
-    description: 'A great beacon at {location_name} must be lit to guide allied forces — but the tower is sheathed in dark enchantments that snuff out ordinary flames. Only light-aligned power can pierce the shroud.',
-    preferredClass: '',
-    traitAxis: 'ld',
-    traitPolarity: 'negative',
-    triggerType: 'location_enter',
-    triggerLocation: 'any',
-    isKeyEvent: false,
-    buffType: 'healing',
-    buffAmount: 10,
-    narrativeOnMatch: '{hero_name} channels radiant energy into the beacon wick. The dark enchantments dissolve and the flame roars to life. Light cannot be smothered by dark magic.',
-    narrativeOnComplete: 'The beacon blazes. Allied forces rally. The party\'s morale soars and their natural resilience is enhanced.',
-    difficultyModifier: 0,
-  },
-  // 50. Darkness (ld positive): Infiltrate Under Cover of Night
-  {
-    encounterId: 'trait2_dark_night_infiltration',
-    category: 'trait',
-    title: 'Night Infiltration of {dungeon_name}',
-    description: 'The only time to enter {dungeon_name} undetected is at night, in complete darkness. Someone comfortable in the dark must lead the party through without a torch.',
-    preferredClass: '',
-    traitAxis: 'ld',
-    traitPolarity: 'positive',
-    triggerType: 'camp_night',
-    triggerLocation: 'any',
-    isKeyEvent: false,
-    buffType: 'crit',
-    buffAmount: 10,
-    narrativeOnMatch: '{hero_name} moves through the absolute dark as if it were daylight, navigating by memory and instinct. The party follows their whispered guidance. Darkness is their home.',
-    narrativeOnComplete: 'The infiltration succeeds without a single alarm raised. The party\'s ability to exploit vulnerabilities is sharpened by the experience.',
-    difficultyModifier: 1,
-  },
-  // 51. Chaos (co negative): Create a Diversion
-  {
-    encounterId: 'trait2_chaos_diversion',
-    category: 'trait',
-    title: 'Create a Diversion at {location_name}',
-    description: 'The party needs a diversion at {location_name} to draw enemy attention while allies slip through. Only someone who thrives in chaos could improvise something spectacular enough.',
-    preferredClass: '',
-    traitAxis: 'co',
-    traitPolarity: 'negative',
-    triggerType: 'town_visit',
-    triggerLocation: 'town',
-    isKeyEvent: false,
-    buffType: 'speed',
-    buffAmount: 10,
-    narrativeOnMatch: '{hero_name} vanishes into the market and two minutes later, the entire eastern quarter is in uproar. No plan, just instinct and chaos weaponised. Exactly what was needed.',
-    narrativeOnComplete: 'The enemy scrambles to respond. In the confusion, the party moves faster and more freely than before.',
-    difficultyModifier: 0,
-  },
-  // 52. Order (co positive): Reform the Broken Formation
-  {
-    encounterId: 'trait2_order_reform_formation',
-    category: 'trait',
-    title: 'Rally the Routed Forces at {destination_name}',
-    description: 'Allied forces at {destination_name} are routing in disarray. Without someone to impose order and reform their lines, they will be destroyed before the party can use them.',
-    preferredClass: '',
-    traitAxis: 'co',
-    traitPolarity: 'positive',
-    triggerType: 'travel_segment',
-    triggerLocation: 'any',
-    isKeyEvent: false,
-    buffType: 'defense',
-    buffAmount: 12,
-    narrativeOnMatch: '{hero_name} strides into the chaos and shouts crisp, clear orders. Soldiers snap to attention almost instinctively. Order imposed through sheer force of structure.',
-    narrativeOnComplete: 'The reformed forces hold the line. The party\'s own defensive coordination benefits from the exercise.',
-    difficultyModifier: 0,
-  },
-  // 53. Sly (sh negative): Leverage the Gate Captain
-  {
-    encounterId: 'trait2_sly_leverage',
-    category: 'trait',
-    title: 'Blackmail the Gate Captain at {location_name}',
-    description: 'The gate to {location_name} is held by a corrupt captain. Frontal assault is impossible — but someone sly enough could acquire leverage and force the gate open without a fight.',
-    preferredClass: '',
-    traitAxis: 'sh',
-    traitPolarity: 'negative',
-    triggerType: 'town_visit',
-    triggerLocation: 'town',
-    isKeyEvent: false,
-    buffType: 'crit',
-    buffAmount: 8,
-    narrativeOnMatch: '{hero_name} produces a folded note and slides it across the table without a word. The captain\'s face drains of colour. The gate opens immediately. A sly mind always finds the leverage.',
-    narrativeOnComplete: 'The gate is passed without bloodshed. The party\'s ability to exploit weaknesses in enemy positions is sharpened.',
-    difficultyModifier: 0,
-  },
-  // 54. Honorable (sh positive): Negotiate the Parley
-  {
-    encounterId: 'trait2_honor_parley',
-    category: 'trait',
-    title: 'Parley with {villain_name}\'s Warlord',
-    description: '{villain_name}\'s warlord has called for parley. Responding with honesty and respect could turn a potential enemy into a neutral party — or even an ally. Only someone with genuine honour can make this work.',
-    preferredClass: '',
-    traitAxis: 'sh',
-    traitPolarity: 'positive',
-    triggerType: 'location_enter',
-    triggerLocation: 'any',
-    isKeyEvent: false,
-    buffType: 'xp',
-    buffAmount: 15,
-    narrativeOnMatch: '{hero_name} meets the warlord\'s gaze squarely and speaks only truth. The warlord listens. Honour, it turns out, is a universal currency.',
-    narrativeOnComplete: 'The parley succeeds. The warlord withdraws. The lesson in honourable diplomacy leaves the party wiser and more experienced.',
-    difficultyModifier: 0,
-  },
-  // 55. Range (rm negative): Harass the Enemy Flank
-  {
-    encounterId: 'trait2_range_harass_flank',
-    category: 'trait',
-    title: 'Harass {villain_name}\'s Flank',
-    description: '{villain_name}\'s flank is exposed but too distant for melee engagement. A skilled ranged combatant can harry them from a safe distance and force a disorganised response.',
-    preferredClass: '',
-    traitAxis: 'rm',
-    traitPolarity: 'negative',
-    triggerType: 'travel_segment',
-    triggerLocation: 'wilderness',
-    isKeyEvent: false,
-    buffType: 'attack',
-    buffAmount: 10,
-    narrativeOnMatch: '{hero_name} finds a rise, settles into a steady rhythm of fire, and makes the enemy flank pay dearly for every inch. At range, they are surgical.',
-    narrativeOnComplete: 'The flank collapses under sustained fire. The party\'s ranged advantage translates into sharper attacks going forward.',
-    difficultyModifier: 0,
-  },
-  // 56. Melee (rm positive): Shield Wall
-  {
-    encounterId: 'trait2_melee_shield_wall',
-    category: 'trait',
-    title: 'Shield Wall at {location_name}',
-    description: 'Enemy cavalry charges toward {location_name} with enough force to scatter the party. A melee specialist must anchor a shield wall and absorb the impact.',
-    preferredClass: '',
-    traitAxis: 'rm',
-    traitPolarity: 'positive',
-    triggerType: 'location_enter',
-    triggerLocation: 'any',
-    isKeyEvent: false,
-    buffType: 'defense',
-    buffAmount: 12,
-    narrativeOnMatch: '{hero_name} plants their feet, raises their weapon across their body, and braces. The cavalry crashes against them like a wave against a cliff. A melee fighter\'s natural position.',
-    narrativeOnComplete: 'The charge is broken. The party\'s close-quarters resilience is hardened by the experience.',
-    difficultyModifier: 1,
-  },
-  // 57. Absorb (ai negative): Take the Hit
-  {
-    encounterId: 'trait2_absorb_take_hit',
-    category: 'trait',
-    title: 'Intercept the Blow at {location_name}',
-    description: 'A devastating trap is about to trigger at {location_name}, and there is no time to disarm it — only to absorb the blast and shield the rest of the party.',
-    preferredClass: '',
-    traitAxis: 'ai',
-    traitPolarity: 'negative',
-    triggerType: 'location_enter',
-    triggerLocation: 'any',
-    isKeyEvent: false,
-    buffType: 'defense',
-    buffAmount: 15,
-    narrativeOnMatch: '{hero_name} throws themselves in front of the blast without hesitation. They stagger, but stand. Their capacity to absorb punishment is extraordinary.',
-    narrativeOnComplete: 'The party walks away unscathed. The one who took the hit has toughened the party\'s resolve and bolstered everyone\'s defences.',
-    difficultyModifier: 1,
-  },
-  // 58. Inflict (ai positive): Exploit the Armour Gap
-  {
-    encounterId: 'trait2_inflict_armour_gap',
-    category: 'trait',
-    title: 'Fell the {creature_name} Juggernaut',
-    description: 'A heavily armoured {creature_name} juggernaut bars the path. Its armour is impenetrable — except for a single flaw that only someone with a damage-dealer\'s eye could spot.',
-    preferredClass: '',
-    traitAxis: 'ai',
-    traitPolarity: 'positive',
-    triggerType: 'travel_segment',
-    triggerLocation: 'wilderness',
-    isKeyEvent: false,
-    buffType: 'crit',
-    buffAmount: 12,
-    narrativeOnMatch: '{hero_name} circles the juggernaut once, then drives their weapon into the exposed gap between shoulder plate and gorget. The creature topples. One strike, perfectly placed.',
-    narrativeOnComplete: 'The juggernaut falls. Exploiting armour gaps becomes second nature for the party in future engagements.',
-    difficultyModifier: 2,
-  },
-  // 59. Area (af negative): Bombard the Encampment
-  {
-    encounterId: 'trait2_area_bombard',
-    category: 'trait',
-    title: 'Bombard {villain_name}\'s Encampment',
-    description: '{villain_name}\'s encampment at {location_name} holds too many enemies for direct assault. Someone with area devastation abilities must suppress the camp from a distance.',
-    preferredClass: '',
-    traitAxis: 'af',
-    traitPolarity: 'negative',
-    triggerType: 'camp_night',
-    triggerLocation: 'any',
-    isKeyEvent: false,
-    buffType: 'attack',
-    buffAmount: 10,
-    narrativeOnMatch: '{hero_name} unleashes a sustained barrage of area attacks, reducing the camp to chaos. Their ability to suppress entire areas simultaneously is unmatched.',
-    narrativeOnComplete: 'The encampment is suppressed. The party\'s ability to deliver broad, devastating attacks is refined.',
-    difficultyModifier: 1,
-  },
-  // 60. Focus (af positive): Eliminate the Enemy Commander
-  {
-    encounterId: 'trait2_focus_eliminate_commander',
-    category: 'trait',
-    title: 'Eliminate {villain_name}\'s Field Commander',
-    description: 'Without their field commander, {villain_name}\'s forces will fall into disarray. Someone with perfect single-target focus must reach and eliminate the commander before they can retreat.',
-    preferredClass: '',
-    traitAxis: 'af',
-    traitPolarity: 'positive',
-    triggerType: 'location_enter',
-    triggerLocation: 'any',
-    isKeyEvent: true,
-    buffType: 'crit',
-    buffAmount: 15,
-    narrativeOnMatch: '{hero_name} locks onto the commander through the press of battle and drives straight for them, ignoring everything else. Target acquired, target neutralised. That is their gift.',
-    narrativeOnComplete: 'The commander falls. Enemy forces lose cohesion. The party\'s focused lethality reaches its peak.',
-    difficultyModifier: 2,
-  },
 ];
 
 // ── Hero encounter matching ─────────────────────────────────────────────────
@@ -2107,6 +1489,36 @@ function resolveSlots(text: string, bindings: Record<string, string>): string {
   return text.replace(/\{(\w+)\}/g, (_match, slotName: string) => {
     return bindings[slotName] ?? `{${slotName}}`;
   });
+}
+
+// ── BRL data initialisation ──────────────────────────────────────────────────
+
+let _initAdventurePromise: Promise<void> | null = null;
+
+/**
+ * Load adventure template data from BRL files and replace the fallback arrays.
+ *
+ * Loads objectives, milestones, events from `story-adventure-templates.brl`
+ * and hero encounters from `adventure-expansion-set-1.brl` + `expansion_pack_2.brl`.
+ *
+ * After calling this function, all exported quest-generation functions use
+ * BRL-loaded data.  If the BRL load fails, the hardcoded fallback arrays
+ * remain in place.
+ *
+ * Safe to call multiple times — subsequent calls return the cached result.
+ */
+export async function initAdventureData(): Promise<void> {
+  if (_initAdventurePromise) return _initAdventurePromise;
+
+  _initAdventurePromise = (async () => {
+    const data = await loadAdventureData();
+    if (data.objectives.length > 0)     OBJECTIVE_TEMPLATES = data.objectives;
+    if (data.milestones.length > 0)     MILESTONE_TEMPLATES = data.milestones;
+    if (data.events.length > 0)         EVENT_TEMPLATES = data.events;
+    if (data.heroEncounters.length > 0) HERO_ENCOUNTER_TEMPLATES = data.heroEncounters as HeroEncounterTemplate[];
+  })();
+
+  return _initAdventurePromise;
 }
 
 /**
