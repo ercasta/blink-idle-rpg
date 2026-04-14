@@ -17,6 +17,15 @@ interface BattleScreenProps {
   narrativeLog?: NarrativeEntry[];
 }
 
+// ── Top-level dispatcher ────────────────────────────────────────────────────
+
+export function BattleScreen(props: BattleScreenProps) {
+  if (props.runType === 'story') {
+    return <ImmersiveStoryView {...props} />;
+  }
+  return <FightBattleView {...props} />;
+}
+
 function buildResult(snapshots: GameSnapshot[], heroPaths: HeroPath[]): RunResult {
   const final = snapshots[snapshots.length - 1];
   const maxTier = Math.max(...snapshots.map(s => s.currentTier));
@@ -59,7 +68,9 @@ function ProgressBar({ value, max }: { value: number; max: number }) {
   );
 }
 
-export function BattleScreen({ snapshots, prevSnapshots = [], heroes, heroPaths, onComplete, runType = 'fight', narrativeLog = [] }: BattleScreenProps) {
+// ── Fight mode battle view (original layout) ────────────────────────────────
+
+function FightBattleView({ snapshots, prevSnapshots = [], heroes, heroPaths, onComplete, runType = 'fight', narrativeLog = [] }: BattleScreenProps) {
   const [stepIndex, setStepIndex] = useState(0);
   const [done, setDone] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -321,6 +332,93 @@ function NarrativeLogEntry({ entry }: { entry: NarrativeEntry }) {
   return (
     <div className={`${levelStyles[entry.level]} leading-relaxed`}>
       {entry.text}
+    </div>
+  );
+}
+
+// ── Immersive Story View ────────────────────────────────────────────────────
+
+function ImmersiveStoryView({ snapshots, prevSnapshots = [], narrativeLog = [], heroPaths, onComplete }: BattleScreenProps) {
+  const [dayIndex, setDayIndex] = useState(0);
+  const [verbosity, setVerbosity] = useState<NarrativeLevel>(2);
+  const logRef = useRef<HTMLDivElement | null>(null);
+
+  const totalDays = snapshots.length;
+  const currentDay = dayIndex + 1;
+  const current = snapshots[dayIndex] ?? snapshots[0];
+  const prevSnap = prevSnapshots[dayIndex];
+  const isLastDay = dayIndex >= totalDays - 1;
+
+  // Show only current day's entries filtered by verbosity
+  const dayEntries = narrativeLog.filter(e => e.level <= verbosity && e.day === currentDay);
+
+  // Scroll log to top whenever the day changes
+  useEffect(() => {
+    if (logRef.current) {
+      logRef.current.scrollTop = 0;
+    }
+  }, [dayIndex]);
+
+  function handleNext() {
+    if (isLastDay) {
+      onComplete(buildResult(snapshots, heroPaths));
+    } else {
+      setDayIndex(prev => prev + 1);
+    }
+  }
+
+  const score = current.score;
+  const delta = prevSnap !== undefined ? score - prevSnap.score : null;
+
+  return (
+    <div className="flex flex-col h-screen bg-stone-900 text-stone-100 overflow-hidden">
+      {/* Thin top bar */}
+      <div className="flex items-center justify-between px-4 py-2 border-b border-stone-700 shrink-0">
+        <div className="flex items-center gap-1.5">
+          <span className="text-amber-400 font-bold text-sm">{score.toLocaleString()} pts</span>
+          {delta !== null && delta !== 0 && (
+            <span className={`text-xs font-bold ${delta > 0 ? 'text-green-400' : 'text-red-400'}`}>
+              {delta > 0 ? '▲' : '▼'}
+            </span>
+          )}
+        </div>
+        <span className="text-stone-400 text-sm">Day {currentDay} / {totalDays}</span>
+      </div>
+
+      {/* Full-screen narrative log — shows only current day */}
+      <div ref={logRef} className="flex-1 overflow-y-auto px-4 py-4 text-sm space-y-1.5">
+        {dayEntries.length === 0 ? (
+          <p className="text-stone-500 italic">No events recorded for this day.</p>
+        ) : (
+          dayEntries.map((entry, i) => <NarrativeLogEntry key={i} entry={entry} />)
+        )}
+      </div>
+
+      {/* Bottom controls: verbosity + Next/Results button */}
+      <div className="flex items-center justify-between px-4 py-3 border-t border-stone-700 shrink-0 gap-3">
+        <div className="flex gap-1">
+          {([1, 2, 3] as NarrativeLevel[]).map(level => (
+            <button
+              key={level}
+              onClick={() => setVerbosity(level)}
+              className={`px-2 py-0.5 text-xs rounded-lg transition-colors ${
+                verbosity === level
+                  ? 'bg-blue-700 text-blue-100'
+                  : 'bg-stone-700 text-stone-400 hover:bg-stone-600'
+              }`}
+              title={VERBOSITY_LABELS[level]}
+            >
+              {VERBOSITY_LABELS[level]}
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={handleNext}
+          className="px-5 py-2 rounded-xl bg-amber-700 hover:bg-amber-600 text-stone-100 font-bold text-sm transition-colors"
+        >
+          {isLastDay ? 'View Results' : 'Next Day →'}
+        </button>
+      </div>
     </div>
   );
 }
