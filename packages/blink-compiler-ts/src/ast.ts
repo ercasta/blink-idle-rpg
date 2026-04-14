@@ -12,6 +12,7 @@ export interface Module {
 
 export type Item =
   | ComponentDef
+  | EventDef
   | RuleDef
   | FunctionDef
   | ImportDef
@@ -47,6 +48,15 @@ export type TypeExpr =
   | { type: 'list'; element: TypeExpr }
   | { type: 'optional'; inner: TypeExpr }
   | { type: 'composite'; types: TypeExpr[] };
+
+// ===== Event Declaration =====
+
+export interface EventDef {
+  type: 'event';
+  name: string;
+  fields: FieldDef[];
+  span: Span;
+}
 
 // ===== Rule Definition =====
 
@@ -244,7 +254,8 @@ export type Expr =
   | ListExpr
   | ParenExpr
   | EntitiesHavingExpr
-  | CloneEntityExpr;
+  | CloneEntityExpr
+  | NewEntityExpr;
 
 export interface LiteralExpr {
   type: 'literal';
@@ -358,5 +369,11 @@ export interface CloneEntityExpr {
   type: 'clone_entity';
   source: Expr;
   overrides: ComponentInit[];
+  span: Span;
+}
+
+export interface NewEntityExpr {
+  type: 'new_entity';
+  components: ComponentInit[];
   span: Span;
 }

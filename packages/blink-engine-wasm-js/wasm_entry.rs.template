@@ -90,6 +90,15 @@ impl BlinkWasmGame {
         crate::json_bridge::get_component_json(&self.engine, entity_id, component_name)
     }
 
+    /// Return all entity IDs that have the named component as a JSON array string.
+    ///
+    /// Returns `"[]"` if the component name is unknown or no entities have it.
+    /// Entity IDs are returned as a JSON array of unsigned integers.
+    pub fn get_entities_having(&self, component_name: &str) -> String {
+        let ids = crate::json_bridge::get_entities_having_json(&self.engine, component_name);
+        serde_json::to_string(&ids).unwrap_or_else(|_| "[]".to_string())
+    }
+
     /// Schedule an event on the timeline.
     ///
     /// `event_type` is the BRL event name (e.g. `"GameStart"`, `"Attack"`).

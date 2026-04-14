@@ -78,6 +78,9 @@ export class SemanticAnalyzer {
         case 'component':
           this.collectComponent(item);
           break;
+        case 'event':
+          // Event declarations are informational type definitions; no global registration needed.
+          break;
         case 'function':
           this.functions.add(item.name);
           break;
@@ -146,6 +149,9 @@ export class SemanticAnalyzer {
         case 'module':
           // Recurse into nested module for validation
           this.validateItems(item.items);
+          break;
+        case 'event':
+          // Event declarations define event types; no logic to validate.
           break;
       }
     }

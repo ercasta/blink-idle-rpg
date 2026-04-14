@@ -32,6 +32,7 @@ export class RustCodeGenerator {
   private functionNames: string[] = [];
   private entityDefs: AST.EntityDef[] = [];
   private componentDefs: AST.ComponentDef[] = [];
+  private eventDefs: AST.EventDef[] = [];
   private ruleDefs: AST.RuleDef[] = [];
   private functionDefs: AST.FunctionDef[] = [];
   private allStrings: Set<string> = new Set();
@@ -44,7 +45,7 @@ export class RustCodeGenerator {
   private componentFieldTypes: Map<string, Map<string, string>> = new Map();
   // Local variable types for the current rule/function (reset per body)
   private localVarTypes: Map<string, string> = new Map();
-  // Event field types inferred from schedule statements: eventName → (fieldName → type)
+  // Event field types inferred from schedule statements and event declarations: eventName → (fieldName → type)
   private eventFieldTypes: Map<string, Map<string, string>> = new Map();
 
   constructor(options: RustCodegenOptions = {}) {
@@ -105,6 +106,9 @@ export class RustCodeGenerator {
         case 'component':
           this.componentDefs.push(item);
           this.componentNames.push(item.name);
+          break;
+        case 'event':
+          this.eventDefs.push(item);
           break;
         case 'rule':
           this.ruleDefs.push(item);
@@ -252,7 +256,19 @@ export class RustCodeGenerator {
   }
 
   private buildEventFieldTypes() {
-    // Scan all schedule statements in rules and functions to infer event field types
+    // Seed from explicit event declarations first (authoritative)
+    for (const evtDef of this.eventDefs) {
+      if (!this.eventFieldTypes.has(evtDef.name)) {
+        this.eventFieldTypes.set(evtDef.name, new Map());
+      }
+      const fieldMap = this.eventFieldTypes.get(evtDef.name)!;
+      for (const field of evtDef.fields) {
+        if (!fieldMap.has(field.name)) {
+          fieldMap.set(field.name, field.fieldType.type);
+        }
+      }
+    }
+    // Also scan all schedule statements in rules and functions to infer event field types
     for (const rule of this.ruleDefs) {
       this.scanBlockForEventFields(rule.body);
     }
@@ -729,6 +745,22 @@ export class RustCodeGenerator {
     }
 
     code += '        _ => "{}".to_string(),\n';
+    code += '    }\n';
+    code += '}\n\n';
+
+    code += '/// Return all entity IDs that have the named component.\n';
+    code += '/// Returns an empty Vec if the component name is unknown.\n';
+    code += 'pub fn get_entities_having_json(\n';
+    code += '    engine: &Engine,\n';
+    code += '    component_name: &str,\n';
+    code += ') -> Vec<u32> {\n';
+    code += '    match component_name {\n';
+
+    for (const comp of this.componentDefs) {
+      code += `        "${comp.name}" => engine.world.query_component::<${comp.name}>(),\n`;
+    }
+
+    code += '        _ => vec![],\n';
     code += '    }\n';
     code += '}\n';
 

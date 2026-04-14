@@ -28,11 +28,37 @@ const OUTPUT_DIR = path.join(ROOT, 'game/app/public/ir');
 const { compile } = require(path.join(ROOT, 'packages/blink-compiler-ts/dist/index.js'));
 
 /**
+ * Resolve import declarations from main.brl to an ordered list of file paths.
+ * Import syntax: `import module_name` where `module_name` maps to
+ * `<module_name with underscores replaced by hyphens>.brl` in the BRL directory.
+ */
+function resolveBrlImports(mainFile, brlDir) {
+  const content = fs.readFileSync(mainFile, 'utf8');
+  const importRe = /^\s*import\s+([\w.]+)/gm;
+  const files = [];
+  let m;
+  while ((m = importRe.exec(content)) !== null) {
+    const parts = m[1].split('.');
+    const filename = parts.map(p => p.replace(/_/g, '-')).join('/') + '.brl';
+    const filepath = path.join(brlDir, filename);
+    if (!fs.existsSync(filepath)) {
+      console.warn(`  Warning: imported BRL file not found: ${filepath}`);
+      continue;
+    }
+    files.push(filepath);
+  }
+  return files;
+}
+
+const BRL_DIR = path.join(ROOT, 'game/brl');
+const MAIN_BRL = path.join(BRL_DIR, 'main.brl');
+
+/**
  * Compile a set of BRL files to one merged IR JSON file.
  */
 function compileBrlFiles(files, outputName) {
   const sources = files.map(f => ({
-    path: f,
+    path: path.basename(f),
     content: fs.readFileSync(f, 'utf8'),
     language: 'brl',
   }));
@@ -54,18 +80,21 @@ function compileBrlFiles(files, outputName) {
 // ─── Ensure output directory exists ───────────────────────────────────────
 fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 
-// ─── Compile game rules (classic-rpg.brl + heroes.brl for functions) ──────
-// Only the rules/components/functions are needed in the IR.
+// ─── Resolve the full ordered list of BRL files from main.brl ─────────────
+const allBrlFiles = fs.existsSync(MAIN_BRL)
+  ? resolveBrlImports(MAIN_BRL, BRL_DIR)
+  : [];
+
+if (allBrlFiles.length === 0) {
+  console.error('❌ main.brl not found or contains no imports. Cannot compile BRL.');
+  process.exit(1);
+}
+
+// ─── Compile game rules (all BRL files for complete component coverage) ──────
 // Entity initial state (heroes, enemies, game config) is set up
 // programmatically at runtime by the SimEngine.
-console.log('Compiling classic-rpg.ir.json …');
-const classicIR = compileBrlFiles(
-  [
-    path.join(ROOT, 'game/brl/classic-rpg.brl'),
-    path.join(ROOT, 'game/brl/heroes.brl'),
-  ],
-  'classic-rpg'
-);
+console.log(`Compiling classic-rpg.ir.json from ${allBrlFiles.length} BRL files …`);
+const classicIR = compileBrlFiles(allBrlFiles, 'classic-rpg');
 
 // Remove all initial_state entities — they are set up at runtime
 // to avoid conflicts and allow party customisation.
@@ -79,21 +108,11 @@ console.log(`  → ${classicOut}  (${(fs.statSync(classicOut).size / 1024).toFix
 
 // ─── Compile standalone IR (all BRL files, WITH entities) ────────────────
 // Used by the GitHub Pages deploy and `game/brl-tests/ir/` for reference.
-// Includes scenario-normal.brl (NOT game-config.brl — they share entity names
-// and are mutually exclusive; scenario files override the defaults).
 const BRL_TESTS_OUTPUT_DIR = path.join(ROOT, 'game/brl-tests/ir');
 fs.mkdirSync(BRL_TESTS_OUTPUT_DIR, { recursive: true });
 
 console.log('Compiling classic-rpg-full.ir.json (full game with entities) …');
-const fullIR = compileBrlFiles(
-  [
-    path.join(ROOT, 'game/brl/heroes.brl'),
-    path.join(ROOT, 'game/brl/enemies.brl'),
-    path.join(ROOT, 'game/brl/scenario-normal.brl'),
-    path.join(ROOT, 'game/brl/classic-rpg.brl'),
-  ],
-  'classic-rpg-full'
-);
+const fullIR = compileBrlFiles(allBrlFiles, 'classic-rpg-full');
 
 // Keep initial_state entities — this IR includes the full game setup
 const fullOut = path.join(BRL_TESTS_OUTPUT_DIR, 'classic-rpg-full.ir.json');

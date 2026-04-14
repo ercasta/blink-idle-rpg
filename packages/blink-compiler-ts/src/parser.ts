@@ -74,6 +74,8 @@ export class Parser {
     switch (token.kind) {
       case TokenKind.Component:
         return this.parseComponent();
+      case TokenKind.Event:
+        return this.parseEventDecl();
       case TokenKind.Rule:
         return this.parseRule();
       case TokenKind.Fn:
@@ -109,6 +111,39 @@ export class Parser {
           `Entities can be declared as: let name: id = new entity { ... } or name = new entity { ... }`
         );
     }
+  }
+
+  // ===== Event Declaration Parsing =====
+
+  /**
+   * Parse an event type declaration: event EventName { field: type, ... }
+   * Fields are comma-separated (unlike component fields which are newline-separated).
+   */
+  private parseEventDecl(): AST.EventDef {
+    const start = this.consume(TokenKind.Event, 'event').span.start;
+    const name = this.consume(TokenKind.Identifier, 'event name').text;
+
+    const fields: AST.FieldDef[] = [];
+    if (this.check(TokenKind.LBrace)) {
+      this.advance();
+      while (!this.check(TokenKind.RBrace) && !this.isAtEnd()) {
+        fields.push(this.parseFieldDef());
+        // Fields in event declarations are comma-separated
+        if (this.check(TokenKind.Comma)) {
+          this.advance();
+        }
+      }
+      this.consume(TokenKind.RBrace, '}');
+    }
+
+    const end = this.tokens[this.pos - 1]?.span.end ?? start;
+
+    return {
+      type: 'event',
+      name,
+      fields,
+      span: { start, end },
+    };
   }
 
   // ===== Component Parsing =====

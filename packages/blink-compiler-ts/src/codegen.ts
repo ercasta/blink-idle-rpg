@@ -83,6 +83,9 @@ export class CodeGenerator {
           case 'import':
             // Imports are resolved at a higher level
             break;
+          case 'event':
+            // Event declarations are type definitions; no IR output needed.
+            break;
         }
       }
     }
