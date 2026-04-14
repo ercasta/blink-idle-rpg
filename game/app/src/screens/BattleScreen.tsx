@@ -384,7 +384,7 @@ function ImmersiveStoryView({ snapshots, prevSnapshots = [], narrativeLog = [], 
             </span>
           )}
         </div>
-        <span className="text-stone-400 text-sm">Day {currentDay} / {totalDays}</span>
+        <span className="text-stone-400 text-sm">Day {currentDay}</span>
       </div>
 
       {/* Full-screen narrative log — shows only current day */}
@@ -396,7 +396,7 @@ function ImmersiveStoryView({ snapshots, prevSnapshots = [], narrativeLog = [], 
         )}
       </div>
 
-      {/* Bottom controls: verbosity + Next/Results button */}
+      {/* Bottom controls: verbosity + skip/Next/Results button */}
       <div className="flex items-center justify-between px-4 py-3 border-t border-stone-700 shrink-0 gap-3">
         <div className="flex gap-1">
           {NARRATIVE_LEVELS.map(level => (
@@ -414,12 +414,23 @@ function ImmersiveStoryView({ snapshots, prevSnapshots = [], narrativeLog = [], 
             </button>
           ))}
         </div>
-        <button
-          onClick={handleNext}
-          className="px-5 py-2 rounded-xl bg-amber-700 hover:bg-amber-600 text-stone-100 font-bold text-sm transition-colors"
-        >
-          {isLastDay ? 'View Results' : 'Next Day →'}
-        </button>
+        <div className="flex items-center gap-2">
+          {!isLastDay && (
+            <button
+              onClick={() => onComplete(buildResult(snapshots, heroPaths))}
+              className="text-xs text-stone-500 hover:text-stone-300 transition-colors inline-flex items-center gap-1"
+              title="Skip to results"
+            >
+              <SkipIcon size={12} /> Skip to Results
+            </button>
+          )}
+          <button
+            onClick={handleNext}
+            className="px-5 py-2 rounded-xl bg-amber-700 hover:bg-amber-600 text-stone-100 font-bold text-sm transition-colors"
+          >
+            {isLastDay ? 'View Results' : 'Next Day →'}
+          </button>
+        </div>
       </div>
     </div>
   );
