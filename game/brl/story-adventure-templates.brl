@@ -1,0 +1,673 @@
+// =============================================================================
+// BLINK IDLE RPG — ADVENTURE TEMPLATE ENTITIES
+// =============================================================================
+// Defines all ObjectiveTemplate, MilestoneTemplate, and EventTemplate entities
+// for the adventure quest system. These are the data entities that the
+// TypeScript composition algorithm draws from when generating adventures.
+//
+// This file is the single source of truth for adventure content pools.
+// At runtime, adventureDataLoader.ts fetches and parses this file to
+// populate the OBJECTIVE_TEMPLATES, MILESTONE_TEMPLATES, and EVENT_TEMPLATES
+// arrays in adventureQuest.ts. The hardcoded TypeScript arrays serve as
+// fallback only.
+//
+// Extensibility: add new objectives, milestones, or events by declaring
+// new entities with the appropriate component. No rule changes are needed —
+// the composition algorithm automatically includes new templates.
+//
+// See doc/game-design/adventure-design.md for full design documentation.
+// =============================================================================
+
+// ─── Component Declarations ──────────────────────────────────────────────────
+
+// An adventure objective: the overarching goal of the adventure.
+component ObjectiveTemplate {
+    objectiveId: string             // Unique ID, e.g. "rescue_npc"
+    category: string                // "rescue", "retrieve", "defeat", "escort"
+    title: string                   // Display title with slot tokens
+    description: string             // 2–3 sentence overview with slot tokens (use | for variants)
+    winCondition: string            // Condition type: "npc_rescued", "item_delivered", etc.
+    requiredSlots: string           // CSV: slot names the composition algorithm must fill, e.g. "npc_name,npc_role"
+    milestoneCategories: string     // CSV: compatible milestone categories, e.g. "combat,exploration"
+}
+
+// A quest milestone: a major checkpoint within the adventure.
+component MilestoneTemplate {
+    milestoneId: string             // Unique ID, e.g. "gather_intel"
+    category: string                // "information", "combat", "exploration", "social"
+    title: string                   // Display title with slot tokens
+    description: string             // 1–3 sentence description with slot tokens (use | for variants)
+    completionType: string          // "item_found", "npc_talked", "area_cleared", etc.
+    completionKey: string           // Key produced on completion
+    bailoutDay: integer             // Days after activation before bail-out triggers
+    bailoutDescription: string      // Narrative for the bail-out
+    compatibleObjectives: string    // CSV: objective categories this milestone works with, e.g. "rescue,retrieve"
+    eventSlots: integer             // Number of events this milestone contains (2 or 3)
+}
+
+// A quest event: a specific encounter or activity within a milestone.
+component EventTemplate {
+    eventId: string                 // Unique ID, e.g. "duel_rival"
+    category: string                // "combat", "search", "social", "puzzle", "discovery"
+    title: string                   // Display title with slot tokens
+    description: string             // 1–5 sentence narrative passage
+    triggerType: string             // "location_enter", "travel_segment", "camp_night", "town_visit"
+    triggerLocation: string         // "wilderness", "town", "dungeon", "any"
+    isKeyEvent: boolean             // If true, completing this event completes the milestone
+    rewardType: string              // "quest_item", "quest_info", "stat_buff", "score_bonus"
+    narrativeOnTrigger: string      // Narrative when event triggers (use | for variants)
+    narrativeOnComplete: string     // Narrative when event completes (use | for variants)
+    difficultyModifier: integer     // Encounter difficulty adjustment (-2 to +2)
+}
+
+// =============================================================================
+// OBJECTIVE TEMPLATES
+// =============================================================================
+
+// 1. Rescue the NPC
+let obj_rescue_npc: id = new entity {
+    ObjectiveTemplate {
+        objectiveId: "rescue_npc"
+        category: "rescue"
+        title: "Rescue the {npc_name}"
+        description: "Rumours say {npc_name}, the {npc_role}, has been captured by {captor_name}'s forces. The party must find and rescue {npc_name} before it is too late.|Word has come that {captor_name} holds {npc_name} prisoner. Only the party can save them.|{npc_name}, beloved {npc_role}, has vanished. {captor_name} is surely behind it."
+        winCondition: "npc_rescued"
+        requiredSlots: "npc_name,npc_role,captor_name"
+        milestoneCategories: "information,combat,exploration,social"
+    }
+}
+
+// 2. Retrieve the Artifact
+let obj_retrieve_artifact: id = new entity {
+    ObjectiveTemplate {
+        objectiveId: "retrieve_artifact"
+        category: "retrieve"
+        title: "Retrieve the {item_name}"
+        description: "The {item_name}, {item_origin}, has been lost to the wilds. {quest_giver} has asked the party to recover it before it falls into the wrong hands.|{quest_giver} speaks of the {item_name} — an artifact of immense power. It must be found."
+        winCondition: "item_delivered"
+        requiredSlots: "item_name,item_origin,quest_giver"
+        milestoneCategories: "exploration,combat,information,social"
+    }
+}
+
+// 3. Defeat the Villain
+let obj_defeat_villain: id = new entity {
+    ObjectiveTemplate {
+        objectiveId: "defeat_villain"
+        category: "defeat"
+        title: "Stop {villain_name}"
+        description: "{villain_name}, {villain_title}, threatens the land with {threat_desc}. The party must track down and defeat {villain_name} before it is too late.|The shadow of {villain_name} grows longer each day. Someone must put an end to {threat_desc}."
+        winCondition: "boss_defeated"
+        requiredSlots: "villain_name,villain_title,threat_desc"
+        milestoneCategories: "combat,information,exploration,social"
+    }
+}
+
+// 4. Lift the Curse
+let obj_lift_curse: id = new entity {
+    ObjectiveTemplate {
+        objectiveId: "lift_curse"
+        category: "rescue"
+        title: "Lift the Curse of {curse_name}"
+        description: "A terrible curse — the {curse_name} — has befallen {cursed_location}. {npc_name} begs the party to find the cure.|The {curse_name} spreads through {cursed_location}. Only by finding the source can the party end this blight."
+        winCondition: "curse_lifted"
+        requiredSlots: "curse_name,cursed_location,npc_name,npc_role"
+        milestoneCategories: "information,exploration,social,combat"
+    }
+}
+
+// 5. Escort the Caravan
+let obj_escort_caravan: id = new entity {
+    ObjectiveTemplate {
+        objectiveId: "escort_caravan"
+        category: "escort"
+        title: "Escort the {npc_name}'s Caravan"
+        description: "{npc_name} needs safe passage for a caravan carrying {cargo_desc} to {destination_name}. The road is dangerous — the party must protect them.|The caravan must reach {destination_name} with its precious {cargo_desc}. {npc_name} is counting on you."
+        winCondition: "destination_reached"
+        requiredSlots: "npc_name,npc_role,cargo_desc,destination_name"
+        milestoneCategories: "combat,social,exploration"
+    }
+}
+
+// 6. Seal the Portal
+let obj_seal_portal: id = new entity {
+    ObjectiveTemplate {
+        objectiveId: "seal_portal"
+        category: "defeat"
+        title: "Seal the {portal_name}"
+        description: "An ancient portal — the {portal_name} — has opened at {portal_location}, spewing creatures from beyond. The party needs {seal_item} to seal it shut.|The {portal_name} pulses with dark energy at {portal_location}. Without the {seal_item}, this world is doomed."
+        winCondition: "portal_sealed"
+        requiredSlots: "portal_name,portal_location,seal_item"
+        milestoneCategories: "exploration,combat,information"
+    }
+}
+
+// 7. Spy Mission (Expansion Pack 2)
+let obj_spy_mission: id = new entity {
+    ObjectiveTemplate {
+        objectiveId: "spy_mission"
+        category: "retrieve"
+        title: "Steal the Plans from {villain_name}"
+        description: "{villain_name} holds battle plans that could doom the realm. {quest_giver} has asked the party to infiltrate, steal the plans, and return before the assault begins.|Critical intelligence sits in {villain_name}'s stronghold. {quest_giver} needs those plans — and time is running out."
+        winCondition: "plans_retrieved"
+        requiredSlots: "villain_name,quest_giver"
+        milestoneCategories: "exploration,social,information,combat"
+    }
+}
+
+// 8. Defend the Stronghold (Expansion Pack 2)
+let obj_defend_stronghold: id = new entity {
+    ObjectiveTemplate {
+        objectiveId: "defend_stronghold"
+        category: "escort"
+        title: "Defend {npc_name}'s Stronghold"
+        description: "{villain_name}'s forces march on {npc_name}'s stronghold. The party must fortify, rally, and hold until the siege breaks.|{npc_name} cannot hold {threat_desc} alone. The party must reach the stronghold and lead its defence."
+        winCondition: "stronghold_held"
+        requiredSlots: "npc_name,villain_name,threat_desc"
+        milestoneCategories: "combat,social,exploration,information"
+    }
+}
+
+// 9. Break the Siege (Expansion Pack 2)
+let obj_break_siege: id = new entity {
+    ObjectiveTemplate {
+        objectiveId: "break_siege"
+        category: "defeat"
+        title: "Break the Siege of {cursed_location}"
+        description: "{villain_name} has besieged {cursed_location} for weeks. The party must disrupt the siege lines and open a route for the defenders to escape.|The people of {cursed_location} are starving. Only by breaking {villain_name}'s siege can they be saved."
+        winCondition: "siege_broken"
+        requiredSlots: "villain_name,cursed_location"
+        milestoneCategories: "combat,exploration,information,social"
+    }
+}
+
+// =============================================================================
+// MILESTONE TEMPLATES
+// =============================================================================
+
+// 1. Gather Intel
+let ms_gather_intel: id = new entity {
+    MilestoneTemplate {
+        milestoneId: "gather_intel"
+        category: "information"
+        title: "Seek the {info_name}"
+        description: "To progress, the party must seek information. Travellers on the road may know something, or perhaps the archives of a nearby town hold clues.|Information is the key. The party must find someone — or something — that holds the answer."
+        completionType: "npc_talked"
+        completionKey: "intel_gathered"
+        bailoutDay: 3
+        bailoutDescription: "An old traveller approaches the camp and shares critical information."
+        compatibleObjectives: "rescue,retrieve,defeat,escort"
+        eventSlots: 2
+    }
+}
+
+// 2. Find the Key Item
+let ms_find_key_item: id = new entity {
+    MilestoneTemplate {
+        milestoneId: "find_key_item"
+        category: "exploration"
+        title: "Find the {item_name}"
+        description: "A critical item lies hidden in the wilds. The party must search the surrounding area to find it.|Somewhere out there, the {item_name} waits. The party must be thorough in their search."
+        completionType: "item_found"
+        completionKey: "key_item_found"
+        bailoutDay: 3
+        bailoutDescription: "The item washes up at the edge of the next town, found by a helpful local."
+        compatibleObjectives: "retrieve,rescue,defeat,escort"
+        eventSlots: 3
+    }
+}
+
+// 3. Clear the Dungeon
+let ms_clear_dungeon: id = new entity {
+    MilestoneTemplate {
+        milestoneId: "clear_dungeon"
+        category: "combat"
+        title: "Clear the {dungeon_name}"
+        description: "The path forward is blocked by hostile forces occupying {dungeon_name}. The party must clear them out.|{dungeon_name} is crawling with enemies. The party must fight through."
+        completionType: "area_cleared"
+        completionKey: "dungeon_cleared"
+        bailoutDay: 4
+        bailoutDescription: "A cave-in reveals an alternate path, bypassing the remaining enemies."
+        compatibleObjectives: "defeat,rescue,retrieve"
+        eventSlots: 3
+    }
+}
+
+// 4. Win the Duel
+let ms_win_duel: id = new entity {
+    MilestoneTemplate {
+        milestoneId: "win_duel"
+        category: "combat"
+        title: "Defeat {rival_name} in Combat"
+        description: "{rival_name} stands in the party's way and will not be moved by words alone.|The only way past {rival_name} is through strength. Prepare for battle."
+        completionType: "duel_won"
+        completionKey: "rival_defeated"
+        bailoutDay: 3
+        bailoutDescription: "The rival is distracted by another threat and withdraws."
+        compatibleObjectives: "defeat,rescue,escort"
+        eventSlots: 2
+    }
+}
+
+// 5. Solve the Riddle
+let ms_solve_riddle: id = new entity {
+    MilestoneTemplate {
+        milestoneId: "solve_riddle"
+        category: "social"
+        title: "Solve the Riddle of {riddle_name}"
+        description: "An ancient puzzle blocks the way — the Riddle of {riddle_name}. The party must use their wits.|The riddle has stumped many before. Perhaps the party can succeed where others failed."
+        completionType: "puzzle_solved"
+        completionKey: "riddle_solved"
+        bailoutDay: 2
+        bailoutDescription: "A wandering scholar provides the answer to the riddle."
+        compatibleObjectives: "retrieve,rescue,defeat"
+        eventSlots: 2
+    }
+}
+
+// 6. Negotiate Passage
+let ms_negotiate_passage: id = new entity {
+    MilestoneTemplate {
+        milestoneId: "negotiate_passage"
+        category: "social"
+        title: "Convince {npc_name} to Help"
+        description: "{npc_name} holds the key to the next step, but must be persuaded.|The party must find common ground with {npc_name} to earn their cooperation."
+        completionType: "npc_persuaded"
+        completionKey: "passage_negotiated"
+        bailoutDay: 3
+        bailoutDescription: "A mutual threat forces an uneasy cooperation."
+        compatibleObjectives: "rescue,escort,retrieve,defeat"
+        eventSlots: 2
+    }
+}
+
+// 7. Survive the Ambush
+let ms_survive_ambush: id = new entity {
+    MilestoneTemplate {
+        milestoneId: "survive_ambush"
+        category: "combat"
+        title: "Survive the {threat_name} Ambush"
+        description: "The party walks into a trap — a {threat_name} ambush! They must survive.|Enemies spring from the shadows. The party must fight their way out."
+        completionType: "ambush_survived"
+        completionKey: "ambush_cleared"
+        bailoutDay: 2
+        bailoutDescription: "Reinforcements arrive just in time to scatter the ambushers."
+        compatibleObjectives: "defeat,escort,rescue"
+        eventSlots: 2
+    }
+}
+
+// 8. Retrieve a Fragment
+let ms_retrieve_fragment: id = new entity {
+    MilestoneTemplate {
+        milestoneId: "retrieve_fragment"
+        category: "exploration"
+        title: "Recover a Fragment of {item_name}"
+        description: "A fragment of the {item_name} is hidden nearby. The party must locate and retrieve it.|The fragment calls out with a faint magical pulse. The party must follow it."
+        completionType: "item_found"
+        completionKey: "fragment_recovered"
+        bailoutDay: 3
+        bailoutDescription: "The fragment's magic pulls it toward the party on its own."
+        compatibleObjectives: "retrieve,rescue,defeat"
+        eventSlots: 2
+    }
+}
+
+// 9. Escort the Survivor
+let ms_escort_survivor: id = new entity {
+    MilestoneTemplate {
+        milestoneId: "escort_survivor"
+        category: "social"
+        title: "Escort {npc_name} to Safety"
+        description: "{npc_name} is in danger and must be escorted to safety. The party must protect them on the road.|The journey is perilous, but {npc_name} must reach safety."
+        completionType: "npc_escorted"
+        completionKey: "survivor_escorted"
+        bailoutDay: 3
+        bailoutDescription: "The survivor finds their own way to safety through a hidden path."
+        compatibleObjectives: "rescue,escort"
+        eventSlots: 2
+    }
+}
+
+// 10. Decipher the Map
+let ms_decipher_map: id = new entity {
+    MilestoneTemplate {
+        milestoneId: "decipher_map"
+        category: "information"
+        title: "Decipher the Ancient Map"
+        description: "An ancient map holds the secret to the next destination, but it is written in a forgotten script.|The map is old and faded. The party must find a way to read its hidden message."
+        completionType: "puzzle_solved"
+        completionKey: "map_deciphered"
+        bailoutDay: 2
+        bailoutDescription: "A mysterious figure appears and translates the map before vanishing."
+        compatibleObjectives: "retrieve,rescue,defeat,escort"
+        eventSlots: 2
+    }
+}
+
+// 11. Destroy the Siege Weapon (Expansion Pack 2)
+let ms_destroy_siege_weapon: id = new entity {
+    MilestoneTemplate {
+        milestoneId: "destroy_siege_weapon"
+        category: "combat"
+        title: "Destroy the Enemy {threat_name}"
+        description: "Enemy forces deploy a devastating siege weapon — the {threat_name}. The party must reach it and destroy it before it can be used.|The {threat_name} stands ready to tear down every defence. The party must act now."
+        completionType: "area_cleared"
+        completionKey: "siege_weapon_destroyed"
+        bailoutDay: 3
+        bailoutDescription: "The siege weapon misfires and destroys itself in a lucky accident."
+        compatibleObjectives: "defeat,escort,rescue"
+        eventSlots: 3
+    }
+}
+
+// 12. Find the Hidden Passage (Expansion Pack 2)
+let ms_find_hidden_passage: id = new entity {
+    MilestoneTemplate {
+        milestoneId: "find_hidden_passage"
+        category: "exploration"
+        title: "Discover the Hidden Way into {dungeon_name}"
+        description: "The main entrance to {dungeon_name} is impenetrable. Somewhere, a hidden passage must exist — the party just has to find it.|The walls of {dungeon_name} look solid, but old maps hint at a secret entrance. The party must locate it."
+        completionType: "item_found"
+        completionKey: "passage_discovered"
+        bailoutDay: 3
+        bailoutDescription: "A captured enemy soldier reveals the hidden passage under interrogation."
+        compatibleObjectives: "retrieve,rescue,defeat,spy_mission,break_siege"
+        eventSlots: 2
+    }
+}
+
+// 13. Hold the Pass (Expansion Pack 2)
+let ms_hold_the_pass: id = new entity {
+    MilestoneTemplate {
+        milestoneId: "hold_the_pass"
+        category: "combat"
+        title: "Hold the {threat_name} Pass"
+        description: "Enemy forces are pushing through the {threat_name} pass. The party must hold the line long enough for the defenders to regroup.|The pass is the last defensible position. If it falls, so does everything beyond it."
+        completionType: "ambush_survived"
+        completionKey: "pass_held"
+        bailoutDay: 4
+        bailoutDescription: "Reinforcements arrive just as the party is about to be overrun."
+        compatibleObjectives: "defeat,escort,defend_stronghold,break_siege"
+        eventSlots: 3
+    }
+}
+
+// 14. Gather Allies (Expansion Pack 2)
+let ms_gather_allies: id = new entity {
+    MilestoneTemplate {
+        milestoneId: "gather_allies"
+        category: "social"
+        title: "Recruit {rival_name} to the Cause"
+        description: "{rival_name} commands forces that could turn the tide — but they need convincing before they will commit.|The party must win {rival_name}'s trust and bring them into the alliance."
+        completionType: "npc_persuaded"
+        completionKey: "allies_gathered"
+        bailoutDay: 3
+        bailoutDescription: "A shared enemy attack forces {rival_name} to fight alongside the party."
+        compatibleObjectives: "defeat,rescue,defend_stronghold,break_siege,escort"
+        eventSlots: 2
+    }
+}
+
+// =============================================================================
+// EVENT TEMPLATES — KEY EVENTS
+// =============================================================================
+
+// 1. Duel with the Rival
+let ev_duel_rival: id = new entity {
+    EventTemplate {
+        eventId: "duel_rival"
+        category: "combat"
+        title: "Duel with {rival_name}"
+        description: "{rival_name} challenges the party to single combat!"
+        triggerType: "location_enter"
+        triggerLocation: "wilderness"
+        isKeyEvent: true
+        rewardType: "quest_item"
+        narrativeOnTrigger: "{rival_name} steps from the shadows, blade drawn. \"You will go no further!\"|A figure blocks the road ahead — {rival_name}, eyes burning with determination."
+        narrativeOnComplete: "{rival_name} falls to their knees, defeated. The path is clear.|With a final clash of steel, {rival_name} yields."
+        difficultyModifier: 1
+    }
+}
+
+// 2. Search the Ruins
+let ev_search_ruins: id = new entity {
+    EventTemplate {
+        eventId: "search_ruins"
+        category: "search"
+        title: "Search the {ruin_name}"
+        description: "The party must search {ruin_name} for clues or items."
+        triggerType: "location_enter"
+        triggerLocation: "wilderness"
+        isKeyEvent: true
+        rewardType: "quest_item"
+        narrativeOnTrigger: "The crumbling walls of {ruin_name} loom ahead. Something important lies within.|{ruin_name} stands silent and waiting. The party begins their search."
+        narrativeOnComplete: "After a thorough search of {ruin_name}, the party finds what they seek.|Hidden beneath rubble in {ruin_name}, a glint of light reveals the prize."
+        difficultyModifier: 0
+    }
+}
+
+// 3. Interrogate the Prisoner
+let ev_interrogate_prisoner: id = new entity {
+    EventTemplate {
+        eventId: "interrogate_prisoner"
+        category: "social"
+        title: "Question the {npc_name}"
+        description: "A captured prisoner — {npc_name} — may have vital information."
+        triggerType: "town_visit"
+        triggerLocation: "town"
+        isKeyEvent: true
+        rewardType: "quest_info"
+        narrativeOnTrigger: "In the town jail, {npc_name} sits behind iron bars. \"I know what you seek,\" they whisper.|{npc_name} eyes the party warily. \"Ask your questions. But I want something in return.\""
+        narrativeOnComplete: "{npc_name} reveals everything — names, places, plans. The party now knows where to go.|After careful questioning, {npc_name} gives up the crucial details."
+        difficultyModifier: 0
+    }
+}
+
+// 4. Decode the Inscription
+let ev_decode_inscription: id = new entity {
+    EventTemplate {
+        eventId: "decode_inscription"
+        category: "puzzle"
+        title: "Decipher the {inscription_name}"
+        description: "An ancient inscription holds a vital clue."
+        triggerType: "location_enter"
+        triggerLocation: "any"
+        isKeyEvent: true
+        rewardType: "quest_info"
+        narrativeOnTrigger: "Strange symbols cover the stone — the {inscription_name}. The party studies them intently.|The {inscription_name} glows faintly in the dim light. Its secrets must be unlocked."
+        narrativeOnComplete: "With careful study, the party deciphers the {inscription_name}. The message is clear.|The inscription yields its meaning at last — a revelation that changes everything."
+        difficultyModifier: 0
+    }
+}
+
+// 5. Face the Ancient Guardian
+let ev_ancient_guardian: id = new entity {
+    EventTemplate {
+        eventId: "ancient_guardian"
+        category: "combat"
+        title: "Face the Ancient Guardian"
+        description: "A powerful guardian bars the way forward."
+        triggerType: "location_enter"
+        triggerLocation: "wilderness"
+        isKeyEvent: true
+        rewardType: "quest_item"
+        narrativeOnTrigger: "The ground trembles. An ancient guardian rises from the earth, eyes blazing with eldritch light.|A massive stone figure awakens, blocking the path. It will not let the party pass without a fight."
+        narrativeOnComplete: "The guardian crumbles, its purpose fulfilled. The way forward is open.|With a final shudder, the guardian falls. Among the rubble, the party finds their prize."
+        difficultyModifier: 2
+    }
+}
+
+// 6. Investigate the Ritual Site
+let ev_ritual_site: id = new entity {
+    EventTemplate {
+        eventId: "ritual_site"
+        category: "discovery"
+        title: "Investigate the Ritual Site"
+        description: "A mysterious ritual site holds clues to the quest."
+        triggerType: "location_enter"
+        triggerLocation: "wilderness"
+        isKeyEvent: true
+        rewardType: "quest_info"
+        narrativeOnTrigger: "Dark circles and strange runes mark this clearing. A ritual was performed here recently.|The air crackles with residual energy. Whatever happened here, it left traces."
+        narrativeOnComplete: "The ritual site reveals its secrets. The party pieces together what happened — and what must be done next.|Among the ritual components, the party finds exactly the information they needed."
+        difficultyModifier: 0
+    }
+}
+
+// 7. Research in the Archives
+let ev_library_research: id = new entity {
+    EventTemplate {
+        eventId: "library_research"
+        category: "puzzle"
+        title: "Research in the {location_name} Archives"
+        description: "The town archives may hold the answers the party seeks."
+        triggerType: "town_visit"
+        triggerLocation: "town"
+        isKeyEvent: true
+        rewardType: "quest_info"
+        narrativeOnTrigger: "The dusty shelves of the {location_name} archives stretch endlessly. Somewhere in here is the answer.|The archivist eyes the party suspiciously, then reluctantly grants access."
+        narrativeOnComplete: "Hours of research pay off — a dusty tome reveals the crucial information.|In a forgotten corner of the archives, the party finds exactly what they need."
+        difficultyModifier: 0
+    }
+}
+
+// =============================================================================
+// EVENT TEMPLATES — SIDE EVENTS
+// =============================================================================
+
+// 8. Intercept Enemy Scouts
+let ev_ambush_scouts: id = new entity {
+    EventTemplate {
+        eventId: "ambush_scouts"
+        category: "combat"
+        title: "Intercept {enemy_name} Scouts"
+        description: "Enemy scouts are spotted ahead. Engaging them could yield useful supplies."
+        triggerType: "travel_segment"
+        triggerLocation: "any"
+        isKeyEvent: false
+        rewardType: "score_bonus"
+        narrativeOnTrigger: "Movement in the underbrush — {enemy_name} scouts, three of them, moving fast.|The party spots {enemy_name} scouts on the ridge. An opportunity presents itself."
+        narrativeOnComplete: "The scouts are dealt with quickly. They were carrying useful supplies.|The {enemy_name} scouts fall. Among their belongings, the party finds a few useful items."
+        difficultyModifier: 1
+    }
+}
+
+// 9. Overhear a Tavern Rumour
+let ev_tavern_rumour: id = new entity {
+    EventTemplate {
+        eventId: "tavern_rumour"
+        category: "social"
+        title: "Overhear a Rumour at {location_name}"
+        description: "A whispered conversation in a tavern catches the party's attention."
+        triggerType: "town_visit"
+        triggerLocation: "town"
+        isKeyEvent: false
+        rewardType: "quest_info"
+        narrativeOnTrigger: "At the tavern in {location_name}, a hooded stranger leans close and whispers a rumour.|Over cheap ale at {location_name}, the party catches fragments of an interesting conversation."
+        narrativeOnComplete: "The rumour proves true — a small but valuable piece of the puzzle falls into place.|The whispered tale leads to a useful insight."
+        difficultyModifier: 0
+    }
+}
+
+// 10. Discover a Hidden Cache
+let ev_hidden_cache: id = new entity {
+    EventTemplate {
+        eventId: "hidden_cache"
+        category: "search"
+        title: "Discover a Hidden Cache"
+        description: "A hidden cache of supplies is found along the road."
+        triggerType: "travel_segment"
+        triggerLocation: "any"
+        isKeyEvent: false
+        rewardType: "score_bonus"
+        narrativeOnTrigger: "A loose stone in a ruined wall catches the eye. Behind it — a hidden cache!|Beneath a fallen tree, the glint of metal reveals a buried cache."
+        narrativeOnComplete: "The cache contains old but serviceable supplies. A welcome find.|The party divides the cache's contents and presses on."
+        difficultyModifier: 0
+    }
+}
+
+// 11. Aid a Wounded Traveller
+let ev_wounded_traveller: id = new entity {
+    EventTemplate {
+        eventId: "wounded_traveller"
+        category: "social"
+        title: "Aid a Wounded Traveller"
+        description: "A wounded traveller on the road needs the party's help."
+        triggerType: "travel_segment"
+        triggerLocation: "any"
+        isKeyEvent: false
+        rewardType: "score_bonus"
+        narrativeOnTrigger: "A figure lies by the roadside, clutching a wounded leg. \"Please… help me.\"|The party finds a wounded traveller. They look like they've been through something terrible."
+        narrativeOnComplete: "The traveller, grateful, shares a useful tip before parting ways.|\"Thank you,\" the traveller says, bandaged and steadier. \"Let me tell you something in return…\""
+        difficultyModifier: 0
+    }
+}
+
+// 12. Bargain with the Merchant
+let ev_merchant_bargain: id = new entity {
+    EventTemplate {
+        eventId: "merchant_bargain"
+        category: "social"
+        title: "Bargain with {npc_name}"
+        description: "A merchant offers to trade — at a price."
+        triggerType: "town_visit"
+        triggerLocation: "town"
+        isKeyEvent: false
+        rewardType: "score_bonus"
+        narrativeOnTrigger: "{npc_name} spreads a collection of wares across the table. \"Everything has a price, friend.\"|\"Well, well,\" {npc_name} says, eyeing the party. \"I think we can do business.\""
+        narrativeOnComplete: "A deal is struck. Both sides walk away satisfied.|After much haggling, {npc_name} and the party reach an agreement."
+        difficultyModifier: 0
+    }
+}
+
+// 13. Navigate the Trapped Passage
+let ev_trap_corridor: id = new entity {
+    EventTemplate {
+        eventId: "trap_corridor"
+        category: "puzzle"
+        title: "Navigate the Trapped Passage"
+        description: "A corridor full of traps blocks the party's path."
+        triggerType: "location_enter"
+        triggerLocation: "wilderness"
+        isKeyEvent: false
+        rewardType: "score_bonus"
+        narrativeOnTrigger: "Click. The floor shifts beneath the party's feet — a trapped passage!|Dart holes and pressure plates line the narrow corridor. Careful now…"
+        narrativeOnComplete: "With steady nerves, the party navigates the traps unscathed.|The last trap is disarmed. The party emerges on the other side, intact."
+        difficultyModifier: 0
+    }
+}
+
+// 14. Hunt the Beast
+let ev_beast_hunt: id = new entity {
+    EventTemplate {
+        eventId: "beast_hunt"
+        category: "combat"
+        title: "Hunt the {creature_name}"
+        description: "A dangerous beast roams the area. Hunting it would prove the party's strength."
+        triggerType: "travel_segment"
+        triggerLocation: "any"
+        isKeyEvent: false
+        rewardType: "score_bonus"
+        narrativeOnTrigger: "Tracks in the mud — fresh ones. The {creature_name} is nearby.|A chilling howl echoes through the trees. The {creature_name} hunts here."
+        narrativeOnComplete: "The {creature_name} is slain. The party takes a trophy as proof.|After a fierce fight, the {creature_name} falls. The road is safer now."
+        difficultyModifier: 1
+    }
+}
+
+// 15. Light the Signal Fire
+let ev_signal_fire: id = new entity {
+    EventTemplate {
+        eventId: "signal_fire"
+        category: "discovery"
+        title: "Light the Signal Fire"
+        description: "An old signal tower stands atop the hill. Lighting it may draw allies."
+        triggerType: "location_enter"
+        triggerLocation: "wilderness"
+        isKeyEvent: false
+        rewardType: "score_bonus"
+        narrativeOnTrigger: "An old signal tower crowns the nearby hill. Its beacon has been dark for years.|The tower stands forgotten. But someone maintained the firewood inside."
+        narrativeOnComplete: "The signal fire blazes to life, visible for miles. Help may come.|Flames climb the beacon. A distant answering light flickers on the horizon."
+        difficultyModifier: 0
+    }
+}

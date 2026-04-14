@@ -19,12 +19,13 @@ Blink Rule Language (BRL) source files for the game.  BRL is used for both
 | `scenario-hard.brl` | Hard difficulty overrides |
 | `story-mode.brl` | Story mode components (StoryConfig, MapLocation, TravelState) — extends classic-rpg.brl |
 | `story-adventure.brl` | Adventure quest components (`AdventureState`, `QuestMilestone`, etc.) and composition rules — *planned* |
-| `story-adventure-templates.brl` | Objective, milestone, and event template entities — *planned* |
+| `story-adventure-templates.brl` | Objective, milestone, and event template entities — loaded at runtime by `adventureDataLoader.ts` |
 | `story-adventure-pools.brl` | NPC, villain, item, location, and creature pool entities — *planned* |
 | `story-adventure-rules.brl` | Custom event rules (duel, search, etc.) — *planned* |
 | `story-world.brl` | World system components (`WorldLocation`, `WorldPath`, `WorldNpc`, `HeroArrivalComment`, `LocationBuff`, `BlockingEncounter`, `NpcRoleAssignment`) — see [world-design.md](../../doc/game-design/world-design.md) |
 | `story-world-data.brl` | World entity data: 15 named locations, 25 paths, 20 NPCs, 40 hero arrival comments, 6 blocking encounters |
 | `adventure-expansion-set-1.brl` | Adventure expansion set 1: 30 hero-matched encounter templates (class + trait), matching rules, buff system |
+| `expansion_pack_2.brl` | Adventure expansion set 2: 30 additional hero-matched encounter templates (one alternate scenario per class and per trait axis pole), extending the encounter pool to 60 total |
 | `test-heroes.brl` | Two hero entities (Warrior + Mage) used by the test harness only |
 
 ---

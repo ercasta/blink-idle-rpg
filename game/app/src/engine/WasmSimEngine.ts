@@ -12,7 +12,7 @@
 import type { GameSnapshot, HeroDefinition, GameMode, HeroPath, CustomModeSettings, EnvironmentSettings, DamageCategory, Element, RunType, StoryKpis, NarrativeEntry, NarrativeLevel } from '../types';
 import { DEFAULT_ENVIRONMENT_SETTINGS } from '../types';
 import { simulateHeroPath, getSkillName, deriveDamageCategory, deriveDamageElement, deriveResistances, computeLinePreferenceScore } from '../data/traits';
-import { computeAdventureSeed, simulateQuestProgress, generateQuestNarrative, QUEST_EARLY_COMPLETION_POINTS_PER_DAY } from '../data/adventureQuest';
+import { computeAdventureSeed, simulateQuestProgress, generateQuestNarrative, QUEST_EARLY_COMPLETION_POINTS_PER_DAY, initAdventureData } from '../data/adventureQuest';
 import type { AdventureDefinition } from '../types';
 import { selectWorldMap, findPath, selectArrivalComments, findBlockingEncounters, PATH_TYPE_DESCRIPTIONS, initWorldData } from '../data/worldData';
 import type { WorldLocation, WorldPath } from '../data/worldData';
@@ -234,8 +234,9 @@ export async function runSimulation(
     loadEnemyTemplates(),
     loadScenarioConfigs(),
     loadHeroClassData(),
-    initWorldData(),  // Populates world data from BRL (returns void)
-  ]) as [Awaited<ReturnType<typeof loadWasmModule>>, Awaited<ReturnType<typeof loadEnemyTemplates>>, Awaited<ReturnType<typeof loadScenarioConfigs>>, Awaited<ReturnType<typeof loadHeroClassData>>, void];
+    initWorldData(),       // Populates world data from BRL (returns void)
+    initAdventureData(),   // Populates adventure template data from BRL (returns void)
+  ]) as [Awaited<ReturnType<typeof loadWasmModule>>, Awaited<ReturnType<typeof loadEnemyTemplates>>, Awaited<ReturnType<typeof loadScenarioConfigs>>, Awaited<ReturnType<typeof loadHeroClassData>>, void, void];
 
   if (!mod) {
     throw new Error(
