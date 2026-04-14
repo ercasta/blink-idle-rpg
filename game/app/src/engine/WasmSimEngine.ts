@@ -75,6 +75,8 @@ function _getClassAttackSpeed(heroClass: string, classData: Record<string, HeroC
 function _getClassSkills(heroClass: string, classData: Record<string, HeroClassData>): [string, string, string, string] {
   const cd = classData[heroClass];
   if (cd) {
+    // skill1 defaults to 'basic_attack' — a hero must always have at least one attack.
+    // skill2–4 default to '' (empty = no skill in that slot).
     return [cd.skills.skill1 || 'basic_attack', cd.skills.skill2 || '', cd.skills.skill3 || '', cd.skills.skill4 || ''];
   }
   return FALLBACK_CLASS_SKILLS[heroClass] ?? ['basic_attack', '', '', ''];
