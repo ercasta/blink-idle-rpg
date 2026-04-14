@@ -137,7 +137,7 @@ The following duplication has been resolved:
 | `game/brl/scenario-*.brl` | `WasmSimEngine.ts` `MODE_CONFIGS` | BRL loaded at runtime via `scenarioData.ts`; TS fallback only |
 | `game/brl/story-world-data.brl` | `worldData.ts` data arrays | BRL loaded at runtime via `worldDataLoader.ts`; TS fallback only |
 | `game/brl/hero-classes.brl` | `WasmSimEngine.ts` `CLASS_BASE_*` / `traits.ts` `CLASS_BASE_GROWTH` | BRL loaded at runtime via `heroClassData.ts`; TS fallback only |
-| `game/brl/story-adventure-templates.brl` + expansion BRLs | `adventureQuest.ts` template arrays | BRL loaded at runtime via `adventureDataLoader.ts`; TS fallback only |
+| `game/brl/story-adventure-templates.brl` + expansion BRLs | `adventureQuest.ts` template arrays | BRL loaded at runtime via `adventureDataLoader.ts`; no TS duplication |
 
 The two files that had diverged (`classic-rpg.brl` missing DamageType/Resistance
 components, `scenario-normal.brl` with different balance values) are now always

@@ -10,8 +10,8 @@
  * This is the BRL→TypeScript bridge for the adventure quest system.
  * After calling `loadAdventureData()`, the same data that was previously
  * hardcoded in adventureQuest.ts is loaded from BRL files at runtime.
- * The hardcoded TypeScript arrays serve as fallback defaults for environments
- * where BRL files are unavailable (e.g. unit tests).
+ * All adventure content (objectives, milestones, events, hero encounters) is
+ * loaded exclusively from BRL files.  Template data is NOT hardcoded in TypeScript.
  */
 
 import {
@@ -240,7 +240,7 @@ export async function loadAdventureData(): Promise<AdventureDataSet> {
       return data;
     } catch (err) {
       console.error(
-        'Failed to load adventure data from BRL — falling back to hardcoded TypeScript defaults.',
+        'Failed to load adventure data from BRL. Quest generation will not work until this is resolved.',
         err,
       );
       adventureDataCache = {
