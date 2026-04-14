@@ -232,6 +232,8 @@ const VERBOSITY_LABELS: Record<NarrativeLevel, string> = {
   3: 'Detailed',
 };
 
+const NARRATIVE_LEVELS: NarrativeLevel[] = [1, 2, 3];
+
 function NarrativeLogPanel({
   entries,
   currentDay,
@@ -256,7 +258,7 @@ function NarrativeLogPanel({
 
   const controls = (
     <div className="flex gap-1 items-center">
-      {([1, 2, 3] as NarrativeLevel[]).map(level => (
+      {NARRATIVE_LEVELS.map(level => (
         <button
           key={level}
           onClick={() => onVerbosityChange(level)}
@@ -390,14 +392,14 @@ function ImmersiveStoryView({ snapshots, prevSnapshots = [], narrativeLog = [], 
         {dayEntries.length === 0 ? (
           <p className="text-stone-500 italic">No events recorded for this day.</p>
         ) : (
-          dayEntries.map((entry, i) => <NarrativeLogEntry key={i} entry={entry} />)
+          dayEntries.map((entry, i) => <NarrativeLogEntry key={`${entry.day}-${entry.hour}-${entry.level}-${i}`} entry={entry} />)
         )}
       </div>
 
       {/* Bottom controls: verbosity + Next/Results button */}
       <div className="flex items-center justify-between px-4 py-3 border-t border-stone-700 shrink-0 gap-3">
         <div className="flex gap-1">
-          {([1, 2, 3] as NarrativeLevel[]).map(level => (
+          {NARRATIVE_LEVELS.map(level => (
             <button
               key={level}
               onClick={() => setVerbosity(level)}
