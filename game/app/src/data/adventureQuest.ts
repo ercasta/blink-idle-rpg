@@ -576,6 +576,14 @@ export function generateAdventureQuest(
   seed: number,
   heroes?: readonly Pick<HeroDefinition, 'name' | 'heroClass' | 'traits'>[],
 ): AdventureQuest {
+  if (OBJECTIVE_TEMPLATES.length === 0 || MILESTONE_TEMPLATES.length === 0 || EVENT_TEMPLATES.length === 0) {
+    throw new Error(
+      'Adventure template data is not loaded. ' +
+      'Ensure initAdventureData() has completed and that story-adventure-templates.brl ' +
+      'is accessible from /game-files/ (run `npm run copy-game-files` if missing).',
+    );
+  }
+
   const rng = new Rng(seed);
 
   // 1. Draw objective
