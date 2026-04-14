@@ -349,6 +349,55 @@ export function compileToRust(
   return { files: result.files, errors };
 }
 
+/**
+ * Resolve all `import "filename.brl"` directives from an entry-point file,
+ * returning the full ordered list of `SourceFile`s ready for compilation.
+ *
+ * Imports are resolved depth-first so that every dependency appears before
+ * the file that imports it.  Circular or duplicate imports are silently
+ * de-duplicated.
+ *
+ * @param entryPath  Path key for the entry-point file (e.g. `"game.brl"`).
+ *                   This exact string is passed to `readFile`.
+ * @param readFile   Synchronous loader.  Receives the path from the `import`
+ *                   directive (relative to the BRL source directory) and must
+ *                   return the file's content as a string.
+ */
+export function resolveImports(
+  entryPath: string,
+  readFile: (path: string) => string,
+): SourceFile[] {
+  const resolved: SourceFile[] = [];
+  const seen = new Set<string>();
+
+  function visit(filePath: string): void {
+    if (seen.has(filePath)) return;
+    seen.add(filePath);
+
+    const content = readFile(filePath);
+    const source: SourceFile = { path: filePath, content, language: 'brl' };
+
+    // Parse to find file-import directives; ignore parse errors here —
+    // they will surface during compilation with accurate diagnostics.
+    try {
+      const tokens = tokenize(content);
+      const ast = parse(tokens);
+      for (const item of ast.items) {
+        if (item.type === 'import' && item.filePath) {
+          visit(item.filePath);
+        }
+      }
+    } catch (_e) {
+      // Intentionally swallowed; compilation step will surface the error.
+    }
+
+    resolved.push(source);
+  }
+
+  visit(entryPath);
+  return resolved;
+}
+
 // Browser-friendly global export for script tags
 if (typeof window !== 'undefined') {
   (window as any).BlinkCompiler = {
@@ -358,6 +407,7 @@ if (typeof window !== 'undefined') {
     parseSource,
     tokenizeSource,
     mergeIRModules,
+    resolveImports,
     tokenize,
     parse,
     generate,

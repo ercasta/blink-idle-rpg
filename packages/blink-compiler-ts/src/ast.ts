@@ -16,7 +16,8 @@ export type Item =
   | FunctionDef
   | ImportDef
   | ModuleDef
-  | EntityDef;
+  | EntityDef
+  | EventDef;
 
 // ===== Component Definition =====
 
@@ -82,8 +83,20 @@ export interface ParamDef {
 
 export interface ImportDef {
   type: 'import';
+  /** Dotted module path for `import module.name` style imports. */
   path: string[];
+  /** File path for `import "filename.brl"` style imports. Mutually exclusive with path. */
+  filePath?: string;
   items: string[] | null;
+  span: Span;
+}
+
+// ===== Event Declaration =====
+
+export interface EventDef {
+  type: 'event';
+  name: string;
+  fields: FieldDef[];
   span: Span;
 }
 
@@ -244,7 +257,9 @@ export type Expr =
   | ListExpr
   | ParenExpr
   | EntitiesHavingExpr
-  | CloneEntityExpr;
+  | CloneEntityExpr
+  | NewEntityExpr
+  | ScheduleExpr;
 
 export interface LiteralExpr {
   type: 'literal';
@@ -358,5 +373,21 @@ export interface CloneEntityExpr {
   type: 'clone_entity';
   source: Expr;
   overrides: ComponentInit[];
+  span: Span;
+}
+
+export interface NewEntityExpr {
+  type: 'new_entity';
+  components: ComponentInit[];
+  span: Span;
+}
+
+export interface ScheduleExpr {
+  type: 'schedule_expr';
+  recurring: boolean;
+  delay: Expr | null;
+  interval: Expr | null;
+  eventName: string;
+  fields: [string, Expr][];
   span: Span;
 }

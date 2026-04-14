@@ -116,6 +116,9 @@ export class RustCodeGenerator {
         case 'entity':
           this.entityDefs.push(item);
           break;
+        case 'event':
+          // Event declarations are type-information only; no Rust codegen needed.
+          break;
         case 'module':
           this.collectItems(item.items);
           break;
@@ -730,6 +733,22 @@ export class RustCodeGenerator {
 
     code += '        _ => "{}".to_string(),\n';
     code += '    }\n';
+    code += '}\n\n';
+
+    code += '/// Return all entity IDs that have a given component.\n';
+    code += '/// Used by JavaScript to discover pre-compiled data entities.\n';
+    code += 'pub fn get_entities_with_component(\n';
+    code += '    engine: &Engine,\n';
+    code += '    component_name: &str,\n';
+    code += ') -> Vec<u32> {\n';
+    code += '    match component_name {\n';
+
+    for (const comp of this.componentDefs) {
+      code += `        "${comp.name}" => engine.world.query_component::<${comp.name}>().iter().map(|&id| id as u32).collect(),\n`;
+    }
+
+    code += '        _ => vec![],\n';
+    code += '    }\n';
     code += '}\n';
 
     return code;
@@ -1083,6 +1102,14 @@ export class RustCodeGenerator {
 
   private generateScheduleStatement(stmt: AST.ScheduleStatement, indent: number): string {
     const pad = '    '.repeat(indent);
+    return this.generateScheduleCode(stmt, pad);
+  }
+
+  /** Core schedule codegen shared by statement and expression paths. */
+  private generateScheduleCode(
+    stmt: Pick<AST.ScheduleStatement, 'eventName' | 'fields' | 'delay'>,
+    pad = '',
+  ): string {
     let code = '';
 
     const eventConstName = this.stringConstName(stmt.eventName);
@@ -1110,7 +1137,7 @@ export class RustCodeGenerator {
     } else {
       code += `${pad}    engine.timeline.schedule_immediate(sched_event);\n`;
     }
-    code += `${pad}}\n`;
+    code += `${pad}}`;
     return code;
   }
 
@@ -1234,8 +1261,44 @@ export class RustCodeGenerator {
         return code;
       }
 
+      case 'new_entity': {
+        // Spawn a fresh entity, attach each listed component, and return the id.
+        let code = `{\n`;
+        code += `    let __new = engine.world.spawn();\n`;
+        for (const compInit of expr.components) {
+          const compFields = this.componentFieldTypes.get(compInit.name);
+          code += `    engine.world.insert(__new, ${compInit.name} {\n`;
+          for (const [fieldName, value] of compInit.fields) {
+            const fieldType = compFields?.get(fieldName);
+            const rustField = this.toSnakeCase(fieldName);
+            const rustValue = this.exprToRustForField(value, fieldType);
+            code += `        ${rustField}: ${rustValue},\n`;
+          }
+          // Fill any fields not supplied in the BRL init with zero/default values
+          if (compFields) {
+            for (const [fieldName, fieldType] of compFields) {
+              if (!compInit.fields.some(([fn]) => fn === fieldName)) {
+                const rustField = this.toSnakeCase(fieldName);
+                code += `        ${rustField}: ${this.defaultValueForType(fieldType)},\n`;
+              }
+            }
+          }
+          code += `    });\n`;
+        }
+        code += `    __new\n`;
+        code += `}`;
+        return code;
+      }
+
       case 'cast':
         return this.exprToRust(expr.expr);
+
+      case 'schedule_expr': {
+        // schedule used as an expression: emit the schedule side-effect in a block and
+        // return NO_ENTITY since the runtime does not surface a cancellable handle.
+        const schedStmt = this.generateScheduleCode(expr);
+        return `{ ${schedStmt}; blink_runtime::NO_ENTITY }`;
+      }
     }
   }
 
@@ -1333,6 +1396,21 @@ export class RustCodeGenerator {
       case 'gte': return `${left} >= ${right}`;
       case 'and': return `${left} && ${right}`;
       case 'or': return `${left} || ${right}`;
+    }
+  }
+
+  private defaultValueForType(typeExpr: AST.TypeExpr): string {
+    switch (typeExpr.type) {
+      case 'integer': return '0';
+      case 'decimal':
+      case 'number':  return '0.0';
+      case 'boolean': return 'false';
+      case 'string':  return 'engine.interner.intern("")';
+      case 'id':
+      case 'component':
+      case 'composite': return 'blink_runtime::NO_ENTITY';
+      case 'list':    return 'vec![]';
+      case 'optional': return this.defaultValueForType(typeExpr.inner);
     }
   }
 

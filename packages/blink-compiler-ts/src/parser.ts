@@ -80,6 +80,8 @@ export class Parser {
         return this.parseFunction(false);
       case TokenKind.Choice:
         return this.parseChoiceFunction();
+      case TokenKind.Event:
+        return this.parseEventDeclaration();
       case TokenKind.Import:
         return this.parseImport();
       case TokenKind.Module:
@@ -128,6 +130,33 @@ export class Parser {
     
     return {
       type: 'component',
+      name,
+      fields,
+      span: { start, end },
+    };
+  }
+
+  // ===== Event Declaration Parsing =====
+
+  private parseEventDeclaration(): AST.EventDef {
+    const start = this.consume(TokenKind.Event, 'event').span.start;
+    const name = this.consume(TokenKind.Identifier, 'event name').text;
+
+    this.consume(TokenKind.LBrace, '{');
+
+    const fields: AST.FieldDef[] = [];
+    while (!this.check(TokenKind.RBrace) && !this.isAtEnd()) {
+      fields.push(this.parseFieldDef());
+      // Event fields may be comma-separated (inline style) or newline-separated
+      if (this.check(TokenKind.Comma)) {
+        this.advance();
+      }
+    }
+
+    const end = this.consume(TokenKind.RBrace, '}').span.end;
+
+    return {
+      type: 'event',
       name,
       fields,
       span: { start, end },
@@ -412,7 +441,23 @@ export class Parser {
 
   private parseImport(): AST.ImportDef {
     const start = this.consume(TokenKind.Import, 'import').span.start;
-    
+
+    // File import: import "filename.brl"
+    if (this.check(TokenKind.StringLiteral) || this.check(TokenKind.StringLiteralSingle)) {
+      const pathToken = this.advance();
+      // Strip surrounding quotes from the raw token text
+      const filePath = pathToken.text.slice(1, -1);
+      const end = pathToken.span.end;
+      return {
+        type: 'import',
+        path: [],
+        filePath,
+        items: null,
+        span: { start, end },
+      };
+    }
+
+    // Module import: import module.path { Item1, Item2 }
     const path: string[] = [];
     path.push(this.consume(TokenKind.Identifier, 'module path').text);
     
@@ -1247,6 +1292,56 @@ export class Parser {
           span: { start: token.span.start, end: componentToken.span.end },
         };
       
+      case TokenKind.New:
+        // `new entity { ComponentName { ... } ... }` — create an entity inline
+        this.consume(TokenKind.Entity, 'entity');
+        this.consume(TokenKind.LBrace, '{');
+        const newComponents: AST.ComponentInit[] = [];
+        while (!this.check(TokenKind.RBrace) && !this.isAtEnd()) {
+          newComponents.push(this.parseComponentInit());
+        }
+        const newEnd = this.consume(TokenKind.RBrace, '}').span.end;
+        return {
+          type: 'new_entity',
+          components: newComponents,
+          span: { start: token.span.start, end: newEnd },
+        };
+
+      case TokenKind.Schedule: {
+        // `schedule EventName { ... }` used as an expression (return value is NO_ENTITY)
+        const schedRecurring = this.check(TokenKind.Recurring);
+        if (schedRecurring) this.advance();
+        let schedDelay: AST.Expr | null = null;
+        let schedInterval: AST.Expr | null = null;
+        if (this.check(TokenKind.LBracket)) {
+          this.advance();
+          const paramName = this.consume(TokenKind.Identifier, 'delay or interval').text;
+          this.consume(TokenKind.Colon, ':');
+          const paramValue = this.parseExpression();
+          if (paramName === 'delay') schedDelay = paramValue;
+          else if (paramName === 'interval') schedInterval = paramValue;
+          this.consume(TokenKind.RBracket, ']');
+        }
+        const schedEventName = this.consume(TokenKind.Identifier, 'event name').text;
+        this.consume(TokenKind.LBrace, '{');
+        const schedFields: [string, AST.Expr][] = [];
+        while (!this.check(TokenKind.RBrace) && !this.isAtEnd()) {
+          const fieldName = this.consume(TokenKind.Identifier, 'field name').text;
+          this.consume(TokenKind.Colon, ':');
+          schedFields.push([fieldName, this.parseExpression()]);
+        }
+        const schedEnd = this.consume(TokenKind.RBrace, '}').span.end;
+        return {
+          type: 'schedule_expr',
+          recurring: schedRecurring,
+          delay: schedDelay,
+          interval: schedInterval,
+          eventName: schedEventName,
+          fields: schedFields,
+          span: { start: token.span.start, end: schedEnd },
+        };
+      }
+
       case TokenKind.Clone:
         // `clone entity_expr` or `clone entity_expr { overrides }`
         const source = this.parsePostfixExpr();
