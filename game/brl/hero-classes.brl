@@ -15,6 +15,40 @@
 // =============================================================================
 
 // -----------------------------------------------------------------------------
+// COMPONENT DEFINITIONS
+// -----------------------------------------------------------------------------
+
+component HeroBalanceConfig {
+    elementThreshold: integer
+}
+
+component HeroClassDef {
+    className: string
+}
+
+component HeroBaseCombat {
+    baseHp: integer
+    baseDamage: integer
+    baseDefense: integer
+    baseAttackSpeed: decimal
+}
+
+component HeroStartingSkills {
+    skill1: string
+    skill2: string
+    skill3: string
+    skill4: string
+}
+
+component HeroGrowthVector {
+    growthStr: decimal
+    growthDex: decimal
+    growthInt: decimal
+    growthCon: decimal
+    growthWis: decimal
+}
+
+// -----------------------------------------------------------------------------
 // GLOBAL BALANCE CONSTANTS
 // -----------------------------------------------------------------------------
 

@@ -31,6 +31,7 @@ interface Scope {
  */
 export class SemanticAnalyzer {
   private components: Map<string, ComponentInfo> = new Map();
+  private eventTypes: Set<string> = new Set();
   private functions: Set<string> = new Set();
   private errors: SemanticError[] = [];
   
@@ -53,6 +54,7 @@ export class SemanticAnalyzer {
   analyze(modules: AST.Module[]): SemanticError[] {
     this.errors = [];
     this.components.clear();
+    this.eventTypes.clear();
     this.functions.clear();
     
     // First pass: collect all component and function definitions
@@ -79,7 +81,8 @@ export class SemanticAnalyzer {
           this.collectComponent(item);
           break;
         case 'event':
-          // Event declarations are informational type definitions; no global registration needed.
+          // Register event type so field access patterns (evt.EventType.field) are validated correctly.
+          this.eventTypes.add(item.name);
           break;
         case 'function':
           this.functions.add(item.name);
@@ -455,6 +458,10 @@ export class SemanticAnalyzer {
       // Check if the component exists
       const componentName = baseAccess.field;
       if (!this.components.has(componentName)) {
+        // Allow event type names used in field-access patterns like evt.EventType.field
+        if (this.eventTypes.has(componentName)) {
+          return;
+        }
         this.errors.push({
           message: `Unknown component '${componentName}'`,
           span: baseAccess.span,

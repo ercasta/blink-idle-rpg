@@ -1272,6 +1272,44 @@ export class Parser {
           span: token.span,
         };
       
+      case TokenKind.Schedule: {
+        // `schedule [delay: N] EventName { fields }` used as an expression.
+        // Schedules the event and evaluates to NO_ENTITY (the id is rarely used).
+        const recurring = this.check(TokenKind.Recurring);
+        if (recurring) this.advance();
+
+        let schedDelay: AST.Expr | null = null;
+        let schedInterval: AST.Expr | null = null;
+        if (this.check(TokenKind.LBracket)) {
+          this.advance();
+          const paramName = this.consume(TokenKind.Identifier, 'delay or interval').text;
+          this.consume(TokenKind.Colon, ':');
+          const paramVal = this.parseExpression();
+          if (paramName === 'delay') schedDelay = paramVal;
+          else if (paramName === 'interval') schedInterval = paramVal;
+          this.consume(TokenKind.RBracket, ']');
+        }
+
+        const schedEventName = this.consume(TokenKind.Identifier, 'event name').text;
+        this.consume(TokenKind.LBrace, '{');
+        const schedFields: [string, AST.Expr][] = [];
+        while (!this.check(TokenKind.RBrace) && !this.isAtEnd()) {
+          const fn = this.consume(TokenKind.Identifier, 'field name').text;
+          this.consume(TokenKind.Colon, ':');
+          schedFields.push([fn, this.parseExpression()]);
+        }
+        const schedEnd = this.consume(TokenKind.RBrace, '}').span.end;
+        return {
+          type: 'schedule_expr',
+          recurring,
+          delay: schedDelay,
+          interval: schedInterval,
+          eventName: schedEventName,
+          fields: schedFields,
+          span: { start: token.span.start, end: schedEnd },
+        };
+      }
+
       case TokenKind.Entities:
         // `entities having ComponentType`
         this.consume(TokenKind.Having, 'having');
@@ -1282,6 +1320,29 @@ export class Parser {
           span: { start: token.span.start, end: componentToken.span.end },
         };
       
+      case TokenKind.New: {
+        // `new entity { ComponentName { field: val, ... }, ... }`
+        this.consume(TokenKind.Entity, 'entity');
+        const newComponents: AST.ComponentInit[] = [];
+        if (this.check(TokenKind.LBrace)) {
+          this.advance();
+          while (!this.check(TokenKind.RBrace) && !this.isAtEnd()) {
+            newComponents.push(this.parseComponentInit());
+          }
+          const newEnd = this.consume(TokenKind.RBrace, '}').span.end;
+          return {
+            type: 'new_entity',
+            components: newComponents,
+            span: { start: token.span.start, end: newEnd },
+          };
+        }
+        return {
+          type: 'new_entity',
+          components: newComponents,
+          span: { start: token.span.start, end: token.span.end },
+        };
+      }
+
       case TokenKind.Clone:
         // `clone entity_expr` or `clone entity_expr { overrides }`
         const source = this.parsePostfixExpr();

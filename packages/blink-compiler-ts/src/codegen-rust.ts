@@ -241,6 +241,13 @@ export class RustCodeGenerator {
       this.collectStringsFromExpr(expr.base);
       this.collectStringsFromExpr(expr.index);
     }
+    if (expr.type === 'schedule_expr') {
+      this.allStrings.add(expr.eventName);
+      for (const [fieldName, value] of expr.fields) {
+        this.allStrings.add(fieldName);
+        this.collectStringsFromExpr(value);
+      }
+    }
   }
 
   private buildComponentFieldTypes() {
@@ -1262,6 +1269,51 @@ export class RustCodeGenerator {
           }
         }
         code += `    __new\n`;
+        code += `}`;
+        return code;
+      }
+
+      case 'new_entity': {
+        // Spawn a new entity and attach all specified components.
+        let code = `{\n`;
+        code += `    let __new_entity = engine.world.spawn();\n`;
+        for (const comp of expr.components) {
+          const compFields = this.componentFieldTypes.get(comp.name);
+          code += `    engine.world.insert(__new_entity, ${comp.name} {\n`;
+          for (const [fieldName, value] of comp.fields) {
+            const fieldType = compFields?.get(fieldName);
+            const rustField = this.toSnakeCase(fieldName);
+            code += `        ${rustField}: ${this.exprToRustForField(value, fieldType)},\n`;
+          }
+          code += `        ..Default::default()\n`;
+          code += `    });\n`;
+        }
+        code += `    __new_entity\n`;
+        code += `}`;
+        return code;
+      }
+
+      case 'schedule_expr': {
+        // Schedule-as-expression: emit the schedule side-effect and yield NO_ENTITY.
+        const eventConstName = this.stringConstName(expr.eventName);
+        let code = `{\n`;
+        code += `    let mut sched_event = blink_runtime::Event::new(string_ids::${eventConstName});\n`;
+        for (const [fieldName, value] of expr.fields) {
+          if (fieldName === 'source') {
+            code += `    sched_event.source = ${this.exprToRust(value)} as EntityId;\n`;
+          } else if (fieldName === 'target') {
+            code += `    sched_event.target = ${this.exprToRust(value)} as EntityId;\n`;
+          } else {
+            const fieldConst = this.stringConstName(fieldName);
+            code += `    sched_event.fields.insert(string_ids::${fieldConst}, ${this.exprToValueRust(value)});\n`;
+          }
+        }
+        if (expr.delay) {
+          code += `    engine.timeline.schedule_delay(${this.exprToRust(expr.delay)} as f64, sched_event);\n`;
+        } else {
+          code += `    engine.timeline.schedule_immediate(sched_event);\n`;
+        }
+        code += `    blink_runtime::NO_ENTITY\n`;
         code += `}`;
         return code;
       }

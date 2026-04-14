@@ -255,7 +255,8 @@ export type Expr =
   | ParenExpr
   | EntitiesHavingExpr
   | CloneEntityExpr
-  | NewEntityExpr;
+  | NewEntityExpr
+  | ScheduleExpr;
 
 export interface LiteralExpr {
   type: 'literal';
@@ -375,5 +376,15 @@ export interface CloneEntityExpr {
 export interface NewEntityExpr {
   type: 'new_entity';
   components: ComponentInit[];
+  span: Span;
+}
+
+export interface ScheduleExpr {
+  type: 'schedule_expr';
+  recurring: boolean;
+  delay: Expr | null;
+  interval: Expr | null;
+  eventName: string;
+  fields: [string, Expr][];
   span: Span;
 }
