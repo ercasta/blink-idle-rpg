@@ -27,8 +27,8 @@ component ObjectiveTemplate {
     title: string                   // Display title with slot tokens
     description: string             // 2–3 sentence overview with slot tokens (use | for variants)
     winCondition: string            // Condition type: "npc_rescued", "item_delivered", etc.
-    requiredSlots: string           // Comma-separated slot names, e.g. "npc_name,npc_role"
-    milestoneCategories: string     // Comma-separated compatible milestone categories
+    requiredSlots: string           // CSV: slot names the composition algorithm must fill, e.g. "npc_name,npc_role"
+    milestoneCategories: string     // CSV: compatible milestone categories, e.g. "combat,exploration"
 }
 
 // A quest milestone: a major checkpoint within the adventure.
@@ -41,7 +41,7 @@ component MilestoneTemplate {
     completionKey: string           // Key produced on completion
     bailoutDay: integer             // Days after activation before bail-out triggers
     bailoutDescription: string      // Narrative for the bail-out
-    compatibleObjectives: string    // Comma-separated objective categories this milestone works with
+    compatibleObjectives: string    // CSV: objective categories this milestone works with, e.g. "rescue,retrieve"
     eventSlots: integer             // Number of events this milestone contains (2 or 3)
 }
 

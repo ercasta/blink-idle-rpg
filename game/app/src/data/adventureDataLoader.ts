@@ -85,6 +85,11 @@ export interface HeroEncounterTemplate {
 
 // ── Parsing functions ────────────────────────────────────────────────────────
 
+/** Parse a comma-separated BRL string field into a trimmed, non-empty string array. */
+function parseCommaSeparated(value: string): string[] {
+  return value ? value.split(',').map(s => s.trim()).filter(Boolean) : [];
+}
+
 function parseObjectiveTemplates(text: string): ObjectiveTemplate[] {
   const entities = parseEntities(text);
   const objectives: ObjectiveTemplate[] = [];
@@ -93,17 +98,14 @@ function parseObjectiveTemplates(text: string): ObjectiveTemplate[] {
     const comp = getComponent(entity, 'ObjectiveTemplate');
     if (!comp) continue;
 
-    const requiredSlotsRaw = extractStringField(comp.body, 'requiredSlots');
-    const milestoneCategoriesRaw = extractStringField(comp.body, 'milestoneCategories');
-
     objectives.push({
       objectiveId: extractStringField(comp.body, 'objectiveId'),
       category: extractStringField(comp.body, 'category'),
       title: extractStringField(comp.body, 'title'),
       description: extractStringField(comp.body, 'description'),
       winCondition: extractStringField(comp.body, 'winCondition'),
-      requiredSlots: requiredSlotsRaw ? requiredSlotsRaw.split(',').map(s => s.trim()).filter(Boolean) : [],
-      milestoneCategories: milestoneCategoriesRaw ? milestoneCategoriesRaw.split(',').map(s => s.trim()).filter(Boolean) : [],
+      requiredSlots: parseCommaSeparated(extractStringField(comp.body, 'requiredSlots')),
+      milestoneCategories: parseCommaSeparated(extractStringField(comp.body, 'milestoneCategories')),
     });
   }
 
@@ -118,8 +120,6 @@ function parseMilestoneTemplates(text: string): MilestoneTemplate[] {
     const comp = getComponent(entity, 'MilestoneTemplate');
     if (!comp) continue;
 
-    const compatibleObjectivesRaw = extractStringField(comp.body, 'compatibleObjectives');
-
     milestones.push({
       milestoneId: extractStringField(comp.body, 'milestoneId'),
       category: extractStringField(comp.body, 'category'),
@@ -129,7 +129,7 @@ function parseMilestoneTemplates(text: string): MilestoneTemplate[] {
       completionKey: extractStringField(comp.body, 'completionKey'),
       bailoutDay: extractNumberField(comp.body, 'bailoutDay') ?? 3,
       bailoutDescription: extractStringField(comp.body, 'bailoutDescription'),
-      compatibleObjectives: compatibleObjectivesRaw ? compatibleObjectivesRaw.split(',').map(s => s.trim()).filter(Boolean) : [],
+      compatibleObjectives: parseCommaSeparated(extractStringField(comp.body, 'compatibleObjectives')),
       eventSlots: extractNumberField(comp.body, 'eventSlots') ?? 2,
     });
   }
@@ -239,7 +239,10 @@ export async function loadAdventureData(): Promise<AdventureDataSet> {
       adventureDataCache = data;
       return data;
     } catch (err) {
-      console.error('Failed to load adventure data from BRL:', err);
+      console.error(
+        'Failed to load adventure data from BRL — falling back to hardcoded TypeScript defaults.',
+        err,
+      );
       adventureDataCache = {
         objectives: [],
         milestones: [],
