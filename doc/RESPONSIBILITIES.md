@@ -80,22 +80,29 @@ fallback data is used only when BRL files are unavailable.
 **Remaining**: The `game/data/game-modes.json` ↔ `gameModes.ts` duplication
 for the batch simulation tool is not yet resolved (presentation-only data).
 
-### 4. Hero Stat Computation
+### 4. Hero Stat Computation ✅ Resolved
 
-| BRL | TypeScript |
-|-----|------------|
-| `heroes.brl` (AI functions only) | `traits.ts` (`computeBaseStats`, `deriveDamageCategory`, `deriveResistances`) |
+| Source of truth | Duplicate |
+|-----------------|-----------|
+| `game/brl/hero-classes.brl` | `traits.ts` / `WasmSimEngine.ts` (fallback only) |
 
-**What**: Base stat formulas, damage type derivation, and resistance
-calculation are in TypeScript.
+**What**: Class base combat stats (HP, damage, defense, attack speed),
+starting skills, stat growth vectors, and element threshold are defined
+in BRL.
 
-**Why it exists**: Heroes are created at runtime from the player's party
-selection.  The stat computation runs in the React app before entity
-injection.
+**Resolution**: `heroClassData.ts` loads hero class data from
+`hero-classes.brl` at runtime via `brlParser.ts`.  `WasmSimEngine.ts`
+calls `loadHeroClassData()` in parallel with WASM module loading and
+uses BRL-loaded values for hero entity creation.  `traits.ts` uses
+BRL-loaded growth vectors and element threshold for stat computation,
+damage type derivation, and resistance calculation.  Hardcoded fallback
+data is used only when BRL files are unavailable.
 
-**Recommended migration**: These formulas could be expressed as BRL
-functions that the engine evaluates during entity creation, keeping
-game balance logic in one place.
+**Note**: The stat computation formulas themselves (the algorithms in
+`computeBaseStats`, `deriveDamageCategory`, `deriveResistances`) remain
+in TypeScript because they run in the React app before entity injection.
+All game _data_ (balance constants, growth weights, thresholds) is now
+sourced from BRL.
 
 ---
 
@@ -129,6 +136,7 @@ The following duplication has been resolved:
 | `game/brl/enemies.brl` | `WasmSimEngine.ts` `ENEMY_TEMPLATES` | BRL loaded at runtime via `enemyData.ts`; TS fallback only |
 | `game/brl/scenario-*.brl` | `WasmSimEngine.ts` `MODE_CONFIGS` | BRL loaded at runtime via `scenarioData.ts`; TS fallback only |
 | `game/brl/story-world-data.brl` | `worldData.ts` data arrays | BRL loaded at runtime via `worldDataLoader.ts`; TS fallback only |
+| `game/brl/hero-classes.brl` | `WasmSimEngine.ts` `CLASS_BASE_*` / `traits.ts` `CLASS_BASE_GROWTH` | BRL loaded at runtime via `heroClassData.ts`; TS fallback only |
 
 The two files that had diverged (`classic-rpg.brl` missing DamageType/Resistance
 components, `scenario-normal.brl` with different balance values) are now always
@@ -137,14 +145,15 @@ in sync because the canonical source is the only file that is edited.
 ### Runtime BRL Loading Architecture
 
 The migration uses a common `brlParser.ts` utility that extracts entity and
-component data from BRL files at runtime.  Three data loader modules use it:
+component data from BRL files at runtime.  Four data loader modules use it:
 
 | Module | BRL source | What it loads |
 |--------|-----------|---------------|
 | `enemyData.ts` | `enemies.brl` | Enemy templates (stats, skills, tiers) |
 | `scenarioData.ts` | `scenario-*.brl` | Mode configs (spawn, scoring, flee) |
 | `worldDataLoader.ts` | `story-world-data.brl` | Locations, paths, NPCs, comments, encounters |
+| `heroClassData.ts` | `hero-classes.brl` | Class combat stats, skills, growth vectors, element threshold |
 
-All three loaders are called in parallel during `runSimulation()`, alongside
+All four loaders are called in parallel during `runSimulation()`, alongside
 the WASM module load.  Results are cached after the first fetch.  If BRL
 files are unavailable, hardcoded fallback data is used.
