@@ -457,7 +457,13 @@ export class RustCodeGenerator {
     code += 'use crate::string_ids;\n\n';
 
     // Generate named entity variable storage
-    const namedEntities = this.entityDefs.filter(e => e.variable);
+    // Deduplicate by variable name: keep the last definition for each name
+    // (multiple BRL files may define the same variable; last one wins).
+    const namedEntitiesMap = new Map<string, AST.EntityDef>();
+    for (const e of this.entityDefs) {
+      if (e.variable) namedEntitiesMap.set(e.variable, e);
+    }
+    const namedEntities = Array.from(namedEntitiesMap.values());
     if (namedEntities.length > 0) {
       code += '/// Named entity IDs (populated during create_initial_entities)\n';
       code += 'pub struct NamedEntities {\n';
@@ -484,8 +490,26 @@ export class RustCodeGenerator {
       code += '    let mut named = NamedEntities::default();\n';
     }
 
+    // Build the list to iterate: deduplicated named entities (last definition wins)
+    // plus all anonymous entities (no variable), preserving original order.
+    const seenVars = new Set<string>();
+    const entitiesToCreate: AST.EntityDef[] = [];
+    // First pass: collect the winning (last) definition for each named entity
+    // We already have `namedEntitiesMap` with last-wins semantics.
+    // Second pass: walk original list; for named entities emit only if it's the
+    // winning definition (i.e. matches the one in namedEntitiesMap); emit all
+    // anonymous entities as-is.
     for (const entity of this.entityDefs) {
-      const varName = entity.variable ? this.toSnakeCase(entity.variable) : `_entity_${this.entityDefs.indexOf(entity)}`;
+      if (!entity.variable) {
+        entitiesToCreate.push(entity);
+      } else if (namedEntitiesMap.get(entity.variable) === entity && !seenVars.has(entity.variable)) {
+        seenVars.add(entity.variable);
+        entitiesToCreate.push(entity);
+      }
+    }
+
+    for (const [idx, entity] of entitiesToCreate.entries()) {
+      const varName = entity.variable ? this.toSnakeCase(entity.variable) : `_entity_${idx}`;
 
       if (entity.variable) {
         code += `    let ${varName} = engine.world.spawn_named("${entity.variable}");\n`;

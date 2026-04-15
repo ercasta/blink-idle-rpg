@@ -30,14 +30,6 @@ import heroes
 // ── Entity data: enemies ──────────────────────────────────────────────────
 import enemies
 
-// ── Scenario / game-mode configs ─────────────────────────────────────────
-import scenario_normal
-import scenario_easy
-import scenario_hard
-
-// ── Game configuration ────────────────────────────────────────────────────
-import game_config
-
 // ── World and adventure data ──────────────────────────────────────────────
 import story_world_data
 import story_adventure_templates
