@@ -75,8 +75,8 @@ event HeroEncounterBuffApplied { heroName: string, buffType: string, buffAmount:
 // generate the narrative highlight, and schedule completion.
 rule hero_encounter_trigger on HeroEncounterTriggered(evt: id) {
     let heroes: list = entities having Character
-    let encounter_id: string = evt.HeroEncounterTriggered.encounterId
-    let matched_hero: string = evt.HeroEncounterTriggered.heroName
+    let encounter_id: string = evt.encounterId
+    let matched_hero: string = evt.heroName
 
     // Create the encounter outcome record
     let outcome: id = new entity {
@@ -101,10 +101,10 @@ rule hero_encounter_trigger on HeroEncounterTriggered(evt: id) {
 
 // Rule: When a hero encounter completes, apply the buff to the party.
 rule hero_encounter_complete on HeroEncounterCompleted(evt: id) {
-    let hero_name: string = evt.HeroEncounterCompleted.heroName
-    let buff_type: string = evt.HeroEncounterCompleted.buffType
-    let buff_amount: integer = evt.HeroEncounterCompleted.buffAmount
-    let encounter_id: string = evt.HeroEncounterCompleted.encounterId
+    let hero_name: string = evt.heroName
+    let buff_type: string = evt.buffType
+    let buff_amount: integer = evt.buffAmount
+    let encounter_id: string = evt.encounterId
 
     // Create the buff entity
     let buff: id = new entity {
