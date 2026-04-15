@@ -1,22 +1,10 @@
 /**
- * Enemy Data — loads enemy template data from the canonical BRL source.
+ * Enemy Data — loads pre-compiled enemy template data from JSON.
  *
- * Previously, enemy stats were hardcoded in WasmSimEngine.ts as
- * ENEMY_TEMPLATES.  This module loads the same data from
- * `game/brl/enemies.brl` (served at `public/game-files/enemies.brl`),
- * making the BRL file the single source of truth.
- *
- * Parsed results are cached after the first fetch.
+ * At build time, `scripts/compile-game-data.js` reads `game/brl/enemies.brl`
+ * and produces `public/game-data/enemies.json`.  This module fetches that
+ * pre-compiled JSON at runtime, avoiding any BRL parsing in the browser.
  */
-
-import {
-  parseEntities,
-  getComponent,
-  extractStringField,
-  extractNumberField,
-  extractBoolField,
-  fetchBrlFile,
-} from './brlParser';
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -41,63 +29,13 @@ export interface EnemyTemplate {
   critMultiplier: number;
 }
 
-// ── Parsing ─────────────────────────────────────────────────────────────────
-
-function parseEnemyTemplates(text: string): EnemyTemplate[] {
-  const entities = parseEntities(text);
-  const templates: EnemyTemplate[] = [];
-  let nextId = 100;
-
-  for (const entity of entities) {
-    const character = getComponent(entity, 'Character');
-    const health = getComponent(entity, 'Health');
-    const combat = getComponent(entity, 'Combat');
-    const enemy = getComponent(entity, 'Enemy');
-    const enemyTemplate = getComponent(entity, 'EnemyTemplate');
-    const stats = getComponent(entity, 'Stats');
-    const manaComp = getComponent(entity, 'Mana');
-    const finalBoss = getComponent(entity, 'FinalBoss');
-
-    // Only process actual enemy templates
-    if (!character || !health || !combat || !enemy || !enemyTemplate) continue;
-
-    const isTemplate = extractBoolField(enemyTemplate.body, 'isTemplate');
-    if (isTemplate !== true) continue;
-
-    templates.push({
-      id: nextId++,
-      tier: extractNumberField(enemy.body, 'tier') ?? 1,
-      name: extractStringField(character.body, 'name'),
-      hp: extractNumberField(health.body, 'max') ?? 100,
-      dmg: extractNumberField(combat.body, 'damage') ?? 10,
-      def: extractNumberField(combat.body, 'defense') ?? 2,
-      spd: extractNumberField(combat.body, 'attackSpeed') ?? 1.0,
-      exp: extractNumberField(enemy.body, 'expReward') ?? 25,
-      boss: extractBoolField(enemy.body, 'isBoss') ?? false,
-      finalBoss: finalBoss !== undefined,
-      stats: {
-        strength: extractNumberField(stats?.body ?? '', 'strength') ?? 8,
-        dexterity: extractNumberField(stats?.body ?? '', 'dexterity') ?? 8,
-        intelligence: extractNumberField(stats?.body ?? '', 'intelligence') ?? 4,
-        constitution: extractNumberField(stats?.body ?? '', 'constitution') ?? 8,
-        wisdom: extractNumberField(stats?.body ?? '', 'wisdom') ?? 4,
-      },
-      mana: extractNumberField(manaComp?.body ?? '', 'max') ?? 0,
-      critChance: extractNumberField(combat.body, 'critChance') ?? 0.05,
-      critMultiplier: extractNumberField(combat.body, 'critMultiplier') ?? 1.5,
-    });
-  }
-
-  return templates;
-}
-
 // ── Cache ────────────────────────────────────────────────────────────────────
 
 let templateCache: EnemyTemplate[] | null = null;
 let fetchPromise: Promise<EnemyTemplate[]> | null = null;
 
 /**
- * Load enemy templates from the BRL file.
+ * Load enemy templates from the pre-compiled JSON file.
  * Returns cached results on subsequent calls.
  */
 export async function loadEnemyTemplates(): Promise<EnemyTemplate[]> {
@@ -106,13 +44,15 @@ export async function loadEnemyTemplates(): Promise<EnemyTemplate[]> {
 
   fetchPromise = (async () => {
     try {
-      const text = await fetchBrlFile('enemies.brl');
-      const templates = parseEnemyTemplates(text);
+      const base = (typeof import.meta !== 'undefined' && import.meta.env?.BASE_URL) ?? '/';
+      const url = `${base}game-data/enemies.json`.replace('//', '/');
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Failed to fetch enemies.json: ${res.status}`);
+      const templates: EnemyTemplate[] = await res.json();
       templateCache = templates;
       return templates;
     } catch (err) {
-      console.error('Failed to load enemy templates from enemies.brl:', err);
-      // Return empty array — engine will fail gracefully
+      console.error('Failed to load enemy templates from enemies.json:', err);
       templateCache = [];
       return templateCache;
     }

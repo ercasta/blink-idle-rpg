@@ -2,12 +2,13 @@
 /**
  * copy-game-files.js
  *
- * Copy BRL and BCL source files from their canonical locations
- * (game/brl/ and game/bcl/) into the React app's public directory
+ * Copy BCL source files from game/bcl/ into the React app's public directory
  * so that Vite can serve them at runtime.
  *
- * This eliminates the need to maintain duplicate copies of these files
- * under game/app/public/game-files/.
+ * BRL entity data is no longer served as raw BRL source.  Instead,
+ * `scripts/compile-game-data.js` compiles BRL entity data to pre-parsed JSON
+ * files under `public/game-data/`.  Run that script (or `npm run compile-game-data`)
+ * to regenerate the JSON after changing BRL content files.
  *
  * Run before dev or build:
  *   node scripts/copy-game-files.js
@@ -21,23 +22,6 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
 const DEST = path.join(ROOT, 'game', 'app', 'public', 'game-files');
 
-// BRL files needed at runtime by the web app (fetched via HTTP for display/parsing)
-const BRL_SRC = path.join(ROOT, 'game', 'brl');
-const BRL_FILES = [
-  'classic-rpg.brl',
-  'enemies.brl',
-  'hero-classes.brl',
-  'heroes.brl',
-  'scenario-easy.brl',
-  'scenario-normal.brl',
-  'scenario-hard.brl',
-  'skill-catalog.brl',
-  'story-world-data.brl',
-  'story-adventure-templates.brl',
-  'adventure-expansion-set-1.brl',
-  'expansion-pack-2.brl',
-];
-
 // BCL files served to the web app
 const BCL_SRC = path.join(ROOT, 'game', 'bcl');
 const BCL_FILES = [
@@ -48,21 +32,11 @@ const BCL_FILES = [
   'warrior-skills.bcl',
 ];
 
-// ── Copy files ──────────────────────────────────────────────────────────────
+// ── Copy BCL files ──────────────────────────────────────────────────────────
 
 fs.mkdirSync(DEST, { recursive: true });
 
 let copied = 0;
-
-for (const file of BRL_FILES) {
-  const src = path.join(BRL_SRC, file);
-  if (!fs.existsSync(src)) {
-    console.error(`❌  Missing BRL source: ${path.relative(ROOT, src)}`);
-    process.exit(1);
-  }
-  fs.copyFileSync(src, path.join(DEST, file));
-  copied++;
-}
 
 for (const file of BCL_FILES) {
   const src = path.join(BCL_SRC, file);
@@ -74,4 +48,5 @@ for (const file of BCL_FILES) {
   copied++;
 }
 
-console.log(`✅  Copied ${copied} game files to ${path.relative(ROOT, DEST)}`);
+console.log(`✅  Copied ${copied} BCL files to ${path.relative(ROOT, DEST)}`);
+

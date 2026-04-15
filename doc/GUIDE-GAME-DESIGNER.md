@@ -125,7 +125,7 @@ Or use `tools/simulate.js` for quick comparisons (see
 ## Testing Your Changes
 
 ```bash
-npm run compile-brl          # Quick syntax/semantic check
+npm run compile-game-data    # Compile BRL entity data to JSON (syntax/semantic check + data refresh)
 npm run test:harness         # Full E2E test (BRL → native binary → simulation)
 npm run test:massive         # Large-scale balance validation
 npm run dev:app              # Visual test in the browser

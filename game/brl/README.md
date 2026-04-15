@@ -139,19 +139,19 @@ selected difficulty's spawn config to be injected without recompiling the WASM.
 are also injected at runtime from the constants in `WasmSimEngine.ts`, which
 mirror the values in `game/brl/enemies.brl` and `game/data/enemies.json`.
 
-**Web app game-files:**  Some BRL/BCL files are served as static assets by the
-web app (e.g. `skill-catalog.brl` is fetched at runtime for skill descriptions).
-These files are copied automatically from `game/brl/` and `game/bcl/` into
-`game/app/public/game-files/` by `npm run copy-game-files` (run automatically
+**Web app game data:**  BRL entity data (enemies, hero classes, scenarios, world,
+adventure templates, skills) is compiled to pre-parsed JSON files under
+`game/app/public/game-data/` by `npm run compile-game-data` (run automatically
 as part of `npm run dev:app` and `npm run build:app`).  Do **not** edit the
-copies in `public/game-files/` directly — always edit the source files here.
+compiled JSON directly — always edit the source BRL files here and re-run the
+script.  BCL files are still copied as static assets via `npm run copy-game-files`.
 
 ---
 
 ## Compiling
 
 ```bash
-npm run compile-brl    # compile BRL to IR (for React app)
-npm run test:harness   # compile BRL to Rust native binary and run tests
-npm run build:wasm     # compile BRL to WASM for the browser
+npm run compile-game-data  # compile BRL entity data to JSON (for React app)
+npm run test:harness        # compile BRL to Rust native binary and run tests
+npm run build:wasm          # compile BRL to WASM for the browser
 ```

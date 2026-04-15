@@ -1,11 +1,9 @@
 /**
- * Skill Catalog — extracts skill descriptions embedded in the BRL skill-catalog file.
+ * Skill Catalog — loads pre-compiled skill descriptions from JSON.
  *
- * The skill descriptions are served from `public/game-files/skill-catalog.brl`,
- * which is auto-copied from the canonical source at `game/brl/skill-catalog.brl`
- * by `npm run copy-game-files`.  This module fetches that file at runtime and
- * parses out the descriptions using a lightweight regex approach, so the authoritative
- * source of truth always remains the BRL file itself.
+ * At build time, `scripts/compile-game-data.js` reads `game/brl/skill-catalog.brl`
+ * and produces `public/game-data/skills.json`.  This module fetches that
+ * pre-compiled JSON at runtime, avoiding any BRL parsing in the browser.
  *
  * Parsed results are cached after the first fetch.
  */
@@ -18,60 +16,13 @@ export interface SkillEntry {
   prerequisites: string[];
 }
 
-// ── Simple BRL string-field extractor ────────────────────────────────────────
-
-/**
- * Extract the value of a string field from a BRL component block snippet.
- * e.g.  `  name: "Power Strike"` → "Power Strike"
- */
-function extractField(block: string, field: string): string {
-  const re = new RegExp(`\\b${field}:\\s*"([^"]*)"`, 's');
-  const m = block.match(re);
-  return m ? m[1] : '';
-}
-
-/**
- * Parse all SkillInfo entities from raw BRL text.
- * Looks for blocks of the form:
- *   SkillInfo {
- *     id: "..."
- *     name: "..."
- *     ...
- *   }
- */
-function parseBrl(text: string): SkillEntry[] {
-  const entries: SkillEntry[] = [];
-
-  // Match every SkillInfo { ... } block
-  const blockRe = /SkillInfo\s*\{([^}]*)\}/gs;
-  let m: RegExpExecArray | null;
-
-  while ((m = blockRe.exec(text)) !== null) {
-    const block = m[1];
-    const id = extractField(block, 'id');
-    if (!id) continue;
-
-    const name = extractField(block, 'name');
-    const description = extractField(block, 'description');
-    const skillType = extractField(block, 'skillType');
-    const prereqRaw = extractField(block, 'prerequisites');
-    const prerequisites = prereqRaw
-      ? prereqRaw.split(',').map(s => s.trim()).filter(Boolean)
-      : [];
-
-    entries.push({ id, name, description, skillType, prerequisites });
-  }
-
-  return entries;
-}
-
 // ── Cache ────────────────────────────────────────────────────────────────────
 
 let catalogCache: Map<string, SkillEntry> | null = null;
 let fetchPromise: Promise<Map<string, SkillEntry>> | null = null;
 
 /**
- * Fetch and parse the skill catalog BRL file.
+ * Fetch the pre-compiled skill catalog JSON.
  * Returns a Map of skill-id → SkillEntry.
  * Subsequent calls return the cached result without re-fetching.
  */
@@ -81,17 +32,15 @@ export async function loadSkillCatalog(): Promise<Map<string, SkillEntry>> {
 
   fetchPromise = (async () => {
     try {
-      const base = import.meta.env?.BASE_URL ?? '/';
-      const url = `${base}game-files/skill-catalog.brl`.replace('//', '/');
+      const base = (typeof import.meta !== 'undefined' && import.meta.env?.BASE_URL) ?? '/';
+      const url = `${base}game-data/skills.json`.replace('//', '/');
       const res = await fetch(url);
-      if (!res.ok) throw new Error(`Failed to fetch skill catalog: ${res.status}`);
-      const text = await res.text();
-      const entries = parseBrl(text);
+      if (!res.ok) throw new Error(`Failed to fetch skills.json: ${res.status}`);
+      const entries: SkillEntry[] = await res.json();
       const map = new Map<string, SkillEntry>(entries.map(e => [e.id, e]));
       catalogCache = map;
       return map;
     } catch (err) {
-      // Log for debugging; return empty map so the UI degrades gracefully
       console.error('Failed to load skill catalog:', err);
       catalogCache = new Map();
       return catalogCache;

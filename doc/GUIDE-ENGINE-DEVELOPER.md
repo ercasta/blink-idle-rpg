@@ -68,16 +68,17 @@ npm --prefix game/app run lint   # Lint check
 
 | Script | Purpose |
 |--------|---------|
-| `scripts/copy-game-files.js` | Copy BRL/BCL files to web app public dir |
+| `scripts/compile-game-data.js` | Compile BRL entity data to JSON for the web app |
+| `scripts/copy-game-files.js` | Copy BCL files to web app public dir |
 | `scripts/install-wasm.js` | Copy WASM artefacts to web app public dir |
-| `tools/compile-brl-to-ir.js` | Compile BRL source files to IR JSON |
 
 Full production build: `npm run build`
 
 ## Key Concepts
 
 - **BRL files** in `game/brl/` are the source of truth for game rules and data
-- **IR JSON** is the intermediate format between compiler and engine
 - **WASM binary** embeds compiled rules; entity data is injected at runtime
-- **game-files/** in the web app public dir are auto-copied from source at build time
+- **game-data/** in the web app public dir contains pre-compiled JSON from BRL entity data
+  (see `scripts/compile-game-data.js`)
+- **game-files/** in the web app public dir contains BCL files
   (see `scripts/copy-game-files.js`)

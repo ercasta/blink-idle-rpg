@@ -76,17 +76,17 @@ Each skill is a BRL entity with `SkillInfo` and effect components.
 1. Edit or create BRL entity definitions in the appropriate `game/brl/*.brl` file
 2. Recompile:
    ```bash
-   npm run compile-brl       # Compile BRL to IR
-   npm run build:wasm        # Rebuild WASM (if rules changed)
-   npm run install:wasm      # Copy WASM to web app
+   npm run compile-game-data  # Recompile BRL entity data to JSON (for React app)
+   npm run build:wasm         # Rebuild WASM (if rules changed)
+   npm run install:wasm       # Copy WASM to web app
    ```
 3. Test locally:
    ```bash
    npm run dev:app           # Start local dev server
    ```
 
-**Tip**: If you're only adding entity data (not changing rules), you may only
-need `npm run compile-brl` followed by `npm run dev:app`.
+**Tip**: If you're only adding entity data (not changing rules), you only
+need `npm run compile-game-data` followed by `npm run dev:app`.
 
 ## BRL Quick Reference for Content Creators
 

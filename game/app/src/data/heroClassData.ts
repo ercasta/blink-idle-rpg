@@ -1,24 +1,10 @@
 /**
- * Hero Class Data — loads hero class balance data from the canonical BRL source.
+ * Hero Class Data — loads pre-compiled hero class balance data from JSON.
  *
- * Previously, hero class stats were hardcoded in WasmSimEngine.ts
- * (CLASS_BASE_HP, CLASS_BASE_DAMAGE, CLASS_BASE_DEFENSE, CLASS_ATTACK_SPEED,
- * CLASS_SKILLS) and traits.ts (CLASS_BASE_GROWTH, ELEMENT_THRESHOLD).
- *
- * This module loads the same data from `game/brl/hero-classes.brl`
- * (served at `public/game-files/hero-classes.brl`), making the BRL file
- * the single source of truth for hero class balance.
- *
- * Parsed results are cached after the first fetch.
+ * At build time, `scripts/compile-game-data.js` reads `game/brl/hero-classes.brl`
+ * and produces `public/game-data/hero-classes.json`.  This module fetches that
+ * pre-compiled JSON at runtime, avoiding any BRL parsing in the browser.
  */
-
-import {
-  parseEntities,
-  getComponent,
-  extractStringField,
-  extractNumberField,
-  fetchBrlFile,
-} from './brlParser';
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -56,64 +42,6 @@ export interface HeroBalanceConfig {
   elementThreshold: number;
 }
 
-// ── Parsing ─────────────────────────────────────────────────────────────────
-
-function parseHeroClassData(text: string): {
-  classes: Record<string, HeroClassData>;
-  balanceConfig: HeroBalanceConfig;
-} {
-  const entities = parseEntities(text);
-  const classes: Record<string, HeroClassData> = {};
-  let balanceConfig: HeroBalanceConfig = { elementThreshold: 5 };
-
-  for (const entity of entities) {
-    // Parse balance config entity
-    const balComp = getComponent(entity, 'HeroBalanceConfig');
-    if (balComp) {
-      balanceConfig = {
-        elementThreshold: extractNumberField(balComp.body, 'elementThreshold') ?? 5,
-      };
-      continue;
-    }
-
-    // Parse hero class entities
-    const classDef = getComponent(entity, 'HeroClassDef');
-    if (!classDef) continue;
-
-    const className = extractStringField(classDef.body, 'className');
-    if (!className) continue;
-
-    const combatComp = getComponent(entity, 'HeroBaseCombat');
-    const skillsComp = getComponent(entity, 'HeroStartingSkills');
-    const growthComp = getComponent(entity, 'HeroGrowthVector');
-
-    classes[className] = {
-      className,
-      combat: {
-        baseHp: extractNumberField(combatComp?.body ?? '', 'baseHp') ?? 100,
-        baseDamage: extractNumberField(combatComp?.body ?? '', 'baseDamage') ?? 15,
-        baseDefense: extractNumberField(combatComp?.body ?? '', 'baseDefense') ?? 5,
-        baseAttackSpeed: extractNumberField(combatComp?.body ?? '', 'baseAttackSpeed') ?? 1.0,
-      },
-      skills: {
-        skill1: extractStringField(skillsComp?.body ?? '', 'skill1'),
-        skill2: extractStringField(skillsComp?.body ?? '', 'skill2'),
-        skill3: extractStringField(skillsComp?.body ?? '', 'skill3'),
-        skill4: extractStringField(skillsComp?.body ?? '', 'skill4'),
-      },
-      growth: {
-        growthStr: extractNumberField(growthComp?.body ?? '', 'growthStr') ?? 0.2,
-        growthDex: extractNumberField(growthComp?.body ?? '', 'growthDex') ?? 0.2,
-        growthInt: extractNumberField(growthComp?.body ?? '', 'growthInt') ?? 0.2,
-        growthCon: extractNumberField(growthComp?.body ?? '', 'growthCon') ?? 0.2,
-        growthWis: extractNumberField(growthComp?.body ?? '', 'growthWis') ?? 0.2,
-      },
-    };
-  }
-
-  return { classes, balanceConfig };
-}
-
 // ── Cache ────────────────────────────────────────────────────────────────────
 
 let classDataCache: Record<string, HeroClassData> | null = null;
@@ -121,7 +49,7 @@ let balanceConfigCache: HeroBalanceConfig | null = null;
 let fetchPromise: Promise<{ classes: Record<string, HeroClassData>; balanceConfig: HeroBalanceConfig }> | null = null;
 
 /**
- * Load hero class data from the BRL file.
+ * Load hero class data from the pre-compiled JSON file.
  * Returns cached results on subsequent calls.
  */
 export async function loadHeroClassData(): Promise<{
@@ -135,14 +63,16 @@ export async function loadHeroClassData(): Promise<{
 
   fetchPromise = (async () => {
     try {
-      const text = await fetchBrlFile('hero-classes.brl');
-      const result = parseHeroClassData(text);
+      const base = (typeof import.meta !== 'undefined' && import.meta.env?.BASE_URL) ?? '/';
+      const url = `${base}game-data/hero-classes.json`.replace('//', '/');
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Failed to fetch hero-classes.json: ${res.status}`);
+      const result: { classes: Record<string, HeroClassData>; balanceConfig: HeroBalanceConfig } = await res.json();
       classDataCache = result.classes;
       balanceConfigCache = result.balanceConfig;
       return result;
     } catch (err) {
-      console.error('Failed to load hero class data from hero-classes.brl:', err);
-      // Return empty defaults — engine will use fallback data
+      console.error('Failed to load hero class data from hero-classes.json:', err);
       classDataCache = {};
       balanceConfigCache = { elementThreshold: 5 };
       return { classes: classDataCache, balanceConfig: balanceConfigCache };
