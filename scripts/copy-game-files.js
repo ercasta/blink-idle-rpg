@@ -26,13 +26,16 @@ const BRL_SRC = path.join(ROOT, 'game', 'brl');
 const BRL_FILES = [
   'classic-rpg.brl',
   'enemies.brl',
-  'game-config.brl',
   'hero-classes.brl',
   'heroes.brl',
   'scenario-easy.brl',
   'scenario-normal.brl',
   'scenario-hard.brl',
   'skill-catalog.brl',
+  'story-world-data.brl',
+  'story-adventure-templates.brl',
+  'adventure-expansion-set-1.brl',
+  'expansion-pack-2.brl',
 ];
 
 // BCL files served to the web app
