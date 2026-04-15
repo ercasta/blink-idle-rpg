@@ -30,7 +30,7 @@ const ROOT    = path.resolve(__dirname, '..');
 const BRL_DIR = path.join(ROOT, 'game', 'brl');
 const OUT_DIR = path.join(ROOT, 'game', 'app', 'public', 'game-data');
 
-// ── BRL parsing helpers (mirrors game/app/src/data/brlParser.ts) ─────────────
+// ── BRL parsing helpers ───────────────────────────────────────────────────────
 
 function extractStringField(block, field) {
   const re = new RegExp(`\\b${field}:\\s*"([^"]*)"`, 's');
@@ -543,7 +543,7 @@ for (const { name, fn } of tasks) {
   try {
     const data = fn();
     const outPath = path.join(OUT_DIR, name);
-    fs.writeFileSync(outPath, JSON.stringify(data));
+    fs.writeFileSync(outPath, JSON.stringify(data, null, 2));
     const kb = (fs.statSync(outPath).size / 1024).toFixed(1);
     console.log(`  ✓  ${name}  (${kb} KB)`);
   } catch (err) {
