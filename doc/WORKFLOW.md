@@ -16,7 +16,9 @@ system, and practical workflows for game developers and game designers.
 │       ▼                                                              │
 │   @blink/compiler-ts  (TypeScript — lexer, parser, semantic, codegen)│
 │       │                                                              │
-│       ├──► IR JSON (game/ir/*.ir.json)    — intermediate format      │
+│       ├──► scripts/compile-game-data.js                              │
+│       │    Extracts entity data (enemies, heroes, scenarios, …)      │
+│       │    → game/app/public/game-data/*.json                        │
 │       │                                                              │
 │       └──► 7 Rust source files:                                      │
 │            components.rs   rules.rs   entities.rs   functions.rs     │
@@ -197,11 +199,19 @@ npm run test:harness
 
 #### After changing entity data
 
-Entity data is injected at runtime, so:
-- **Web app**: Edit the constants in `game/app/src/engine/WasmSimEngine.ts`
-  (hero stats, enemy templates, mode configs). No rebuild needed — just
-  refresh the browser.
-- **Batch tool**: Edit files in `game/data/`. No rebuild needed.
+Entity data (enemies, hero classes, scenarios, world data, adventure templates,
+skills) lives in BRL files in `game/brl/` and is compiled to JSON at build
+time by `scripts/compile-game-data.js`:
+
+```bash
+npm run compile-game-data
+npm run dev:app           # or build:app for production
+```
+
+The web app fetches the pre-compiled JSON files from `public/game-data/` at
+runtime — it never parses BRL directly.
+
+For the **batch tool**: Edit files in `game/data/`. No rebuild needed.
 
 #### Full production build
 

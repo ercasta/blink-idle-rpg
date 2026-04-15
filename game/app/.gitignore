@@ -28,11 +28,15 @@ public/blink-engine.bundle.js
 public/blink-compiler.bundle.js
 
 # Generated IR files — compiled from BRL at build time (make compile-brl)
-public/ir/
+# public/ir/ is no longer used; BRL entity data is compiled to public/game-data/ instead.
 
 # Generated WASM engine artefacts — built at deploy time (make build-wasm)
 public/wasm/
 
-# Game files — copied from game/brl/ and game/bcl/ at build time
+# Game files — BCL files copied from game/bcl/ at build time
 # by scripts/copy-game-files.js.  Do NOT edit these directly.
 public/game-files/
+
+# Pre-compiled game data JSON — generated from BRL sources at build time
+# by scripts/compile-game-data.js.  Do NOT edit these directly.
+public/game-data/
