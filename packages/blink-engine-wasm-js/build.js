@@ -64,15 +64,50 @@ const { compileToRust } = require(
   path.join(REPO_ROOT, 'packages', 'blink-compiler-ts', 'dist', 'index.js')
 );
 
-// The app only needs the component/rule definitions from classic-rpg.brl and
-// heroes.brl; entity initial state is set up at runtime by the JS caller.
-const BRL_FILES = [
-  path.join(BRL_DIR, 'classic-rpg.brl'),
-  path.join(BRL_DIR, 'heroes.brl'),
-];
+/**
+ * Resolve import declarations from a BRL file to an ordered list of file paths.
+ * Reads `main.brl` for the canonical compilation order.
+ *
+ * Import syntax: `import module_name` where `module_name` maps to
+ * `<module_name with underscores replaced by hyphens>.brl` in BRL_DIR.
+ * Example: `import classic_rpg` → `classic-rpg.brl`
+ *
+ * Only imports found in the provided file are resolved; nested imports are
+ * not followed (main.brl is the single top-level manifest).
+ */
+function resolveBrlImports(mainFile) {
+  const content = fs.readFileSync(mainFile, 'utf8');
+  const importRe = /^\s*import\s+([\w.]+)/gm;
+  const files = [];
+  let m;
+  while ((m = importRe.exec(content)) !== null) {
+    // Convert dotted path to directory path, replacing underscores with hyphens
+    const parts = m[1].split('.');
+    const filename = parts.map(p => p.replace(/_/g, '-')).join('/') + '.brl';
+    const filepath = path.join(BRL_DIR, filename);
+    if (!fs.existsSync(filepath)) {
+      console.warn(`  Warning: imported BRL file not found: ${filepath}`);
+      continue;
+    }
+    files.push(filepath);
+  }
+  return files;
+}
+
+// Read the ordered file list from main.brl
+const MAIN_BRL = path.join(BRL_DIR, 'main.brl');
+const BRL_FILES = fs.existsSync(MAIN_BRL)
+  ? resolveBrlImports(MAIN_BRL)
+  : [
+      // Fallback: minimal set needed for WASM (rules + component definitions)
+      path.join(BRL_DIR, 'classic-rpg.brl'),
+      path.join(BRL_DIR, 'heroes.brl'),
+    ];
+
+console.log(`  Using ${BRL_FILES.length} BRL source file(s) from ${fs.existsSync(MAIN_BRL) ? 'main.brl' : 'fallback list'}`);
 
 const sources = BRL_FILES.map(f => ({
-  path: f,
+  path: path.basename(f),
   content: fs.readFileSync(f, 'utf8'),
   language: /** @type {'brl'} */ ('brl'),
 }));

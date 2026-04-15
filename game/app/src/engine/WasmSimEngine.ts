@@ -121,6 +121,7 @@ interface BlinkWasmGame {
   create_entity(id: number): void;
   add_component(entityId: number, componentName: string, fieldsJson: string): boolean;
   get_component(entityId: number, componentName: string): string;
+  get_entities_having(componentName: string): string;
   schedule_event(eventType: string, delay: number): void;
   step(): boolean;
   run_steps(maxSteps: number): number;

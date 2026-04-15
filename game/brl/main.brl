@@ -1,0 +1,45 @@
+// =============================================================================
+// BLINK IDLE RPG — Main Entry Point
+// =============================================================================
+// This file imports all BRL modules in the correct compilation order.
+// It is the mandatory entry point for BRL compilation:
+//   • component definitions before any rules that reference them
+//   • base game rules before story-mode extensions
+//   • entity/data files after all component definitions
+//
+// Build tools (packages/blink-engine-wasm-js/build.js and
+// tools/compile-brl-to-ir.js) read this file to discover the full
+// set of BRL source files and their compilation order.
+// =============================================================================
+
+// ── Base game system ──────────────────────────────────────────────────────
+// Components, combat rules, skill definitions
+import classic_rpg
+import skill_catalog
+
+// ── Story mode extensions ─────────────────────────────────────────────────
+// Components and events for story/adventure/world systems
+import story_mode
+import story_adventure
+import story_world
+
+// ── Entity data: classes and heroes ──────────────────────────────────────
+import hero_classes
+import heroes
+
+// ── Entity data: enemies ──────────────────────────────────────────────────
+import enemies
+
+// ── Scenario / game-mode configs ─────────────────────────────────────────
+import scenario_normal
+import scenario_easy
+import scenario_hard
+
+// ── Game configuration ────────────────────────────────────────────────────
+import game_config
+
+// ── World and adventure data ──────────────────────────────────────────────
+import story_world_data
+import story_adventure_templates
+import adventure_expansion_set_1
+import expansion_pack_2

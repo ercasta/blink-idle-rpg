@@ -83,6 +83,9 @@ export class CodeGenerator {
           case 'import':
             // Imports are resolved at a higher level
             break;
+          case 'event':
+            // Event declarations are type definitions; no IR output needed.
+            break;
         }
       }
     }
@@ -535,6 +538,18 @@ export class CodeGenerator {
           source: this.generateExpression(expr.source),
           overrides: expr.overrides.map(o => this.generateComponentInit(o)),
         };
+      
+      case 'new_entity':
+        // Represent inline entity creation as a special IR call
+        return {
+          type: 'call',
+          function: 'new_entity',
+          args: [],
+        };
+
+      case 'schedule_expr':
+        // Schedule-as-expression: side-effect only; yields null entity id
+        return { type: 'literal', value: null };
       
       case 'cast':
         // Casts are type hints, pass through the expression
