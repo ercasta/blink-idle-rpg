@@ -280,7 +280,7 @@ interface HeroEncounterTemplate {
   difficultyModifier: number;
 }
 
-// Loaded from BRL via initAdventureData(). See adventure-expansion-set-1.brl and expansion_pack_2.brl.
+// Loaded from BRL via initAdventureData(). See adventure-expansion-set-1.brl and expansion-pack-2.brl.
 let HERO_ENCOUNTER_TEMPLATES: readonly HeroEncounterTemplate[] = [];
 // ── Hero encounter matching ─────────────────────────────────────────────────
 
@@ -541,7 +541,7 @@ let _initAdventurePromise: Promise<void> | null = null;
  * Load adventure template data from BRL files.
  *
  * Loads objectives, milestones, events from `story-adventure-templates.brl`
- * and hero encounters from `adventure-expansion-set-1.brl` + `expansion_pack_2.brl`.
+ * and hero encounters from `adventure-expansion-set-1.brl` + `expansion-pack-2.brl`.
  *
  * Must be called (and awaited) before any quest-generation functions are used.
  *

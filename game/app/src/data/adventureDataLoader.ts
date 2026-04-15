@@ -4,7 +4,7 @@
  * Loads and parses:
  *   - `story-adventure-templates.brl` — ObjectiveTemplate, MilestoneTemplate,
  *     EventTemplate entities
- *   - `adventure-expansion-set-1.brl` and `expansion_pack_2.brl` —
+ *   - `adventure-expansion-set-1.brl` and `expansion-pack-2.brl` —
  *     HeroEncounterTemplate entities
  *
  * This is the BRL→TypeScript bridge for the adventure quest system.
@@ -211,7 +211,7 @@ let fetchPromise: Promise<AdventureDataSet> | null = null;
  *
  * Sources:
  *   - `story-adventure-templates.brl` for objectives, milestones, events
- *   - `adventure-expansion-set-1.brl` and `expansion_pack_2.brl` for hero encounters
+ *   - `adventure-expansion-set-1.brl` and `expansion-pack-2.brl` for hero encounters
  */
 export async function loadAdventureData(): Promise<AdventureDataSet> {
   if (adventureDataCache) return adventureDataCache;
@@ -222,7 +222,7 @@ export async function loadAdventureData(): Promise<AdventureDataSet> {
       const [templatesText, expansionSet1Text, expansionSet2Text] = await Promise.all([
         fetchBrlFile('story-adventure-templates.brl'),
         fetchBrlFile('adventure-expansion-set-1.brl'),
-        fetchBrlFile('expansion_pack_2.brl'),
+        fetchBrlFile('expansion-pack-2.brl'),
       ]);
 
       const heroEncounters = [

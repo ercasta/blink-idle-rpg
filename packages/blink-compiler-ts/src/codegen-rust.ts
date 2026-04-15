@@ -37,8 +37,9 @@ export class RustCodeGenerator {
   private functionDefs: AST.FunctionDef[] = [];
   private allStrings: Set<string> = new Set();
   private ruleCounter = 0;
-  // Track the current event alias during rule generation
+  // Track the current event alias and event name during rule generation
   private currentEventAlias: string | null = null;
+  private currentEventName: string | null = null;
   // Resolved const names for strings (built during lib.rs generation to handle collisions)
   private stringConstNameResolved: Map<string, string> = new Map();
   // Component field types: ComponentName → (fieldName → BRL type string)
@@ -562,6 +563,7 @@ export class RustCodeGenerator {
   private generateRuleFunction(rule: AST.RuleDef): string {
     const funcName = this.ruleFuncName(rule);
     this.currentEventAlias = rule.eventParam.name;
+    this.currentEventName = rule.triggerEvent;
     this.localVarTypes = new Map(); // Reset per-rule variable type tracking
 
     // Track this rule for the dispatch table
@@ -592,6 +594,7 @@ export class RustCodeGenerator {
     code += `}\n`;
 
     this.currentEventAlias = null;
+    this.currentEventName = null;
     return code;
   }
 
@@ -1383,12 +1386,10 @@ export class RustCodeGenerator {
         }
         // Event field access — use the correct accessor based on inferred field type
         const fieldConst = this.stringConstName(field);
-        // Look up the event field type from all schedule statements for this event
-        const currentEventName = this.currentEventAlias
-          ? this.ruleDefs.find(r => r.eventParam.name === this.currentEventAlias)?.triggerEvent
-          : undefined;
-        const fieldType = currentEventName
-          ? this.eventFieldTypes.get(currentEventName)?.get(field)
+        // Use the current rule's trigger event name directly (avoids ambiguity when
+        // multiple rules share the same event parameter alias, e.g. all use 'evt')
+        const fieldType = this.currentEventName
+          ? this.eventFieldTypes.get(this.currentEventName)?.get(field)
           : undefined;
         let accessor: string;
         switch (fieldType) {
