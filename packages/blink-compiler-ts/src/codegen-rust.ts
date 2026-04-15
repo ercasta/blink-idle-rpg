@@ -457,7 +457,13 @@ export class RustCodeGenerator {
     code += 'use crate::string_ids;\n\n';
 
     // Generate named entity variable storage
-    const namedEntities = this.entityDefs.filter(e => e.variable);
+    // Deduplicate by variable name: keep the last definition for each name
+    // (multiple BRL files may define the same variable; last one wins).
+    const namedEntitiesMap = new Map<string, AST.EntityDef>();
+    for (const e of this.entityDefs) {
+      if (e.variable) namedEntitiesMap.set(e.variable, e);
+    }
+    const namedEntities = Array.from(namedEntitiesMap.values());
     if (namedEntities.length > 0) {
       code += '/// Named entity IDs (populated during create_initial_entities)\n';
       code += 'pub struct NamedEntities {\n';
@@ -484,8 +490,23 @@ export class RustCodeGenerator {
       code += '    let mut named = NamedEntities::default();\n';
     }
 
+    // Build the list to iterate: deduplicated named entities (last definition wins)
+    // plus all anonymous entities (no variable), preserving original order.
+    const entitiesToCreate: AST.EntityDef[] = [];
+    // Walk original list; for named entities emit only the winning (last)
+    // definition (i.e. the one stored in namedEntitiesMap); emit all anonymous
+    // entities as-is.
     for (const entity of this.entityDefs) {
-      const varName = entity.variable ? this.toSnakeCase(entity.variable) : `_entity_${this.entityDefs.indexOf(entity)}`;
+      if (!entity.variable) {
+        entitiesToCreate.push(entity);
+      } else if (namedEntitiesMap.get(entity.variable) === entity) {
+        entitiesToCreate.push(entity);
+      }
+    }
+
+    let anonCounter = 0;
+    for (const entity of entitiesToCreate) {
+      const varName = entity.variable ? this.toSnakeCase(entity.variable) : `_entity_${anonCounter++}`;
 
       if (entity.variable) {
         code += `    let ${varName} = engine.world.spawn_named("${entity.variable}");\n`;
