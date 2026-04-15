@@ -68,6 +68,9 @@ jobs:
       - name: Copy BRL/BCL game files to web app
         run: node scripts/copy-game-files.js
 
+      - name: Compile BRL entity data to JSON
+        run: node scripts/compile-game-data.js
+
       - name: Build React web app
         env:
           VITE_BASE_URL: ${{ steps.pages.outputs.base_path }}/
