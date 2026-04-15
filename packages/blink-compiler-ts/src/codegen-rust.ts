@@ -492,24 +492,21 @@ export class RustCodeGenerator {
 
     // Build the list to iterate: deduplicated named entities (last definition wins)
     // plus all anonymous entities (no variable), preserving original order.
-    const seenVars = new Set<string>();
     const entitiesToCreate: AST.EntityDef[] = [];
-    // First pass: collect the winning (last) definition for each named entity
-    // We already have `namedEntitiesMap` with last-wins semantics.
-    // Second pass: walk original list; for named entities emit only if it's the
-    // winning definition (i.e. matches the one in namedEntitiesMap); emit all
-    // anonymous entities as-is.
+    // Walk original list; for named entities emit only the winning (last)
+    // definition (i.e. the one stored in namedEntitiesMap); emit all anonymous
+    // entities as-is.
     for (const entity of this.entityDefs) {
       if (!entity.variable) {
         entitiesToCreate.push(entity);
-      } else if (namedEntitiesMap.get(entity.variable) === entity && !seenVars.has(entity.variable)) {
-        seenVars.add(entity.variable);
+      } else if (namedEntitiesMap.get(entity.variable) === entity) {
         entitiesToCreate.push(entity);
       }
     }
 
-    for (const [idx, entity] of entitiesToCreate.entries()) {
-      const varName = entity.variable ? this.toSnakeCase(entity.variable) : `_entity_${idx}`;
+    let anonCounter = 0;
+    for (const entity of entitiesToCreate) {
+      const varName = entity.variable ? this.toSnakeCase(entity.variable) : `_entity_${anonCounter++}`;
 
       if (entity.variable) {
         code += `    let ${varName} = engine.world.spawn_named("${entity.variable}");\n`;
