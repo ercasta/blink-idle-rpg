@@ -65,6 +65,9 @@ jobs:
         id: pages
         uses: actions/configure-pages@v4
 
+      - name: Copy BRL/BCL game files to web app
+        run: node scripts/copy-game-files.js
+
       - name: Build React web app
         env:
           VITE_BASE_URL: ${{ steps.pages.outputs.base_path }}/
