@@ -39,7 +39,7 @@ export class SemanticAnalyzer {
   private builtinFunctions = new Set([
     'min', 'max', 'floor', 'ceil', 'round', 'abs',
     'random', 'random_range', 'len', 'list', 'get',
-    'entities_having',
+    'entities_having', 'concat', 'to_string', 'str_replace', 'str_contains',
   ]);
   
   // Built-in variables available in rules

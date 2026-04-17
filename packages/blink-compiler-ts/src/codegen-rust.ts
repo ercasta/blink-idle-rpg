@@ -374,6 +374,10 @@ export class RustCodeGenerator {
           return 'decimal'; // brl_* builtins always return f64
         case 'len':
           return 'integer';
+        case 'concat': case 'to_string': case 'str_replace':
+          return 'string';
+        case 'str_contains':
+          return 'boolean';
       }
       return 'unknown'; // user-defined functions
     }
@@ -381,6 +385,8 @@ export class RustCodeGenerator {
     if (expr.type === 'binary') {
       const leftType = this.inferExprType(expr.left);
       const rightType = this.inferExprType(expr.right);
+      // String concatenation: string + anything = string
+      if (expr.op === 'add' && (leftType === 'string' || rightType === 'string')) return 'string';
       // If either operand is decimal, the result is decimal
       if (leftType === 'decimal' || rightType === 'decimal') return 'decimal';
       // If both are integer (and it's arithmetic), result is integer
@@ -1411,6 +1417,13 @@ export class RustCodeGenerator {
     const leftType = this.inferExprType(expr.left);
     const rightType = this.inferExprType(expr.right);
 
+    // String concatenation: string + anything → brl_concat
+    if (expr.op === 'add' && (leftType === 'string' || rightType === 'string')) {
+      const left = this.exprToRustAsString(expr.left, leftType);
+      const right = this.exprToRustAsString(expr.right, rightType);
+      return `brl_concat(${left}, ${right}, &mut engine.interner)`;
+    }
+
     // When one side is a known decimal and the other isn't, cast the non-decimal
     // side to f64 so Rust doesn't complain about mixed {integer}/{float} types.
     // We do this for all numeric operators (arithmetic AND comparison).
@@ -1442,6 +1455,21 @@ export class RustCodeGenerator {
     }
   }
 
+  /**
+   * Convert an expression to an InternedString for string concatenation.
+   * Non-string types are auto-converted via brl_to_string_*.
+   */
+  private exprToRustAsString(expr: AST.Expr, inferredType: string): string {
+    const rust = this.exprToRust(expr);
+    switch (inferredType) {
+      case 'string': return rust;
+      case 'integer': return `brl_to_string_int(${rust}, &mut engine.interner)`;
+      case 'decimal': return `brl_to_string_float(${rust}, &mut engine.interner)`;
+      case 'boolean': return `brl_to_string_int(if ${rust} { 1 } else { 0 }, &mut engine.interner)`;
+      default: return `brl_to_string_int(${rust} as i64, &mut engine.interner)`;
+    }
+  }
+
   private callToRust(expr: AST.CallExpr): string {
     const args = expr.args.map(a => this.exprToRust(a));
 
@@ -1457,6 +1485,16 @@ export class RustCodeGenerator {
       case 'random_range': return `engine.rng.random_range(${args[0]} as f64, ${args[1]} as f64)`;
       case 'len': return `(${args[0]}).len() as i64`;
       case 'entities_having': return `engine.world.query_component::<${this.extractComponentName(expr.args[0])}>()`;
+      // ── String built-ins ──
+      case 'concat': return `brl_concat(${args[0]}, ${args[1]}, &mut engine.interner)`;
+      case 'to_string': {
+        const argType = this.inferExprType(expr.args[0]);
+        if (argType === 'string') return args[0];
+        if (argType === 'decimal') return `brl_to_string_float(${args[0]}, &mut engine.interner)`;
+        return `brl_to_string_int((${args[0]}) as i64, &mut engine.interner)`;
+      }
+      case 'str_replace': return `brl_str_replace(${args[0]}, ${args[1]}, ${args[2]}, &mut engine.interner)`;
+      case 'str_contains': return `brl_str_contains(${args[0]}, ${args[1]}, &engine.interner)`;
       default:
         // User-defined function — append engine as last argument
         return `${this.toSnakeCase(expr.name)}(${args.length > 0 ? args.join(', ') + ', ' : ''}engine)`;

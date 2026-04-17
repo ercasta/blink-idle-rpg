@@ -14,7 +14,7 @@ pub mod value;
 pub mod world;
 
 // Re-export key types for convenience
-pub use builtins::{brl_abs, brl_ceil, brl_floor, brl_max, brl_min, brl_round, Rng};
+pub use builtins::{brl_abs, brl_ceil, brl_floor, brl_max, brl_min, brl_round, brl_concat, brl_to_string_int, brl_to_string_float, brl_str_replace, brl_str_contains, Rng};
 pub use event::{Event, EventId};
 pub use interning::{InternedString, StringInterner};
 pub use timeline::Timeline;
