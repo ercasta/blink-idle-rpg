@@ -1196,14 +1196,20 @@ function _runStoryMode(
   }
   // Each entry goes to the first step whose hour >= entry.hour on the same day.
   // If no such step exists, it falls back to the last step of that day.
-  for (const entry of brlNarrativeLog) {
-    const daySteps = stepsByDay.get(entry.day) ?? [];
-    const targetStep =
-      daySteps.find(s => s.hour >= entry.hour) ?? daySteps[daySteps.length - 1];
-    if (targetStep) {
-      targetStep.narrativeEntries.push(entry);
+  function assignEntriesToSteps(entries: NarrativeEntry[]) {
+    for (const entry of entries) {
+      const daySteps = stepsByDay.get(entry.day) ?? [];
+      const targetStep =
+        daySteps.find(s => s.hour >= entry.hour) ?? daySteps[daySteps.length - 1];
+      if (targetStep) {
+        targetStep.narrativeEntries.push(entry);
+      }
     }
   }
+  assignEntriesToSteps(brlNarrativeLog);
+  // Also distribute quest narrative entries (hero challenges, milestone events)
+  // so they appear in the run page steps, not only in the results page log.
+  assignEntriesToSteps(questNarrative);
 
   // Per-step milestone state: override BRL's static milestone strings with
   // day-accurate state derived from the quest simulation. This ensures early
