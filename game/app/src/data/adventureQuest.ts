@@ -1080,23 +1080,11 @@ export function generateQuestNarrative(questResult: QuestSimResult, maxDay: numb
   }
 
   // Hero-matched encounters
+  // Completed encounters are now emitted by BRL as blocking_encounter steps
+  // integrated into the timeline (the party does not travel on those days).
+  // Only emit narrative here for encounters that were NOT completed.
   for (const heroEnc of quest.heroEncounters) {
-    if (heroEnc.isCompleted && heroEnc.triggerDay > 0) {
-      // Encounter trigger — headline (Level 1)
-      emit(heroEnc.triggerDay, 3, 1,
-        `⭐ ${heroEnc.title}`);
-      // Goal description and match reason (Level 2 — Standard)
-      emit(heroEnc.triggerDay, 3, 2,
-        heroEnc.description);
-      emit(heroEnc.triggerDay, 4, 2,
-        `🌟 ${heroEnc.matchReason}`);
-      // What happens — hero in action (Level 3 — Detailed)
-      emit(heroEnc.triggerDay, 5, 3,
-        heroEnc.narrativeOnMatch);
-      // Outcome: passed + buff granted (Level 2 — Standard)
-      emit(heroEnc.triggerDay, 6, 2,
-        `✅ Passed: ${heroEnc.narrativeOnComplete} (+${heroEnc.buffAmount}% ${heroEnc.buffType} buff, +${QUEST_HERO_ENCOUNTER_BONUS} points)`);
-    } else if (!heroEnc.isCompleted && heroEnc.triggerDay > 0) {
+    if (!heroEnc.isCompleted && heroEnc.triggerDay > 0) {
       // Encounter was scheduled but the adventure ended before it triggered
       emit(maxDay, 9, 2,
         `❌ ${heroEnc.title}: Not reached — the party completed their objective before this encounter could be attempted.`);
