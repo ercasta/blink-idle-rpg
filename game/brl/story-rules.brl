@@ -98,7 +98,8 @@ component StoryGenerateConfig {
 
 // ── Events ──────────────────────────────────────────────────────────────────
 
-event StoryGenerate { configEntity: id }
+// StoryGenerate has no fields — config is looked up from StoryGenerateConfig entity
+event StoryGenerate { placeholder: integer }
 
 event StoryProcessDay {
     configEntity: id
@@ -482,7 +483,9 @@ fn findArrivalComment(heroClass: string, traitRc: integer, locAffinity: string, 
 // =============================================================================
 
 rule story_generate on StoryGenerate(evt: id) {
-    let config = evt.StoryGenerate.configEntity
+    // Look up config from StoryGenerateConfig entity (set up by TypeScript)
+    let configs = entities having StoryGenerateConfig
+    let config = configs[0]
 
     let seed = config.StoryGenerateConfig.seed
     let totalEnc = config.StoryGenerateConfig.totalEncounters

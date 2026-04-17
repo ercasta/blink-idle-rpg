@@ -9,13 +9,12 @@
  *   • Accepts runtime data (heroes, enemies, config) via create_entity/add_component
  */
 
-import type { GameSnapshot, HeroDefinition, GameMode, HeroPath, CustomModeSettings, EnvironmentSettings, DamageCategory, Element, RunType, StoryKpis, NarrativeEntry, NarrativeLevel, StoryStep, StoryStepType } from '../types';
+import type { GameSnapshot, HeroDefinition, GameMode, HeroPath, CustomModeSettings, EnvironmentSettings, DamageCategory, Element, RunType, StoryKpis, NarrativeEntry, StoryStep, StoryStepType } from '../types';
 import { DEFAULT_ENVIRONMENT_SETTINGS } from '../types';
 import { simulateHeroPath, getSkillName, deriveDamageCategory, deriveDamageElement, deriveResistances, computeLinePreferenceScore } from '../data/traits';
 import { computeAdventureSeed, simulateQuestProgress, generateQuestNarrative, QUEST_EARLY_COMPLETION_POINTS_PER_DAY, initAdventureData } from '../data/adventureQuest';
 import type { AdventureDefinition } from '../types';
-import { selectWorldMap, findPath, selectArrivalComments, findBlockingEncounters, PATH_TYPE_DESCRIPTIONS, initWorldData } from '../data/worldData';
-import type { WorldLocation, WorldPath } from '../data/worldData';
+import { initWorldData } from '../data/worldData';
 import { loadEnemyTemplates } from '../data/enemyData';
 import type { EnemyTemplate } from '../data/enemyData';
 import { loadScenarioConfigs } from '../data/scenarioData';
@@ -1069,7 +1068,43 @@ function _runStoryMode(
     ...(earlyCompletionBonus > 0 ? { earlyCompletionBonus } : {}),
   };
 
-  // Generate narrative log — deterministic from seed + heroes + game outcome
+  // ── BRL narrative generation ──────────────────────────────────────────────
+  // Set up entities for BRL story rules, schedule StoryGenerate, and read results.
+
+  // Assign entity IDs for story generation (well above combat entity range)
+  const STORY_ENTITY_BASE = 2000;
+  let storyEntityId = STORY_ENTITY_BASE;
+
+  // Create StoryHeroInfo entities for each hero
+  selectedHeroes.forEach((hero, i) => {
+    const heroSkills = _getClassSkills(hero.heroClass, classData);
+    const skillNames = heroSkills.map(sk => getSkillName(sk, hero.heroClass));
+    storyEntityId++;
+    game.create_entity(storyEntityId);
+    game.add_component(storyEntityId, 'StoryHeroInfo', JSON.stringify({
+      heroName: hero.name,
+      heroClass: hero.heroClass,
+      traitRc: hero.traits.rc ?? 0,
+      traitOd: hero.traits.od ?? 0,
+      skill1: skillNames[0] ?? 'Attack',
+      skill2: skillNames[1] ?? 'Defend',
+      skill3: skillNames[2] ?? 'Heal',
+      skill4: skillNames[3] ?? 'Special',
+      heroIndex: i,
+    }));
+  });
+
+  // Create StoryEnemyInfo entities for narrative encounter names
+  enemyTemplates.forEach((tmpl, i) => {
+    storyEntityId++;
+    game.create_entity(storyEntityId);
+    game.add_component(storyEntityId, 'StoryEnemyInfo', JSON.stringify({
+      enemyName: tmpl.name,
+      enemyExp: tmpl.exp,
+      enemyIndex: i,
+    }));
+  });
+
   // Build quest info for step metadata
   const questInfoForSteps = pendingQuestResult ? {
     objectiveTitle: pendingQuestResult.quest.objectiveTitle,
@@ -1080,19 +1115,101 @@ function _runStoryMode(
     })),
   } : undefined;
 
-  const baseNarrativeResult = _generateNarrativeLog(
-    selectedHeroes, seedNum, totalEncounters,
-    locationsVisited, totalLocations, townsRested, ambushesSurvived,
-    finalDestinationReached, env, enemyTemplates, completionDay, classData,
-    questInfoForSteps,
-  );
+  const questObjectiveStr = questInfoForSteps?.objectiveTitle ?? '';
+  const activeMilestoneStr = questInfoForSteps?.milestones?.find(m => m.isActive)?.title ?? '';
+  const completedMilestonesStr = questInfoForSteps?.milestones
+    ?.filter(m => m.isCompleted)
+    .map(m => m.title)
+    .join(',') ?? '';
+
+  // Create StoryGenerateConfig entity
+  storyEntityId++;
+  const configEntityId = storyEntityId;
+  game.create_entity(configEntityId);
+  game.add_component(configEntityId, 'StoryGenerateConfig', JSON.stringify({
+    seed: seedNum,
+    totalEncounters,
+    locationsVisited,
+    totalLocations,
+    townsRested,
+    ambushesSurvived,
+    finalDestinationReached,
+    completionDay,
+    questObjective: questObjectiveStr,
+    activeMilestone: activeMilestoneStr,
+    completedMilestones: completedMilestonesStr,
+    heroCount: selectedHeroes.length,
+    enemyCount: enemyTemplates.length,
+  }));
+
+  // Schedule StoryGenerate event and run BRL story rules
+  game.schedule_event('StoryGenerate', 0.0);
+  game.run_steps(500_000); // Process all story days (one event per day + sub-events)
+
+  // Read NarrativeEntry entities produced by BRL rules
+  const narrativeEntityIds: number[] = JSON.parse(game.get_entities_having('NarrativeEntry'));
+  const brlNarrativeLog: NarrativeEntry[] = narrativeEntityIds.map(id => {
+    const data = JSON.parse(game.get_component(id, 'NarrativeEntry'));
+    return {
+      day: data.day,
+      hour: data.hour,
+      level: data.level,
+      text: data.text,
+    };
+  });
+
+  // Read StoryStepData entities produced by BRL rules
+  const stepEntityIds: number[] = JSON.parse(game.get_entities_having('StoryStepData'));
+  const brlStorySteps: StoryStep[] = stepEntityIds.map(id => {
+    const data = JSON.parse(game.get_component(id, 'StoryStepData'));
+    return {
+      index: data.stepIndex,
+      day: data.day,
+      hour: data.hour,
+      type: data.stepType as StoryStepType,
+      locationName: data.locationName,
+      locationId: data.locationId,
+      destinationName: data.destinationName || undefined,
+      encounterName: data.encounterName || undefined,
+      isBlocking: data.isBlocking || undefined,
+      pathDescription: data.pathDescription || undefined,
+      score: data.score,
+      narrativeEntries: [],
+      questObjective: data.questObjective || undefined,
+      activeMilestone: data.activeMilestone || undefined,
+      completedMilestones: data.completedMilestones
+        ? data.completedMilestones.split(',').filter((s: string) => s)
+        : undefined,
+    };
+  });
+
+  // Sort steps by index and associate narrative entries with steps
+  brlStorySteps.sort((a, b) => a.index - b.index);
+  brlNarrativeLog.sort((a, b) => a.day - b.day || a.hour - b.hour);
+
+  // Assign narrative entries to their corresponding steps
+  for (const step of brlStorySteps) {
+    step.narrativeEntries = brlNarrativeLog.filter(
+      n => n.day === step.day && n.hour <= step.hour + 1,
+    );
+  }
+  // Deduplicate: each entry goes to the last matching step only
+  const assignedEntries = new Set<NarrativeEntry>();
+  for (let i = brlStorySteps.length - 1; i >= 0; i--) {
+    const step = brlStorySteps[i];
+    step.narrativeEntries = step.narrativeEntries.filter(e => {
+      if (assignedEntries.has(e)) return false;
+      assignedEntries.add(e);
+      return true;
+    });
+  }
 
   // Merge quest narrative entries into the base log, sorted by day/hour
-  const narrativeLog = [...baseNarrativeResult.log, ...questNarrative]
+  const narrativeLog = [...brlNarrativeLog, ...questNarrative]
     .sort((a, b) => a.day - b.day || a.hour - b.hour);
 
   // Distribute score across story steps proportionally
-  const storySteps = baseNarrativeResult.steps;
+  const storySteps = brlStorySteps;
   const finalScore = lastSnapshot.score;
   if (storySteps.length > 0) {
     for (let i = 0; i < storySteps.length; i++) {
@@ -1105,430 +1222,8 @@ function _runStoryMode(
 }
 
 // ── Story mode narrative log generation ─────────────────────────────────────
-
-/** Deterministic hash for narrative seeding. */
-function _narrativeHash(a: number, b: number, c: number): number {
-  let h = (a * 2654435761 + b * 2246822519 + c * 3266489909) >>> 0;
-  h = ((h ^ (h >> 16)) * 2246822507) >>> 0;
-  h = ((h ^ (h >> 13)) * 3266489909) >>> 0;
-  return (h ^ (h >> 16)) >>> 0;
-}
-
-/** Pick one item from an array using a deterministic hash. */
-function _pickOne<T>(arr: T[], seed: number): T {
-  return arr[seed % arr.length];
-}
-
-/**
- * Select world locations for a story map using the persistent world data.
- *
- * Replaces the procedural _generateLocationNames() with world-based map
- * selection per doc/game-design/world-design.md "Map Selection".
- */
-function _selectWorldLocations(seedNum: number, count: number): {
-  locations: WorldLocation[];
-  paths: WorldPath[];
-  locationNames: string[];
-} {
-  const { locations, paths } = selectWorldMap(seedNum, count);
-  return {
-    locations,
-    paths,
-    locationNames: locations.map(l => l.name),
-  };
-}
-
-/**
- * Generate a complete narrative log for a story mode run.
- *
- * Uses the persistent world data (locations, paths, NPCs, hero arrival
- * comments, blocking encounters) to generate narratively rich text.
- * Location descriptions are shown at level 3, hero arrival comments at
- * level 3, and path descriptions at level 3.
- *
- * Also produces a StoryStep[] array for granular step-by-step navigation.
- *
- * All text is generated deterministically from the seed, hero names, and game
- * outcome — no PRNG state is needed beyond what can be reconstructed from
- * these inputs.
- */
-function _generateNarrativeLog(
-  heroes: HeroDefinition[],
-  seedNum: number,
-  totalEncounters: number,
-  locationsVisited: number,
-  totalLocations: number,
-  townsRested: number,
-  ambushesSurvived: number,
-  finalDestinationReached: boolean,
-  _env: EnvironmentSettings,
-  enemyPool: EnemyTemplate[],
-  completionDay: number = STORY_TOTAL_DAYS,
-  classData: Record<string, HeroClassData> = {},
-  questInfo?: { objectiveTitle?: string; milestones?: { title: string; isCompleted: boolean; isActive: boolean }[] },
-): { log: NarrativeEntry[]; steps: StoryStep[] } {
-  const log: NarrativeEntry[] = [];
-  const steps: StoryStep[] = [];
-  const heroNames = heroes.map(h => h.name);
-
-  // Select world locations for this adventure's map
-  const worldMap = _selectWorldLocations(seedNum, totalLocations);
-  const locationNames = worldMap.locationNames;
-  const worldLocations = worldMap.locations;
-  const startLocation = locationNames[0];
-  const finalLocation = locationNames[locationNames.length - 1];
-
-  // Track current step's narrative entries
-  let currentStepEntries: NarrativeEntry[] = [];
-
-  function emit(day: number, hour: number, level: NarrativeLevel, text: string) {
-    const entry: NarrativeEntry = { day, hour, level, text };
-    log.push(entry);
-    currentStepEntries.push(entry);
-  }
-
-  // Interpolate score across steps — divide total score evenly across days,
-  // then evenly across steps within each day (approximate but smooth).
-  // We'll assign scores after all steps are built.
-  let currentLocationIdx = 0;
-
-  /** Helper to compute quest context for steps. */
-  function questContext(): { questObjective?: string; activeMilestone?: string; completedMilestones?: string[] } {
-    if (!questInfo) return {};
-    const completedMilestones = questInfo.milestones
-      ?.filter(m => m.isCompleted)
-      .map(m => m.title) ?? [];
-    const activeMilestone = questInfo.milestones?.find(m => m.isActive)?.title;
-    return {
-      questObjective: questInfo.objectiveTitle,
-      activeMilestone,
-      completedMilestones: completedMilestones.length > 0 ? completedMilestones : undefined,
-    };
-  }
-
-  /** Push a StoryStep and reset the entry buffer. */
-  function pushStep(
-    day: number,
-    hour: number,
-    type: StoryStepType,
-    locationName: string,
-    locationId: string,
-    extra?: Partial<StoryStep>,
-  ) {
-    steps.push({
-      index: steps.length,
-      day,
-      hour,
-      type,
-      locationName,
-      locationId,
-      score: 0, // filled in later
-      narrativeEntries: currentStepEntries,
-      ...questContext(),
-      ...extra,
-    });
-    currentStepEntries = [];
-  }
-
-  // ── Day 1 opening ─────────────────────────────────────────────────────
-  emit(1, 0, 1, `The adventure begins at ${startLocation}. The party prepares for a 30-day journey.`);
-  emit(1, 0, 2, `The party gathers at the ${startLocation} tavern. Their destination: ${finalLocation}.`);
-  emit(1, 0, 3, `${heroNames.join(', ')} check their equipment and study the map. The road ahead is long.`);
-
-  // Show starting location description at level 3
-  if (worldLocations[0]) {
-    emit(1, 0, 3, worldLocations[0].description);
-  }
-
-  pushStep(1, 0, 'journey_start', startLocation, worldLocations[0]?.locationId ?? 'start');
-
-  // Track which locations have been visited, encounters per day, etc.
-  let encountersRemaining = totalEncounters;
-  let locationsLeft = locationsVisited - 1; // -1 for start
-  let townsLeft = townsRested;
-  let ambushesLeft = ambushesSurvived;
-
-  for (let day = 1; day <= completionDay; day++) {
-    const dayHash = _narrativeHash(seedNum, day, 0);
-    const curLocName = locationNames[currentLocationIdx];
-    const curLocId = worldLocations[currentLocationIdx]?.locationId ?? `loc_${currentLocationIdx}`;
-
-    // Day start (skip day 1, already emitted)
-    if (day > 1) {
-      emit(day, 0, 1, `Day ${day} begins.`);
-      pushStep(day, 0, 'day_start', curLocName, curLocId);
-    }
-
-    // ── Decision / Voting ───────────────────────────────────────────────
-    // Pick next destination based on deterministic hash
-    const shouldTravel = locationsLeft > 0 && day < STORY_TOTAL_DAYS;
-    if (shouldTravel) {
-      const nextLocIdx = Math.min(currentLocationIdx + 1, locationNames.length - 1);
-      const nextLocation = locationNames[nextLocIdx];
-      const nextWorldLoc = worldLocations[nextLocIdx];
-      const prevWorldLoc = worldLocations[currentLocationIdx];
-
-      // Find the world path between current and next location
-      const travelPath = prevWorldLoc && nextWorldLoc
-        ? findPath(prevWorldLoc.locationId, nextWorldLoc.locationId)
-        : undefined;
-      const terrainDesc = travelPath
-        ? (PATH_TYPE_DESCRIPTIONS[travelPath.pathType] ?? travelPath.pathType)
-        : 'the road ahead';
-
-      // Each hero proposes a destination based on traits
-      const heroProposals: string[] = [];
-      for (let hi = 0; hi < heroes.length; hi++) {
-        const hero = heroes[hi];
-        const h = _narrativeHash(seedNum, day, hi + 100);
-        // Cautious heroes (high rc) propose towns/safe routes
-        // Risky heroes (low rc) propose dangerous wilderness
-        const isCautious = hero.traits.rc > 0;
-        const isOffensive = hero.traits.od < 0;
-
-        if (isCautious && townsLeft > 0 && h % 3 === 0) {
-          // Propose a safe town — look for a town in the selected locations
-          const townIdx = _narrativeHash(seedNum, day, hi + 200) % locationNames.length;
-          const townName = locationNames[townIdx];
-          heroProposals.push(`${hero.name} proposes to retreat to ${townName} and heal`);
-        } else if (isOffensive) {
-          heroProposals.push(`${hero.name} proposes to push toward ${nextLocation} through ${terrainDesc}`);
-        } else {
-          heroProposals.push(`${hero.name} proposes to head for ${nextLocation}`);
-        }
-      }
-
-      // Level 2: Show each hero's preference
-      for (const proposal of heroProposals) {
-        emit(day, 0, 2, proposal);
-      }
-
-      // Party decision
-      emit(day, 1, 2, `The party decides to travel toward ${nextLocation}.`);
-      if (travelPath) {
-        emit(day, 1, 3, `The path leads through ${terrainDesc}. Travel will take approximately ${travelPath.travelHours} hours.`);
-      } else {
-        emit(day, 1, 3, `The path leads through ${terrainDesc}. Travel will take several hours.`);
-      }
-
-      const prevLocation = locationNames[currentLocationIdx];
-
-      // ── Departure step ────────────────────────────────────────────
-      pushStep(day, 1, 'departure', prevLocation, curLocId, {
-        destinationName: nextLocation,
-        pathDescription: terrainDesc,
-      });
-
-      currentLocationIdx = nextLocIdx;
-      locationsLeft--;
-
-      // ── Travel & Encounters ─────────────────────────────────────────
-      const travelHours = travelPath ? travelPath.travelHours : (2 + (dayHash % 5));
-      const encountersToday = Math.min(encountersRemaining,
-        Math.max(0, 1 + (dayHash % 4))); // 1-4 encounters
-
-      emit(day, 1, 2, `The party sets out from ${prevLocation} toward ${nextLocation}, following ${terrainDesc}.`);
-      // Show path description at level 3
-      if (travelPath) {
-        emit(day, 1, 3, travelPath.description);
-      } else {
-        emit(day, 1, 3, `The route will take approximately ${travelHours} hours.`);
-      }
-
-      // ── Travel step ─────────────────────────────────────────────────
-      // Per design: traveling is represented as a location (e.g. "Imperial Road")
-      const travelLocationName = `${prevLocation} → ${nextLocation}`;
-      pushStep(day, 1, 'travel', travelLocationName, travelPath?.pathId ?? 'path', {
-        destinationName: nextLocation,
-        pathDescription: terrainDesc,
-      });
-
-      // ── Blocking encounter check ────────────────────────────────────
-      if (travelPath) {
-        const blockingEncs = findBlockingEncounters(
-          travelPath.pathType, travelPath.pathId,
-          nextWorldLoc?.locationId,
-        );
-        if (blockingEncs.length > 0) {
-          const blockHash = _narrativeHash(seedNum, day, 900);
-          const blocking = blockingEncs[blockHash % blockingEncs.length];
-          if ((blockHash % 100) / 100 < blocking.triggerChance) {
-            emit(day, 2, 2, `⚠️ ${blocking.description}`);
-            emit(day, 2, 3, blocking.narrativeOnBlock);
-            emit(day, 2, 3, blocking.narrativeOnResolve);
-
-            pushStep(day, 2, 'blocking_encounter', travelLocationName, travelPath.pathId ?? 'path', {
-              encounterName: blocking.description,
-              isBlocking: true,
-              destinationName: nextLocation,
-            });
-          }
-        }
-      }
-
-      let hour = 2;
-      for (let enc = 0; enc < encountersToday && encountersRemaining > 0; enc++) {
-        const encHash = _narrativeHash(seedNum, day, enc + 300);
-        const enemyIdx = encHash % enemyPool.length;
-        const enemy = enemyPool[enemyIdx];
-        const enemyCount = Math.max(1, heroes.length + (encHash % 3) - 1);
-
-        // Encounter notification
-        emit(day, hour, 2, `The party encounters ${enemyCount} ${enemy.name}${enemyCount > 1 ? 's' : ''}!`);
-
-        // Combat details — hero actions
-        for (let hi = 0; hi < heroes.length; hi++) {
-          const hero = heroes[hi];
-          const actionHash = _narrativeHash(seedNum, day * 100 + enc, hi + 400);
-          const skills = _getClassSkills(hero.heroClass, classData);
-          const skillIdx = actionHash % skills.length;
-          const skillKey = skills[skillIdx];
-          const skillName = getSkillName(skillKey, hero.heroClass);
-
-          emit(day, hour, 3, `${hero.name} uses ${skillName}.`);
-
-          // Effect descriptions
-          const effectHash = _narrativeHash(seedNum, day * 100 + enc, hi + 500);
-          const effects = [
-            `The enemy staggers from the blow.`,
-            `The attack lands with devastating force.`,
-            `A critical hit!`,
-            `The enemy is weakened.`,
-            `The enemy is knocked back.`,
-          ];
-          if (effectHash % 3 === 0) {
-            emit(day, hour, 3, _pickOne(effects, effectHash));
-          }
-        }
-
-        // Combat outcome
-        const xp = enemy.exp * enemyCount;
-        emit(day, hour, 3, `The party defeats the ${enemy.name}${enemyCount > 1 ? 's' : ''}. ${enemyCount} enem${enemyCount > 1 ? 'ies' : 'y'} slain, ${xp} XP earned.`);
-
-        // ── Encounter step ──────────────────────────────────────────
-        const encLocId = nextWorldLoc?.locationId ?? curLocId;
-        pushStep(day, hour, 'encounter', travelLocationName, encLocId, {
-          encounterName: `${enemyCount} ${enemy.name}${enemyCount > 1 ? 's' : ''}`,
-          destinationName: nextLocation,
-        });
-
-        encountersRemaining -= enemyCount;
-        hour++;
-      }
-
-      // Arrival
-      emit(day, hour, 1, `Day ${day} — The party arrives at ${nextLocation}.`);
-
-      // Show location description at level 3
-      if (nextWorldLoc) {
-        emit(day, hour, 3, nextWorldLoc.description);
-      }
-
-      // ── Hero arrival comments (level 3, ~60% trigger rate) ──────────
-      if (nextWorldLoc) {
-        const commentHash = _narrativeHash(seedNum, day, 850);
-        if (commentHash % 100 < 60) { // 60% trigger rate
-          // Pick the best-matching hero for a comment
-          const heroIdx = commentHash % heroes.length;
-          const hero = heroes[heroIdx];
-          const traitMap: Record<string, number> = {};
-          for (const key of Object.keys(hero.traits)) {
-            traitMap[key] = hero.traits[key as keyof typeof hero.traits];
-          }
-          const comments = selectArrivalComments(hero.heroClass, traitMap, nextWorldLoc);
-          if (comments.length > 0) {
-            const selectedComment = comments[0];
-            const commentText = selectedComment.comment.replace('{hero_name}', hero.name);
-            emit(day, hour, 3, commentText);
-          }
-        }
-      }
-
-      // ── Arrival step ────────────────────────────────────────────────
-      const arrLocId = nextWorldLoc?.locationId ?? `loc_${nextLocIdx}`;
-      pushStep(day, hour, 'arrival', nextLocation, arrLocId);
-
-      // Town rest or camp
-      const isTown = townsLeft > 0 && (nextWorldLoc?.locationType === 'town' || dayHash % 3 === 0);
-      if (isTown) {
-        townsLeft--;
-        emit(day, hour + 1, 2, `The party rests at the ${nextLocation} tavern. All wounds are healed.`);
-        emit(day, hour + 1, 3, `A warm meal and a soft bed restore the party to full strength.`);
-
-        pushStep(day, hour + 1, 'town_rest', nextLocation, arrLocId);
-      } else {
-        emit(day, hour + 1, 2, `The party sets up camp as night falls.`);
-
-        // Night ambush chance
-        if (ambushesLeft > 0 && dayHash % 5 === 0) {
-          ambushesLeft--;
-          const ambushHash = _narrativeHash(seedNum, day, 600);
-          const ambushEnemy = enemyPool[ambushHash % enemyPool.length];
-          const ambushCount = Math.max(1, heroes.length - 1);
-
-          emit(day, hour + 2, 2, `The night watch spots movement! ${ambushCount} ${ambushEnemy.name}${ambushCount > 1 ? 's' : ''} attack the camp.`);
-
-          for (let hi = 0; hi < heroes.length; hi++) {
-            const hero = heroes[hi];
-            const skills = _getClassSkills(hero.heroClass, classData);
-            const sh = _narrativeHash(seedNum, day, hi + 700);
-            const skillName = getSkillName(skills[sh % skills.length], hero.heroClass);
-            emit(day, hour + 2, 3, `${hero.name} scrambles awake and uses ${skillName}.`);
-          }
-
-          emit(day, hour + 2, 3, `The party fends off the ambush. +100 bonus points.`);
-
-          pushStep(day, hour + 2, 'night_ambush', nextLocation, arrLocId, {
-            encounterName: `${ambushCount} ${ambushEnemy.name}${ambushCount > 1 ? 's' : ''}`,
-          });
-        } else {
-          const watchHero = heroes[dayHash % heroes.length];
-          emit(day, hour + 1, 3, `${watchHero.name} volunteers for first watch. The night passes without incident.`);
-
-          pushStep(day, hour + 1, 'camp', nextLocation, arrLocId);
-        }
-      }
-    } else {
-      // Rest day or final day
-      if (day === completionDay) {
-        emit(day, 0, 2, `The final day of the journey.`);
-      } else {
-        emit(day, 0, 2, `The party rests and recuperates.`);
-      }
-      // Push a rest/final step for non-travel days
-      if (day > 1) {
-        // day_start was already pushed; flush remaining entries
-      }
-    }
-
-    // Day summary
-    const dayEncounters = Math.max(0, Math.min(4, _narrativeHash(seedNum, day, 800) % 5));
-    emit(day, 11, 1, `Day ${day} ends. ${dayEncounters > 0 ? `${dayEncounters} encounters fought.` : 'A quiet day.'}`);
-
-    const endLocName = locationNames[currentLocationIdx];
-    const endLocId = worldLocations[currentLocationIdx]?.locationId ?? `loc_${currentLocationIdx}`;
-    pushStep(day, 11, 'day_end', endLocName, endLocId);
-  }
-
-  // ── Journey end ───────────────────────────────────────────────────────
-  const isEarlyCompletion = completionDay < STORY_TOTAL_DAYS;
-  const endLocName = locationNames[currentLocationIdx];
-  const endLocId = worldLocations[currentLocationIdx]?.locationId ?? `loc_${currentLocationIdx}`;
-  if (finalDestinationReached && isEarlyCompletion) {
-    const daysRemaining = STORY_TOTAL_DAYS - completionDay;
-    emit(completionDay, 11, 1, `🏆 Mission complete! The party has achieved their goal with ${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} to spare!`);
-    emit(completionDay, 11, 2, `${heroNames.join(', ')} have accomplished the mission ahead of schedule.`);
-    emit(completionDay, 11, 3, `${locationsVisited} locations explored, ${totalEncounters} enemies defeated. An exceptional performance.`);
-  } else if (finalDestinationReached) {
-    emit(completionDay, 11, 1, `The party reaches ${finalLocation}! The journey ends in triumph.`);
-    emit(completionDay, 11, 2, `After ${completionDay} day${completionDay !== 1 ? 's' : ''} of travel, the heroes stand victorious at ${finalLocation}.`);
-    emit(completionDay, 11, 3, `${heroNames.join(', ')} raise their weapons in celebration. ${locationsVisited} locations explored, ${totalEncounters} enemies defeated.`);
-  } else {
-    emit(completionDay, 11, 1, `The journey ends. The party did not reach ${finalLocation}.`);
-    emit(completionDay, 11, 2, `After ${completionDay} day${completionDay !== 1 ? 's' : ''}, the heroes' strength was not enough to complete the journey.`);
-  }
-
-  pushStep(completionDay, 11, 'journey_end', endLocName, endLocId);
-
-  return { log, steps };
-}
+// Party traveling, voting, and narrative generation are now in BRL
+// (game/brl/story-rules.brl). The functions _narrativeHash, _pickOne,
+// _selectWorldLocations, and _generateNarrativeLog have been removed.
+// TypeScript sets up StoryHeroInfo/StoryEnemyInfo/StoryGenerateConfig entities,
+// schedules StoryGenerate, and reads back NarrativeEntry + StoryStepData entities.
