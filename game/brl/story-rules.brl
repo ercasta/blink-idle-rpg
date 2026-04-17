@@ -93,6 +93,7 @@ component StoryHeroEncounter {
     narrativeOnComplete: string
     buffType: string
     buffAmount: integer
+    bonusPoints: integer
     isCompleted: boolean
 }
 
@@ -523,6 +524,7 @@ fn emitHeroEncounterDay(day: integer, curLocName: string, curLocId: string,
             let onComplete = enc.StoryHeroEncounter.narrativeOnComplete
             let buffType = enc.StoryHeroEncounter.buffType
             let buffAmt = enc.StoryHeroEncounter.buffAmount
+            let bonus = enc.StoryHeroEncounter.bonusPoints
 
             // Headline (Level 1)
             let n1 = emitNarrative(day, 2, 1, "⭐ " + encTitle)
@@ -533,7 +535,7 @@ fn emitHeroEncounterDay(day: integer, curLocName: string, curLocId: string,
             // Hero in action (Level 3)
             let n4 = emitNarrative(day, 4, 3, onMatch)
             // Outcome: passed + buff (Level 2)
-            let n5 = emitNarrative(day, 5, 2, "✅ Passed: " + onComplete + " (+" + to_string(buffAmt) + "% " + buffType + " buff, +100 points)")
+            let n5 = emitNarrative(day, 5, 2, "✅ Passed: " + onComplete + " (+" + to_string(buffAmt) + "% " + buffType + " buff, +" + to_string(bonus) + " points)")
 
             // Blocking encounter step
             let encStep = emitStep(stepCount, day, 2, "blocking_encounter", curLocName, curLocId, "", encTitle, true, "", questObj, activeMil, completedMil)

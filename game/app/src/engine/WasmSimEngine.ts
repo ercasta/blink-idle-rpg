@@ -12,7 +12,7 @@
 import type { GameSnapshot, HeroDefinition, GameMode, HeroPath, CustomModeSettings, EnvironmentSettings, DamageCategory, Element, RunType, StoryKpis, NarrativeEntry, StoryStep, StoryStepType } from '../types';
 import { DEFAULT_ENVIRONMENT_SETTINGS } from '../types';
 import { simulateHeroPath, getSkillName, deriveDamageCategory, deriveDamageElement, deriveResistances, computeLinePreferenceScore } from '../data/traits';
-import { computeAdventureSeed, simulateQuestProgress, generateQuestNarrative, QUEST_EARLY_COMPLETION_POINTS_PER_DAY, initAdventureData } from '../data/adventureQuest';
+import { computeAdventureSeed, simulateQuestProgress, generateQuestNarrative, QUEST_EARLY_COMPLETION_POINTS_PER_DAY, QUEST_HERO_ENCOUNTER_BONUS, initAdventureData } from '../data/adventureQuest';
 import type { AdventureDefinition } from '../types';
 import { initWorldData } from '../data/worldData';
 import { loadEnemyTemplates } from '../data/enemyData';
@@ -1160,6 +1160,7 @@ function _runStoryMode(
           narrativeOnComplete: heroEnc.narrativeOnComplete,
           buffType: heroEnc.buffType,
           buffAmount: heroEnc.buffAmount,
+          bonusPoints: QUEST_HERO_ENCOUNTER_BONUS,
           isCompleted: heroEnc.isCompleted,
         }));
       }
