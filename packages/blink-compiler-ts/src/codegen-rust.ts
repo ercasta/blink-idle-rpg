@@ -1170,7 +1170,9 @@ export class RustCodeGenerator {
         code += `${pad}    sched_event.target = ${this.exprToRust(value)} as EntityId;\n`;
       } else {
         const fieldConst = this.stringConstName(fieldName);
-        code += `${pad}    sched_event.fields.insert(string_ids::${fieldConst}, ${this.exprToValueRust(value)});\n`;
+        // Use event declaration field type when available for correct Value variant
+        const expectedType = this.eventFieldTypes.get(stmt.eventName)?.get(fieldName);
+        code += `${pad}    sched_event.fields.insert(string_ids::${fieldConst}, ${this.exprToValueRust(value, expectedType)});\n`;
       }
     }
 
@@ -1335,7 +1337,8 @@ export class RustCodeGenerator {
             code += `    sched_event.target = ${this.exprToRust(value)} as EntityId;\n`;
           } else {
             const fieldConst = this.stringConstName(fieldName);
-            code += `    sched_event.fields.insert(string_ids::${fieldConst}, ${this.exprToValueRust(value)});\n`;
+            const expectedType = this.eventFieldTypes.get(expr.eventName)?.get(fieldName);
+            code += `    sched_event.fields.insert(string_ids::${fieldConst}, ${this.exprToValueRust(value, expectedType)});\n`;
           }
         }
         if (expr.delay) {
@@ -1458,6 +1461,8 @@ export class RustCodeGenerator {
   /**
    * Convert an expression to an InternedString for string concatenation.
    * Non-string types are auto-converted via brl_to_string_*.
+   * Unknown types are assumed to already be InternedString (common case in
+   * string concatenation is user-defined fn returning string).
    */
   private exprToRustAsString(expr: AST.Expr, inferredType: string): string {
     const rust = this.exprToRust(expr);
@@ -1466,7 +1471,7 @@ export class RustCodeGenerator {
       case 'integer': return `brl_to_string_int(${rust}, &mut engine.interner)`;
       case 'decimal': return `brl_to_string_float(${rust}, &mut engine.interner)`;
       case 'boolean': return `brl_to_string_int(if ${rust} { 1 } else { 0 }, &mut engine.interner)`;
-      default: return `brl_to_string_int(${rust} as i64, &mut engine.interner)`;
+      default: return rust; // Assume InternedString for unknown types in string context
     }
   }
 
@@ -1505,7 +1510,7 @@ export class RustCodeGenerator {
    * Convert an expression to a Value enum variant (for event fields).
    * Uses type inference to choose the correct variant.
    */
-  private exprToValueRust(expr: AST.Expr): string {
+  private exprToValueRust(expr: AST.Expr, expectedType?: string): string {
     if (expr.type === 'literal') {
       switch (expr.value.type) {
         case 'integer': return `Value::Integer(${expr.value.value})`;
@@ -1516,7 +1521,11 @@ export class RustCodeGenerator {
       }
     }
     // Use type inference to wrap in the correct Value variant
-    const inferredType = this.inferExprType(expr);
+    let inferredType: string = this.inferExprType(expr);
+    // Use expected type from event declaration when inferred type is unknown
+    if (inferredType === 'unknown' && expectedType) {
+      inferredType = expectedType;
+    }
     const rustExpr = this.exprToRust(expr);
     switch (inferredType) {
       case 'integer': return `Value::Integer(${rustExpr})`;

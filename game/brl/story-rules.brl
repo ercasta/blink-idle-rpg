@@ -544,14 +544,14 @@ rule story_generate on StoryGenerate(evt: id) {
 // =============================================================================
 
 rule story_process_day on StoryProcessDay(evt: id) {
-    let config = evt.StoryProcessDay.configEntity
-    let day = evt.StoryProcessDay.day
-    let currentLocIdx = evt.StoryProcessDay.currentLocIdx
-    let locationsLeft = evt.StoryProcessDay.locationsLeft
-    let townsLeft = evt.StoryProcessDay.townsLeft
-    let ambushesLeft = evt.StoryProcessDay.ambushesLeft
-    let encountersRemaining = evt.StoryProcessDay.encountersRemaining
-    let stepCount = evt.StoryProcessDay.stepCount
+    let config = evt.configEntity
+    let day = evt.day
+    let currentLocIdx = evt.currentLocIdx
+    let locationsLeft = evt.locationsLeft
+    let townsLeft = evt.townsLeft
+    let ambushesLeft = evt.ambushesLeft
+    let encountersRemaining = evt.encountersRemaining
+    let stepCount = evt.stepCount
 
     let seed = config.StoryGenerateConfig.seed
     let completionDay = config.StoryGenerateConfig.completionDay
@@ -595,7 +595,7 @@ rule story_process_day on StoryProcessDay(evt: id) {
             let isCautious = hero.StoryHeroInfo.traitRc > 0
             let isOffensive = hero.StoryHeroInfo.traitOd < 0
 
-            let randVal = floor(random_range(0, 3))
+            let randVal: integer = floor(random_range(0, 3))
             if isCautious && townsLeft > 0 && randVal == 0 {
                 let proposal = emitNarrative(day, 0, 2, heroName + " proposes to find a safe town and heal")
             } else {
@@ -612,7 +612,8 @@ rule story_process_day on StoryProcessDay(evt: id) {
         let terrainDesc = pathTypeDescription(path.SelectedPath.pathType)
         let travelHours = path.SelectedPath.travelHours
         if travelHours < 2 {
-            travelHours = 2 + floor(random_range(0, 5))
+            let travelExtra: integer = floor(random_range(0, 5))
+            travelHours = 2 + travelExtra
         }
 
         // Party decision
@@ -652,7 +653,8 @@ rule story_process_day on StoryProcessDay(evt: id) {
         }
 
         // ── Encounters ──────────────────────────────────────────────────
-        let encountersToday = 1 + floor(random_range(0, 4))
+        let encBase: integer = floor(random_range(0, 4))
+        let encountersToday: integer = 1 + encBase
         if encountersToday > encountersRemaining {
             encountersToday = encountersRemaining
         }
@@ -660,11 +662,12 @@ rule story_process_day on StoryProcessDay(evt: id) {
         let hour = 2
         let enc = 0
         while enc < encountersToday && encountersRemaining > 0 {
-            let enemyIdx = floor(random_range(0, config.StoryGenerateConfig.enemyCount))
+            let enemyIdx: integer = floor(random_range(0, config.StoryGenerateConfig.enemyCount))
             let enemy = getEnemy(enemyIdx)
             let enemyName = enemy.StoryEnemyInfo.enemyName
             let enemyExp = enemy.StoryEnemyInfo.enemyExp
-            let enemyCount = hCount + floor(random_range(0, 3)) - 1
+            let encCountBase: integer = floor(random_range(0, 3))
+            let enemyCount: integer = hCount + encCountBase - 1
             if enemyCount < 1 {
                 enemyCount = 1
             }
@@ -679,14 +682,14 @@ rule story_process_day on StoryProcessDay(evt: id) {
             // Combat details — hero actions
             let heroes2 = entities having StoryHeroInfo
             for hero2 in heroes2 {
-                let skillPick = floor(random_range(0, 4))
+                let skillPick: integer = floor(random_range(0, 4))
                 let skillName = pickHeroSkill(hero2, skillPick)
                 let actionN = emitNarrative(day, hour, 3, hero2.StoryHeroInfo.heroName + " uses " + skillName + ".")
 
                 // Effect descriptions (33% chance)
-                let effectRoll = floor(random_range(0, 3))
+                let effectRoll: integer = floor(random_range(0, 3))
                 if effectRoll == 0 {
-                    let effectPick = floor(random_range(0, 5))
+                    let effectPick: integer = floor(random_range(0, 5))
                     if effectPick == 0 {
                         let effN = emitNarrative(day, hour, 3, "The enemy staggers from the blow.")
                     }
@@ -729,7 +732,7 @@ rule story_process_day on StoryProcessDay(evt: id) {
         // Hero arrival comment (60% chance)
         let commentRoll = random()
         if commentRoll < 0.6d {
-            let heroIdx = floor(random_range(0, hCount))
+            let heroIdx: integer = floor(random_range(0, hCount))
             let commentHero = getHero(heroIdx)
             let comment = findArrivalComment(
                 commentHero.StoryHeroInfo.heroClass,
@@ -753,7 +756,7 @@ rule story_process_day on StoryProcessDay(evt: id) {
             if nextLoc.SelectedLocation.locationType == "town" {
                 isTown = true
             } else {
-                let townRoll = floor(random_range(0, 3))
+                let townRoll: integer = floor(random_range(0, 3))
                 if townRoll == 0 {
                     isTown = true
                 }
@@ -770,10 +773,10 @@ rule story_process_day on StoryProcessDay(evt: id) {
             let campN = emitNarrative(day, hour + 1, 2, "The party sets up camp as night falls.")
 
             // Night ambush chance
-            let ambushRoll = floor(random_range(0, 5))
+            let ambushRoll: integer = floor(random_range(0, 5))
             if ambushesLeft > 0 && ambushRoll == 0 {
                 ambushesLeft = ambushesLeft - 1
-                let ambushEnemyIdx = floor(random_range(0, config.StoryGenerateConfig.enemyCount))
+                let ambushEnemyIdx: integer = floor(random_range(0, config.StoryGenerateConfig.enemyCount))
                 let ambushEnemy = getEnemy(ambushEnemyIdx)
                 let ambushCount = hCount - 1
                 if ambushCount < 1 {
@@ -789,7 +792,7 @@ rule story_process_day on StoryProcessDay(evt: id) {
                 // Heroes respond
                 let heroes3 = entities having StoryHeroInfo
                 for hero3 in heroes3 {
-                    let ambSkill = floor(random_range(0, 4))
+                    let ambSkill: integer = floor(random_range(0, 4))
                     let ambSkillName = pickHeroSkill(hero3, ambSkill)
                     let ambActN = emitNarrative(day, hour + 2, 3, hero3.StoryHeroInfo.heroName + " scrambles awake and uses " + ambSkillName + ".")
                 }
@@ -799,7 +802,7 @@ rule story_process_day on StoryProcessDay(evt: id) {
                 stepCount = stepCount + 1
             } else {
                 // Peaceful night
-                let watchIdx = floor(random_range(0, hCount))
+                let watchIdx: integer = floor(random_range(0, hCount))
                 let watchHero = getHero(watchIdx)
                 let watchN = emitNarrative(day, hour + 1, 3, watchHero.StoryHeroInfo.heroName + " volunteers for first watch. The night passes without incident.")
                 let campStep = emitStep(stepCount, day, hour + 1, "camp", nextLocName, nextLocId, "", "", false, "", questObj, activeMil, completedMil)
@@ -816,7 +819,7 @@ rule story_process_day on StoryProcessDay(evt: id) {
     }
 
     // ── Day summary ─────────────────────────────────────────────────────
-    let dayEnc = floor(random_range(0, 5))
+    let dayEnc: integer = floor(random_range(0, 5))
     if dayEnc > 0 {
         let sumN = emitNarrative(day, 11, 1, "Day " + to_string(day) + " ends. " + to_string(dayEnc) + " encounters fought.")
     } else {
@@ -856,9 +859,9 @@ rule story_process_day on StoryProcessDay(evt: id) {
 // =============================================================================
 
 rule story_finalize on StoryFinalize(evt: id) {
-    let config = evt.StoryFinalize.configEntity
-    let currentLocIdx = evt.StoryFinalize.currentLocIdx
-    let stepCount = evt.StoryFinalize.stepCount
+    let config = evt.configEntity
+    let currentLocIdx = evt.currentLocIdx
+    let stepCount = evt.stepCount
 
     let completionDay = config.StoryGenerateConfig.completionDay
     let finalReached = config.StoryGenerateConfig.finalDestinationReached
