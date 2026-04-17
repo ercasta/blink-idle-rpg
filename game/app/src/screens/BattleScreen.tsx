@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { GameSnapshot, HeroDefinition, RunResult, HeroPath, RunType, NarrativeEntry, NarrativeLevel } from '../types';
+import type { GameSnapshot, HeroDefinition, RunResult, HeroPath, RunType, NarrativeEntry, NarrativeLevel, StoryStep } from '../types';
 import { ClassIcon, CrossedSwordsIcon, TrophyIcon, SkipIcon, ExpandIcon, ShrinkIcon } from '../components/icons';
 import { heroSummary } from '../data/traits';
 
@@ -15,6 +15,8 @@ interface BattleScreenProps {
   runType?: RunType;
   /** Narrative log entries (story mode only). */
   narrativeLog?: NarrativeEntry[];
+  /** Story steps for granular step-by-step navigation (story mode only). */
+  storySteps?: StoryStep[];
 }
 
 // ── Top-level dispatcher ────────────────────────────────────────────────────
@@ -338,9 +340,281 @@ function NarrativeLogEntry({ entry }: { entry: NarrativeEntry }) {
   );
 }
 
-// ── Immersive Story View ────────────────────────────────────────────────────
+// ── Step type display helpers ────────────────────────────────────────────────
 
-function ImmersiveStoryView({ snapshots, prevSnapshots = [], narrativeLog = [], heroPaths, onComplete }: BattleScreenProps) {
+const STEP_TYPE_ICONS: Record<string, string> = {
+  journey_start: '🏰',
+  day_start: '🌅',
+  departure: '🚶',
+  travel: '🛤️',
+  encounter: '⚔️',
+  blocking_encounter: '🚧',
+  arrival: '📍',
+  town_rest: '🏨',
+  camp: '🏕️',
+  night_ambush: '🌙',
+  day_end: '🌙',
+  journey_end: '🏁',
+};
+
+const STEP_TYPE_LABELS: Record<string, string> = {
+  journey_start: 'Journey Begins',
+  day_start: 'Day Starts',
+  departure: 'Departing',
+  travel: 'Travelling',
+  encounter: 'Encounter',
+  blocking_encounter: 'Blocked!',
+  arrival: 'Arrived',
+  town_rest: 'Resting at Town',
+  camp: 'Camping',
+  night_ambush: 'Night Ambush!',
+  day_end: 'Day Ends',
+  journey_end: 'Journey Ends',
+};
+
+// ── Immersive Story View (step-based navigation) ────────────────────────────
+
+function ImmersiveStoryView({ snapshots, prevSnapshots = [], heroes, narrativeLog = [], heroPaths, onComplete, storySteps = [] }: BattleScreenProps) {
+  const [stepIndex, setStepIndex] = useState(0);
+  const [verbosity, setVerbosity] = useState<NarrativeLevel>(2);
+  const [questPanelOpen, setQuestPanelOpen] = useState(false);
+  const logRef = useRef<HTMLDivElement | null>(null);
+
+  const totalSteps = storySteps.length;
+  const currentStep = storySteps[stepIndex] ?? storySteps[0];
+  const isLastStep = stepIndex >= totalSteps - 1;
+
+  // Filter narrative entries for current step by verbosity
+  const stepEntries = currentStep
+    ? currentStep.narrativeEntries.filter(e => e.level <= verbosity)
+    : [];
+
+  // Scroll log to top whenever the step changes
+  useEffect(() => {
+    if (logRef.current) {
+      logRef.current.scrollTop = 0;
+    }
+  }, [stepIndex]);
+
+  // ── Navigation handlers ─────────────────────────────────────────────────
+
+  function handleNextStep() {
+    if (isLastStep) {
+      onComplete(buildResult(snapshots, heroPaths));
+    } else {
+      setStepIndex(prev => prev + 1);
+    }
+  }
+
+  function handlePrevStep() {
+    setStepIndex(prev => Math.max(0, prev - 1));
+  }
+
+  function handleNextDay() {
+    if (!currentStep) return;
+    const currentDay = currentStep.day;
+    // Find first step of the next day
+    const nextDayIdx = storySteps.findIndex((s, i) => i > stepIndex && s.day > currentDay);
+    if (nextDayIdx >= 0) {
+      setStepIndex(nextDayIdx);
+    } else {
+      // Go to last step
+      setStepIndex(totalSteps - 1);
+    }
+  }
+
+  function handlePrevDay() {
+    if (!currentStep) return;
+    const currentDay = currentStep.day;
+    if (currentDay <= 1 && stepIndex === 0) return;
+    // Find first step of the previous day (or beginning of current day)
+    const firstOfCurrentDay = storySteps.findIndex(s => s.day === currentDay);
+    if (stepIndex > firstOfCurrentDay) {
+      // Go to start of current day
+      setStepIndex(firstOfCurrentDay);
+    } else {
+      // Go to start of previous day
+      const prevDay = currentDay - 1;
+      const firstOfPrevDay = storySteps.findIndex(s => s.day === prevDay);
+      if (firstOfPrevDay >= 0) {
+        setStepIndex(firstOfPrevDay);
+      } else {
+        setStepIndex(0);
+      }
+    }
+  }
+
+  if (!currentStep) {
+    // Fallback to old day-based view if no steps available
+    return <ImmersiveStoryViewLegacy
+      snapshots={snapshots}
+      prevSnapshots={prevSnapshots}
+      heroes={heroes}
+      narrativeLog={narrativeLog}
+      heroPaths={heroPaths}
+      onComplete={onComplete}
+    />;
+  }
+
+  const score = currentStep.score;
+
+  // Collect all completed and active milestones up to current step
+  const completedMilestones = currentStep.completedMilestones ?? [];
+  const activeMilestone = currentStep.activeMilestone;
+  const questObjective = currentStep.questObjective;
+
+  return (
+    <div className="flex flex-col h-screen bg-stone-900 text-stone-100 overflow-hidden">
+      {/* Score bar */}
+      <div className="flex items-center justify-between px-4 py-2 border-b border-stone-700 shrink-0">
+        <div className="flex items-center gap-1.5">
+          <span className="text-amber-400 font-bold text-sm">{score.toLocaleString()} pts</span>
+        </div>
+        <span className="text-stone-400 text-sm">Day {currentStep.day} • Step {stepIndex + 1}/{totalSteps}</span>
+      </div>
+
+      {/* Location / Encounter band */}
+      <div className="flex items-center justify-between px-4 py-1.5 border-b border-stone-700/50 bg-stone-800/50 shrink-0">
+        <div className="flex items-center gap-2 text-sm min-w-0">
+          <span className="shrink-0">{STEP_TYPE_ICONS[currentStep.type] ?? '📍'}</span>
+          <span className="text-stone-300 truncate font-medium">
+            {currentStep.locationName}
+          </span>
+          {currentStep.destinationName && (
+            <span className="text-stone-500 truncate">
+              → {currentStep.destinationName}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2 shrink-0 ml-2">
+          {currentStep.encounterName && (
+            <span className="text-red-400 text-xs font-semibold px-2 py-0.5 bg-red-900/30 rounded-lg truncate max-w-40">
+              {currentStep.isBlocking ? '🚧 ' : '⚔️ '}{currentStep.encounterName}
+            </span>
+          )}
+          <span className="text-stone-500 text-xs">
+            {STEP_TYPE_LABELS[currentStep.type] ?? currentStep.type}
+          </span>
+        </div>
+      </div>
+
+      {/* Quest / Milestones expandable panel */}
+      {questObjective && (
+        <div className="border-b border-stone-700/50 shrink-0">
+          <button
+            onClick={() => setQuestPanelOpen(!questPanelOpen)}
+            className="w-full flex items-center justify-between px-4 py-1.5 text-xs text-blue-300 hover:bg-stone-800/80 transition-colors"
+          >
+            <span className="font-semibold uppercase tracking-widest">
+              📜 {questObjective}
+            </span>
+            <span className="text-stone-500">
+              {questPanelOpen ? '▲' : '▼'}
+            </span>
+          </button>
+          {questPanelOpen && (
+            <div className="px-4 pb-2 space-y-1">
+              {activeMilestone && (
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="text-amber-400">▸</span>
+                  <span className="text-amber-300">{activeMilestone}</span>
+                  <span className="text-stone-500">(active)</span>
+                </div>
+              )}
+              {completedMilestones.map((m, i) => (
+                <div key={i} className="flex items-center gap-2 text-xs">
+                  <span className="text-green-400">✓</span>
+                  <span className="text-stone-400 line-through">{m}</span>
+                </div>
+              ))}
+              {completedMilestones.length === 0 && !activeMilestone && (
+                <div className="text-xs text-stone-500 italic">No milestones yet</div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Full-screen narrative log — shows current step's entries */}
+      <div ref={logRef} className="flex-1 overflow-y-auto px-4 py-4 text-sm space-y-1.5">
+        {stepEntries.length === 0 ? (
+          <p className="text-stone-500 italic">No events at this step.</p>
+        ) : (
+          stepEntries.map((entry, i) => <NarrativeLogEntry key={`${entry.day}-${entry.hour}-${entry.level}-${i}`} entry={entry} />)
+        )}
+      </div>
+
+      {/* Bottom controls */}
+      <div className="flex items-center justify-between px-4 py-3 border-t border-stone-700 shrink-0 gap-2">
+        {/* Verbosity toggle */}
+        <div className="flex gap-1 shrink-0">
+          {NARRATIVE_LEVELS.map(level => (
+            <button
+              key={level}
+              onClick={() => setVerbosity(level)}
+              className={`px-2 py-0.5 text-xs rounded-lg transition-colors ${
+                verbosity === level
+                  ? 'bg-blue-700 text-blue-100'
+                  : 'bg-stone-700 text-stone-400 hover:bg-stone-600'
+              }`}
+              title={VERBOSITY_LABELS[level]}
+            >
+              {VERBOSITY_LABELS[level]}
+            </button>
+          ))}
+        </div>
+
+        {/* Navigation buttons */}
+        <div className="flex items-center gap-1">
+          <button
+            onClick={handlePrevDay}
+            disabled={stepIndex === 0}
+            className="px-2 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-stone-700 text-stone-300 hover:bg-stone-600"
+            title="Previous Day"
+          >
+            ⏪
+          </button>
+          <button
+            onClick={handlePrevStep}
+            disabled={stepIndex === 0}
+            className="px-2 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-stone-700 text-stone-300 hover:bg-stone-600"
+            title="Previous Step"
+          >
+            ◀
+          </button>
+          <button
+            onClick={handleNextStep}
+            className="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors bg-amber-700 hover:bg-amber-600 text-stone-100"
+            title={isLastStep ? 'View Results' : 'Next Step'}
+          >
+            {isLastStep ? 'Results' : '▶'}
+          </button>
+          <button
+            onClick={handleNextDay}
+            disabled={isLastStep}
+            className="px-2 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-stone-700 text-stone-300 hover:bg-stone-600"
+            title="Next Day"
+          >
+            ⏩
+          </button>
+          {!isLastStep && (
+            <button
+              onClick={() => onComplete(buildResult(snapshots, heroPaths))}
+              className="ml-1 text-xs text-stone-500 hover:text-stone-300 transition-colors inline-flex items-center gap-1"
+              title="Skip to results"
+            >
+              <SkipIcon size={12} /> Skip
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Legacy day-based Story View (fallback when no steps) ────────────────────
+
+function ImmersiveStoryViewLegacy({ snapshots, prevSnapshots = [], narrativeLog = [], heroPaths, onComplete }: BattleScreenProps) {
   const [dayIndex, setDayIndex] = useState(0);
   const [verbosity, setVerbosity] = useState<NarrativeLevel>(2);
   const logRef = useRef<HTMLDivElement | null>(null);

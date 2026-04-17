@@ -9,7 +9,7 @@
  *   • Accepts runtime data (heroes, enemies, config) via create_entity/add_component
  */
 
-import type { GameSnapshot, HeroDefinition, GameMode, HeroPath, CustomModeSettings, EnvironmentSettings, DamageCategory, Element, RunType, StoryKpis, NarrativeEntry, NarrativeLevel } from '../types';
+import type { GameSnapshot, HeroDefinition, GameMode, HeroPath, CustomModeSettings, EnvironmentSettings, DamageCategory, Element, RunType, StoryKpis, NarrativeEntry, NarrativeLevel, StoryStep, StoryStepType } from '../types';
 import { DEFAULT_ENVIRONMENT_SETTINGS } from '../types';
 import { simulateHeroPath, getSkillName, deriveDamageCategory, deriveDamageElement, deriveResistances, computeLinePreferenceScore } from '../data/traits';
 import { computeAdventureSeed, simulateQuestProgress, generateQuestNarrative, QUEST_EARLY_COMPLETION_POINTS_PER_DAY, initAdventureData } from '../data/adventureQuest';
@@ -228,7 +228,7 @@ export async function runSimulation(
   environmentSettings?: EnvironmentSettings,
   runType: RunType = 'fight',
   adventure?: AdventureDefinition,
-): Promise<{ snapshots: GameSnapshot[]; heroPaths: HeroPath[]; storyKpis?: StoryKpis; narrativeLog?: NarrativeEntry[] }> {
+): Promise<{ snapshots: GameSnapshot[]; heroPaths: HeroPath[]; storyKpis?: StoryKpis; narrativeLog?: NarrativeEntry[]; storySteps?: StoryStep[] }> {
   // Load WASM module and BRL game data in parallel
   const [mod, enemyTemplates, scenarioConfigs, heroClassResult] = await Promise.all([
     loadWasmModule(),
@@ -282,7 +282,7 @@ export async function runSimulation(
         return { heroName: hero.name, heroClass: hero.heroClass, entries, finalStats };
       });
 
-      return { snapshots: result.snapshots, heroPaths, storyKpis: result.storyKpis, narrativeLog: result.narrativeLog };
+      return { snapshots: result.snapshots, heroPaths, storyKpis: result.storyKpis, narrativeLog: result.narrativeLog, storySteps: result.storySteps };
     }
 
     // Fight mode (original)
@@ -745,7 +745,7 @@ function _runStoryMode(
   seed?: bigint,
   adventure?: AdventureDefinition,
   classData: Record<string, HeroClassData> = {},
-): { snapshots: GameSnapshot[]; storyKpis: StoryKpis; narrativeLog: NarrativeEntry[] } {
+): { snapshots: GameSnapshot[]; storyKpis: StoryKpis; narrativeLog: NarrativeEntry[]; storySteps: StoryStep[] } {
   // Use the same entity setup as fight mode, but with story-specific config
   game.init_static();
 
@@ -1070,17 +1070,38 @@ function _runStoryMode(
   };
 
   // Generate narrative log — deterministic from seed + heroes + game outcome
-  const baseNarrativeLog = _generateNarrativeLog(
+  // Build quest info for step metadata
+  const questInfoForSteps = pendingQuestResult ? {
+    objectiveTitle: pendingQuestResult.quest.objectiveTitle,
+    milestones: pendingQuestResult.quest.milestones.map(m => ({
+      title: m.title,
+      isCompleted: m.isCompleted,
+      isActive: m.isActive,
+    })),
+  } : undefined;
+
+  const baseNarrativeResult = _generateNarrativeLog(
     selectedHeroes, seedNum, totalEncounters,
     locationsVisited, totalLocations, townsRested, ambushesSurvived,
     finalDestinationReached, env, enemyTemplates, completionDay, classData,
+    questInfoForSteps,
   );
 
   // Merge quest narrative entries into the base log, sorted by day/hour
-  const narrativeLog = [...baseNarrativeLog, ...questNarrative]
+  const narrativeLog = [...baseNarrativeResult.log, ...questNarrative]
     .sort((a, b) => a.day - b.day || a.hour - b.hour);
 
-  return { snapshots, storyKpis, narrativeLog };
+  // Distribute score across story steps proportionally
+  const storySteps = baseNarrativeResult.steps;
+  const finalScore = lastSnapshot.score;
+  if (storySteps.length > 0) {
+    for (let i = 0; i < storySteps.length; i++) {
+      // Linear interpolation of score across steps
+      storySteps[i].score = Math.round(finalScore * (i + 1) / storySteps.length);
+    }
+  }
+
+  return { snapshots, storyKpis, narrativeLog, storySteps };
 }
 
 // ── Story mode narrative log generation ─────────────────────────────────────
@@ -1125,6 +1146,8 @@ function _selectWorldLocations(seedNum: number, count: number): {
  * Location descriptions are shown at level 3, hero arrival comments at
  * level 3, and path descriptions at level 3.
  *
+ * Also produces a StoryStep[] array for granular step-by-step navigation.
+ *
  * All text is generated deterministically from the seed, hero names, and game
  * outcome — no PRNG state is needed beyond what can be reconstructed from
  * these inputs.
@@ -1142,8 +1165,10 @@ function _generateNarrativeLog(
   enemyPool: EnemyTemplate[],
   completionDay: number = STORY_TOTAL_DAYS,
   classData: Record<string, HeroClassData> = {},
-): NarrativeEntry[] {
+  questInfo?: { objectiveTitle?: string; milestones?: { title: string; isCompleted: boolean; isActive: boolean }[] },
+): { log: NarrativeEntry[]; steps: StoryStep[] } {
   const log: NarrativeEntry[] = [];
+  const steps: StoryStep[] = [];
   const heroNames = heroes.map(h => h.name);
 
   // Select world locations for this adventure's map
@@ -1153,8 +1178,56 @@ function _generateNarrativeLog(
   const startLocation = locationNames[0];
   const finalLocation = locationNames[locationNames.length - 1];
 
+  // Track current step's narrative entries
+  let currentStepEntries: NarrativeEntry[] = [];
+
   function emit(day: number, hour: number, level: NarrativeLevel, text: string) {
-    log.push({ day, hour, level, text });
+    const entry: NarrativeEntry = { day, hour, level, text };
+    log.push(entry);
+    currentStepEntries.push(entry);
+  }
+
+  // Interpolate score across steps — divide total score evenly across days,
+  // then evenly across steps within each day (approximate but smooth).
+  // We'll assign scores after all steps are built.
+  let currentLocationIdx = 0;
+
+  /** Helper to compute quest context for steps. */
+  function questContext(): { questObjective?: string; activeMilestone?: string; completedMilestones?: string[] } {
+    if (!questInfo) return {};
+    const completedMilestones = questInfo.milestones
+      ?.filter(m => m.isCompleted)
+      .map(m => m.title) ?? [];
+    const activeMilestone = questInfo.milestones?.find(m => m.isActive)?.title;
+    return {
+      questObjective: questInfo.objectiveTitle,
+      activeMilestone,
+      completedMilestones: completedMilestones.length > 0 ? completedMilestones : undefined,
+    };
+  }
+
+  /** Push a StoryStep and reset the entry buffer. */
+  function pushStep(
+    day: number,
+    hour: number,
+    type: StoryStepType,
+    locationName: string,
+    locationId: string,
+    extra?: Partial<StoryStep>,
+  ) {
+    steps.push({
+      index: steps.length,
+      day,
+      hour,
+      type,
+      locationName,
+      locationId,
+      score: 0, // filled in later
+      narrativeEntries: currentStepEntries,
+      ...questContext(),
+      ...extra,
+    });
+    currentStepEntries = [];
   }
 
   // ── Day 1 opening ─────────────────────────────────────────────────────
@@ -1167,19 +1240,23 @@ function _generateNarrativeLog(
     emit(1, 0, 3, worldLocations[0].description);
   }
 
+  pushStep(1, 0, 'journey_start', startLocation, worldLocations[0]?.locationId ?? 'start');
+
   // Track which locations have been visited, encounters per day, etc.
   let encountersRemaining = totalEncounters;
   let locationsLeft = locationsVisited - 1; // -1 for start
   let townsLeft = townsRested;
   let ambushesLeft = ambushesSurvived;
-  let currentLocationIdx = 0;
 
   for (let day = 1; day <= completionDay; day++) {
     const dayHash = _narrativeHash(seedNum, day, 0);
+    const curLocName = locationNames[currentLocationIdx];
+    const curLocId = worldLocations[currentLocationIdx]?.locationId ?? `loc_${currentLocationIdx}`;
 
     // Day start (skip day 1, already emitted)
     if (day > 1) {
       emit(day, 0, 1, `Day ${day} begins.`);
+      pushStep(day, 0, 'day_start', curLocName, curLocId);
     }
 
     // ── Decision / Voting ───────────────────────────────────────────────
@@ -1235,6 +1312,13 @@ function _generateNarrativeLog(
       }
 
       const prevLocation = locationNames[currentLocationIdx];
+
+      // ── Departure step ────────────────────────────────────────────
+      pushStep(day, 1, 'departure', prevLocation, curLocId, {
+        destinationName: nextLocation,
+        pathDescription: terrainDesc,
+      });
+
       currentLocationIdx = nextLocIdx;
       locationsLeft--;
 
@@ -1251,6 +1335,12 @@ function _generateNarrativeLog(
         emit(day, 1, 3, `The route will take approximately ${travelHours} hours.`);
       }
 
+      // ── Travel step ─────────────────────────────────────────────────
+      pushStep(day, 1, 'travel', terrainDesc, travelPath?.pathId ?? 'path', {
+        destinationName: nextLocation,
+        pathDescription: terrainDesc,
+      });
+
       // ── Blocking encounter check ────────────────────────────────────
       if (travelPath) {
         const blockingEncs = findBlockingEncounters(
@@ -1264,6 +1354,12 @@ function _generateNarrativeLog(
             emit(day, 2, 2, `⚠️ ${blocking.description}`);
             emit(day, 2, 3, blocking.narrativeOnBlock);
             emit(day, 2, 3, blocking.narrativeOnResolve);
+
+            pushStep(day, 2, 'blocking_encounter', terrainDesc, travelPath.pathId ?? 'path', {
+              encounterName: blocking.description,
+              isBlocking: true,
+              destinationName: nextLocation,
+            });
           }
         }
       }
@@ -1307,6 +1403,13 @@ function _generateNarrativeLog(
         const xp = enemy.exp * enemyCount;
         emit(day, hour, 3, `The party defeats the ${enemy.name}${enemyCount > 1 ? 's' : ''}. ${enemyCount} enem${enemyCount > 1 ? 'ies' : 'y'} slain, ${xp} XP earned.`);
 
+        // ── Encounter step ──────────────────────────────────────────
+        const encLocId = nextWorldLoc?.locationId ?? curLocId;
+        pushStep(day, hour, 'encounter', terrainDesc, encLocId, {
+          encounterName: `${enemyCount} ${enemy.name}${enemyCount > 1 ? 's' : ''}`,
+          destinationName: nextLocation,
+        });
+
         encountersRemaining -= enemyCount;
         hour++;
       }
@@ -1339,12 +1442,18 @@ function _generateNarrativeLog(
         }
       }
 
+      // ── Arrival step ────────────────────────────────────────────────
+      const arrLocId = nextWorldLoc?.locationId ?? `loc_${nextLocIdx}`;
+      pushStep(day, hour, 'arrival', nextLocation, arrLocId);
+
       // Town rest or camp
       const isTown = townsLeft > 0 && (nextWorldLoc?.locationType === 'town' || dayHash % 3 === 0);
       if (isTown) {
         townsLeft--;
         emit(day, hour + 1, 2, `The party rests at the ${nextLocation} tavern. All wounds are healed.`);
         emit(day, hour + 1, 3, `A warm meal and a soft bed restore the party to full strength.`);
+
+        pushStep(day, hour + 1, 'town_rest', nextLocation, arrLocId);
       } else {
         emit(day, hour + 1, 2, `The party sets up camp as night falls.`);
 
@@ -1366,9 +1475,15 @@ function _generateNarrativeLog(
           }
 
           emit(day, hour + 2, 3, `The party fends off the ambush. +100 bonus points.`);
+
+          pushStep(day, hour + 2, 'night_ambush', nextLocation, arrLocId, {
+            encounterName: `${ambushCount} ${ambushEnemy.name}${ambushCount > 1 ? 's' : ''}`,
+          });
         } else {
           const watchHero = heroes[dayHash % heroes.length];
           emit(day, hour + 1, 3, `${watchHero.name} volunteers for first watch. The night passes without incident.`);
+
+          pushStep(day, hour + 1, 'camp', nextLocation, arrLocId);
         }
       }
     } else {
@@ -1378,15 +1493,25 @@ function _generateNarrativeLog(
       } else {
         emit(day, 0, 2, `The party rests and recuperates.`);
       }
+      // Push a rest/final step for non-travel days
+      if (day > 1) {
+        // day_start was already pushed; flush remaining entries
+      }
     }
 
     // Day summary
     const dayEncounters = Math.max(0, Math.min(4, _narrativeHash(seedNum, day, 800) % 5));
     emit(day, 11, 1, `Day ${day} ends. ${dayEncounters > 0 ? `${dayEncounters} encounters fought.` : 'A quiet day.'}`);
+
+    const endLocName = locationNames[currentLocationIdx];
+    const endLocId = worldLocations[currentLocationIdx]?.locationId ?? `loc_${currentLocationIdx}`;
+    pushStep(day, 11, 'day_end', endLocName, endLocId);
   }
 
   // ── Journey end ───────────────────────────────────────────────────────
   const isEarlyCompletion = completionDay < STORY_TOTAL_DAYS;
+  const endLocName = locationNames[currentLocationIdx];
+  const endLocId = worldLocations[currentLocationIdx]?.locationId ?? `loc_${currentLocationIdx}`;
   if (finalDestinationReached && isEarlyCompletion) {
     const daysRemaining = STORY_TOTAL_DAYS - completionDay;
     emit(completionDay, 11, 1, `🏆 Mission complete! The party has achieved their goal with ${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} to spare!`);
@@ -1401,5 +1526,7 @@ function _generateNarrativeLog(
     emit(completionDay, 11, 2, `After ${completionDay} day${completionDay !== 1 ? 's' : ''}, the heroes' strength was not enough to complete the journey.`);
   }
 
-  return log;
+  pushStep(completionDay, 11, 'journey_end', endLocName, endLocId);
+
+  return { log, steps };
 }
