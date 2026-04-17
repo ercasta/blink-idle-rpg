@@ -80,9 +80,10 @@ component SelectedPath {
 }
 
 // Hero encounter passed from TypeScript quest simulation.
-// One entity per completed hero encounter; BRL uses these to insert
-// blocking_encounter steps into the timeline so the party does not
-// travel on the encounter day.
+// One entity per hero encounter with triggerDay > 0. Both completed and
+// not-completed encounters are included; BRL uses completed ones to insert
+// blocking_encounter steps into the timeline (the party does not travel on
+// that day) and emits "not reached" narrative for incomplete ones at finalize.
 component StoryHeroEncounter {
     triggerDay: integer
     title: string
@@ -545,6 +546,23 @@ fn emitHeroEncounterDay(day: integer, curLocName: string, curLocId: string,
     return stepCount
 }
 
+// ── Helper: emit narrative for hero encounters that were not reached ─────────
+// Called during story_finalize to notify about scheduled encounters the party
+// did not complete (e.g., the objective finished before the trigger day).
+
+fn emitUnreachedEncounters(completionDay: integer): integer {
+    let emitted = 0
+    let encounters = entities having StoryHeroEncounter
+    for enc in encounters {
+        if !enc.StoryHeroEncounter.isCompleted && enc.StoryHeroEncounter.triggerDay > 0 {
+            let encTitle = enc.StoryHeroEncounter.title
+            let n = emitNarrative(completionDay, 9, 2, "❌ " + encTitle + ": Not reached — the party completed their objective before this encounter could be attempted.")
+            emitted = emitted + 1
+        }
+    }
+    return emitted
+}
+
 
 // =============================================================================
 // RULE: StoryGenerate — entry point for narrative generation
@@ -977,6 +995,10 @@ rule story_finalize on StoryFinalize(evt: id) {
             let n8 = emitNarrative(completionDay, 11, 2, "After " + to_string(completionDay) + " days, the heroes' strength was not enough to complete the journey.")
         }
     }
+
+    // Emit narrative for any hero encounters that were scheduled but not
+    // completed (party finished the objective before the trigger day).
+    let unreached = emitUnreachedEncounters(completionDay)
 
     let finalStep = emitStep(stepCount, completionDay, 11, "journey_end", endLocName, endLocId, "", "", false, "", questObj, activeMil, completedMil)
 }

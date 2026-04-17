@@ -3,7 +3,7 @@
  * Tests the complete compilation pipeline from source to IR
  */
 
-import { compile, compileString, CompileResult } from './index';
+import { compile, compileString, compileToRust, CompileResult } from './index';
 
 describe('End-to-End Compiler', () => {
   describe('compileString', () => {
@@ -332,6 +332,80 @@ describe('End-to-End Compiler', () => {
       expect(result.errors).toHaveLength(0);
       expect(result.ir.source_map).toBeDefined();
       expect(result.ir.source_map?.files).toHaveLength(1);
+    });
+  });
+
+  describe('Rust codegen: mutable parameters', () => {
+    it('should emit mut for function parameters that are reassigned', () => {
+      const result = compileToRust([
+        {
+          path: 'test.brl',
+          language: 'brl',
+          content: `
+            component Counter { value: integer }
+
+            fn incrementAndReturn(count: integer, step: integer): integer {
+              count = count + step
+              return count
+            }
+          `,
+        },
+      ]);
+
+      expect(result.errors).toHaveLength(0);
+      const functionsFile = result.files.get('functions.rs');
+      expect(functionsFile).toBeDefined();
+      // 'count' is reassigned so must be mut; 'step' is not reassigned
+      expect(functionsFile).toContain('mut count: i64');
+      expect(functionsFile).not.toMatch(/mut step/);
+    });
+
+    it('should not emit mut for parameters that are only read', () => {
+      const result = compileToRust([
+        {
+          path: 'test.brl',
+          language: 'brl',
+          content: `
+            component Counter { value: integer }
+
+            fn addValues(a: integer, b: integer): integer {
+              let sum = a + b
+              return sum
+            }
+          `,
+        },
+      ]);
+
+      expect(result.errors).toHaveLength(0);
+      const functionsFile = result.files.get('functions.rs');
+      expect(functionsFile).toBeDefined();
+      expect(functionsFile).not.toMatch(/mut a/);
+      expect(functionsFile).not.toMatch(/mut b/);
+    });
+
+    it('should detect reassignment inside nested if/for blocks', () => {
+      const result = compileToRust([
+        {
+          path: 'test.brl',
+          language: 'brl',
+          content: `
+            component Health { current: integer max: integer }
+
+            fn conditionalIncrement(count: integer, flag: boolean): integer {
+              if flag {
+                count = count + 1
+              }
+              return count
+            }
+          `,
+        },
+      ]);
+
+      expect(result.errors).toHaveLength(0);
+      const functionsFile = result.files.get('functions.rs');
+      expect(functionsFile).toBeDefined();
+      expect(functionsFile).toContain('mut count: i64');
+      expect(functionsFile).not.toMatch(/mut flag/);
     });
   });
 });

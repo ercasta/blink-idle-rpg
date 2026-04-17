@@ -1080,16 +1080,10 @@ export function generateQuestNarrative(questResult: QuestSimResult, maxDay: numb
   }
 
   // Hero-matched encounters
-  // Completed encounters are now emitted by BRL as blocking_encounter steps
-  // integrated into the timeline (the party does not travel on those days).
-  // Only emit narrative here for encounters that were NOT completed.
-  for (const heroEnc of quest.heroEncounters) {
-    if (!heroEnc.isCompleted && heroEnc.triggerDay > 0) {
-      // Encounter was scheduled but the adventure ended before it triggered
-      emit(maxDay, 9, 2,
-        `❌ ${heroEnc.title}: Not reached — the party completed their objective before this encounter could be attempted.`);
-    }
-  }
+  // Both completed and not-completed encounters are now fully handled by BRL:
+  // completed encounters are emitted as blocking_encounter steps integrated
+  // into the timeline, and unreached encounters are emitted during
+  // story_finalize via emitUnreachedEncounters().
 
   // Objective completion
   if (quest.isComplete) {

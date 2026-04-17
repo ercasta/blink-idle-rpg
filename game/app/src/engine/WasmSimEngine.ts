@@ -1143,8 +1143,9 @@ function _runStoryMode(
   }));
 
   // Create StoryHeroEncounter entities so BRL can integrate hero-specific
-  // encounters into the timeline as blocking_encounter steps, preventing
-  // the party from travelling on those days.
+  // encounters into the timeline: completed encounters become blocking_encounter
+  // steps (the party does not travel on those days), and unreached encounters
+  // get "not reached" narrative during story_finalize.
   if (pendingQuestResult) {
     for (const heroEnc of pendingQuestResult.quest.heroEncounters) {
       if (heroEnc.triggerDay > 0) {

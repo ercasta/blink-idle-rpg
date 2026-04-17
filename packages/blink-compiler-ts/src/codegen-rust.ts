@@ -646,6 +646,41 @@ export class RustCodeGenerator {
     return code;
   }
 
+  /**
+   * Collect the names of all identifiers that appear as assignment targets
+   * (=, +=, -=, *=, /=) anywhere inside a block, recursing into nested
+   * if / for / while blocks.
+   */
+  private collectAssignedIdentifiers(block: AST.Block, out: Set<string>): void {
+    for (const stmt of block.statements) {
+      switch (stmt.type) {
+        case 'assignment':
+          if (stmt.target.type === 'identifier') {
+            out.add(stmt.target.name);
+          }
+          break;
+        case 'if':
+          this.collectAssignedIdentifiers(stmt.thenBlock, out);
+          if (stmt.elseBlock) {
+            if (stmt.elseBlock.type === 'else') {
+              this.collectAssignedIdentifiers(stmt.elseBlock.block, out);
+            } else {
+              // else_if — wrap the nested IfStatement in a synthetic block
+              this.collectAssignedIdentifiers(
+                { statements: [stmt.elseBlock.statement], span: stmt.elseBlock.statement.span },
+                out,
+              );
+            }
+          }
+          break;
+        case 'for':
+        case 'while':
+          this.collectAssignedIdentifiers(stmt.body, out);
+          break;
+      }
+    }
+  }
+
   private generateFunction(func: AST.FunctionDef): string {
     const funcName = this.toSnakeCase(func.name);
     this.localVarTypes = new Map(); // Reset per-function variable type tracking
@@ -655,9 +690,17 @@ export class RustCodeGenerator {
       this.localVarTypes.set(p.name, p.paramType.type);
     }
 
-    const params = func.params.map(p =>
-      `${this.toSnakeCase(p.name)}: ${this.typeToRust(p.paramType)}`
-    ).join(', ');
+    // Detect parameters that are reassigned inside the function body so we
+    // can emit `mut` in the Rust signature (Rust requires it for reassignment).
+    const assignedIds = new Set<string>();
+    this.collectAssignedIdentifiers(func.body, assignedIds);
+    const paramNames = new Set(func.params.map(p => p.name));
+    const mutParams = new Set([...assignedIds].filter(n => paramNames.has(n)));
+
+    const params = func.params.map(p => {
+      const prefix = mutParams.has(p.name) ? 'mut ' : '';
+      return `${prefix}${this.toSnakeCase(p.name)}: ${this.typeToRust(p.paramType)}`;
+    }).join(', ');
     // Always include engine as the last parameter — component data access needs it
     const engineParam = params ? `, engine: &mut Engine` : `engine: &mut Engine`;
     const returnType = func.returnType ? this.typeToRust(func.returnType) : 'f64';
