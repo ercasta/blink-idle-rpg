@@ -1187,21 +1187,22 @@ function _runStoryMode(
   brlStorySteps.sort((a, b) => a.index - b.index);
   brlNarrativeLog.sort((a, b) => a.day - b.day || a.hour - b.hour);
 
-  // Assign narrative entries to their corresponding steps
+  // Assign narrative entries to their corresponding steps.
+  // Build a day -> sorted-steps map (steps are already sorted by index).
+  const stepsByDay = new Map<number, StoryStep[]>();
   for (const step of brlStorySteps) {
-    step.narrativeEntries = brlNarrativeLog.filter(
-      n => n.day === step.day && n.hour <= step.hour + 1,
-    );
+    if (!stepsByDay.has(step.day)) stepsByDay.set(step.day, []);
+    stepsByDay.get(step.day)!.push(step);
   }
-  // Deduplicate: each entry goes to the last matching step only
-  const assignedEntries = new Set<NarrativeEntry>();
-  for (let i = brlStorySteps.length - 1; i >= 0; i--) {
-    const step = brlStorySteps[i];
-    step.narrativeEntries = step.narrativeEntries.filter(e => {
-      if (assignedEntries.has(e)) return false;
-      assignedEntries.add(e);
-      return true;
-    });
+  // Each entry goes to the first step whose hour >= entry.hour on the same day.
+  // If no such step exists, it falls back to the last step of that day.
+  for (const entry of brlNarrativeLog) {
+    const daySteps = stepsByDay.get(entry.day) ?? [];
+    const targetStep =
+      daySteps.find(s => s.hour >= entry.hour) ?? daySteps[daySteps.length - 1];
+    if (targetStep) {
+      targetStep.narrativeEntries.push(entry);
+    }
   }
 
   // Merge quest narrative entries into the base log, sorted by day/hour
