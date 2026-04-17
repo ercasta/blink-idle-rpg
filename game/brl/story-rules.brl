@@ -1,0 +1,899 @@
+// =============================================================================
+// BLINK IDLE RPG — STORY MODE RULES
+// =============================================================================
+// Contains all game logic for story mode: map selection, day-by-day travel,
+// hero voting, encounter generation, blocking encounters, arrival comments,
+// camp/rest/ambush decisions, and narrative text generation.
+//
+// This replaces the TypeScript _generateNarrativeLog function and related
+// helpers. All game logic is now in BRL; TypeScript only reads the
+// resulting NarrativeEntry and StoryStepData entities for UI display.
+//
+// Lifecycle:
+//   1. TypeScript sets up StoryHeroInfo, StoryEnemyInfo entities
+//   2. TypeScript schedules StoryGenerate event after combat simulation
+//   3. BRL rules produce NarrativeEntry + StoryStepData entities
+//   4. TypeScript reads entities via get_entities_having / get_component
+// =============================================================================
+
+// ── Components for story generation input/output ────────────────────────────
+
+// Hero info passed from TypeScript for narrative generation
+component StoryHeroInfo {
+    heroName: string
+    heroClass: string
+    traitRc: integer        // reckless/cautious axis value
+    traitOd: integer        // offensive/defensive axis value
+    skill1: string          // skill display name
+    skill2: string
+    skill3: string
+    skill4: string
+    heroIndex: integer      // ordering index
+}
+
+// Enemy template info for encounter narrative
+component StoryEnemyInfo {
+    enemyName: string
+    enemyExp: integer
+    enemyIndex: integer     // ordering index for deterministic selection
+}
+
+// Output: one entity per story step (for UI step navigation)
+component StoryStepData {
+    stepIndex: integer
+    day: integer
+    hour: integer
+    stepType: string        // journey_start, day_start, departure, travel, encounter, etc.
+    locationName: string
+    locationId: string
+    destinationName: string
+    encounterName: string
+    isBlocking: boolean
+    pathDescription: string
+    score: integer
+    questObjective: string
+    activeMilestone: string
+    completedMilestones: string  // comma-separated
+}
+
+// Internal state: selected map location for the adventure
+component SelectedLocation {
+    locationIndex: integer      // order on the journey (0 = start)
+    worldLocationId: string
+    worldLocationName: string
+    locationType: string
+    description: string
+    elementalAffinity: string
+    dangerLevel: integer
+    tags: string
+}
+
+// Internal state: selected path for travel
+component SelectedPath {
+    pathIndex: integer          // matches the location index it connects TO
+    fromLocationId: string
+    toLocationId: string
+    pathType: string
+    travelHours: integer
+    description: string
+    pathId: string
+}
+
+// Config entity set up by TypeScript before scheduling StoryGenerate
+component StoryGenerateConfig {
+    seed: integer
+    totalEncounters: integer
+    locationsVisited: integer
+    totalLocations: integer
+    townsRested: integer
+    ambushesSurvived: integer
+    finalDestinationReached: boolean
+    completionDay: integer
+    questObjective: string
+    activeMilestone: string
+    completedMilestones: string     // comma-separated
+    heroCount: integer
+    enemyCount: integer
+}
+
+// ── Events ──────────────────────────────────────────────────────────────────
+
+event StoryGenerate { configEntity: id }
+
+event StoryProcessDay {
+    configEntity: id
+    day: integer
+    currentLocIdx: integer
+    locationsLeft: integer
+    townsLeft: integer
+    ambushesLeft: integer
+    encountersRemaining: integer
+    stepCount: integer
+}
+
+event StoryFinalize {
+    configEntity: id
+    currentLocIdx: integer
+    stepCount: integer
+}
+
+// ── Helper: path type description mapping ───────────────────────────────────
+
+fn pathTypeDescription(pathType: string): string {
+    if pathType == "imperial_road" { return "the paved imperial highway" }
+    if pathType == "mountain_pass" { return "a narrow mountain pass" }
+    if pathType == "forest_trail" { return "a winding forest trail" }
+    if pathType == "coastal_path" { return "a coastal path along the shore" }
+    if pathType == "underground_tunnel" { return "dark underground passages" }
+    if pathType == "river_crossing" { return "a ford across the river" }
+    if pathType == "marsh_track" { return "a treacherous marsh track" }
+    return pathType
+}
+
+// ── Helper: create a narrative entry entity ─────────────────────────────────
+
+fn emitNarrative(day: integer, hour: integer, level: integer, text: string): id {
+    let entry = new entity {
+        NarrativeEntry {
+            day: day
+            hour: hour
+            level: level
+            text: text
+        }
+    }
+    return entry
+}
+
+// ── Helper: create a story step entity ──────────────────────────────────────
+
+fn emitStep(idx: integer, day: integer, hour: integer, stepType: string,
+                  locName: string, locId: string, destName: string,
+                  encName: string, blocking: boolean, pathDesc: string,
+                  questObj: string, activeMil: string, completedMil: string): id {
+    let step = new entity {
+        StoryStepData {
+            stepIndex: idx
+            day: day
+            hour: hour
+            stepType: stepType
+            locationName: locName
+            locationId: locId
+            destinationName: destName
+            encounterName: encName
+            isBlocking: blocking
+            pathDescription: pathDesc
+            score: 0
+            questObjective: questObj
+            activeMilestone: activeMil
+            completedMilestones: completedMil
+        }
+    }
+    return step
+}
+
+// ── Helper: pick a hero skill name ──────────────────────────────────────────
+
+fn pickHeroSkill(hero: id, idx: integer): string {
+    let pick = idx % 4
+    if pick == 0 { return hero.StoryHeroInfo.skill1 }
+    if pick == 1 { return hero.StoryHeroInfo.skill2 }
+    if pick == 2 { return hero.StoryHeroInfo.skill3 }
+    return hero.StoryHeroInfo.skill4
+}
+
+// ── Map selection ───────────────────────────────────────────────────────────
+// Selects world locations for the adventure map. Uses a deterministic
+// walk through connected locations starting from a town.
+
+fn selectMap(seed: integer, targetCount: integer): integer {
+    let locations = entities having WorldLocation
+    let paths = entities having WorldPath
+
+    // Find towns to start from
+    let startEntity = locations[0]
+    let townCount = 0
+    for locEntity in locations {
+        if locEntity.WorldLocation.locationType == "town" {
+            townCount = townCount + 1
+            // Pick deterministically based on seed
+            if townCount == (seed % 5) + 1 {
+                startEntity = locEntity
+            }
+        }
+    }
+
+    // Mark starting location as selected (index 0)
+    let startLoc = new entity {
+        SelectedLocation {
+            locationIndex: 0
+            worldLocationId: startEntity.WorldLocation.locationId
+            worldLocationName: startEntity.WorldLocation.name
+            locationType: startEntity.WorldLocation.locationType
+            description: startEntity.WorldLocation.description
+            elementalAffinity: startEntity.WorldLocation.elementalAffinity
+            dangerLevel: startEntity.WorldLocation.dangerLevel
+            tags: startEntity.WorldLocation.tags
+        }
+    }
+
+    // Iteratively expand the map by following paths
+    let selected = 1
+    let iteration = 0
+    let maxIter = targetCount * 5
+    while selected < targetCount && iteration < maxIter {
+        iteration = iteration + 1
+
+        // Look through all paths to find connections from selected locations
+        let bestPath = paths[0]
+        let bestDest = locations[0]
+        let found = false
+
+        for pathEntity in paths {
+            let fromId = pathEntity.WorldPath.fromLocationId
+            let toId = pathEntity.WorldPath.toLocationId
+
+            // Check if fromId is a selected location
+            let fromSelected = false
+            let selectedLocs = entities having SelectedLocation
+            for selEntity in selectedLocs {
+                if selEntity.SelectedLocation.worldLocationId == fromId {
+                    fromSelected = true
+                }
+            }
+
+            if fromSelected {
+                // Check toId is NOT already selected
+                let toAlreadySelected = false
+                for selEntity2 in selectedLocs {
+                    if selEntity2.SelectedLocation.worldLocationId == toId {
+                        toAlreadySelected = true
+                    }
+                }
+
+                if !toAlreadySelected {
+                    // Find the destination WorldLocation entity
+                    for destEntity in locations {
+                        if destEntity.WorldLocation.locationId == toId {
+                            // Deterministic selection: use seed + iteration
+                            let score = (seed + iteration * 2654435761) % 1000
+                            if !found || score > 500 {
+                                bestPath = pathEntity
+                                bestDest = destEntity
+                                found = true
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Also check bidirectional paths (toId → fromId)
+            if pathEntity.WorldPath.bidirectional {
+                let revFromSelected = false
+                let selectedLocs2 = entities having SelectedLocation
+                for selEntity3 in selectedLocs2 {
+                    if selEntity3.SelectedLocation.worldLocationId == toId {
+                        revFromSelected = true
+                    }
+                }
+
+                if revFromSelected {
+                    let revToAlreadySelected = false
+                    for selEntity4 in selectedLocs2 {
+                        if selEntity4.SelectedLocation.worldLocationId == fromId {
+                            revToAlreadySelected = true
+                        }
+                    }
+
+                    if !revToAlreadySelected {
+                        for destEntity2 in locations {
+                            if destEntity2.WorldLocation.locationId == fromId {
+                                let score2 = (seed + iteration * 2246822519) % 1000
+                                if !found || score2 > 600 {
+                                    bestPath = pathEntity
+                                    bestDest = destEntity2
+                                    found = true
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if found {
+            // Add the selected location
+            let newLoc = new entity {
+                SelectedLocation {
+                    locationIndex: selected
+                    worldLocationId: bestDest.WorldLocation.locationId
+                    worldLocationName: bestDest.WorldLocation.name
+                    locationType: bestDest.WorldLocation.locationType
+                    description: bestDest.WorldLocation.description
+                    elementalAffinity: bestDest.WorldLocation.elementalAffinity
+                    dangerLevel: bestDest.WorldLocation.dangerLevel
+                    tags: bestDest.WorldLocation.tags
+                }
+            }
+
+            // Add the path
+            let newPath = new entity {
+                SelectedPath {
+                    pathIndex: selected
+                    fromLocationId: bestPath.WorldPath.fromLocationId
+                    toLocationId: bestPath.WorldPath.toLocationId
+                    pathType: bestPath.WorldPath.pathType
+                    travelHours: bestPath.WorldPath.travelHours
+                    description: bestPath.WorldPath.description
+                    pathId: bestPath.WorldPath.pathId
+                }
+            }
+
+            selected = selected + 1
+        }
+    }
+
+    return selected
+}
+
+// ── Helper: find selected location by index ─────────────────────────────────
+
+fn getSelectedLocation(idx: integer): id {
+    let result = entities having SelectedLocation
+    for ent in result {
+        if ent.SelectedLocation.locationIndex == idx {
+            return ent
+        }
+    }
+    // Fallback to first
+    return result[0]
+}
+
+// ── Helper: find selected path between locations ────────────────────────────
+
+fn findSelectedPath(fromIdx: integer, toIdx: integer): id {
+    let result = entities having SelectedPath
+    let fromLoc = getSelectedLocation(fromIdx)
+    let toLoc = getSelectedLocation(toIdx)
+    let fromId = fromLoc.SelectedLocation.worldLocationId
+    let toId = toLoc.SelectedLocation.worldLocationId
+
+    for ent in result {
+        if ent.SelectedPath.fromLocationId == fromId && ent.SelectedPath.toLocationId == toId {
+            return ent
+        }
+        if ent.SelectedPath.toLocationId == fromId && ent.SelectedPath.fromLocationId == toId {
+            return ent
+        }
+    }
+    // Fallback: return the path at toIdx
+    for ent in result {
+        if ent.SelectedPath.pathIndex == toIdx {
+            return ent
+        }
+    }
+    return result[0]
+}
+
+// ── Helper: get hero entity by index ────────────────────────────────────────
+
+fn getHero(idx: integer): id {
+    let heroes = entities having StoryHeroInfo
+    for ent in heroes {
+        if ent.StoryHeroInfo.heroIndex == idx {
+            return ent
+        }
+    }
+    return heroes[0]
+}
+
+// ── Helper: get enemy entity by index ───────────────────────────────────────
+
+fn getEnemy(idx: integer): id {
+    let enemies = entities having StoryEnemyInfo
+    let count = len(enemies)
+    let wrappedIdx = idx % count
+    return enemies[wrappedIdx]
+}
+
+// ── Helper: hero count ──────────────────────────────────────────────────────
+
+fn heroCount(): integer {
+    return len(entities having StoryHeroInfo)
+}
+
+// ── Helper: all hero names joined ───────────────────────────────────────────
+
+fn allHeroNames(): string {
+    let heroes = entities having StoryHeroInfo
+    let result = ""
+    let count = len(heroes)
+    let i = 0
+    for hero in heroes {
+        if i > 0 {
+            if i == count - 1 {
+                result = result + " and "
+            } else {
+                result = result + ", "
+            }
+        }
+        result = result + hero.StoryHeroInfo.heroName
+        i = i + 1
+    }
+    return result
+}
+
+// ── Helper: find blocking encounters for a path ─────────────────────────────
+
+fn findBlockingForPath(pathType: string, pathId: string, locationId: string): id {
+    let blockers = entities having BlockingEncounter
+    for blocker in blockers {
+        if blocker.BlockingEncounter.pathId == pathId {
+            return blocker
+        }
+        if str_contains(blocker.BlockingEncounter.matchPathType, pathType) {
+            return blocker
+        }
+        if str_contains(blocker.BlockingEncounter.locationId, locationId) {
+            return blocker
+        }
+    }
+    // Return a "no blocker" sentinel — caller checks blockingId
+    return blockers[0]
+}
+
+// ── Helper: select arrival comment for a hero at a location ─────────────────
+
+fn findArrivalComment(heroClass: string, traitRc: integer, locAffinity: string, locTags: string): string {
+    let comments = entities having HeroArrivalComment
+    for comment in comments {
+        // Check elemental or tag match
+        let elementMatch = comment.HeroArrivalComment.elementalAffinity == locAffinity
+        let tagMatch = false
+        if comment.HeroArrivalComment.locationTags != "" {
+            tagMatch = str_contains(locTags, comment.HeroArrivalComment.locationTags)
+        }
+
+        if elementMatch || tagMatch {
+            // Class-based comment
+            if comment.HeroArrivalComment.triggerClass != "" {
+                if comment.HeroArrivalComment.triggerClass == heroClass {
+                    return comment.HeroArrivalComment.comment
+                }
+            }
+            // Trait-based comment
+            if comment.HeroArrivalComment.triggerTrait != "" {
+                if comment.HeroArrivalComment.triggerTrait == "rc" {
+                    if comment.HeroArrivalComment.triggerPolarity == "positive" && traitRc > 0 {
+                        return comment.HeroArrivalComment.comment
+                    }
+                    if comment.HeroArrivalComment.triggerPolarity == "negative" && traitRc < 0 {
+                        return comment.HeroArrivalComment.comment
+                    }
+                }
+            }
+        }
+    }
+    return ""
+}
+
+
+// =============================================================================
+// RULE: StoryGenerate — entry point for narrative generation
+// =============================================================================
+
+rule story_generate on StoryGenerate(evt: id) {
+    let config = evt.StoryGenerate.configEntity
+
+    let seed = config.StoryGenerateConfig.seed
+    let totalEnc = config.StoryGenerateConfig.totalEncounters
+    let locsVisited = config.StoryGenerateConfig.locationsVisited
+    let totalLocs = config.StoryGenerateConfig.totalLocations
+    let townsRested = config.StoryGenerateConfig.townsRested
+    let ambSurvived = config.StoryGenerateConfig.ambushesSurvived
+    let completionDay = config.StoryGenerateConfig.completionDay
+    let questObj = config.StoryGenerateConfig.questObjective
+    let activeMil = config.StoryGenerateConfig.activeMilestone
+    let completedMil = config.StoryGenerateConfig.completedMilestones
+    let hCount = config.StoryGenerateConfig.heroCount
+
+    // ── Select map locations ────────────────────────────────────────────
+    let selectedCount = selectMap(seed, totalLocs)
+
+    // ── Get start/end locations ─────────────────────────────────────────
+    let startLoc = getSelectedLocation(0)
+    let startName = startLoc.SelectedLocation.worldLocationName
+    let startId = startLoc.SelectedLocation.worldLocationId
+
+    let endLocIdx = selectedCount - 1
+    let endLoc = getSelectedLocation(endLocIdx)
+    let finalName = endLoc.SelectedLocation.worldLocationName
+
+    // ── Journey opening narrative ───────────────────────────────────────
+    let n1 = emitNarrative(1, 0, 1, "The adventure begins at " + startName + ". The party prepares for a 30-day journey.")
+    let n2 = emitNarrative(1, 0, 2, "The party gathers at the " + startName + " tavern. Their destination: " + finalName + ".")
+    let heroNames = allHeroNames()
+    let n3 = emitNarrative(1, 0, 3, heroNames + " check their equipment and study the map. The road ahead is long.")
+
+    // Show starting location description
+    if startLoc.SelectedLocation.description != "" {
+        let n4 = emitNarrative(1, 0, 3, startLoc.SelectedLocation.description)
+    }
+
+    // Journey start step
+    let s1 = emitStep(0, 1, 0, "journey_start", startName, startId, "", "", false, "", questObj, activeMil, completedMil)
+
+    // ── Schedule first day processing ───────────────────────────────────
+    schedule StoryProcessDay {
+        configEntity: config
+        day: 1
+        currentLocIdx: 0
+        locationsLeft: locsVisited - 1
+        townsLeft: townsRested
+        ambushesLeft: ambSurvived
+        encountersRemaining: totalEnc
+        stepCount: 1
+    }
+}
+
+
+// =============================================================================
+// RULE: StoryProcessDay — process one day of the journey
+// =============================================================================
+
+rule story_process_day on StoryProcessDay(evt: id) {
+    let config = evt.StoryProcessDay.configEntity
+    let day = evt.StoryProcessDay.day
+    let currentLocIdx = evt.StoryProcessDay.currentLocIdx
+    let locationsLeft = evt.StoryProcessDay.locationsLeft
+    let townsLeft = evt.StoryProcessDay.townsLeft
+    let ambushesLeft = evt.StoryProcessDay.ambushesLeft
+    let encountersRemaining = evt.StoryProcessDay.encountersRemaining
+    let stepCount = evt.StoryProcessDay.stepCount
+
+    let seed = config.StoryGenerateConfig.seed
+    let completionDay = config.StoryGenerateConfig.completionDay
+    let questObj = config.StoryGenerateConfig.questObjective
+    let activeMil = config.StoryGenerateConfig.activeMilestone
+    let completedMil = config.StoryGenerateConfig.completedMilestones
+    let hCount = config.StoryGenerateConfig.heroCount
+
+    let curLoc = getSelectedLocation(currentLocIdx)
+    let curLocName = curLoc.SelectedLocation.worldLocationName
+    let curLocId = curLoc.SelectedLocation.worldLocationId
+
+    // ── Day start (skip day 1, already emitted) ─────────────────────────
+    if day > 1 {
+        let dayN = emitNarrative(day, 0, 1, "Day " + to_string(day) + " begins.")
+        let dayStep = emitStep(stepCount, day, 0, "day_start", curLocName, curLocId, "", "", false, "", questObj, activeMil, completedMil)
+        stepCount = stepCount + 1
+    }
+
+    // ── Travel decision ─────────────────────────────────────────────────
+    let totalDays = 30
+    let shouldTravel = locationsLeft > 0 && day < totalDays
+    let newLocIdx = currentLocIdx
+
+    if shouldTravel {
+        let selectedLocs = entities having SelectedLocation
+        let maxLocIdx = len(selectedLocs) - 1
+        let nextLocIdx = currentLocIdx + 1
+        if nextLocIdx > maxLocIdx {
+            nextLocIdx = maxLocIdx
+        }
+
+        let nextLoc = getSelectedLocation(nextLocIdx)
+        let nextLocName = nextLoc.SelectedLocation.worldLocationName
+        let nextLocId = nextLoc.SelectedLocation.worldLocationId
+
+        // ── Hero voting ─────────────────────────────────────────────────
+        let heroes = entities having StoryHeroInfo
+        for hero in heroes {
+            let heroName = hero.StoryHeroInfo.heroName
+            let isCautious = hero.StoryHeroInfo.traitRc > 0
+            let isOffensive = hero.StoryHeroInfo.traitOd < 0
+
+            let randVal = floor(random_range(0, 3))
+            if isCautious && townsLeft > 0 && randVal == 0 {
+                let proposal = emitNarrative(day, 0, 2, heroName + " proposes to find a safe town and heal")
+            } else {
+                if isOffensive {
+                    let proposal2 = emitNarrative(day, 0, 2, heroName + " proposes to push toward " + nextLocName)
+                } else {
+                    let proposal3 = emitNarrative(day, 0, 2, heroName + " proposes to head for " + nextLocName)
+                }
+            }
+        }
+
+        // ── Travel path lookup ──────────────────────────────────────────
+        let path = findSelectedPath(currentLocIdx, nextLocIdx)
+        let terrainDesc = pathTypeDescription(path.SelectedPath.pathType)
+        let travelHours = path.SelectedPath.travelHours
+        if travelHours < 2 {
+            travelHours = 2 + floor(random_range(0, 5))
+        }
+
+        // Party decision
+        let decN = emitNarrative(day, 1, 2, "The party decides to travel toward " + nextLocName + ".")
+        let pathN = emitNarrative(day, 1, 3, "The path leads through " + terrainDesc + ". Travel will take approximately " + to_string(travelHours) + " hours.")
+
+        // ── Departure step ──────────────────────────────────────────────
+        let depStep = emitStep(stepCount, day, 1, "departure", curLocName, curLocId, nextLocName, "", false, terrainDesc, questObj, activeMil, completedMil)
+        stepCount = stepCount + 1
+
+        // Update location index
+        newLocIdx = nextLocIdx
+        locationsLeft = locationsLeft - 1
+
+        // ── Travel narrative ────────────────────────────────────────────
+        let prevLocName = curLocName
+        let travelN = emitNarrative(day, 1, 2, "The party sets out from " + prevLocName + " toward " + nextLocName + ", following " + terrainDesc + ".")
+        if path.SelectedPath.description != "" {
+            let pathDescN = emitNarrative(day, 1, 3, path.SelectedPath.description)
+        }
+
+        let travelLocName = prevLocName + " → " + nextLocName
+        let travelStep = emitStep(stepCount, day, 1, "travel", travelLocName, path.SelectedPath.pathId, nextLocName, "", false, terrainDesc, questObj, activeMil, completedMil)
+        stepCount = stepCount + 1
+
+        // ── Blocking encounter check ────────────────────────────────────
+        let blocker = findBlockingForPath(path.SelectedPath.pathType, path.SelectedPath.pathId, nextLocId)
+        if blocker.BlockingEncounter.pathId == path.SelectedPath.pathId || str_contains(blocker.BlockingEncounter.matchPathType, path.SelectedPath.pathType) {
+            let triggerRoll = random()
+            if triggerRoll < blocker.BlockingEncounter.triggerChance {
+                let blockN1 = emitNarrative(day, 2, 2, "⚠️ " + blocker.BlockingEncounter.description)
+                let blockN2 = emitNarrative(day, 2, 3, blocker.BlockingEncounter.narrativeOnBlock)
+                let blockN3 = emitNarrative(day, 2, 3, blocker.BlockingEncounter.narrativeOnResolve)
+                let blockStep = emitStep(stepCount, day, 2, "blocking_encounter", travelLocName, path.SelectedPath.pathId, nextLocName, blocker.BlockingEncounter.description, true, "", questObj, activeMil, completedMil)
+                stepCount = stepCount + 1
+            }
+        }
+
+        // ── Encounters ──────────────────────────────────────────────────
+        let encountersToday = 1 + floor(random_range(0, 4))
+        if encountersToday > encountersRemaining {
+            encountersToday = encountersRemaining
+        }
+
+        let hour = 2
+        let enc = 0
+        while enc < encountersToday && encountersRemaining > 0 {
+            let enemyIdx = floor(random_range(0, config.StoryGenerateConfig.enemyCount))
+            let enemy = getEnemy(enemyIdx)
+            let enemyName = enemy.StoryEnemyInfo.enemyName
+            let enemyExp = enemy.StoryEnemyInfo.enemyExp
+            let enemyCount = hCount + floor(random_range(0, 3)) - 1
+            if enemyCount < 1 {
+                enemyCount = 1
+            }
+
+            // Encounter notification
+            let encLabel = to_string(enemyCount) + " " + enemyName
+            if enemyCount > 1 {
+                encLabel = encLabel + "s"
+            }
+            let encN = emitNarrative(day, hour, 2, "The party encounters " + encLabel + "!")
+
+            // Combat details — hero actions
+            let heroes2 = entities having StoryHeroInfo
+            for hero2 in heroes2 {
+                let skillPick = floor(random_range(0, 4))
+                let skillName = pickHeroSkill(hero2, skillPick)
+                let actionN = emitNarrative(day, hour, 3, hero2.StoryHeroInfo.heroName + " uses " + skillName + ".")
+
+                // Effect descriptions (33% chance)
+                let effectRoll = floor(random_range(0, 3))
+                if effectRoll == 0 {
+                    let effectPick = floor(random_range(0, 5))
+                    if effectPick == 0 {
+                        let effN = emitNarrative(day, hour, 3, "The enemy staggers from the blow.")
+                    }
+                    if effectPick == 1 {
+                        let effN2 = emitNarrative(day, hour, 3, "The attack lands with devastating force.")
+                    }
+                    if effectPick == 2 {
+                        let effN3 = emitNarrative(day, hour, 3, "A critical hit!")
+                    }
+                    if effectPick == 3 {
+                        let effN4 = emitNarrative(day, hour, 3, "The enemy is weakened.")
+                    }
+                    if effectPick == 4 {
+                        let effN5 = emitNarrative(day, hour, 3, "The enemy is knocked back.")
+                    }
+                }
+            }
+
+            // Combat outcome
+            let xp = enemyExp * enemyCount
+            let outcomeN = emitNarrative(day, hour, 3, "The party defeats the " + enemyName + ". " + to_string(enemyCount) + " enemies slain, " + to_string(xp) + " XP earned.")
+
+            // Encounter step
+            let encStep = emitStep(stepCount, day, hour, "encounter", travelLocName, nextLocId, nextLocName, encLabel, false, "", questObj, activeMil, completedMil)
+            stepCount = stepCount + 1
+
+            encountersRemaining = encountersRemaining - enemyCount
+            hour = hour + 1
+            enc = enc + 1
+        }
+
+        // ── Arrival ─────────────────────────────────────────────────────
+        let arrN = emitNarrative(day, hour, 1, "Day " + to_string(day) + " — The party arrives at " + nextLocName + ".")
+
+        // Location description
+        if nextLoc.SelectedLocation.description != "" {
+            let descN = emitNarrative(day, hour, 3, nextLoc.SelectedLocation.description)
+        }
+
+        // Hero arrival comment (60% chance)
+        let commentRoll = random()
+        if commentRoll < 0.6d {
+            let heroIdx = floor(random_range(0, hCount))
+            let commentHero = getHero(heroIdx)
+            let comment = findArrivalComment(
+                commentHero.StoryHeroInfo.heroClass,
+                commentHero.StoryHeroInfo.traitRc,
+                nextLoc.SelectedLocation.elementalAffinity,
+                nextLoc.SelectedLocation.tags
+            )
+            if comment != "" {
+                let filledComment = str_replace(comment, "{hero_name}", commentHero.StoryHeroInfo.heroName)
+                let commentN = emitNarrative(day, hour, 3, filledComment)
+            }
+        }
+
+        // Arrival step
+        let arrStep = emitStep(stepCount, day, hour, "arrival", nextLocName, nextLocId, "", "", false, "", questObj, activeMil, completedMil)
+        stepCount = stepCount + 1
+
+        // ── Town rest or camp ───────────────────────────────────────────
+        let isTown = false
+        if townsLeft > 0 {
+            if nextLoc.SelectedLocation.locationType == "town" {
+                isTown = true
+            } else {
+                let townRoll = floor(random_range(0, 3))
+                if townRoll == 0 {
+                    isTown = true
+                }
+            }
+        }
+
+        if isTown {
+            townsLeft = townsLeft - 1
+            let restN1 = emitNarrative(day, hour + 1, 2, "The party rests at the " + nextLocName + " tavern. All wounds are healed.")
+            let restN2 = emitNarrative(day, hour + 1, 3, "A warm meal and a soft bed restore the party to full strength.")
+            let restStep = emitStep(stepCount, day, hour + 1, "town_rest", nextLocName, nextLocId, "", "", false, "", questObj, activeMil, completedMil)
+            stepCount = stepCount + 1
+        } else {
+            let campN = emitNarrative(day, hour + 1, 2, "The party sets up camp as night falls.")
+
+            // Night ambush chance
+            let ambushRoll = floor(random_range(0, 5))
+            if ambushesLeft > 0 && ambushRoll == 0 {
+                ambushesLeft = ambushesLeft - 1
+                let ambushEnemyIdx = floor(random_range(0, config.StoryGenerateConfig.enemyCount))
+                let ambushEnemy = getEnemy(ambushEnemyIdx)
+                let ambushCount = hCount - 1
+                if ambushCount < 1 {
+                    ambushCount = 1
+                }
+
+                let ambushLabel = to_string(ambushCount) + " " + ambushEnemy.StoryEnemyInfo.enemyName
+                if ambushCount > 1 {
+                    ambushLabel = ambushLabel + "s"
+                }
+                let ambN1 = emitNarrative(day, hour + 2, 2, "The night watch spots movement! " + ambushLabel + " attack the camp.")
+
+                // Heroes respond
+                let heroes3 = entities having StoryHeroInfo
+                for hero3 in heroes3 {
+                    let ambSkill = floor(random_range(0, 4))
+                    let ambSkillName = pickHeroSkill(hero3, ambSkill)
+                    let ambActN = emitNarrative(day, hour + 2, 3, hero3.StoryHeroInfo.heroName + " scrambles awake and uses " + ambSkillName + ".")
+                }
+
+                let ambOutN = emitNarrative(day, hour + 2, 3, "The party fends off the ambush. +100 bonus points.")
+                let ambStep = emitStep(stepCount, day, hour + 2, "night_ambush", nextLocName, nextLocId, "", ambushLabel, false, "", questObj, activeMil, completedMil)
+                stepCount = stepCount + 1
+            } else {
+                // Peaceful night
+                let watchIdx = floor(random_range(0, hCount))
+                let watchHero = getHero(watchIdx)
+                let watchN = emitNarrative(day, hour + 1, 3, watchHero.StoryHeroInfo.heroName + " volunteers for first watch. The night passes without incident.")
+                let campStep = emitStep(stepCount, day, hour + 1, "camp", nextLocName, nextLocId, "", "", false, "", questObj, activeMil, completedMil)
+                stepCount = stepCount + 1
+            }
+        }
+    } else {
+        // Rest day or final day
+        if day == completionDay {
+            let finalDayN = emitNarrative(day, 0, 2, "The final day of the journey.")
+        } else {
+            let restDayN = emitNarrative(day, 0, 2, "The party rests and recuperates.")
+        }
+    }
+
+    // ── Day summary ─────────────────────────────────────────────────────
+    let dayEnc = floor(random_range(0, 5))
+    if dayEnc > 0 {
+        let sumN = emitNarrative(day, 11, 1, "Day " + to_string(day) + " ends. " + to_string(dayEnc) + " encounters fought.")
+    } else {
+        let sumN2 = emitNarrative(day, 11, 1, "Day " + to_string(day) + " ends. A quiet day.")
+    }
+
+    let endLoc = getSelectedLocation(newLocIdx)
+    let endLocName = endLoc.SelectedLocation.worldLocationName
+    let endLocId = endLoc.SelectedLocation.worldLocationId
+    let dayEndStep = emitStep(stepCount, day, 11, "day_end", endLocName, endLocId, "", "", false, "", questObj, activeMil, completedMil)
+    stepCount = stepCount + 1
+
+    // ── Next day or finalize ────────────────────────────────────────────
+    if day < completionDay {
+        schedule StoryProcessDay {
+            configEntity: config
+            day: day + 1
+            currentLocIdx: newLocIdx
+            locationsLeft: locationsLeft
+            townsLeft: townsLeft
+            ambushesLeft: ambushesLeft
+            encountersRemaining: encountersRemaining
+            stepCount: stepCount
+        }
+    } else {
+        schedule StoryFinalize {
+            configEntity: config
+            currentLocIdx: newLocIdx
+            stepCount: stepCount
+        }
+    }
+}
+
+
+// =============================================================================
+// RULE: StoryFinalize — journey ending
+// =============================================================================
+
+rule story_finalize on StoryFinalize(evt: id) {
+    let config = evt.StoryFinalize.configEntity
+    let currentLocIdx = evt.StoryFinalize.currentLocIdx
+    let stepCount = evt.StoryFinalize.stepCount
+
+    let completionDay = config.StoryGenerateConfig.completionDay
+    let finalReached = config.StoryGenerateConfig.finalDestinationReached
+    let locsVisited = config.StoryGenerateConfig.locationsVisited
+    let totalEnc = config.StoryGenerateConfig.totalEncounters
+    let questObj = config.StoryGenerateConfig.questObjective
+    let activeMil = config.StoryGenerateConfig.activeMilestone
+    let completedMil = config.StoryGenerateConfig.completedMilestones
+    let hCount = config.StoryGenerateConfig.heroCount
+    let totalDays = 30
+
+    let endLoc = getSelectedLocation(currentLocIdx)
+    let endLocName = endLoc.SelectedLocation.worldLocationName
+    let endLocId = endLoc.SelectedLocation.worldLocationId
+
+    let selectedLocs = entities having SelectedLocation
+    let lastIdx = len(selectedLocs) - 1
+    let finalLoc = getSelectedLocation(lastIdx)
+    let finalLocName = finalLoc.SelectedLocation.worldLocationName
+
+    let heroNames = allHeroNames()
+    let isEarly = completionDay < totalDays
+
+    if finalReached && isEarly {
+        let daysRemaining = totalDays - completionDay
+        let n1 = emitNarrative(completionDay, 11, 1, "🏆 Mission complete! The party has achieved their goal with " + to_string(daysRemaining) + " days to spare!")
+        let n2 = emitNarrative(completionDay, 11, 2, heroNames + " have accomplished the mission ahead of schedule.")
+        let n3 = emitNarrative(completionDay, 11, 3, to_string(locsVisited) + " locations explored, " + to_string(totalEnc) + " enemies defeated. An exceptional performance.")
+    } else {
+        if finalReached {
+            let n4 = emitNarrative(completionDay, 11, 1, "The party reaches " + finalLocName + "! The journey ends in triumph.")
+            let n5 = emitNarrative(completionDay, 11, 2, "After " + to_string(completionDay) + " days of travel, the heroes stand victorious at " + finalLocName + ".")
+            let n6 = emitNarrative(completionDay, 11, 3, heroNames + " raise their weapons in celebration. " + to_string(locsVisited) + " locations explored, " + to_string(totalEnc) + " enemies defeated.")
+        } else {
+            let n7 = emitNarrative(completionDay, 11, 1, "The journey ends. The party did not reach " + finalLocName + ".")
+            let n8 = emitNarrative(completionDay, 11, 2, "After " + to_string(completionDay) + " days, the heroes' strength was not enough to complete the journey.")
+        }
+    }
+
+    let finalStep = emitStep(stepCount, completionDay, 11, "journey_end", endLocName, endLocId, "", "", false, "", questObj, activeMil, completedMil)
+}
