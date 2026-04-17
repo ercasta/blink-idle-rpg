@@ -1336,7 +1336,9 @@ function _generateNarrativeLog(
       }
 
       // ── Travel step ─────────────────────────────────────────────────
-      pushStep(day, 1, 'travel', terrainDesc, travelPath?.pathId ?? 'path', {
+      // Per design: traveling is represented as a location (e.g. "Imperial Road")
+      const travelLocationName = `${prevLocation} → ${nextLocation}`;
+      pushStep(day, 1, 'travel', travelLocationName, travelPath?.pathId ?? 'path', {
         destinationName: nextLocation,
         pathDescription: terrainDesc,
       });
@@ -1355,7 +1357,7 @@ function _generateNarrativeLog(
             emit(day, 2, 3, blocking.narrativeOnBlock);
             emit(day, 2, 3, blocking.narrativeOnResolve);
 
-            pushStep(day, 2, 'blocking_encounter', terrainDesc, travelPath.pathId ?? 'path', {
+            pushStep(day, 2, 'blocking_encounter', travelLocationName, travelPath.pathId ?? 'path', {
               encounterName: blocking.description,
               isBlocking: true,
               destinationName: nextLocation,
@@ -1405,7 +1407,7 @@ function _generateNarrativeLog(
 
         // ── Encounter step ──────────────────────────────────────────
         const encLocId = nextWorldLoc?.locationId ?? curLocId;
-        pushStep(day, hour, 'encounter', terrainDesc, encLocId, {
+        pushStep(day, hour, 'encounter', travelLocationName, encLocId, {
           encounterName: `${enemyCount} ${enemy.name}${enemyCount > 1 ? 's' : ''}`,
           destinationName: nextLocation,
         });
