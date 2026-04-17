@@ -79,6 +79,23 @@ component SelectedPath {
     pathId: string
 }
 
+// Hero encounter passed from TypeScript quest simulation.
+// One entity per completed hero encounter; BRL uses these to insert
+// blocking_encounter steps into the timeline so the party does not
+// travel on the encounter day.
+component StoryHeroEncounter {
+    triggerDay: integer
+    title: string
+    heroName: string
+    description: string
+    matchReason: string
+    narrativeOnMatch: string
+    narrativeOnComplete: string
+    buffType: string
+    buffAmount: integer
+    isCompleted: boolean
+}
+
 // Config entity set up by TypeScript before scheduling StoryGenerate
 component StoryGenerateConfig {
     seed: integer
@@ -477,6 +494,55 @@ fn findArrivalComment(heroClass: string, traitRc: integer, locAffinity: string, 
     return ""
 }
 
+// ── Helper: check if a hero encounter is scheduled for a given day ───────────
+
+fn hasHeroEncounterOnDay(day: integer): boolean {
+    let encounters = entities having StoryHeroEncounter
+    for enc in encounters {
+        if enc.StoryHeroEncounter.triggerDay == day && enc.StoryHeroEncounter.isCompleted {
+            return true
+        }
+    }
+    return false
+}
+
+// ── Helper: emit hero encounter narrative and steps for a given day ──────────
+// Returns the updated stepCount after emitting all hero encounter steps.
+
+fn emitHeroEncounterDay(day: integer, curLocName: string, curLocId: string,
+                        questObj: string, activeMil: string, completedMil: string,
+                        stepCount: integer): integer {
+    let encounters = entities having StoryHeroEncounter
+    for enc in encounters {
+        if enc.StoryHeroEncounter.triggerDay == day && enc.StoryHeroEncounter.isCompleted {
+            let heroName = enc.StoryHeroEncounter.heroName
+            let encTitle = enc.StoryHeroEncounter.title
+            let encDesc = enc.StoryHeroEncounter.description
+            let reason = enc.StoryHeroEncounter.matchReason
+            let onMatch = enc.StoryHeroEncounter.narrativeOnMatch
+            let onComplete = enc.StoryHeroEncounter.narrativeOnComplete
+            let buffType = enc.StoryHeroEncounter.buffType
+            let buffAmt = enc.StoryHeroEncounter.buffAmount
+
+            // Headline (Level 1)
+            let n1 = emitNarrative(day, 2, 1, "⭐ " + encTitle)
+            // Description (Level 2)
+            let n2 = emitNarrative(day, 2, 2, encDesc)
+            // Match reason (Level 2)
+            let n3 = emitNarrative(day, 3, 2, "🌟 " + reason)
+            // Hero in action (Level 3)
+            let n4 = emitNarrative(day, 4, 3, onMatch)
+            // Outcome: passed + buff (Level 2)
+            let n5 = emitNarrative(day, 5, 2, "✅ Passed: " + onComplete + " (+" + to_string(buffAmt) + "% " + buffType + " buff, +100 points)")
+
+            // Blocking encounter step
+            let encStep = emitStep(stepCount, day, 2, "blocking_encounter", curLocName, curLocId, "", encTitle, true, "", questObj, activeMil, completedMil)
+            stepCount = stepCount + 1
+        }
+    }
+    return stepCount
+}
+
 
 // =============================================================================
 // RULE: StoryGenerate — entry point for narrative generation
@@ -572,8 +638,11 @@ rule story_process_day on StoryProcessDay(evt: id) {
     }
 
     // ── Travel decision ─────────────────────────────────────────────────
+    // Hero-specific encounters are blocking: the party stays at the current
+    // location for the entire day while the encounter resolves.
     let totalDays = 30
-    let shouldTravel = locationsLeft > 0 && day < totalDays
+    let heroEncToday = hasHeroEncounterOnDay(day)
+    let shouldTravel = locationsLeft > 0 && day < totalDays && !heroEncToday
     let newLocIdx = currentLocIdx
 
     if shouldTravel {
@@ -810,11 +879,17 @@ rule story_process_day on StoryProcessDay(evt: id) {
             }
         }
     } else {
-        // Rest day or final day
-        if day == completionDay {
-            let finalDayN = emitNarrative(day, 0, 2, "The final day of the journey.")
+        // Non-travel day: hero encounter, rest day, or final day
+        if heroEncToday {
+            // Hero-specific encounter — party stays at current location
+            let heroEncN = emitNarrative(day, 1, 2, "The party remains at " + curLocName + " to deal with a personal challenge.")
+            stepCount = emitHeroEncounterDay(day, curLocName, curLocId, questObj, activeMil, completedMil, stepCount)
         } else {
-            let restDayN = emitNarrative(day, 0, 2, "The party rests and recuperates.")
+            if day == completionDay {
+                let finalDayN = emitNarrative(day, 0, 2, "The final day of the journey.")
+            } else {
+                let restDayN = emitNarrative(day, 0, 2, "The party rests and recuperates.")
+            }
         }
     }
 

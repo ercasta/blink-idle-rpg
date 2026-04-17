@@ -1142,6 +1142,30 @@ function _runStoryMode(
     enemyCount: enemyTemplates.length,
   }));
 
+  // Create StoryHeroEncounter entities so BRL can integrate hero-specific
+  // encounters into the timeline as blocking_encounter steps, preventing
+  // the party from travelling on those days.
+  if (pendingQuestResult) {
+    for (const heroEnc of pendingQuestResult.quest.heroEncounters) {
+      if (heroEnc.triggerDay > 0) {
+        storyEntityId++;
+        game.create_entity(storyEntityId);
+        game.add_component(storyEntityId, 'StoryHeroEncounter', JSON.stringify({
+          triggerDay: heroEnc.triggerDay,
+          title: heroEnc.title,
+          heroName: heroEnc.heroName,
+          description: heroEnc.description,
+          matchReason: heroEnc.matchReason,
+          narrativeOnMatch: heroEnc.narrativeOnMatch,
+          narrativeOnComplete: heroEnc.narrativeOnComplete,
+          buffType: heroEnc.buffType,
+          buffAmount: heroEnc.buffAmount,
+          isCompleted: heroEnc.isCompleted,
+        }));
+      }
+    }
+  }
+
   // Schedule StoryGenerate event and run BRL story rules
   game.schedule_event('StoryGenerate', 0.0);
   game.run_steps(500_000); // Process all story days (one event per day + sub-events)
