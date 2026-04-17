@@ -22,6 +22,7 @@ import skill_catalog
 import story_mode
 import story_adventure
 import story_world
+import story_rules
 
 // ── Entity data: classes and heroes ──────────────────────────────────────
 import hero_classes

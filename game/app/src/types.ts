@@ -285,3 +285,54 @@ export interface StoryKpis {
   /** Early completion bonus (days saved × points per day), if quest completed early */
   earlyCompletionBonus?: number;
 }
+
+// ── Story step types ────────────────────────────────────────────────────────
+
+/** Discrete step type in a story mode run. */
+export type StoryStepType =
+  | 'journey_start'
+  | 'day_start'
+  | 'departure'
+  | 'travel'
+  | 'encounter'
+  | 'blocking_encounter'
+  | 'arrival'
+  | 'town_rest'
+  | 'camp'
+  | 'night_ambush'
+  | 'day_end'
+  | 'journey_end';
+
+/** A discrete step in the story, carrying location/encounter context. */
+export interface StoryStep {
+  /** Unique step index within the run (0-based) */
+  index: number;
+  /** Day this step occurs on (1-based) */
+  day: number;
+  /** Hour within the day */
+  hour: number;
+  /** Step type */
+  type: StoryStepType;
+  /** Current location name (where the party is) */
+  locationName: string;
+  /** Location ID (world location ID) */
+  locationId: string;
+  /** Destination name (if travelling or departing) */
+  destinationName?: string;
+  /** Path name/description (if travelling) */
+  pathDescription?: string;
+  /** Encounter name (if in encounter) */
+  encounterName?: string;
+  /** Whether this encounter blocks progress */
+  isBlocking?: boolean;
+  /** Score at this step */
+  score: number;
+  /** Narrative entries associated with this step */
+  narrativeEntries: NarrativeEntry[];
+  /** Active quest objective title */
+  questObjective?: string;
+  /** Active milestone title */
+  activeMilestone?: string;
+  /** Completed milestones (titles) */
+  completedMilestones?: string[];
+}

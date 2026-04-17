@@ -107,6 +107,68 @@ pub fn brl_len(list: &[crate::value::Value]) -> i64 {
     list.len() as i64
 }
 
+// ── String operations ──────────────────────────────────────────────────────
+
+/// Concatenate two interned strings and intern the result.
+pub fn brl_concat(
+    a: crate::interning::InternedString,
+    b: crate::interning::InternedString,
+    interner: &mut crate::interning::StringInterner,
+) -> crate::interning::InternedString {
+    let sa = interner.resolve(a).to_string();
+    let sb = interner.resolve(b).to_string();
+    let result = format!("{}{}", sa, sb);
+    interner.intern(&result)
+}
+
+/// Convert an integer to a string and intern the result.
+pub fn brl_to_string_int(
+    n: i64,
+    interner: &mut crate::interning::StringInterner,
+) -> crate::interning::InternedString {
+    let s = n.to_string();
+    interner.intern(&s)
+}
+
+/// Convert a float/decimal to a string and intern the result.
+pub fn brl_to_string_float(
+    n: f64,
+    interner: &mut crate::interning::StringInterner,
+) -> crate::interning::InternedString {
+    // Use integer representation if the value has no fractional part
+    let s = if n.fract() == 0.0 && n.abs() < i64::MAX as f64 {
+        (n as i64).to_string()
+    } else {
+        format!("{}", n)
+    };
+    interner.intern(&s)
+}
+
+/// Replace all occurrences of a pattern in a string.
+pub fn brl_str_replace(
+    text: crate::interning::InternedString,
+    pattern: crate::interning::InternedString,
+    replacement: crate::interning::InternedString,
+    interner: &mut crate::interning::StringInterner,
+) -> crate::interning::InternedString {
+    let s = interner.resolve(text).to_string();
+    let pat = interner.resolve(pattern).to_string();
+    let rep = interner.resolve(replacement).to_string();
+    let result = s.replace(&pat, &rep);
+    interner.intern(&result)
+}
+
+/// Check if a string contains a substring.
+pub fn brl_str_contains(
+    text: crate::interning::InternedString,
+    pattern: crate::interning::InternedString,
+    interner: &crate::interning::StringInterner,
+) -> bool {
+    let s = interner.resolve(text);
+    let pat = interner.resolve(pattern);
+    s.contains(pat)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -161,5 +223,53 @@ mod tests {
             let v = rng.random_int_range(1, 6);
             assert!((1..=6).contains(&v));
         }
+    }
+
+    #[test]
+    fn test_concat() {
+        let mut interner = crate::interning::StringInterner::new();
+        let a = interner.intern("hello");
+        let b = interner.intern(" world");
+        let result = brl_concat(a, b, &mut interner);
+        assert_eq!(interner.resolve(result), "hello world");
+    }
+
+    #[test]
+    fn test_to_string_int() {
+        let mut interner = crate::interning::StringInterner::new();
+        let result = brl_to_string_int(42, &mut interner);
+        assert_eq!(interner.resolve(result), "42");
+        let result_neg = brl_to_string_int(-7, &mut interner);
+        assert_eq!(interner.resolve(result_neg), "-7");
+    }
+
+    #[test]
+    fn test_to_string_float() {
+        let mut interner = crate::interning::StringInterner::new();
+        let result = brl_to_string_float(3.14, &mut interner);
+        assert_eq!(interner.resolve(result), "3.14");
+        // Whole numbers display without decimal
+        let result_whole = brl_to_string_float(5.0, &mut interner);
+        assert_eq!(interner.resolve(result_whole), "5");
+    }
+
+    #[test]
+    fn test_str_replace() {
+        let mut interner = crate::interning::StringInterner::new();
+        let text = interner.intern("hello {name}, welcome!");
+        let pattern = interner.intern("{name}");
+        let replacement = interner.intern("Alice");
+        let result = brl_str_replace(text, pattern, replacement, &mut interner);
+        assert_eq!(interner.resolve(result), "hello Alice, welcome!");
+    }
+
+    #[test]
+    fn test_str_contains() {
+        let mut interner = crate::interning::StringInterner::new();
+        let text = interner.intern("hello world");
+        let pattern = interner.intern("world");
+        let missing = interner.intern("xyz");
+        assert!(brl_str_contains(text, pattern, &interner));
+        assert!(!brl_str_contains(text, missing, &interner));
     }
 }
