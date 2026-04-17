@@ -1205,6 +1205,40 @@ function _runStoryMode(
     }
   }
 
+  // Per-step milestone state: override BRL's static milestone strings with
+  // day-accurate state derived from the quest simulation. This ensures early
+  // steps do not show milestones that only appeared later in the run.
+  if (pendingQuestResult) {
+    const questMilestones = pendingQuestResult.quest.milestones;
+
+    // Compute the day on which a milestone was effectively completed.
+    const getMilestoneCompletionDay = (m: (typeof questMilestones)[number]): number => {
+      if (!m.isCompleted) return Infinity;
+      if (m.completedViaBailout) return m.activationDay + m.bailoutDay;
+      const keyDays = m.events
+        .filter(e => e.isKeyEvent && e.completedDay > 0)
+        .map(e => e.completedDay);
+      return keyDays.length > 0 ? keyDays.reduce((max, day) => Math.max(max, day), 0) : m.activationDay + 1;
+    };
+
+    for (const step of brlStorySteps) {
+      const day = step.day;
+      // Only milestones that have been activated by this step's day
+      const appeared = questMilestones.filter(
+        m => m.activationDay > 0 && m.activationDay <= day,
+      );
+      const completedTitles = appeared
+        .filter(m => m.isCompleted && getMilestoneCompletionDay(m) <= day)
+        .map(m => m.title);
+      const activeMilestone = appeared.find(
+        m => m.isActive && !(m.isCompleted && getMilestoneCompletionDay(m) <= day),
+      )?.title;
+
+      step.completedMilestones = completedTitles.length > 0 ? completedTitles : undefined;
+      step.activeMilestone = activeMilestone;
+    }
+  }
+
   // Merge quest narrative entries into the base log, sorted by day/hour
   const narrativeLog = [...brlNarrativeLog, ...questNarrative]
     .sort((a, b) => a.day - b.day || a.hour - b.hour);

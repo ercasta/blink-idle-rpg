@@ -382,12 +382,21 @@ function ImmersiveStoryView({ snapshots, prevSnapshots = [], heroes, narrativeLo
 
   const totalSteps = storySteps.length;
   const currentStep = storySteps[stepIndex] ?? storySteps[0];
-  const isLastStep = stepIndex >= totalSteps - 1;
+  const isAtLastStep = stepIndex >= totalSteps - 1;
+
+  // Helper: does a step have at least one visible entry at the current verbosity?
+  const hasVisibleEntries = (step: StoryStep) =>
+    step.narrativeEntries.some(e => e.level <= verbosity);
 
   // Filter narrative entries for current step by verbosity
   const stepEntries = currentStep
     ? currentStep.narrativeEntries.filter(e => e.level <= verbosity)
     : [];
+
+  // Whether there is any non-empty step after the current one (at current verbosity)
+  const hasNextNonEmpty = storySteps.slice(stepIndex + 1).some(hasVisibleEntries);
+  // "Effective" last step: no non-empty steps remain after this one
+  const isLastStep = isAtLastStep || !hasNextNonEmpty;
 
   // Scroll log to top whenever the step changes
   useEffect(() => {
@@ -399,15 +408,25 @@ function ImmersiveStoryView({ snapshots, prevSnapshots = [], heroes, narrativeLo
   // ── Navigation handlers ─────────────────────────────────────────────────
 
   function handleNextStep() {
-    if (isLastStep) {
-      onComplete(buildResult(snapshots, heroPaths));
-    } else {
-      setStepIndex(prev => prev + 1);
+    // Skip over empty steps; if no non-empty step remains, complete the run
+    for (let i = stepIndex + 1; i < totalSteps; i++) {
+      if (hasVisibleEntries(storySteps[i])) {
+        setStepIndex(i);
+        return;
+      }
     }
+    onComplete(buildResult(snapshots, heroPaths));
   }
 
   function handlePrevStep() {
-    setStepIndex(prev => Math.max(0, prev - 1));
+    // Skip over empty steps backwards; fall back to step 0
+    for (let i = stepIndex - 1; i >= 0; i--) {
+      if (hasVisibleEntries(storySteps[i])) {
+        setStepIndex(i);
+        return;
+      }
+    }
+    setStepIndex(0);
   }
 
   function handleNextDay() {
@@ -470,7 +489,7 @@ function ImmersiveStoryView({ snapshots, prevSnapshots = [], heroes, narrativeLo
         <div className="flex items-center gap-1.5">
           <span className="text-amber-400 font-bold text-sm">{score.toLocaleString()} pts</span>
         </div>
-        <span className="text-stone-400 text-sm">Day {currentStep.day} • Step {stepIndex + 1}/{totalSteps}</span>
+        <span className="text-stone-400 text-sm">Day {currentStep.day} • Step {stepIndex + 1}</span>
       </div>
 
       {/* Location / Encounter band */}
@@ -546,23 +565,17 @@ function ImmersiveStoryView({ snapshots, prevSnapshots = [], heroes, narrativeLo
 
       {/* Bottom controls */}
       <div className="flex items-center justify-between px-4 py-3 border-t border-stone-700 shrink-0 gap-2">
-        {/* Verbosity toggle */}
-        <div className="flex gap-1 shrink-0">
+        {/* Verbosity dropdown */}
+        <select
+          value={verbosity}
+          onChange={e => setVerbosity(Number(e.target.value) as NarrativeLevel)}
+          className="px-2 py-1 text-xs rounded-lg bg-stone-700 text-stone-300 border border-stone-600 shrink-0 cursor-pointer"
+          title="Log detail level"
+        >
           {NARRATIVE_LEVELS.map(level => (
-            <button
-              key={level}
-              onClick={() => setVerbosity(level)}
-              className={`px-2 py-0.5 text-xs rounded-lg transition-colors ${
-                verbosity === level
-                  ? 'bg-blue-700 text-blue-100'
-                  : 'bg-stone-700 text-stone-400 hover:bg-stone-600'
-              }`}
-              title={VERBOSITY_LABELS[level]}
-            >
-              {VERBOSITY_LABELS[level]}
-            </button>
+            <option key={level} value={level}>{VERBOSITY_LABELS[level]}</option>
           ))}
-        </div>
+        </select>
 
         {/* Navigation buttons */}
         <div className="flex items-center gap-1">
@@ -591,7 +604,7 @@ function ImmersiveStoryView({ snapshots, prevSnapshots = [], heroes, narrativeLo
           </button>
           <button
             onClick={handleNextDay}
-            disabled={isLastStep}
+            disabled={isAtLastStep}
             className="px-2 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-stone-700 text-stone-300 hover:bg-stone-600"
             title="Next Day"
           >
