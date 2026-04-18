@@ -264,17 +264,22 @@ export function RosterScreen({ roster, onRosterChange, onBack, sharedHero }: Ros
   useEffect(() => {
     loadHeroClassData().then(() => {
       if (sharedHero) {
-        setDraftHero(prev => prev ?? {
-          id: `hero-${crypto.randomUUID()}`,
-          name: sharedHero.name,
-          heroClass: sharedHero.heroClass,
-          description: generateHeroDescription(sharedHero.heroClass, sharedHero.traits),
-          role: computeRole(sharedHero.heroClass, sharedHero.traits),
-          emoji: CLASS_EMOJIS[sharedHero.heroClass],
-          stats: computeBaseStats(sharedHero.heroClass, sharedHero.traits),
-          traits: sharedHero.traits,
-          linePreference: computeLinePreference(sharedHero.traits),
-        });
+        try {
+          setDraftHero({
+            id: `hero-${crypto.randomUUID()}`,
+            name: sharedHero.name,
+            heroClass: sharedHero.heroClass,
+            description: generateHeroDescription(sharedHero.heroClass, sharedHero.traits),
+            role: computeRole(sharedHero.heroClass, sharedHero.traits),
+            emoji: CLASS_EMOJIS[sharedHero.heroClass],
+            stats: computeBaseStats(sharedHero.heroClass, sharedHero.traits),
+            traits: sharedHero.traits,
+            linePreference: computeLinePreference(sharedHero.traits),
+          });
+        } catch (err) {
+          console.error('[RosterScreen] Failed to initialize shared hero:', err);
+          setView('list');
+        }
       }
     });
   // sharedHero is stable (decoded once from URL params and never changes)
@@ -321,9 +326,13 @@ export function RosterScreen({ roster, onRosterChange, onBack, sharedHero }: Ros
   }
 
   async function openCreate() {
-    await loadHeroClassData();
-    setDraftHero(generateRandomHero());
-    setView('create');
+    try {
+      await loadHeroClassData();
+      setDraftHero(generateRandomHero());
+      setView('create');
+    } catch (err) {
+      console.error('[RosterScreen] Failed to load hero class data:', err);
+    }
   }
 
   function randomizeDraftTraits() {
