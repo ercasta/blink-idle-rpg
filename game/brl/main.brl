@@ -32,6 +32,10 @@ import enemies
 
 // ── World and adventure data ──────────────────────────────────────────────
 import story_world_data
+import story_quest_pools
 import story_adventure_templates
 import adventure_expansion_set_1
 import expansion_pack_2
+
+// ── Adventure quest rules (composition, simulation, narrative) ───────────
+import story_adventure_rules

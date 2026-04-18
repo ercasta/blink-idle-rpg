@@ -1,16 +1,20 @@
 /**
  * Adventure Quest Generation — deterministic quest composition from a seed.
  *
- * Generates objectives, milestones, events, NPC/item/villain bindings,
- * and narrative passages. All content is deterministic: the same seed
- * always produces the same adventure structure.
+ * **MIGRATION NOTE:** Quest composition, simulation, and narrative generation
+ * have been migrated to BRL (story-adventure-rules.brl). The functions
+ * `generateAdventureQuest`, `simulateQuestProgress`, and
+ * `generateQuestNarrative` are now only used as TypeScript-side references
+ * and will be removed in a future cleanup pass.
  *
- * This module implements the composition algorithm described in
- * doc/game-design/adventure-design.md.
+ * Functions still used by WasmSimEngine.ts:
+ *   - `computeAdventureSeed` — computes the deterministic adventure seed
+ *   - `initAdventureData` — loads BRL template data for the WASM engine
+ *   - `MAX_SEED_VALUE` — used by AdventureScreen for seed validation
  *
- * **BRL is the single source of truth.**  Call `initAdventureData()` before
- * using any quest-generation functions.  Template data is loaded from BRL files
- * at runtime; the arrays below are empty until `initAdventureData()` resolves.
+ * **BRL is the single source of truth.**  Template data is loaded from BRL
+ * files at runtime; the arrays below are empty until `initAdventureData()`
+ * resolves.
  */
 
 import type { AdventureDefinition, HeroDefinition, HeroTraits } from '../types';

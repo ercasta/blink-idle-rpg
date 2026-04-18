@@ -1409,6 +1409,113 @@ comment_sa_neg_darkness = new entity {
     }
 }
 
+// ─── Offensive/Defensive (od) trait arrival comments ────────────────────────
+// Issue 5: Expand hero arrival comments with od trait axis
+
+comment_od_neg_fire = new entity {
+    HeroArrivalComment {
+        commentId: "od_neg_fire"
+        triggerClass: ""
+        triggerTrait: "od"
+        triggerPolarity: "negative"
+        elementalAffinity: "fire"
+        locationTags: ""
+        comment: "{hero_name} draws their weapon instinctively. 'Fire and fury — this is where we strike first, strike hard.'"
+        sentiment: "positive"
+    }
+}
+
+comment_od_neg_water = new entity {
+    HeroArrivalComment {
+        commentId: "od_neg_water"
+        triggerClass: ""
+        triggerTrait: "od"
+        triggerPolarity: "negative"
+        elementalAffinity: "water"
+        locationTags: ""
+        comment: "{hero_name} eyes the rushing water with intensity. 'Keep moving, keep pressing — water doesn't hesitate and neither should we.'"
+        sentiment: "neutral"
+    }
+}
+
+comment_od_neg_darkness = new entity {
+    HeroArrivalComment {
+        commentId: "od_neg_darkness"
+        triggerClass: ""
+        triggerTrait: "od"
+        triggerPolarity: "negative"
+        elementalAffinity: "darkness"
+        locationTags: ""
+        comment: "{hero_name} unsheathes a blade in the gloom. 'In the dark, the one who strikes first wins. That will be us.'"
+        sentiment: "positive"
+    }
+}
+
+comment_od_neg_earth = new entity {
+    HeroArrivalComment {
+        commentId: "od_neg_earth"
+        triggerClass: ""
+        triggerTrait: "od"
+        triggerPolarity: "negative"
+        elementalAffinity: "earth"
+        locationTags: ""
+        comment: "{hero_name} scans the rocky terrain for weaknesses. 'Every stronghold has a breach. I will find it.'"
+        sentiment: "neutral"
+    }
+}
+
+comment_od_pos_fire = new entity {
+    HeroArrivalComment {
+        commentId: "od_pos_fire"
+        triggerClass: ""
+        triggerTrait: "od"
+        triggerPolarity: "positive"
+        elementalAffinity: "fire"
+        locationTags: ""
+        comment: "{hero_name} checks the party's formation. 'Stay close and stay behind me. Fire is dangerous but it cannot reach us if we hold the line.'"
+        sentiment: "positive"
+    }
+}
+
+comment_od_pos_water = new entity {
+    HeroArrivalComment {
+        commentId: "od_pos_water"
+        triggerClass: ""
+        triggerTrait: "od"
+        triggerPolarity: "positive"
+        elementalAffinity: "water"
+        locationTags: ""
+        comment: "{hero_name} positions the party behind a rocky outcrop. 'The currents are treacherous. We guard the flanks and wait for safe passage.'"
+        sentiment: "neutral"
+    }
+}
+
+comment_od_pos_light = new entity {
+    HeroArrivalComment {
+        commentId: "od_pos_light"
+        triggerClass: ""
+        triggerTrait: "od"
+        triggerPolarity: "positive"
+        elementalAffinity: "light"
+        locationTags: ""
+        comment: "{hero_name} raises a shield against the blinding radiance. 'Even in the light, danger lurks. Shields up, eyes forward.'"
+        sentiment: "neutral"
+    }
+}
+
+comment_od_pos_darkness = new entity {
+    HeroArrivalComment {
+        commentId: "od_pos_darkness"
+        triggerClass: ""
+        triggerTrait: "od"
+        triggerPolarity: "positive"
+        elementalAffinity: "darkness"
+        locationTags: ""
+        comment: "{hero_name} takes a defensive stance at the rear. 'In darkness, we cannot see what comes. Stay tight, watch each other's backs.'"
+        sentiment: "negative"
+    }
+}
+
 // ─── Blocking Encounters (6) ────────────────────────────────────────────────
 
 blocking_troll_bridge = new entity {

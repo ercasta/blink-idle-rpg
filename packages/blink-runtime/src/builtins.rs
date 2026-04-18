@@ -169,6 +169,35 @@ pub fn brl_str_contains(
     s.contains(pat)
 }
 
+/// Pick a variant from a pipe-separated string.
+/// Given "alpha|beta|gamma" and index 1, returns "beta".
+/// The index wraps around (modulo the number of variants).
+/// Each variant is trimmed of leading/trailing whitespace.
+pub fn brl_str_pick_variant(
+    text: crate::interning::InternedString,
+    index: i64,
+    interner: &mut crate::interning::StringInterner,
+) -> crate::interning::InternedString {
+    let s = interner.resolve(text).to_string();
+    let parts: Vec<&str> = s.split('|').collect();
+    if parts.is_empty() {
+        return text;
+    }
+    let idx = (index.unsigned_abs() as usize) % parts.len();
+    let result = parts[idx].trim();
+    interner.intern(result)
+}
+
+/// Count the number of pipe-separated variants in a string.
+/// Given "alpha|beta|gamma", returns 3. Given "just one", returns 1.
+pub fn brl_str_count_variants(
+    text: crate::interning::InternedString,
+    interner: &crate::interning::StringInterner,
+) -> i64 {
+    let s = interner.resolve(text);
+    s.split('|').count() as i64
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -271,5 +300,28 @@ mod tests {
         let missing = interner.intern("xyz");
         assert!(brl_str_contains(text, pattern, &interner));
         assert!(!brl_str_contains(text, missing, &interner));
+    }
+
+    #[test]
+    fn test_str_pick_variant() {
+        let mut interner = crate::interning::StringInterner::new();
+        let text = interner.intern("alpha | beta | gamma");
+        assert_eq!(interner.resolve(brl_str_pick_variant(text, 0, &mut interner)), "alpha");
+        assert_eq!(interner.resolve(brl_str_pick_variant(text, 1, &mut interner)), "beta");
+        assert_eq!(interner.resolve(brl_str_pick_variant(text, 2, &mut interner)), "gamma");
+        // Wraps around
+        assert_eq!(interner.resolve(brl_str_pick_variant(text, 3, &mut interner)), "alpha");
+        // Single variant
+        let single = interner.intern("just one");
+        assert_eq!(interner.resolve(brl_str_pick_variant(single, 5, &mut interner)), "just one");
+    }
+
+    #[test]
+    fn test_str_count_variants() {
+        let mut interner = crate::interning::StringInterner::new();
+        let text = interner.intern("alpha|beta|gamma");
+        assert_eq!(brl_str_count_variants(text, &interner), 3);
+        let single = interner.intern("just one");
+        assert_eq!(brl_str_count_variants(single, &interner), 1);
     }
 }

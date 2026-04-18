@@ -462,8 +462,9 @@ fn findBlockingForPath(pathType: string, pathId: string, locationId: string): id
 }
 
 // ── Helper: select arrival comment for a hero at a location ─────────────────
+// Issue 5 fix: supports both 'rc' and 'od' trait axes for broader matching
 
-fn findArrivalComment(heroClass: string, traitRc: integer, locAffinity: string, locTags: string): string {
+fn findArrivalComment(heroClass: string, traitRc: integer, traitOd: integer, locAffinity: string, locTags: string): string {
     let comments = entities having HeroArrivalComment
     for comment in comments {
         // Check elemental or tag match
@@ -480,13 +481,22 @@ fn findArrivalComment(heroClass: string, traitRc: integer, locAffinity: string, 
                     return comment.HeroArrivalComment.comment
                 }
             }
-            // Trait-based comment
+            // Trait-based comment (rc axis)
             if comment.HeroArrivalComment.triggerTrait != "" {
                 if comment.HeroArrivalComment.triggerTrait == "rc" {
                     if comment.HeroArrivalComment.triggerPolarity == "positive" && traitRc > 0 {
                         return comment.HeroArrivalComment.comment
                     }
                     if comment.HeroArrivalComment.triggerPolarity == "negative" && traitRc < 0 {
+                        return comment.HeroArrivalComment.comment
+                    }
+                }
+                // Trait-based comment (od axis)
+                if comment.HeroArrivalComment.triggerTrait == "od" {
+                    if comment.HeroArrivalComment.triggerPolarity == "positive" && traitOd > 0 {
+                        return comment.HeroArrivalComment.comment
+                    }
+                    if comment.HeroArrivalComment.triggerPolarity == "negative" && traitOd < 0 {
                         return comment.HeroArrivalComment.comment
                     }
                 }
@@ -497,11 +507,13 @@ fn findArrivalComment(heroClass: string, traitRc: integer, locAffinity: string, 
 }
 
 // ── Helper: check if a hero encounter is scheduled for a given day ───────────
+// Issue 1 fix: checks triggerDay only (not isCompleted) so that combat is
+// correctly suppressed on hero encounter days even before processQuestDay runs.
 
 fn hasHeroEncounterOnDay(day: integer): boolean {
     let encounters = entities having StoryHeroEncounter
     for enc in encounters {
-        if enc.StoryHeroEncounter.triggerDay == day && enc.StoryHeroEncounter.isCompleted {
+        if enc.StoryHeroEncounter.triggerDay == day {
             return true
         }
     }
@@ -564,6 +576,56 @@ fn emitUnreachedEncounters(completionDay: integer): integer {
 }
 
 
+// ── Helper: get current quest objective title (live from AdventureState) ─────
+
+fn getQuestObjective(): string {
+    let states = entities having AdventureState
+    if len(states) > 0 {
+        return states[0].AdventureState.objectiveTitle
+    }
+    return ""
+}
+
+// ── Helper: get current active milestone title ─────────────────────────────
+
+fn getActiveMilestoneTitle(): string {
+    let milestones = entities having QuestMilestone
+    for ms in milestones {
+        if ms.QuestMilestone.isActive && !ms.QuestMilestone.isCompleted {
+            return ms.QuestMilestone.title
+        }
+    }
+    return ""
+}
+
+// ── Helper: get comma-separated completed milestone titles ──────────────────
+
+fn getCompletedMilestonesCsv(): string {
+    let milestones = entities having QuestMilestone
+    let result = ""
+    for ms in milestones {
+        if ms.QuestMilestone.isCompleted {
+            if result != "" {
+                result = result + ","
+            }
+            result = result + ms.QuestMilestone.title
+        }
+    }
+    return result
+}
+
+// ── Helper: get current location type from SelectedLocation entities ────────
+
+fn getCurrentLocationType(locId: string): string {
+    let locs = entities having SelectedLocation
+    for loc in locs {
+        if loc.SelectedLocation.worldLocationId == locId {
+            return loc.SelectedLocation.locationType
+        }
+    }
+    return "wilderness"
+}
+
 // =============================================================================
 // RULE: StoryGenerate — entry point for narrative generation
 // =============================================================================
@@ -579,14 +641,42 @@ rule story_generate on StoryGenerate(evt: id) {
     let totalLocs = config.StoryGenerateConfig.totalLocations
     let townsRested = config.StoryGenerateConfig.townsRested
     let ambSurvived = config.StoryGenerateConfig.ambushesSurvived
-    let completionDay = config.StoryGenerateConfig.completionDay
-    let questObj = config.StoryGenerateConfig.questObjective
-    let activeMil = config.StoryGenerateConfig.activeMilestone
-    let completedMil = config.StoryGenerateConfig.completedMilestones
     let hCount = config.StoryGenerateConfig.heroCount
 
     // ── Select map locations ────────────────────────────────────────────
     let selectedCount = selectMap(seed, totalLocs)
+
+    // ── Compose quest (migrated from adventureQuest.ts) ─────────────────
+    // After map selection, compose the quest (objectives, milestones, events,
+    // hero encounters). This replaces the TypeScript quest composition.
+    let advState = composeQuest(seed, hCount)
+    let totalDays = 30
+    let heroEncCount = selectHeroEncountersForAdventure(seed, totalDays)
+
+    // Create QuestConfig entity for simulation parameters
+    let encounterIntensity = totalEnc * 1.0d / 120.0d
+    if encounterIntensity > 1.0d { encounterIntensity = 1.0d }
+    let locationsPerDay = locsVisited * 1.0d / totalDays
+    if locationsPerDay < 0.3d { locationsPerDay = 0.3d }
+
+    let questConfig = new entity {
+        QuestConfig {
+            totalDays: totalDays
+            encounterIntensity: encounterIntensity
+            locationsPerDay: locationsPerDay
+            milestonesTotal: 0
+        }
+    }
+    let msList = entities having QuestMilestone
+    questConfig.QuestConfig.milestonesTotal = len(msList)
+
+    // Set initial completionDay = totalDays (BRL updates when quest completes)
+    config.StoryGenerateConfig.completionDay = totalDays
+
+    // Get live quest context
+    let questObj = getQuestObjective()
+    let activeMil = getActiveMilestoneTitle()
+    let completedMil = getCompletedMilestonesCsv()
 
     // ── Get start/end locations ─────────────────────────────────────────
     let startLoc = getSelectedLocation(0)
@@ -641,14 +731,41 @@ rule story_process_day on StoryProcessDay(evt: id) {
 
     let seed = config.StoryGenerateConfig.seed
     let completionDay = config.StoryGenerateConfig.completionDay
-    let questObj = config.StoryGenerateConfig.questObjective
-    let activeMil = config.StoryGenerateConfig.activeMilestone
-    let completedMil = config.StoryGenerateConfig.completedMilestones
     let hCount = config.StoryGenerateConfig.heroCount
 
     let curLoc = getSelectedLocation(currentLocIdx)
     let curLocName = curLoc.SelectedLocation.worldLocationName
     let curLocId = curLoc.SelectedLocation.worldLocationId
+    let curLocType = curLoc.SelectedLocation.locationType
+
+    // ── Quest simulation (migrated from simulateQuestProgress) ──────────
+    // Process quest day first so hero encounter state is updated before
+    // the travel decision. This fixes Issue 1 (combat on hero encounter days)
+    // and Issue 3 (location-specific event filtering).
+    let questConfigs = entities having QuestConfig
+    let encounterIntensity = 0.5d
+    let locationsPerDay = 0.5d
+    if len(questConfigs) > 0 {
+        encounterIntensity = questConfigs[0].QuestConfig.encounterIntensity
+        locationsPerDay = questConfigs[0].QuestConfig.locationsPerDay
+    }
+    let questComplete = processQuestDay(day, encounterIntensity, locationsPerDay)
+
+    // If quest just completed, set completionDay to allow one more day
+    if questComplete == 1 && completionDay == 30 {
+        let newCompDay = day + 1
+        if newCompDay > 30 { newCompDay = 30 }
+        config.StoryGenerateConfig.completionDay = newCompDay
+        completionDay = newCompDay
+    }
+
+    // Live quest context (updated by processQuestDay)
+    let questObj = getQuestObjective()
+    let activeMil = getActiveMilestoneTitle()
+    let completedMil = getCompletedMilestonesCsv()
+
+    // ── Quest narrative (migrated from generateQuestNarrative) ──────────
+    let questNarr = emitQuestNarrativeForDay(day)
 
     // ── Day start (skip day 1, already emitted) ─────────────────────────
     if day > 1 {
@@ -761,12 +878,30 @@ rule story_process_day on StoryProcessDay(evt: id) {
                 enemyCount = 1
             }
 
-            // Encounter notification
+            // Encounter notification — Issue 4: contextual encounter narrative
+            // Uses terrain/location context for richer descriptions
             let encLabel = to_string(enemyCount) + " " + enemyName
             if enemyCount > 1 {
                 encLabel = encLabel + "s"
             }
-            let encN = emitNarrative(day, hour, 2, "The party encounters " + encLabel + "!")
+            let terrainContext = ""
+            let terrainRoll: integer = floor(random_range(0, 5))
+            if terrainRoll == 0 {
+                terrainContext = " emerge from the " + terrainDesc
+            }
+            if terrainRoll == 1 {
+                terrainContext = " block the path ahead"
+            }
+            if terrainRoll == 2 {
+                terrainContext = " ambush the party on the " + terrainDesc
+            }
+            if terrainRoll == 3 {
+                terrainContext = " appear from behind the rocks"
+            }
+            if terrainRoll == 4 {
+                terrainContext = " charge at the party"
+            }
+            let encN = emitNarrative(day, hour, 2, "The party encounters " + encLabel + "!" + terrainContext + ".")
 
             // Combat details — hero actions
             let heroes2 = entities having StoryHeroInfo
@@ -826,6 +961,7 @@ rule story_process_day on StoryProcessDay(evt: id) {
             let comment = findArrivalComment(
                 commentHero.StoryHeroInfo.heroClass,
                 commentHero.StoryHeroInfo.traitRc,
+                commentHero.StoryHeroInfo.traitOd,
                 nextLoc.SelectedLocation.elementalAffinity,
                 nextLoc.SelectedLocation.tags
             )
@@ -962,11 +1098,13 @@ rule story_finalize on StoryFinalize(evt: id) {
     let finalReached = config.StoryGenerateConfig.finalDestinationReached
     let locsVisited = config.StoryGenerateConfig.locationsVisited
     let totalEnc = config.StoryGenerateConfig.totalEncounters
-    let questObj = config.StoryGenerateConfig.questObjective
-    let activeMil = config.StoryGenerateConfig.activeMilestone
-    let completedMil = config.StoryGenerateConfig.completedMilestones
     let hCount = config.StoryGenerateConfig.heroCount
     let totalDays = 30
+
+    // Live quest context
+    let questObj = getQuestObjective()
+    let activeMil = getActiveMilestoneTitle()
+    let completedMil = getCompletedMilestonesCsv()
 
     let endLoc = getSelectedLocation(currentLocIdx)
     let endLocName = endLoc.SelectedLocation.worldLocationName
@@ -980,19 +1118,43 @@ rule story_finalize on StoryFinalize(evt: id) {
     let heroNames = allHeroNames()
     let isEarly = completionDay < totalDays
 
+    // Issue 6 fix: Include quest scoring in narrative
+    let questScoreText = ""
+    let questScores = entities having QuestScore
+    if len(questScores) > 0 {
+        let qs = questScores[0]
+        questScoreText = " Quest score: " + to_string(qs.QuestScore.totalQuestScore) + " pts"
+        if qs.QuestScore.milestoneBonus > 0 {
+            questScoreText = questScoreText + " (milestones: " + to_string(qs.QuestScore.milestoneBonus)
+            if qs.QuestScore.sideEventBonus > 0 {
+                questScoreText = questScoreText + ", events: " + to_string(qs.QuestScore.sideEventBonus)
+            }
+            if qs.QuestScore.heroEncounterBonus > 0 {
+                questScoreText = questScoreText + ", encounters: " + to_string(qs.QuestScore.heroEncounterBonus)
+            }
+            if qs.QuestScore.objectiveBonus > 0 {
+                questScoreText = questScoreText + ", objective: " + to_string(qs.QuestScore.objectiveBonus)
+            }
+            if qs.QuestScore.allNormalBonus > 0 {
+                questScoreText = questScoreText + ", perfect: " + to_string(qs.QuestScore.allNormalBonus)
+            }
+            questScoreText = questScoreText + ")"
+        }
+    }
+
     if finalReached && isEarly {
         let daysRemaining = totalDays - completionDay
         let n1 = emitNarrative(completionDay, 11, 1, "🏆 Mission complete! The party has achieved their goal with " + to_string(daysRemaining) + " days to spare!")
         let n2 = emitNarrative(completionDay, 11, 2, heroNames + " have accomplished the mission ahead of schedule.")
-        let n3 = emitNarrative(completionDay, 11, 3, to_string(locsVisited) + " locations explored, " + to_string(totalEnc) + " enemies defeated. An exceptional performance.")
+        let n3 = emitNarrative(completionDay, 11, 3, to_string(locsVisited) + " locations explored, " + to_string(totalEnc) + " enemies defeated. An exceptional performance." + questScoreText)
     } else {
         if finalReached {
             let n4 = emitNarrative(completionDay, 11, 1, "The party reaches " + finalLocName + "! The journey ends in triumph.")
             let n5 = emitNarrative(completionDay, 11, 2, "After " + to_string(completionDay) + " days of travel, the heroes stand victorious at " + finalLocName + ".")
-            let n6 = emitNarrative(completionDay, 11, 3, heroNames + " raise their weapons in celebration. " + to_string(locsVisited) + " locations explored, " + to_string(totalEnc) + " enemies defeated.")
+            let n6 = emitNarrative(completionDay, 11, 3, heroNames + " raise their weapons in celebration. " + to_string(locsVisited) + " locations explored, " + to_string(totalEnc) + " enemies defeated." + questScoreText)
         } else {
             let n7 = emitNarrative(completionDay, 11, 1, "The journey ends. The party did not reach " + finalLocName + ".")
-            let n8 = emitNarrative(completionDay, 11, 2, "After " + to_string(completionDay) + " days, the heroes' strength was not enough to complete the journey.")
+            let n8 = emitNarrative(completionDay, 11, 2, "After " + to_string(completionDay) + " days, the heroes' strength was not enough to complete the journey." + questScoreText)
         }
     }
 

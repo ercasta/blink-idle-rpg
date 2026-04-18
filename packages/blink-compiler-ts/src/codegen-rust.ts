@@ -374,10 +374,12 @@ export class RustCodeGenerator {
           return 'decimal'; // brl_* builtins always return f64
         case 'len':
           return 'integer';
-        case 'concat': case 'to_string': case 'str_replace':
+        case 'concat': case 'to_string': case 'str_replace': case 'str_pick_variant':
           return 'string';
         case 'str_contains':
           return 'boolean';
+        case 'str_count_variants':
+          return 'integer';
       }
       return 'unknown'; // user-defined functions
     }
@@ -1543,6 +1545,8 @@ export class RustCodeGenerator {
       }
       case 'str_replace': return `brl_str_replace(${args[0]}, ${args[1]}, ${args[2]}, &mut engine.interner)`;
       case 'str_contains': return `brl_str_contains(${args[0]}, ${args[1]}, &engine.interner)`;
+      case 'str_pick_variant': return `brl_str_pick_variant(${args[0]}, ${args[1]} as i64, &mut engine.interner)`;
+      case 'str_count_variants': return `brl_str_count_variants(${args[0]}, &engine.interner)`;
       default:
         // User-defined function — append engine as last argument
         return `${this.toSnakeCase(expr.name)}(${args.length > 0 ? args.join(', ') + ', ' : ''}engine)`;
