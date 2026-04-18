@@ -260,7 +260,7 @@ fn composeQuest(seed: integer, heroCount: integer): id {
     let msIter = 0
     let maxMsIter = allMsCount * 3
     while msCreated < milestoneCount && msIter < maxMsIter {
-        let msPickIdx = pickIndexByHash(seed, 200 + msIter) % allMsCount
+        let msPickIdx = pickIndexByHash(seed, 200 + msIter, allMsCount)
         let msTmpl = allMilestones[msPickIdx]
 
         // Check compatibility: does msTmpl.compatibleObjectives contain objCategory?
@@ -320,7 +320,7 @@ fn composeQuest(seed: integer, heroCount: integer): id {
                 let evIter = 0
                 let maxEvIter = len(allKeyEvents) * 2
                 while evCreated == 0 && evIter < maxEvIter {
-                    let evPickIdx = pickIndexByHash(seed, 500 + msCreated * 20 + evIter) % len(allKeyEvents)
+                    let evPickIdx = pickIndexByHash(seed, 500 + msCreated * 20 + evIter, len(allKeyEvents))
                     let evTmpl = allKeyEvents[evPickIdx]
 
                     if evTmpl.EventTemplate.isKeyEvent {
@@ -368,7 +368,7 @@ fn composeQuest(seed: integer, heroCount: integer): id {
                 let sideIter = 0
                 let maxSideIter = len(allKeyEvents) * 2
                 while evCreated < eventSlots && sideIter < maxSideIter {
-                    let sidePickIdx = pickIndexByHash(seed, 1000 + msCreated * 20 + sideIter) % len(allKeyEvents)
+                    let sidePickIdx = pickIndexByHash(seed, 1000 + msCreated * 20 + sideIter, len(allKeyEvents))
                     let sideTmpl = allKeyEvents[sidePickIdx]
 
                     if !sideTmpl.EventTemplate.isKeyEvent {
@@ -584,6 +584,7 @@ fn selectHeroEncountersForAdventure(seed: integer, totalDays: integer): integer 
             let encOnMatch = resolveAllSlots(bestTmpl.HeroEncounterTemplate.narrativeOnMatch)
             let encOnComplete = resolveAllSlots(bestTmpl.HeroEncounterTemplate.narrativeOnComplete)
 
+            let heroBonus = questHeroEncounterBonus()
             let heroEnc = new entity {
                 StoryHeroEncounter {
                     triggerDay: trigDay
@@ -595,7 +596,7 @@ fn selectHeroEncountersForAdventure(seed: integer, totalDays: integer): integer 
                     narrativeOnComplete: encOnComplete
                     buffType: bestTmpl.HeroEncounterTemplate.buffType
                     buffAmount: bestTmpl.HeroEncounterTemplate.buffAmount
-                    bonusPoints: questHeroEncounterBonus()
+                    bonusPoints: heroBonus
                     isCompleted: false
                 }
             }
@@ -608,7 +609,7 @@ fn selectHeroEncountersForAdventure(seed: integer, totalDays: integer): integer 
     let fillIter = 0
     let maxFillIter = templateCount
     while selected < targetCount && fillIter < maxFillIter {
-        let tmplIdx = pickIndexByHash(seed, 2000 + fillIter) % templateCount
+        let tmplIdx = pickIndexByHash(seed, 2000 + fillIter, templateCount)
         let tmpl = templates[tmplIdx]
 
         // Check not already used
@@ -634,7 +635,8 @@ fn selectHeroEncountersForAdventure(seed: integer, totalDays: integer): integer 
 
             // Accept if score > 0, or if we need to fill (use first hero as fallback)
             if bestHeroScore == 0 {
-                bestHero = heroes[fillIter % heroCt]
+                let fallbackHeroIdx = pickIndexByHash(seed, 3000 + fillIter, heroCt)
+                bestHero = heroes[fallbackHeroIdx]
             }
 
             let matchReason2 = buildMatchReason(bestHero, tmpl)
@@ -654,6 +656,7 @@ fn selectHeroEncountersForAdventure(seed: integer, totalDays: integer): integer 
             let encOnMatch2 = resolveAllSlots(tmpl.HeroEncounterTemplate.narrativeOnMatch)
             let encOnComplete2 = resolveAllSlots(tmpl.HeroEncounterTemplate.narrativeOnComplete)
 
+            let heroBonus2 = questHeroEncounterBonus()
             let heroEnc2 = new entity {
                 StoryHeroEncounter {
                     triggerDay: trigDay2
@@ -665,7 +668,7 @@ fn selectHeroEncountersForAdventure(seed: integer, totalDays: integer): integer 
                     narrativeOnComplete: encOnComplete2
                     buffType: tmpl.HeroEncounterTemplate.buffType
                     buffAmount: tmpl.HeroEncounterTemplate.buffAmount
-                    bonusPoints: questHeroEncounterBonus()
+                    bonusPoints: heroBonus2
                     isCompleted: false
                 }
             }
