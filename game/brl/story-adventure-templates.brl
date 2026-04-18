@@ -6,10 +6,9 @@
 // TypeScript composition algorithm draws from when generating adventures.
 //
 // This file is the single source of truth for adventure content pools.
-// At runtime, adventureDataLoader.ts fetches and parses this file to
-// populate the OBJECTIVE_TEMPLATES, MILESTONE_TEMPLATES, and EVENT_TEMPLATES
-// arrays in adventureQuest.ts. The hardcoded TypeScript arrays serve as
-// fallback only.
+// At build time, compile-game-data.js compiles this file (and expansion
+// BRL files) into adventure-data.json.  The game app loads the JSON.
+// There are no hardcoded TypeScript fallbacks.
 //
 // Extensibility: add new objectives, milestones, or events by declaring
 // new entities with the appropriate component. No rule changes are needed —

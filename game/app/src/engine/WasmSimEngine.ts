@@ -23,94 +23,53 @@ import { loadHeroClassData } from '../data/heroClassData';
 import type { HeroClassData } from '../data/heroClassData';
 
 // ── Hero stats per class ────────────────────────────────────────────────────
-// Hero class combat stats, skills, and growth vectors are now loaded from BRL
+// Hero class combat stats, skills, and growth vectors are loaded from BRL
 // hero-classes.brl at runtime via loadHeroClassData() in heroClassData.ts.
-// The hardcoded fallbacks below are used only when BRL files are unavailable
-// (e.g. unit tests).
+// BRL is the single source of truth — there are no hardcoded fallbacks.
 
-const FALLBACK_CLASS_BASE_HP: Record<string, number> = {
-  Warrior: 250, Mage: 150, Ranger: 140, Paladin: 220, Rogue: 130, Cleric: 180,
-};
-
-const FALLBACK_CLASS_BASE_DAMAGE: Record<string, number> = {
-  Warrior: 28, Mage: 35, Ranger: 22, Paladin: 20, Rogue: 24, Cleric: 16,
-};
-
-const FALLBACK_CLASS_BASE_DEFENSE: Record<string, number> = {
-  Warrior: 12, Mage: 5, Ranger: 7, Paladin: 14, Rogue: 6, Cleric: 8,
-};
-
-const FALLBACK_CLASS_SKILLS: Record<string, [string, string, string, string]> = {
-  Warrior: ['power_strike', 'shield_bash', 'defensive_stance', 'execute'],
-  Mage:    ['fireball', 'frost_bolt', 'arcane_blast', 'mana_shield'],
-  Ranger:  ['arrow_shot', 'multi_shot', 'evade', 'trap'],
-  Paladin: ['holy_strike', 'divine_shield', 'consecrate', 'lay_on_hands'],
-  Rogue:   ['backstab', 'smoke_bomb', 'poison_blade', 'shadowstep'],
-  Cleric:  ['heal', 'smite', 'divine_favor', 'holy_word'],
-};
-
-const FALLBACK_CLASS_ATTACK_SPEED: Record<string, number> = {
-  Warrior: 0.9, Mage: 0.6, Ranger: 1.1, Paladin: 0.7, Rogue: 1.3, Cleric: 0.6,
-};
-
-// ── Helper to resolve class data from BRL-loaded or fallback ────────────────
+// ── Helper to resolve class data from BRL-loaded data ────────────────
 
 function _getClassBaseHp(heroClass: string, classData: Record<string, HeroClassData>): number {
-  return classData[heroClass]?.combat.baseHp ?? FALLBACK_CLASS_BASE_HP[heroClass] ?? 100;
+  const cd = classData[heroClass];
+  if (!cd) throw new Error(`Hero class data for "${heroClass}" not loaded from BRL.`);
+  return cd.combat.baseHp;
 }
 
 function _getClassBaseDamage(heroClass: string, classData: Record<string, HeroClassData>): number {
-  return classData[heroClass]?.combat.baseDamage ?? FALLBACK_CLASS_BASE_DAMAGE[heroClass] ?? 15;
+  const cd = classData[heroClass];
+  if (!cd) throw new Error(`Hero class data for "${heroClass}" not loaded from BRL.`);
+  return cd.combat.baseDamage;
 }
 
 function _getClassBaseDefense(heroClass: string, classData: Record<string, HeroClassData>): number {
-  return classData[heroClass]?.combat.baseDefense ?? FALLBACK_CLASS_BASE_DEFENSE[heroClass] ?? 5;
+  const cd = classData[heroClass];
+  if (!cd) throw new Error(`Hero class data for "${heroClass}" not loaded from BRL.`);
+  return cd.combat.baseDefense;
 }
 
 function _getClassAttackSpeed(heroClass: string, classData: Record<string, HeroClassData>): number {
-  return classData[heroClass]?.combat.baseAttackSpeed ?? FALLBACK_CLASS_ATTACK_SPEED[heroClass] ?? 1.0;
+  const cd = classData[heroClass];
+  if (!cd) throw new Error(`Hero class data for "${heroClass}" not loaded from BRL.`);
+  return cd.combat.baseAttackSpeed;
 }
 
 function _getClassSkills(heroClass: string, classData: Record<string, HeroClassData>): [string, string, string, string] {
   const cd = classData[heroClass];
-  if (cd) {
-    // skill1 defaults to 'basic_attack' — a hero must always have at least one attack.
-    // skill2–4 default to '' (empty = no skill in that slot).
-    return [cd.skills.skill1 || 'basic_attack', cd.skills.skill2 || '', cd.skills.skill3 || '', cd.skills.skill4 || ''];
-  }
-  return FALLBACK_CLASS_SKILLS[heroClass] ?? ['basic_attack', '', '', ''];
+  if (!cd) throw new Error(`Hero class data for "${heroClass}" not loaded from BRL.`);
+  // skill1 defaults to 'basic_attack' — a hero must always have at least one attack.
+  // skill2–4 default to '' (empty = no skill in that slot).
+  return [cd.skills.skill1 || 'basic_attack', cd.skills.skill2 || '', cd.skills.skill3 || '', cd.skills.skill4 || ''];
 }
 
 // ── Game mode spawn configs ─────────────────────────────────────────────────
-// Mode configs are now loaded from BRL scenario files at runtime via
-// loadScenarioConfigs() in scenarioData.ts.  The hardcoded fallback below
-// is used only when BRL files are unavailable (e.g. unit tests).
-
-const FALLBACK_NORMAL_CONFIG: ModeConfig = {
-  bossEveryKills: 100, tierProgressionKills: 500,
-  healthScaleRate: 80, damageScaleRate: 60, initialEnemyCount: 5,
-  retreatTimePenalty: 10.0, deathTimePenaltyMultiplier: 2.0, fleeCooldown: 5.0,
-  pointsPerKill: 10, pointsPerWave: 50, pointsPerBoss: 500,
-  pointsLostPerDeath: 30, pointsLostPerRetreat: 50, pointsLostPerPenaltySecond: 2,
-  timeBonusPoints: 1000, timeBonusInterval: 10.0,
-};
+// Mode configs are loaded from BRL scenario files at runtime via
+// loadScenarioConfigs() in scenarioData.ts.  BRL is the single source
+// of truth — there are no hardcoded fallbacks.
 
 // ── Enemy template data ─────────────────────────────────────────────────────
-// Enemy templates are now loaded from BRL enemies.brl at runtime via
-// loadEnemyTemplates() in enemyData.ts.  The hardcoded fallback below
-// is used only when BRL files are unavailable (e.g. unit tests).
-
-const FALLBACK_ENEMY_TEMPLATES: EnemyTemplate[] = [
-  { id: 100, tier: 1, name: 'Goblin Scout',      hp: 45,  dmg: 6,  def: 2,  spd: 0.8, exp: 25,  boss: false, finalBoss: false, stats: { strength: 6, dexterity: 10, intelligence: 3, constitution: 6, wisdom: 3 }, mana: 0, critChance: 0.05, critMultiplier: 1.5 },
-  { id: 101, tier: 2, name: 'Orc Raider',        hp: 70,  dmg: 10, def: 3,  spd: 0.7, exp: 35,  boss: false, finalBoss: false, stats: { strength: 10, dexterity: 7, intelligence: 3, constitution: 10, wisdom: 3 }, mana: 0, critChance: 0.05, critMultiplier: 1.5 },
-  { id: 102, tier: 2, name: 'Dark Wolf',         hp: 55,  dmg: 11, def: 2,  spd: 1.0, exp: 40,  boss: false, finalBoss: false, stats: { strength: 8, dexterity: 14, intelligence: 3, constitution: 6, wisdom: 4 }, mana: 0, critChance: 0.08, critMultiplier: 1.5 },
-  { id: 103, tier: 3, name: 'Skeleton Warrior',  hp: 85,  dmg: 13, def: 5,  spd: 0.6, exp: 50,  boss: false, finalBoss: false, stats: { strength: 12, dexterity: 8, intelligence: 3, constitution: 10, wisdom: 3 }, mana: 0, critChance: 0.08, critMultiplier: 1.5 },
-  { id: 104, tier: 3, name: 'Dark Mage',         hp: 60,  dmg: 18, def: 3,  spd: 0.5, exp: 75,  boss: false, finalBoss: false, stats: { strength: 5, dexterity: 8, intelligence: 14, constitution: 6, wisdom: 10 }, mana: 100, critChance: 0.12, critMultiplier: 1.8 },
-  { id: 105, tier: 4, name: 'Troll Berserker',   hp: 140, dmg: 18, def: 6,  spd: 0.5, exp: 80,  boss: false, finalBoss: false, stats: { strength: 15, dexterity: 6, intelligence: 3, constitution: 15, wisdom: 3 }, mana: 0, critChance: 0.10, critMultiplier: 1.5 },
-  { id: 106, tier: 5, name: 'Demon Knight',      hp: 200, dmg: 24, def: 8,  spd: 0.6, exp: 150, boss: false, finalBoss: false, stats: { strength: 15, dexterity: 10, intelligence: 8, constitution: 14, wisdom: 6 }, mana: 50, critChance: 0.12, critMultiplier: 1.8 },
-  { id: 107, tier: 6, name: 'Ancient Dragon',    hp: 300, dmg: 30, def: 10, spd: 0.7, exp: 300, boss: true,  finalBoss: false, stats: { strength: 18, dexterity: 12, intelligence: 14, constitution: 18, wisdom: 12 }, mana: 150, critChance: 0.15, critMultiplier: 1.8 },
-  { id: 108, tier: 6, name: 'Dragon Lord Vexar', hp: 400, dmg: 35, def: 12, spd: 0.7, exp: 500, boss: true,  finalBoss: true,  stats: { strength: 20, dexterity: 12, intelligence: 16, constitution: 20, wisdom: 12 }, mana: 200, critChance: 0.15, critMultiplier: 2.0 },
-];
+// Enemy templates are loaded from BRL enemies.brl at runtime via
+// loadEnemyTemplates() in enemyData.ts.  BRL is the single source of
+// truth — there are no hardcoded fallbacks.
 
 // ── WASM module loader ──────────────────────────────────────────────────────
 
@@ -245,10 +204,19 @@ export async function runSimulation(
     );
   }
 
-  // Use BRL-loaded data, falling back to hardcoded defaults if BRL load failed
-  const enemies = enemyTemplates.length > 0 ? enemyTemplates : FALLBACK_ENEMY_TEMPLATES;
-  const modeConfigs = Object.keys(scenarioConfigs).length > 0 ? scenarioConfigs : { normal: FALLBACK_NORMAL_CONFIG };
-  const normalConfig = modeConfigs['normal'] ?? FALLBACK_NORMAL_CONFIG;
+  // BRL is the single source of truth — data must be loaded successfully
+  if (enemyTemplates.length === 0) {
+    throw new Error('Enemy templates not loaded from BRL. Ensure enemies.brl is available.');
+  }
+  if (Object.keys(scenarioConfigs).length === 0) {
+    throw new Error('Scenario configs not loaded from BRL. Ensure scenario-*.brl files are available.');
+  }
+  const enemies = enemyTemplates;
+  const modeConfigs = scenarioConfigs;
+  const normalConfig = modeConfigs['normal'];
+  if (!normalConfig) {
+    throw new Error('Normal mode config not found in BRL scenario configs.');
+  }
   const classData = heroClassResult.classes;
 
   // Use a cryptographically random seed so each run produces different outcomes.

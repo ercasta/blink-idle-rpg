@@ -5,9 +5,9 @@
  * skill selection, and AI decision weights.
  *
  * Game balance data (class growth vectors, element threshold) is loaded
- * from hero-classes.brl at runtime via heroClassData.ts.  The hardcoded
- * fallback values below are used only when BRL files are unavailable
- * (e.g. unit tests, static hero definitions at import time).
+ * from hero-classes.brl at runtime via heroClassData.ts.  BRL is the
+ * single source of truth — loadHeroClassData() must be called before
+ * using any stat computation or element derivation functions.
  */
 
 import type { HeroClass, HeroTraits, HeroPathEntry, DamageCategory, Element, LinePreference, HeroRole } from '../types';
@@ -70,19 +70,10 @@ function gaussian(mean: number, sigma: number): number {
 }
 
 // ── Class base-growth vectors ───────────────────────────────────────────────
-// These fallback values are used when BRL data is not yet loaded (e.g.
-// during static hero definition at import time or in unit tests).
-// At runtime, the BRL-loaded values from hero-classes.brl take precedence.
-
-const FALLBACK_CLASS_BASE_GROWTH: Record<HeroClass, [number, number, number, number, number]> = {
-  // [STR, DEX, INT, CON, WIS]
-  Warrior: [0.60, 0.25, 0.05, 0.55, 0.15],
-  Mage:    [0.05, 0.20, 0.70, 0.10, 0.55],
-  Ranger:  [0.20, 0.70, 0.10, 0.25, 0.15],
-  Paladin: [0.40, 0.15, 0.10, 0.40, 0.55],
-  Rogue:   [0.35, 0.65, 0.05, 0.25, 0.10],
-  Cleric:  [0.10, 0.15, 0.35, 0.30, 0.70],
-};
+// Growth vectors are loaded from hero-classes.brl at runtime via
+// heroClassData.ts.  BRL is the single source of truth — there are no
+// hardcoded fallbacks.  Call loadHeroClassData() before using stat
+// computation functions.
 
 function _getClassGrowth(heroClass: HeroClass): [number, number, number, number, number] {
   const classData = getHeroClassData();
@@ -92,14 +83,17 @@ function _getClassGrowth(heroClass: HeroClass): [number, number, number, number,
       return [cd.growth.growthStr, cd.growth.growthDex, cd.growth.growthInt, cd.growth.growthCon, cd.growth.growthWis];
     }
   }
-  return FALLBACK_CLASS_BASE_GROWTH[heroClass];
+  throw new Error(
+    `Hero class data for "${heroClass}" not loaded. Call loadHeroClassData() before using stat computation functions.`,
+  );
 }
-
-const FALLBACK_ELEMENT_THRESHOLD = 5;
 
 function _getElementThreshold(): number {
   const config = getHeroBalanceConfig();
-  return config?.elementThreshold ?? FALLBACK_ELEMENT_THRESHOLD;
+  if (config) return config.elementThreshold;
+  throw new Error(
+    'Hero balance config not loaded. Call loadHeroClassData() before using element derivation functions.',
+  );
 }
 
 // ── Deterministic base stats from class + traits ────────────────────────────
@@ -446,8 +440,8 @@ export function simulateHeroPath(
 
 // ── Damage type & resistance derivation from traits ─────────────────────────
 // Element threshold is loaded from hero-classes.brl at runtime.
-// Fallback value FALLBACK_ELEMENT_THRESHOLD is defined above with other
-// class balance constants.
+// BRL is the single source of truth — loadHeroClassData() must be called
+// before using these functions.
 
 /**
  * Derive a hero's primary damage category from the pm trait.
