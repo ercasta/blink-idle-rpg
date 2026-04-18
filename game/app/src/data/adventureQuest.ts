@@ -493,20 +493,24 @@ export async function initAdventureData(): Promise<void> {
     MILESTONE_TEMPLATES = data.milestones;
     EVENT_TEMPLATES = data.events;
     HERO_ENCOUNTER_TEMPLATES = data.heroEncounters as HeroEncounterTemplate[];
-    // Load quest content pools from BRL
-    if (data.questPools) {
-      VILLAIN_POOL = data.questPools.villains;
-      ITEM_POOL = data.questPools.items;
-      CREATURE_POOL = data.questPools.creatures;
-      ENEMY_NAME_POOL = data.questPools.enemyNames;
-      CURSE_POOL = data.questPools.curses;
-      PORTAL_POOL = data.questPools.portals;
-      RIDDLE_POOL = data.questPools.riddles;
-      THREAT_POOL = data.questPools.threats;
-      INFO_POOL = data.questPools.infos;
-      INSCRIPTION_POOL = data.questPools.inscriptions;
-      CARGO_POOL = data.questPools.cargos;
+    // Load quest content pools from BRL — mandatory
+    if (!data.questPools) {
+      throw new Error(
+        'Quest content pools not found in adventure data. ' +
+        'Ensure story-quest-pools.brl is compiled into adventure-data.json.',
+      );
     }
+    VILLAIN_POOL = data.questPools.villains;
+    ITEM_POOL = data.questPools.items;
+    CREATURE_POOL = data.questPools.creatures;
+    ENEMY_NAME_POOL = data.questPools.enemyNames;
+    CURSE_POOL = data.questPools.curses;
+    PORTAL_POOL = data.questPools.portals;
+    RIDDLE_POOL = data.questPools.riddles;
+    THREAT_POOL = data.questPools.threats;
+    INFO_POOL = data.questPools.infos;
+    INSCRIPTION_POOL = data.questPools.inscriptions;
+    CARGO_POOL = data.questPools.cargos;
   })();
 
   return _initAdventurePromise;

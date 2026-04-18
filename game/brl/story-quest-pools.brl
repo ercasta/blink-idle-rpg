@@ -267,7 +267,7 @@ inscription_7 = new entity { InscriptionEntry { name: "Elder Script" } }
 // ─── Cargo Pool (6) ─────────────────────────────────────────────────────────
 
 cargo_1 = new entity { CargoEntry { description: "medical supplies" } }
-cargo_2 = new entity { CargoEntry { description: "weapons and armour" } }
+cargo_2 = new entity { CargoEntry { description: "weapons and armor" } }
 cargo_3 = new entity { CargoEntry { description: "sacred relics" } }
 cargo_4 = new entity { CargoEntry { description: "rare herbs" } }
 cargo_5 = new entity { CargoEntry { description: "gold and silver" } }
