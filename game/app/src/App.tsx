@@ -32,6 +32,7 @@ import { loadAdventures, saveAdventures } from './storage/adventureStorage';
 import { loadAllRuns, saveRun, toggleFavorite, deleteRun, importRun } from './storage/runStorage';
 import { updateLeaderboard, loadLeaderboard } from './storage/leaderboardStorage';
 import { loadRoster, saveRoster } from './storage/rosterStorage';
+import { loadHeroClassData } from './data/heroClassData';
 import { decodeHeroFromParams } from './data/heroDescription';
 import type { SharedHeroData } from './data/heroDescription';
 import { decodeAdventureFromParams } from './data/adventureDescription';
@@ -122,8 +123,11 @@ export default function App() {
   const [leaderboardPosition, setLeaderboardPosition] = useState<number | null | undefined>(undefined);
   const [isNewBest, setIsNewBest] = useState(false);
 
-  // Load all runs, roster, and adventures from IndexedDB on first mount
+  // Load all runs, roster, and adventures from IndexedDB on first mount.
+  // Also kick off hero class data loading immediately so it is ready before
+  // the user reaches the roster screen.
   useEffect(() => {
+    loadHeroClassData();
     loadAllRuns().then(setAllRuns);
     loadRoster().then(setRoster);
     loadAdventures().then(async (loadedAdventures) => {
