@@ -33,10 +33,6 @@ public/blink-compiler.bundle.js
 # Generated WASM engine artefacts — built at deploy time (make build-wasm)
 public/wasm/
 
-# Game files — BCL files copied from game/bcl/ at build time
-# by scripts/copy-game-files.js.  Do NOT edit these directly.
-public/game-files/
-
 # Pre-compiled game data JSON — generated from BRL sources at build time
 # by scripts/compile-game-data.js.  Do NOT edit these directly.
 public/game-data/

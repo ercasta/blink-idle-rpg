@@ -56,10 +56,6 @@ try {
   try { npm run build:bundle } catch { Write-Host "No build:bundle target or it failed; continuing." }
   Pop-Location
 
-  # Compile BRL -> IR
-  Write-Host "Compiling BRL to IR (node tools/compile-brl-to-ir.js)"
-  node tools/compile-brl-to-ir.js
-
   # Build the Node-capable wasm wrapper package
   if (Test-Path "packages\blink-engine-wasm-js\package.json") {
     Write-Host "Building packages\blink-engine-wasm-js"

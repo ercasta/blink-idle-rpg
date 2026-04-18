@@ -7,9 +7,8 @@
 //   • base game rules before story-mode extensions
 //   • entity/data files after all component definitions
 //
-// Build tools (packages/blink-engine-wasm-js/build.js and
-// tools/compile-brl-to-ir.js) read this file to discover the full
-// set of BRL source files and their compilation order.
+// The build tool (packages/blink-engine-wasm-js/build.js) reads this file
+// to discover the full set of BRL source files and their compilation order.
 // =============================================================================
 
 // ── Base game system ──────────────────────────────────────────────────────

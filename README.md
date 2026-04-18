@@ -105,7 +105,6 @@ Use `npm run build:wasm:dev` for a faster debug build during iteration.
 game/
   app/        React web app (Vite + Tailwind) — the game
   brl/        BRL source files (game rules + data — edit these!)
-  bcl/        BCL configuration files (heroes, skills)
   brl-tests/   Small standalone BRL programs for engine pipeline testing
   data/       JSON mirrors of game data (for documentation and UI)
 packages/
@@ -115,8 +114,6 @@ packages/
   blink-engine-wasm-js/  WASM build orchestrator
   blink-runtime/       Rust core engine
   blink-test/          BRL testing framework
-tools/
-  compile-brl-to-ir.js  Batch BRL→IR compiler
 scripts/
   install-rust-wasm-windows.ps1  Windows WASM setup
   install-wasm.js       Cross-platform WASM artefact installer
