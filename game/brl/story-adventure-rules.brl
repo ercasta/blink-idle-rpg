@@ -1,0 +1,1079 @@
+// =============================================================================
+// BLINK IDLE RPG — ADVENTURE QUEST RULES
+// =============================================================================
+// Migrates quest composition, simulation, and narrative generation from
+// TypeScript (adventureQuest.ts) to BRL. Uses the template entities from
+// story-adventure-templates.brl, pool entities from story-quest-pools.brl,
+// hero encounters from adventure-expansion-set-1.brl + expansion-pack-2.brl,
+// and world data from story-world-data.brl.
+//
+// Runtime quest components are defined in story-adventure.brl.
+// StoryHeroEncounter is defined in story-rules.brl.
+// NarrativeEntry is defined in story-mode.brl.
+//
+// Lifecycle:
+//   1. TypeScript sets up StoryHeroInfo, StoryGenerateConfig entities
+//   2. TypeScript schedules AdventureCompose event
+//   3. BRL rule adventure_compose calls composeQuest + selectHeroEncountersForAdventure
+//   4. processQuestDay is called from story_process_day for daily simulation
+//   5. emitQuestNarrativeForDay emits NarrativeEntry entities per day
+// =============================================================================
+
+// ─── QuestConfig: tracks simulation parameters ─────────────────────────────
+
+component QuestConfig {
+    totalDays: integer
+    encounterIntensity: decimal
+    locationsPerDay: decimal
+    milestonesTotal: integer
+}
+
+// ─── Scoring constants ─────────────────────────────────────────────────────
+
+fn questMilestoneNormalBonus(): integer { return 150 }
+fn questMilestoneBailoutBonus(): integer { return 50 }
+fn questSideEventBonus(): integer { return 75 }
+fn questObjectiveBonus(): integer { return 300 }
+fn questAllNormalBonus(): integer { return 200 }
+fn questItemBonus(): integer { return 25 }
+fn questHeroEncounterBonus(): integer { return 100 }
+
+// =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
+
+// ── seedHash: deterministic hash for selection ─────────────────────────────
+// Avoids consuming from the shared RNG so narrative randomness is preserved.
+
+fn seedHash(seed: integer, salt: integer): integer {
+    let h = (seed + salt) * 2654435761
+    if h < 0 { h = -h }
+    return h % 1000000007
+}
+
+// ── resolveAllSlots: resolve {slot_name} tokens from SlotBinding entities ──
+
+fn resolveAllSlots(text: string): string {
+    let bindings = entities having SlotBinding
+    let result = text
+    for b in bindings {
+        let token = "{" + b.SlotBinding.slotName + "}"
+        result = str_replace(result, token, b.SlotBinding.slotValue)
+    }
+    return result
+}
+
+// ── resolveAndPickVariant: resolve slots then pick a pipe-separated variant ─
+
+fn resolveAndPickVariant(text: string, variantSeed: integer): string {
+    let resolved = resolveAllSlots(text)
+    let idx = seedHash(variantSeed, 7919)
+    return str_pick_variant(resolved, idx)
+}
+
+// ── createSlotBinding: create a SlotBinding entity ─────────────────────────
+
+fn createSlotBinding(name: string, value: string): id {
+    let binding = new entity {
+        SlotBinding {
+            slotName: name
+            slotValue: value
+        }
+    }
+    return binding
+}
+
+// ── pickFromListByHash: deterministic index into a list ────────────────────
+
+fn pickIndexByHash(seed: integer, salt: integer, listLen: integer): integer {
+    let h = seedHash(seed, salt)
+    return h % listLen
+}
+
+// =============================================================================
+// QUEST COMPOSITION
+// =============================================================================
+
+fn composeQuest(seed: integer, heroCount: integer): id {
+
+    // ── 1. Pick an objective ────────────────────────────────────────────
+    let objectives = entities having ObjectiveTemplate
+    let objCount = len(objectives)
+    let objIdx = pickIndexByHash(seed, 1, objCount)
+    let chosenObj = objectives[objIdx]
+
+    let objId = chosenObj.ObjectiveTemplate.objectiveId
+    let objCategory = chosenObj.ObjectiveTemplate.category
+    let objWinCondition = chosenObj.ObjectiveTemplate.winCondition
+
+    // ── 2. Determine milestone count (7-9) ──────────────────────────────
+    let milestoneCount = 7 + (seedHash(seed, 2) % 3)
+
+    // ── 3. Bind slots from pool entities ────────────────────────────────
+    // NPC bindings
+    let npcs = entities having WorldNpc
+    let npcCount = len(npcs)
+    let npcIdx = pickIndexByHash(seed, 10, npcCount)
+    let npc = npcs[npcIdx]
+    let b1 = createSlotBinding("npc_name", npc.WorldNpc.name)
+    let npcRole = npc.WorldNpc.role
+    let b2 = createSlotBinding("npc_role", npcRole)
+    let b3 = createSlotBinding("npc_personality", npc.WorldNpc.personality)
+
+    // quest_giver (different NPC)
+    let npc2Idx = pickIndexByHash(seed, 11, npcCount)
+    if npc2Idx == npcIdx {
+        npc2Idx = (npc2Idx + 1) % npcCount
+    }
+    let npc2 = npcs[npc2Idx]
+    let b4 = createSlotBinding("quest_giver", npc2.WorldNpc.name)
+
+    // Villain bindings
+    let villains = entities having VillainEntry
+    let villainCount = len(villains)
+    let villainIdx = pickIndexByHash(seed, 20, villainCount)
+    let villain = villains[villainIdx]
+    let b5 = createSlotBinding("villain_name", villain.VillainEntry.name)
+    let b6 = createSlotBinding("villain_title", villain.VillainEntry.title)
+    let b7 = createSlotBinding("threat_desc", villain.VillainEntry.threatDesc)
+    let b8 = createSlotBinding("captor_name", villain.VillainEntry.name + " " + villain.VillainEntry.title)
+
+    // Item bindings
+    let items = entities having ItemEntry
+    let itemCount = len(items)
+    let itemIdx = pickIndexByHash(seed, 30, itemCount)
+    let item = items[itemIdx]
+    let b9 = createSlotBinding("item_name", item.ItemEntry.name)
+    let b10 = createSlotBinding("item_origin", item.ItemEntry.origin)
+
+    // seal_item (different item)
+    let sealIdx = pickIndexByHash(seed, 31, itemCount)
+    if sealIdx == itemIdx {
+        sealIdx = (sealIdx + 1) % itemCount
+    }
+    let sealItem = items[sealIdx]
+    let b10b = createSlotBinding("seal_item", sealItem.ItemEntry.name)
+
+    // Creature
+    let creatures = entities having CreatureEntry
+    let creatureIdx = pickIndexByHash(seed, 40, len(creatures))
+    let b11 = createSlotBinding("creature_name", creatures[creatureIdx].CreatureEntry.name)
+
+    // Enemy name
+    let enemies = entities having EnemyNameEntry
+    let enemyIdx = pickIndexByHash(seed, 41, len(enemies))
+    let b12 = createSlotBinding("enemy_name", enemies[enemyIdx].EnemyNameEntry.name)
+
+    // Rival (different NPC from first two)
+    let rivalIdx = pickIndexByHash(seed, 50, npcCount)
+    if rivalIdx == npcIdx || rivalIdx == npc2Idx {
+        rivalIdx = (rivalIdx + 1) % npcCount
+    }
+    if rivalIdx == npcIdx || rivalIdx == npc2Idx {
+        rivalIdx = (rivalIdx + 1) % npcCount
+    }
+    let rival = npcs[rivalIdx]
+    let b13 = createSlotBinding("rival_name", rival.WorldNpc.name)
+
+    // Curse
+    let curses = entities having CurseEntry
+    let curseIdx = pickIndexByHash(seed, 60, len(curses))
+    let b14 = createSlotBinding("curse_name", curses[curseIdx].CurseEntry.name)
+
+    // Portal
+    let portals = entities having PortalEntry
+    let portalIdx = pickIndexByHash(seed, 61, len(portals))
+    let b15 = createSlotBinding("portal_name", portals[portalIdx].PortalEntry.name)
+
+    // Riddle
+    let riddles = entities having RiddleEntry
+    let riddleIdx = pickIndexByHash(seed, 62, len(riddles))
+    let b16 = createSlotBinding("riddle_name", riddles[riddleIdx].RiddleEntry.name)
+
+    // Threat
+    let threats = entities having ThreatEntry
+    let threatIdx = pickIndexByHash(seed, 63, len(threats))
+    let b17 = createSlotBinding("threat_name", threats[threatIdx].ThreatEntry.name)
+
+    // Info
+    let infos = entities having InfoEntry
+    let infoIdx = pickIndexByHash(seed, 64, len(infos))
+    let b18 = createSlotBinding("info_name", infos[infoIdx].InfoEntry.name)
+
+    // Inscription
+    let inscriptions = entities having InscriptionEntry
+    let inscIdx = pickIndexByHash(seed, 65, len(inscriptions))
+    let b19 = createSlotBinding("inscription_name", inscriptions[inscIdx].InscriptionEntry.name)
+
+    // Cargo
+    let cargos = entities having CargoEntry
+    let cargoIdx = pickIndexByHash(seed, 66, len(cargos))
+    let b20 = createSlotBinding("cargo_desc", cargos[cargoIdx].CargoEntry.description)
+
+    // Location-based slots (from SelectedLocation entities — selectMap must run first)
+    let selLocs = entities having SelectedLocation
+    let selLocCount = len(selLocs)
+    if selLocCount > 0 {
+        let dIdx = pickIndexByHash(seed, 70, selLocCount)
+        let b21 = createSlotBinding("dungeon_name", selLocs[dIdx].SelectedLocation.worldLocationName)
+
+        let rIdx = pickIndexByHash(seed, 71, selLocCount)
+        let b22 = createSlotBinding("ruin_name", selLocs[rIdx].SelectedLocation.worldLocationName)
+
+        let lIdx = pickIndexByHash(seed, 72, selLocCount)
+        let b23 = createSlotBinding("location_name", selLocs[lIdx].SelectedLocation.worldLocationName)
+
+        let cIdx = pickIndexByHash(seed, 73, selLocCount)
+        let b24 = createSlotBinding("cursed_location", selLocs[cIdx].SelectedLocation.worldLocationName)
+
+        let pIdx = pickIndexByHash(seed, 74, selLocCount)
+        let b25 = createSlotBinding("portal_location", selLocs[pIdx].SelectedLocation.worldLocationName)
+
+        let destIdx = pickIndexByHash(seed, 75, selLocCount)
+        let b26 = createSlotBinding("destination_name", selLocs[destIdx].SelectedLocation.worldLocationName)
+    }
+
+    // ── 4. Resolve objective text ───────────────────────────────────────
+    let objTitleResolved = resolveAndPickVariant(chosenObj.ObjectiveTemplate.title, seed + 100)
+    let objDescResolved = resolveAndPickVariant(chosenObj.ObjectiveTemplate.description, seed + 101)
+
+    // ── 5. Create AdventureState entity ─────────────────────────────────
+    let advState = new entity {
+        AdventureState {
+            seed: seed
+            objectiveId: objId
+            objectiveTitle: objTitleResolved
+            objectiveDescription: objDescResolved
+            objectiveWinCondition: objWinCondition
+            currentMilestoneIndex: 0
+            milestonesCompleted: 0
+            adventureComplete: false
+        }
+    }
+
+    // ── 6. Pick and create milestones ───────────────────────────────────
+    let allMilestones = entities having MilestoneTemplate
+    let allMsCount = len(allMilestones)
+
+    // Pick compatible milestones using deterministic iteration
+    let msCreated = 0
+    let msIter = 0
+    let maxMsIter = allMsCount * 3
+    while msCreated < milestoneCount && msIter < maxMsIter {
+        let msPickIdx = pickIndexByHash(seed, 200 + msIter) % allMsCount
+        let msTmpl = allMilestones[msPickIdx]
+
+        // Check compatibility: does msTmpl.compatibleObjectives contain objCategory?
+        let compatible = str_contains(msTmpl.MilestoneTemplate.compatibleObjectives, objCategory)
+
+        // After first pass, accept any milestone
+        if msIter >= allMsCount {
+            compatible = true
+        }
+
+        if compatible {
+            // Check if we already created a milestone with this ID (skip duplicates)
+            let isDuplicate = false
+            let existingMs = entities having QuestMilestone
+            for existing in existingMs {
+                if existing.QuestMilestone.milestoneId == msTmpl.MilestoneTemplate.milestoneId {
+                    isDuplicate = true
+                }
+            }
+
+            if !isDuplicate {
+                // Compute target layer
+                let targetLayer = 1
+                if milestoneCount > 1 {
+                    targetLayer = 1 + (msCreated * 2) / (milestoneCount - 1)
+                }
+
+                let msTitle = resolveAndPickVariant(msTmpl.MilestoneTemplate.title, seed + 300 + msCreated)
+                let msDesc = resolveAndPickVariant(msTmpl.MilestoneTemplate.description, seed + 400 + msCreated)
+                let msBailoutDesc = resolveAllSlots(msTmpl.MilestoneTemplate.bailoutDescription)
+
+                let isFirstMs = msCreated == 0
+                let msEntity = new entity {
+                    QuestMilestone {
+                        milestoneId: msTmpl.MilestoneTemplate.milestoneId
+                        milestoneIndex: msCreated
+                        title: msTitle
+                        description: msDesc
+                        completionType: msTmpl.MilestoneTemplate.completionType
+                        completionKey: msTmpl.MilestoneTemplate.completionKey
+                        targetLayer: targetLayer
+                        bailoutDay: msTmpl.MilestoneTemplate.bailoutDay
+                        bailoutDescription: msBailoutDesc
+                        isActive: isFirstMs
+                        isCompleted: false
+                        completedViaBailout: false
+                        activationDay: 1
+                    }
+                }
+
+                // ── Create events for this milestone ────────────────────
+                let eventSlots = msTmpl.MilestoneTemplate.eventSlots
+                let allKeyEvents = entities having EventTemplate
+                let evCreated = 0
+
+                // Pick a key event for this milestone
+                let evIter = 0
+                let maxEvIter = len(allKeyEvents) * 2
+                while evCreated == 0 && evIter < maxEvIter {
+                    let evPickIdx = pickIndexByHash(seed, 500 + msCreated * 20 + evIter) % len(allKeyEvents)
+                    let evTmpl = allKeyEvents[evPickIdx]
+
+                    if evTmpl.EventTemplate.isKeyEvent {
+                        // Check not already used
+                        let evDup = false
+                        let existingEvs = entities having QuestEvent
+                        for existEv in existingEvs {
+                            if existEv.QuestEvent.eventId == evTmpl.EventTemplate.eventId {
+                                evDup = true
+                            }
+                        }
+
+                        if !evDup || evIter >= len(allKeyEvents) {
+                            let evTitle = resolveAndPickVariant(evTmpl.EventTemplate.title, seed + 600 + msCreated * 20 + evCreated)
+                            let evDesc = resolveAndPickVariant(evTmpl.EventTemplate.description, seed + 700 + msCreated * 20 + evCreated)
+                            let evTrigNarr = resolveAndPickVariant(evTmpl.EventTemplate.narrativeOnTrigger, seed + 800 + msCreated * 20 + evCreated)
+                            let evCompNarr = resolveAndPickVariant(evTmpl.EventTemplate.narrativeOnComplete, seed + 900 + msCreated * 20 + evCreated)
+
+                            let evEntity = new entity {
+                                QuestEvent {
+                                    eventId: evTmpl.EventTemplate.eventId
+                                    title: evTitle
+                                    description: evDesc
+                                    isKeyEvent: true
+                                    triggerType: evTmpl.EventTemplate.triggerType
+                                    triggerLocation: evTmpl.EventTemplate.triggerLocation
+                                    rewardType: evTmpl.EventTemplate.rewardType
+                                    narrativeOnTrigger: evTrigNarr
+                                    narrativeOnComplete: evCompNarr
+                                    difficultyModifier: evTmpl.EventTemplate.difficultyModifier
+                                    isTriggered: false
+                                    isCompleted: false
+                                    succeeded: false
+                                    triggeredDay: 0
+                                    completedDay: 0
+                                }
+                            }
+                            evCreated = evCreated + 1
+                        }
+                    }
+                    evIter = evIter + 1
+                }
+
+                // Pick side events to fill remaining slots
+                let sideIter = 0
+                let maxSideIter = len(allKeyEvents) * 2
+                while evCreated < eventSlots && sideIter < maxSideIter {
+                    let sidePickIdx = pickIndexByHash(seed, 1000 + msCreated * 20 + sideIter) % len(allKeyEvents)
+                    let sideTmpl = allKeyEvents[sidePickIdx]
+
+                    if !sideTmpl.EventTemplate.isKeyEvent {
+                        let sideDup = false
+                        let existingSideEvs = entities having QuestEvent
+                        for existSide in existingSideEvs {
+                            if existSide.QuestEvent.eventId == sideTmpl.EventTemplate.eventId {
+                                sideDup = true
+                            }
+                        }
+
+                        if !sideDup || sideIter >= len(allKeyEvents) {
+                            let sTitle = resolveAndPickVariant(sideTmpl.EventTemplate.title, seed + 1100 + msCreated * 20 + evCreated)
+                            let sDesc = resolveAndPickVariant(sideTmpl.EventTemplate.description, seed + 1200 + msCreated * 20 + evCreated)
+                            let sTrigNarr = resolveAndPickVariant(sideTmpl.EventTemplate.narrativeOnTrigger, seed + 1300 + msCreated * 20 + evCreated)
+                            let sCompNarr = resolveAndPickVariant(sideTmpl.EventTemplate.narrativeOnComplete, seed + 1400 + msCreated * 20 + evCreated)
+
+                            let sEntity = new entity {
+                                QuestEvent {
+                                    eventId: sideTmpl.EventTemplate.eventId
+                                    title: sTitle
+                                    description: sDesc
+                                    isKeyEvent: false
+                                    triggerType: sideTmpl.EventTemplate.triggerType
+                                    triggerLocation: sideTmpl.EventTemplate.triggerLocation
+                                    rewardType: sideTmpl.EventTemplate.rewardType
+                                    narrativeOnTrigger: sTrigNarr
+                                    narrativeOnComplete: sCompNarr
+                                    difficultyModifier: sideTmpl.EventTemplate.difficultyModifier
+                                    isTriggered: false
+                                    isCompleted: false
+                                    succeeded: false
+                                    triggeredDay: 0
+                                    completedDay: 0
+                                }
+                            }
+                            evCreated = evCreated + 1
+                        }
+                    }
+                    sideIter = sideIter + 1
+                }
+
+                // Create BailoutTimer for this milestone
+                let bailTimer = new entity {
+                    BailoutTimer {
+                        milestoneIndex: msCreated
+                        triggerDay: 1 + msTmpl.MilestoneTemplate.bailoutDay
+                        hasTriggered: false
+                    }
+                }
+
+                msCreated = msCreated + 1
+            }
+        }
+        msIter = msIter + 1
+    }
+
+    // ── 7. Create QuestScore entity ─────────────────────────────────────
+    let scoreEntity = new entity {
+        QuestScore {
+            milestoneBonus: 0
+            sideEventBonus: 0
+            objectiveBonus: 0
+            allNormalBonus: 0
+            questItemBonus: 0
+            heroEncounterBonus: 0
+            totalQuestScore: 0
+        }
+    }
+
+    // ── 8. Create HeroEncounterState entity ─────────────────────────────
+    let encState = new entity {
+        HeroEncounterState {
+            totalEncounters: 0
+            totalBuffsGranted: 0
+        }
+    }
+
+    return advState
+}
+
+
+// =============================================================================
+// HERO ENCOUNTER SELECTION
+// =============================================================================
+
+// Score how well a hero matches a hero encounter template.
+fn scoreHeroForEncounter(hero: id, encounter: id): integer {
+    let encCategory = encounter.HeroEncounterTemplate.category
+
+    if encCategory == "class" {
+        if hero.StoryHeroInfo.heroClass == encounter.HeroEncounterTemplate.preferredClass {
+            return 100
+        }
+        return 0
+    }
+
+    // Trait-based matching — BRL StoryHeroInfo only has traitRc and traitOd
+    let traitAxis = encounter.HeroEncounterTemplate.traitAxis
+    let polarity = encounter.HeroEncounterTemplate.traitPolarity
+    let traitVal = 0
+
+    if traitAxis == "rc" {
+        traitVal = hero.StoryHeroInfo.traitRc
+    }
+    if traitAxis == "od" {
+        traitVal = hero.StoryHeroInfo.traitOd
+    }
+
+    // For other trait axes, use a small fallback score
+    if traitAxis != "rc" && traitAxis != "od" {
+        return 3
+    }
+
+    if polarity == "negative" {
+        // Lower (more negative) values are better
+        let score = -traitVal
+        if score < 0 { score = 0 }
+        return score
+    }
+    // positive polarity: higher values are better
+    let score = traitVal
+    if score < 0 { score = 0 }
+    return score
+}
+
+// Build match reason string for a hero encounter.
+fn buildMatchReason(hero: id, encounter: id): string {
+    let encCategory = encounter.HeroEncounterTemplate.category
+    let heroName = hero.StoryHeroInfo.heroName
+
+    if encCategory == "class" {
+        return "As a " + hero.StoryHeroInfo.heroClass + ", " + heroName + " is perfectly suited for this challenge."
+    }
+
+    let traitAxis = encounter.HeroEncounterTemplate.traitAxis
+    let polarity = encounter.HeroEncounterTemplate.traitPolarity
+
+    let label = traitAxis
+    if traitAxis == "rc" && polarity == "negative" { label = "bold risk-taking" }
+    if traitAxis == "rc" && polarity == "positive" { label = "careful caution" }
+    if traitAxis == "od" && polarity == "negative" { label = "offensive instincts" }
+    if traitAxis == "od" && polarity == "positive" { label = "defensive mastery" }
+    if traitAxis == "pm" && polarity == "negative" { label = "physical prowess" }
+    if traitAxis == "pm" && polarity == "positive" { label = "magical attunement" }
+    if traitAxis == "sa" && polarity == "negative" { label = "supportive nature" }
+    if traitAxis == "sa" && polarity == "positive" { label = "aggressive fighting spirit" }
+    if traitAxis == "fw" && polarity == "negative" { label = "fire affinity" }
+    if traitAxis == "fw" && polarity == "positive" { label = "water affinity" }
+    if traitAxis == "we" && polarity == "negative" { label = "wind attunement" }
+    if traitAxis == "we" && polarity == "positive" { label = "earth attunement" }
+    if traitAxis == "ld" && polarity == "negative" { label = "connection to light" }
+    if traitAxis == "ld" && polarity == "positive" { label = "comfort in darkness" }
+
+    return heroName + "'s " + label + " makes them the ideal choice."
+}
+
+// Select ~7 hero encounters and create StoryHeroEncounter + scoring entities.
+fn selectHeroEncountersForAdventure(seed: integer, totalDays: integer): integer {
+    let templates = entities having HeroEncounterTemplate
+    let templateCount = len(templates)
+    let heroes = entities having StoryHeroInfo
+    let heroCt = len(heroes)
+
+    if templateCount == 0 || heroCt == 0 {
+        return 0
+    }
+
+    let targetCount = 7
+    let selected = 0
+    let usedCount = 0
+
+    // First pass: try to find one encounter per hero (class-match first)
+    let heroIdx = 0
+    for hero in heroes {
+        let bestScore = 0
+        let bestTmplIdx = 0
+        let tIdx = 0
+        for tmpl in templates {
+            let sc = scoreHeroForEncounter(hero, tmpl)
+            if sc > bestScore {
+                // Check not already used (by looking at existing StoryHeroEncounter entities)
+                let alreadyUsed = false
+                let existingEncs = entities having StoryHeroEncounter
+                for existEnc in existingEncs {
+                    if existEnc.StoryHeroEncounter.title == tmpl.HeroEncounterTemplate.title {
+                        alreadyUsed = true
+                    }
+                }
+                if !alreadyUsed {
+                    bestScore = sc
+                    bestTmplIdx = tIdx
+                }
+            }
+            tIdx = tIdx + 1
+        }
+
+        if bestScore > 0 {
+            let bestTmpl = templates[bestTmplIdx]
+            let matchReason = buildMatchReason(hero, bestTmpl)
+
+            // Compute trigger day (spread evenly)
+            let daySpacing = totalDays / (targetCount + 1)
+            if daySpacing < 2 { daySpacing = 2 }
+            let trigDay = daySpacing * (selected + 1)
+            if trigDay >= totalDays { trigDay = totalDays - 1 }
+
+            // Create hero_name slot binding temporarily for resolving
+            let heroNameBinding = createSlotBinding("hero_name", hero.StoryHeroInfo.heroName)
+
+            let encTitle = resolveAllSlots(bestTmpl.HeroEncounterTemplate.title)
+            let encDesc = resolveAllSlots(bestTmpl.HeroEncounterTemplate.description)
+            let encOnMatch = resolveAllSlots(bestTmpl.HeroEncounterTemplate.narrativeOnMatch)
+            let encOnComplete = resolveAllSlots(bestTmpl.HeroEncounterTemplate.narrativeOnComplete)
+
+            let heroEnc = new entity {
+                StoryHeroEncounter {
+                    triggerDay: trigDay
+                    title: encTitle
+                    heroName: hero.StoryHeroInfo.heroName
+                    description: encDesc
+                    matchReason: matchReason
+                    narrativeOnMatch: encOnMatch
+                    narrativeOnComplete: encOnComplete
+                    buffType: bestTmpl.HeroEncounterTemplate.buffType
+                    buffAmount: bestTmpl.HeroEncounterTemplate.buffAmount
+                    bonusPoints: questHeroEncounterBonus()
+                    isCompleted: false
+                }
+            }
+            selected = selected + 1
+        }
+        heroIdx = heroIdx + 1
+    }
+
+    // Second pass: fill up to targetCount with best-match encounters
+    let fillIter = 0
+    let maxFillIter = templateCount
+    while selected < targetCount && fillIter < maxFillIter {
+        let tmplIdx = pickIndexByHash(seed, 2000 + fillIter) % templateCount
+        let tmpl = templates[tmplIdx]
+
+        // Check not already used
+        let alreadyUsed = false
+        let existingEncs2 = entities having StoryHeroEncounter
+        for existEnc2 in existingEncs2 {
+            if existEnc2.StoryHeroEncounter.title == tmpl.HeroEncounterTemplate.title {
+                alreadyUsed = true
+            }
+        }
+
+        if !alreadyUsed {
+            // Find best hero for this encounter
+            let bestHeroScore = 0
+            let bestHero = heroes[0]
+            for h in heroes {
+                let hScore = scoreHeroForEncounter(h, tmpl)
+                if hScore > bestHeroScore {
+                    bestHeroScore = hScore
+                    bestHero = h
+                }
+            }
+
+            // Accept if score > 0, or if we need to fill (use first hero as fallback)
+            if bestHeroScore == 0 {
+                bestHero = heroes[fillIter % heroCt]
+            }
+
+            let matchReason2 = buildMatchReason(bestHero, tmpl)
+            if bestHeroScore == 0 {
+                matchReason2 = bestHero.StoryHeroInfo.heroName + " steps forward to face this challenge."
+            }
+
+            let daySpacing2 = totalDays / (targetCount + 1)
+            if daySpacing2 < 2 { daySpacing2 = 2 }
+            let trigDay2 = daySpacing2 * (selected + 1)
+            if trigDay2 >= totalDays { trigDay2 = totalDays - 1 }
+
+            // Resolve encounter text with hero name
+            let heroNameBinding2 = createSlotBinding("hero_name", bestHero.StoryHeroInfo.heroName)
+            let encTitle2 = resolveAllSlots(tmpl.HeroEncounterTemplate.title)
+            let encDesc2 = resolveAllSlots(tmpl.HeroEncounterTemplate.description)
+            let encOnMatch2 = resolveAllSlots(tmpl.HeroEncounterTemplate.narrativeOnMatch)
+            let encOnComplete2 = resolveAllSlots(tmpl.HeroEncounterTemplate.narrativeOnComplete)
+
+            let heroEnc2 = new entity {
+                StoryHeroEncounter {
+                    triggerDay: trigDay2
+                    title: encTitle2
+                    heroName: bestHero.StoryHeroInfo.heroName
+                    description: encDesc2
+                    matchReason: matchReason2
+                    narrativeOnMatch: encOnMatch2
+                    narrativeOnComplete: encOnComplete2
+                    buffType: tmpl.HeroEncounterTemplate.buffType
+                    buffAmount: tmpl.HeroEncounterTemplate.buffAmount
+                    bonusPoints: questHeroEncounterBonus()
+                    isCompleted: false
+                }
+            }
+            selected = selected + 1
+        }
+        fillIter = fillIter + 1
+    }
+
+    return selected
+}
+
+
+// =============================================================================
+// QUEST DAY SIMULATION
+// =============================================================================
+
+// Process one day of quest progress. Returns 1 if objective is complete, 0 otherwise.
+fn processQuestDay(day: integer, encounterIntensity: decimal, locationsPerDay: decimal): integer {
+    let advStates = entities having AdventureState
+    if len(advStates) == 0 { return 0 }
+    let advState = advStates[0]
+
+    if advState.AdventureState.adventureComplete { return 1 }
+
+    let milestones = entities having QuestMilestone
+    let msCount = len(milestones)
+    let questScores = entities having QuestScore
+    let questScore = questScores[0]
+
+    // Process each active milestone
+    for ms in milestones {
+        if ms.QuestMilestone.isActive && !ms.QuestMilestone.isCompleted {
+
+            let msIdx = ms.QuestMilestone.milestoneIndex
+            let activationDay = ms.QuestMilestone.activationDay
+            let daysSinceActivation = day - activationDay
+            let bailoutDay = ms.QuestMilestone.bailoutDay
+            let targetLayer = ms.QuestMilestone.targetLayer
+            let progressFraction = 0.0d
+            if bailoutDay > 0 {
+                progressFraction = daysSinceActivation * 1.0d / (bailoutDay + 1)
+            }
+
+            let locsSoFar = day * locationsPerDay
+
+            // Process events for this milestone
+            let events = entities having QuestEvent
+            let keyEventCompleted = false
+
+            for ev in events {
+                if ev.QuestEvent.completedDay == 0 {
+
+                    // Calculate trigger chance based on event type
+                    let triggerChance = 0.0d
+                    let evTrigType = ev.QuestEvent.triggerType
+
+                    if evTrigType == "town_visit" {
+                        if locsSoFar > targetLayer * 1.0d {
+                            triggerChance = 0.4d * (0.5d + 0.5d * encounterIntensity)
+                        } else {
+                            triggerChance = 0.2d * (0.5d + 0.5d * encounterIntensity)
+                        }
+                    }
+                    if evTrigType == "travel_segment" {
+                        triggerChance = (0.3d + progressFraction * 0.3d) * (0.5d + 0.5d * encounterIntensity)
+                    }
+                    if evTrigType == "location_enter" {
+                        if locsSoFar >= targetLayer * 1.0d {
+                            triggerChance = 0.35d * (0.5d + 0.5d * encounterIntensity)
+                        } else {
+                            triggerChance = 0.15d * (0.5d + 0.5d * encounterIntensity)
+                        }
+                    }
+                    if evTrigType == "camp_night" {
+                        triggerChance = (0.25d + progressFraction * 0.2d) * (0.5d + 0.5d * encounterIntensity)
+                    }
+
+                    // Trigger check (not yet triggered)
+                    if ev.QuestEvent.triggeredDay == 0 {
+                        let roll = random()
+                        if roll < triggerChance {
+                            ev.QuestEvent.triggeredDay = day
+                            ev.QuestEvent.isTriggered = true
+                            schedule QuestEventTriggered { eventId: ev.QuestEvent.eventId }
+                        }
+                    }
+
+                    // Complete check (triggered events complete on next opportunity)
+                    if ev.QuestEvent.triggeredDay > 0 && ev.QuestEvent.completedDay == 0 {
+                        let completeChance = 0.6d
+                        if !ev.QuestEvent.isKeyEvent {
+                            completeChance = 0.7d
+                        }
+                        completeChance = completeChance + progressFraction * 0.2d
+
+                        let roll2 = random()
+                        if roll2 < completeChance {
+                            ev.QuestEvent.completedDay = day
+                            ev.QuestEvent.isCompleted = true
+                            ev.QuestEvent.succeeded = true
+                            schedule QuestEventCompleted { eventId: ev.QuestEvent.eventId  succeeded: true }
+
+                            if ev.QuestEvent.isKeyEvent {
+                                keyEventCompleted = true
+                            } else {
+                                // Side event bonus
+                                questScore.QuestScore.sideEventBonus = questScore.QuestScore.sideEventBonus + questSideEventBonus()
+                                questScore.QuestScore.totalQuestScore = questScore.QuestScore.totalQuestScore + questSideEventBonus()
+                            }
+                        }
+                    }
+
+                } // end if completedDay == 0
+            }
+
+            // Key event completed → milestone completes
+            if keyEventCompleted {
+                ms.QuestMilestone.isCompleted = true
+                ms.QuestMilestone.completedViaBailout = false
+                advState.AdventureState.milestonesCompleted = advState.AdventureState.milestonesCompleted + 1
+
+                questScore.QuestScore.milestoneBonus = questScore.QuestScore.milestoneBonus + questMilestoneNormalBonus()
+                questScore.QuestScore.totalQuestScore = questScore.QuestScore.totalQuestScore + questMilestoneNormalBonus()
+                questScore.QuestScore.questItemBonus = questScore.QuestScore.questItemBonus + questItemBonus()
+                questScore.QuestScore.totalQuestScore = questScore.QuestScore.totalQuestScore + questItemBonus()
+
+                schedule MilestoneCompleted { milestoneIndex: msIdx  viaBailout: false }
+
+                // Activate next milestone
+                let nextIdx = msIdx + 1
+                for nextMs in milestones {
+                    if nextMs.QuestMilestone.milestoneIndex == nextIdx {
+                        nextMs.QuestMilestone.isActive = true
+                        nextMs.QuestMilestone.activationDay = day
+                        advState.AdventureState.currentMilestoneIndex = nextIdx
+                        schedule MilestoneActivated { milestoneIndex: nextIdx }
+                    }
+                }
+            }
+
+            // Bail-out check
+            if !ms.QuestMilestone.isCompleted && day >= activationDay + bailoutDay {
+                ms.QuestMilestone.isCompleted = true
+                ms.QuestMilestone.completedViaBailout = true
+                advState.AdventureState.milestonesCompleted = advState.AdventureState.milestonesCompleted + 1
+
+                questScore.QuestScore.milestoneBonus = questScore.QuestScore.milestoneBonus + questMilestoneBailoutBonus()
+                questScore.QuestScore.totalQuestScore = questScore.QuestScore.totalQuestScore + questMilestoneBailoutBonus()
+
+                schedule BailoutTriggered { milestoneIndex: msIdx }
+                schedule MilestoneCompleted { milestoneIndex: msIdx  viaBailout: true }
+
+                // Auto-complete key event
+                let bailoutEvents = entities having QuestEvent
+                for bailEv in bailoutEvents {
+                    if bailEv.QuestEvent.isKeyEvent && bailEv.QuestEvent.completedDay == 0 {
+                        bailEv.QuestEvent.triggeredDay = day
+                        bailEv.QuestEvent.completedDay = day
+                        bailEv.QuestEvent.isTriggered = true
+                        bailEv.QuestEvent.isCompleted = true
+                    }
+                }
+
+                // Activate next milestone
+                let nextIdx2 = msIdx + 1
+                for nextMs2 in milestones {
+                    if nextMs2.QuestMilestone.milestoneIndex == nextIdx2 {
+                        nextMs2.QuestMilestone.isActive = true
+                        nextMs2.QuestMilestone.activationDay = day
+                        advState.AdventureState.currentMilestoneIndex = nextIdx2
+                        schedule MilestoneActivated { milestoneIndex: nextIdx2 }
+                    }
+                }
+
+                // Update bailout timer
+                let timers = entities having BailoutTimer
+                for timer in timers {
+                    if timer.BailoutTimer.milestoneIndex == msIdx {
+                        timer.BailoutTimer.hasTriggered = true
+                    }
+                }
+            }
+
+        } // end if isActive && !isCompleted
+    }
+
+    // Hero encounter completion for this day
+    let heroEncs = entities having StoryHeroEncounter
+    for hEnc in heroEncs {
+        if !hEnc.StoryHeroEncounter.isCompleted && hEnc.StoryHeroEncounter.triggerDay == day {
+            hEnc.StoryHeroEncounter.isCompleted = true
+            questScore.QuestScore.heroEncounterBonus = questScore.QuestScore.heroEncounterBonus + questHeroEncounterBonus()
+            questScore.QuestScore.totalQuestScore = questScore.QuestScore.totalQuestScore + questHeroEncounterBonus()
+
+            let encStates = entities having HeroEncounterState
+            if len(encStates) > 0 {
+                let encSt = encStates[0]
+                encSt.HeroEncounterState.totalEncounters = encSt.HeroEncounterState.totalEncounters + 1
+                encSt.HeroEncounterState.totalBuffsGranted = encSt.HeroEncounterState.totalBuffsGranted + 1
+            }
+        }
+    }
+
+    // Check objective completion: all milestones complete?
+    let allComplete = true
+    let bailoutCount = 0
+    for checkMs in milestones {
+        if !checkMs.QuestMilestone.isCompleted {
+            allComplete = false
+        }
+        if checkMs.QuestMilestone.completedViaBailout {
+            bailoutCount = bailoutCount + 1
+        }
+    }
+
+    if allComplete && !advState.AdventureState.adventureComplete {
+        advState.AdventureState.adventureComplete = true
+
+        questScore.QuestScore.objectiveBonus = questObjectiveBonus()
+        questScore.QuestScore.totalQuestScore = questScore.QuestScore.totalQuestScore + questObjectiveBonus()
+
+        // Bonus for no bail-outs
+        if bailoutCount == 0 {
+            questScore.QuestScore.allNormalBonus = questAllNormalBonus()
+            questScore.QuestScore.totalQuestScore = questScore.QuestScore.totalQuestScore + questAllNormalBonus()
+        }
+
+        schedule ObjectiveCompleted {}
+        return 1
+    }
+
+    return 0
+}
+
+
+// =============================================================================
+// QUEST NARRATIVE EMISSION
+// =============================================================================
+
+// Emit quest-related NarrativeEntry entities for a given day.
+fn emitQuestNarrativeForDay(day: integer): integer {
+    let emitted = 0
+    let advStates = entities having AdventureState
+    if len(advStates) == 0 { return 0 }
+    let advState = advStates[0]
+
+    let milestones = entities having QuestMilestone
+    let msTotal = len(milestones)
+
+    // Day 1: objective introduction
+    if day == 1 {
+        let n1 = emitNarrative(1, 1, 1, "⚔️ Quest: " + advState.AdventureState.objectiveTitle)
+        let n2 = emitNarrative(1, 1, 2, advState.AdventureState.objectiveDescription)
+        emitted = emitted + 2
+
+        // First milestone activation
+        for firstMs in milestones {
+            if firstMs.QuestMilestone.milestoneIndex == 0 {
+                let n3 = emitNarrative(1, 2, 1, "📋 Milestone 1/" + to_string(msTotal) + ": " + firstMs.QuestMilestone.title)
+                let n4 = emitNarrative(1, 2, 2, firstMs.QuestMilestone.description)
+                emitted = emitted + 2
+            }
+        }
+    }
+
+    // Milestone activations (after the first one)
+    for ms in milestones {
+        if ms.QuestMilestone.milestoneIndex > 0 && ms.QuestMilestone.activationDay == day {
+            let msNum = ms.QuestMilestone.milestoneIndex + 1
+            let n5 = emitNarrative(day, 1, 1, "📋 Milestone " + to_string(msNum) + "/" + to_string(msTotal) + ": " + ms.QuestMilestone.title)
+            let n6 = emitNarrative(day, 1, 2, ms.QuestMilestone.description)
+            emitted = emitted + 2
+        }
+    }
+
+    // Event triggers and completions
+    let events = entities having QuestEvent
+    for ev in events {
+        // Event triggered today
+        if ev.QuestEvent.triggeredDay == day {
+            let evLevel = 2
+            if !ev.QuestEvent.isKeyEvent { evLevel = 3 }
+            let n7 = emitNarrative(day, 4, evLevel, "🔔 " + ev.QuestEvent.title + ": " + ev.QuestEvent.narrativeOnTrigger)
+            emitted = emitted + 1
+        }
+
+        // Event completed today
+        if ev.QuestEvent.completedDay == day {
+            let evLevel2 = 2
+            if !ev.QuestEvent.isKeyEvent { evLevel2 = 3 }
+            let n8 = emitNarrative(day, 6, evLevel2, "✅ " + ev.QuestEvent.title + ": " + ev.QuestEvent.narrativeOnComplete)
+            emitted = emitted + 1
+        }
+    }
+
+    // Milestone completions
+    for msCheck in milestones {
+        if msCheck.QuestMilestone.isCompleted {
+
+            // Determine completion day for this milestone
+            let msCompDay = msCheck.QuestMilestone.activationDay + 1
+            if msCheck.QuestMilestone.completedViaBailout {
+                msCompDay = msCheck.QuestMilestone.activationDay + msCheck.QuestMilestone.bailoutDay
+            }
+
+            if msCompDay == day {
+                let msNum2 = msCheck.QuestMilestone.milestoneIndex + 1
+                if msCheck.QuestMilestone.completedViaBailout {
+                    let n9 = emitNarrative(day, 8, 1, "⏳ Milestone " + to_string(msNum2) + " completed via bail-out: " + msCheck.QuestMilestone.bailoutDescription + " (+" + to_string(questMilestoneBailoutBonus()) + " points)")
+                    emitted = emitted + 1
+                } else {
+                    let n10 = emitNarrative(day, 8, 1, "🏆 Milestone " + to_string(msNum2) + " completed! (+" + to_string(questMilestoneNormalBonus()) + " points)")
+                    emitted = emitted + 1
+                }
+            }
+
+        } // end if isCompleted
+    }
+
+    // Objective completion narrative
+    if advState.AdventureState.adventureComplete {
+        // Find the day the last milestone completed
+        let lastMsCompDay = 0
+        for lastMs in milestones {
+            let compDay = lastMs.QuestMilestone.activationDay + 1
+            if lastMs.QuestMilestone.completedViaBailout {
+                compDay = lastMs.QuestMilestone.activationDay + lastMs.QuestMilestone.bailoutDay
+            }
+            if compDay > lastMsCompDay {
+                lastMsCompDay = compDay
+            }
+        }
+
+        let objectiveDay = lastMsCompDay + 1
+        if objectiveDay > 30 { objectiveDay = 30 }
+
+        if day == objectiveDay {
+            let n11 = emitNarrative(day, 0, 1, "🎉 Objective Complete: " + advState.AdventureState.objectiveTitle + "! (+" + to_string(questObjectiveBonus()) + " points)")
+            emitted = emitted + 1
+
+            // Check bail-out count for all-normal bonus
+            let bailoutCt = 0
+            for bcMs in milestones {
+                if bcMs.QuestMilestone.completedViaBailout {
+                    bailoutCt = bailoutCt + 1
+                }
+            }
+            if bailoutCt == 0 {
+                let n12 = emitNarrative(day, 0, 2, "🌟 All milestones completed without bail-outs! (+" + to_string(questAllNormalBonus()) + " bonus points)")
+                emitted = emitted + 1
+            }
+
+            // Early completion bonus
+            let configs = entities having QuestConfig
+            if len(configs) > 0 {
+                let totalDays = configs[0].QuestConfig.totalDays
+                if objectiveDay < totalDays {
+                    let daysRemaining = totalDays - objectiveDay
+                    let earlyBonus = daysRemaining * 50
+                    let dayWord = " days"
+                    if daysRemaining == 1 { dayWord = " day" }
+                    let n13 = emitNarrative(day, 1, 1, "⚡ Mission accomplished " + to_string(daysRemaining) + dayWord + " ahead of schedule! (+" + to_string(earlyBonus) + " early completion bonus)")
+                    emitted = emitted + 1
+                }
+            }
+        }
+    }
+
+    return emitted
+}
+
+
+// =============================================================================
+// RULE: adventure_compose — entry point for quest composition
+// =============================================================================
+
+rule adventure_compose on AdventureCompose(evt: id) {
+    // Look up config from StoryGenerateConfig entity
+    let configs = entities having StoryGenerateConfig
+    let config = configs[0]
+    let seed = config.StoryGenerateConfig.seed
+    let hCount = config.StoryGenerateConfig.heroCount
+    let totalDays = 30
+
+    // Create QuestConfig entity for simulation parameters
+    let locationsVisited = config.StoryGenerateConfig.locationsVisited
+    let totalEncounters = config.StoryGenerateConfig.totalEncounters
+    let encounterIntensity = totalEncounters * 1.0d / 120.0d
+    if encounterIntensity > 1.0d { encounterIntensity = 1.0d }
+    let locationsPerDay = locationsVisited * 1.0d / totalDays
+    if locationsPerDay < 0.3d { locationsPerDay = 0.3d }
+
+    let questConfig = new entity {
+        QuestConfig {
+            totalDays: totalDays
+            encounterIntensity: encounterIntensity
+            locationsPerDay: locationsPerDay
+            milestonesTotal: 0
+        }
+    }
+
+    // Compose the quest
+    let advState = composeQuest(seed, hCount)
+
+    // Update milestonesTotal in QuestConfig
+    let msList = entities having QuestMilestone
+    questConfig.QuestConfig.milestonesTotal = len(msList)
+
+    // Select hero encounters
+    let encounterCount = selectHeroEncountersForAdventure(seed, totalDays)
+}
