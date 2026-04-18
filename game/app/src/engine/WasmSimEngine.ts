@@ -12,7 +12,7 @@
 import type { GameSnapshot, HeroDefinition, GameMode, HeroPath, CustomModeSettings, EnvironmentSettings, DamageCategory, Element, RunType, StoryKpis, NarrativeEntry, StoryStep, StoryStepType } from '../types';
 import { DEFAULT_ENVIRONMENT_SETTINGS } from '../types';
 import { simulateHeroPath, getSkillName, deriveDamageCategory, deriveDamageElement, deriveResistances, computeLinePreferenceScore } from '../data/traits';
-import { computeAdventureSeed, simulateQuestProgress, generateQuestNarrative, QUEST_EARLY_COMPLETION_POINTS_PER_DAY, QUEST_HERO_ENCOUNTER_BONUS, initAdventureData } from '../data/adventureQuest';
+import { computeAdventureSeed, initAdventureData } from '../data/adventureQuest';
 import type { AdventureDefinition } from '../types';
 import { initWorldData } from '../data/worldData';
 import { loadEnemyTemplates } from '../data/enemyData';
@@ -962,30 +962,19 @@ function _runStoryMode(
   const ambushesSurvived = Math.max(0, Math.floor(totalEncounters / STORY_ENCOUNTERS_PER_AMBUSH));
 
   // ── Adventure quest integration ───────────────────────────────────────
-  // Compute quest result before finalising finalDestinationReached so that
-  // quest completion can contribute to that flag.
-  let questScore = 0;
-  let questObjectiveCompleted = false;
-  let objectiveCompletionDay = STORY_TOTAL_DAYS;
-  // Defer narrative generation until completionDay is known (see below).
-  let pendingQuestResult: ReturnType<typeof simulateQuestProgress> | null = null;
-
+  // Quest composition, simulation, and narrative now run entirely in BRL.
+  // TypeScript only computes the seed — BRL handles the rest via
+  // story-adventure-rules.brl (composeQuest, processQuestDay,
+  // emitQuestNarrativeForDay) called from story-rules.brl.
+  let adventureSeedNum = 0;
   if (adventure) {
-    const adventureSeed = computeAdventureSeed(adventure);
-    pendingQuestResult = simulateQuestProgress(
-      adventureSeed, totalEncounters, locationsVisited, selectedHeroes,
-    );
-    questScore = pendingQuestResult.totalQuestScore;
-    questObjectiveCompleted = pendingQuestResult.objectiveCompleted;
-    if (pendingQuestResult.objectiveCompletionDay !== undefined) {
-      objectiveCompletionDay = pendingQuestResult.objectiveCompletionDay;
-    }
+    adventureSeedNum = computeAdventureSeed(adventure);
   }
 
-  // "Final destination reached": quest objective completed, engine victory,
-  // OR party survived the full run having explored enough of the map.
+  // "Final destination reached": engine victory or sufficient exploration.
+  // Quest-based completion is determined by BRL and will be reflected in
+  // the completionDay read back from StoryGenerateConfig after BRL runs.
   const finalDestinationReached =
-    questObjectiveCompleted ||
     victoryFromEngine ||
     (!gameOver && locationsVisited / totalLocations >= STORY_EXPLORATION_THRESHOLD);
 
@@ -996,22 +985,8 @@ function _runStoryMode(
     ambushesSurvived * STORY_POINTS_PER_AMBUSH +
     (finalDestinationReached ? STORY_FINAL_DESTINATION_BONUS : 0);
 
-  // ── Early completion ──────────────────────────────────────────────────
-  // If the quest objective was completed before day 30, truncate the run to
-  // the completion day and award a proportional time bonus.
+  // Initial completionDay — BRL will update this if the quest completes early.
   let completionDay = STORY_TOTAL_DAYS;
-  let earlyCompletionBonus = 0;
-
-  if (questObjectiveCompleted && objectiveCompletionDay < STORY_TOTAL_DAYS) {
-    completionDay = objectiveCompletionDay;
-    const daysRemaining = STORY_TOTAL_DAYS - completionDay;
-    earlyCompletionBonus = daysRemaining * QUEST_EARLY_COMPLETION_POINTS_PER_DAY;
-  }
-
-  // Now that completionDay is known, generate quest narrative capped to that day.
-  const questNarrative: NarrativeEntry[] = pendingQuestResult
-    ? generateQuestNarrative(pendingQuestResult, completionDay)
-    : [];
 
   // Pad to exactly completionDay snapshots (one per day) if we have fewer
   while (snapshots.length < completionDay) {
@@ -1021,9 +996,10 @@ function _runStoryMode(
   // Truncate any excess snapshots beyond the completion day
   snapshots.splice(completionDay);
 
-  // Apply all bonuses to the final score
+  // Apply exploration bonus to the final score
+  // (Quest score is added later, after BRL runs and returns QuestScore entity)
   const lastSnapshot = snapshots[snapshots.length - 1];
-  lastSnapshot.score += explorationBonus + questScore + earlyCompletionBonus;
+  lastSnapshot.score += explorationBonus;
 
   const storyKpis: StoryKpis = {
     currentDay: completionDay,
@@ -1032,8 +1008,7 @@ function _runStoryMode(
     townsRested,
     ambushesSurvived,
     finalDestinationReached,
-    explorationBonus: explorationBonus + questScore,
-    ...(earlyCompletionBonus > 0 ? { earlyCompletionBonus } : {}),
+    explorationBonus,
   };
 
   // ── BRL narrative generation ──────────────────────────────────────────────
@@ -1073,29 +1048,14 @@ function _runStoryMode(
     }));
   });
 
-  // Build quest info for step metadata
-  const questInfoForSteps = pendingQuestResult ? {
-    objectiveTitle: pendingQuestResult.quest.objectiveTitle,
-    milestones: pendingQuestResult.quest.milestones.map(m => ({
-      title: m.title,
-      isCompleted: m.isCompleted,
-      isActive: m.isActive,
-    })),
-  } : undefined;
-
-  const questObjectiveStr = questInfoForSteps?.objectiveTitle ?? '';
-  const activeMilestoneStr = questInfoForSteps?.milestones?.find(m => m.isActive)?.title ?? '';
-  const completedMilestonesStr = questInfoForSteps?.milestones
-    ?.filter(m => m.isCompleted)
-    .map(m => m.title)
-    .join(',') ?? '';
-
   // Create StoryGenerateConfig entity
+  // Quest context (questObjective, activeMilestone, completedMilestones) is now
+  // computed dynamically by BRL from AdventureState/QuestMilestone entities.
   storyEntityId++;
   const configEntityId = storyEntityId;
   game.create_entity(configEntityId);
   game.add_component(configEntityId, 'StoryGenerateConfig', JSON.stringify({
-    seed: seedNum,
+    seed: adventureSeedNum || seedNum,
     totalEncounters,
     locationsVisited,
     totalLocations,
@@ -1103,38 +1063,15 @@ function _runStoryMode(
     ambushesSurvived,
     finalDestinationReached,
     completionDay,
-    questObjective: questObjectiveStr,
-    activeMilestone: activeMilestoneStr,
-    completedMilestones: completedMilestonesStr,
+    questObjective: '',
+    activeMilestone: '',
+    completedMilestones: '',
     heroCount: selectedHeroes.length,
     enemyCount: enemyTemplates.length,
   }));
 
-  // Create StoryHeroEncounter entities so BRL can integrate hero-specific
-  // encounters into the timeline: completed encounters become blocking_encounter
-  // steps (the party does not travel on those days), and unreached encounters
-  // get "not reached" narrative during story_finalize.
-  if (pendingQuestResult) {
-    for (const heroEnc of pendingQuestResult.quest.heroEncounters) {
-      if (heroEnc.triggerDay > 0) {
-        storyEntityId++;
-        game.create_entity(storyEntityId);
-        game.add_component(storyEntityId, 'StoryHeroEncounter', JSON.stringify({
-          triggerDay: heroEnc.triggerDay,
-          title: heroEnc.title,
-          heroName: heroEnc.heroName,
-          description: heroEnc.description,
-          matchReason: heroEnc.matchReason,
-          narrativeOnMatch: heroEnc.narrativeOnMatch,
-          narrativeOnComplete: heroEnc.narrativeOnComplete,
-          buffType: heroEnc.buffType,
-          buffAmount: heroEnc.buffAmount,
-          bonusPoints: QUEST_HERO_ENCOUNTER_BONUS,
-          isCompleted: heroEnc.isCompleted,
-        }));
-      }
-    }
-  }
+  // StoryHeroEncounter entities are now created by BRL's
+  // selectHeroEncountersForAdventure() in story-adventure-rules.brl
 
   // Schedule StoryGenerate event and run BRL story rules
   game.schedule_event('StoryGenerate', 0.0);
@@ -1201,46 +1138,66 @@ function _runStoryMode(
     }
   }
   assignEntriesToSteps(brlNarrativeLog);
-  // Also distribute quest narrative entries (hero challenges, milestone events)
-  // so they appear in the run page steps, not only in the results page log.
-  assignEntriesToSteps(questNarrative);
+  // Quest narrative entries are now emitted by BRL (emitQuestNarrativeForDay)
+  // and already included in brlNarrativeLog — no separate merging needed.
 
-  // Per-step milestone state: override BRL's static milestone strings with
-  // day-accurate state derived from the quest simulation. This ensures early
-  // steps do not show milestones that only appeared later in the run.
-  if (pendingQuestResult) {
-    const questMilestones = pendingQuestResult.quest.milestones;
+  // Step milestone state is now computed dynamically by BRL, using live
+  // AdventureState/QuestMilestone entities. No TypeScript override needed.
 
-    // Compute the day on which a milestone was effectively completed.
-    const getMilestoneCompletionDay = (m: (typeof questMilestones)[number]): number => {
-      if (!m.isCompleted) return Infinity;
-      if (m.completedViaBailout) return m.activationDay + m.bailoutDay;
-      const keyDays = m.events
-        .filter(e => e.isKeyEvent && e.completedDay > 0)
-        .map(e => e.completedDay);
-      return keyDays.length > 0 ? keyDays.reduce((max, day) => Math.max(max, day), 0) : m.activationDay + 1;
-    };
-
-    for (const step of brlStorySteps) {
-      const day = step.day;
-      // Only milestones that have been activated by this step's day
-      const appeared = questMilestones.filter(
-        m => m.activationDay > 0 && m.activationDay <= day,
-      );
-      const completedTitles = appeared
-        .filter(m => m.isCompleted && getMilestoneCompletionDay(m) <= day)
-        .map(m => m.title);
-      const activeMilestone = appeared.find(
-        m => m.isActive && !(m.isCompleted && getMilestoneCompletionDay(m) <= day),
-      )?.title;
-
-      step.completedMilestones = completedTitles.length > 0 ? completedTitles : undefined;
-      step.activeMilestone = activeMilestone;
+  // Read quest score from BRL's QuestScore entity and apply to final score
+  let questScore = 0;
+  let earlyCompletionBonus = 0;
+  try {
+    const questScoreIds: number[] = JSON.parse(game.get_entities_having('QuestScore'));
+    if (questScoreIds.length > 0) {
+      const qsData = JSON.parse(game.get_component(questScoreIds[0], 'QuestScore'));
+      questScore = qsData.totalQuestScore ?? 0;
     }
+  } catch { /* no QuestScore entity — no quest was composed */ }
+
+  // Read updated completionDay from StoryGenerateConfig (BRL may have reduced it)
+  try {
+    const configData = JSON.parse(game.get_component(configEntityId, 'StoryGenerateConfig'));
+    const brlCompletionDay = configData.completionDay;
+    if (brlCompletionDay < completionDay) {
+      completionDay = brlCompletionDay;
+      // Recompute early completion bonus
+      const daysRemaining = STORY_TOTAL_DAYS - completionDay;
+      earlyCompletionBonus = daysRemaining * 50; // QUEST_EARLY_COMPLETION_POINTS_PER_DAY = 50
+    }
+  } catch { /* config entity not found or no completionDay change */ }
+
+  // Check if quest objective was completed (from AdventureState entity)
+  let questObjectiveCompleted = false;
+  try {
+    const advStateIds: number[] = JSON.parse(game.get_entities_having('AdventureState'));
+    if (advStateIds.length > 0) {
+      const advData = JSON.parse(game.get_component(advStateIds[0], 'AdventureState'));
+      questObjectiveCompleted = advData.adventureComplete ?? false;
+    }
+  } catch { /* no AdventureState entity */ }
+
+  // Update finalDestinationReached to include quest completion
+  const updatedFinalDestinationReached = finalDestinationReached || questObjectiveCompleted;
+
+  // Apply quest score and early completion bonus to final score
+  lastSnapshot.score += questScore + earlyCompletionBonus;
+
+  // Update storyKpis with final values
+  storyKpis.explorationBonus = explorationBonus + questScore;
+  storyKpis.finalDestinationReached = updatedFinalDestinationReached;
+  if (earlyCompletionBonus > 0) {
+    storyKpis.earlyCompletionBonus = earlyCompletionBonus;
   }
 
-  // Merge quest narrative entries into the base log, sorted by day/hour
-  const narrativeLog = [...brlNarrativeLog, ...questNarrative]
+  // Truncate snapshots to the actual completion day (BRL may have shortened the run)
+  if (completionDay < snapshots.length) {
+    snapshots.splice(completionDay);
+  }
+  storyKpis.currentDay = completionDay;
+
+  // Narrative log — all entries come from BRL now
+  const narrativeLog = brlNarrativeLog
     .sort((a, b) => a.day - b.day || a.hour - b.hour);
 
   // Distribute score across story steps proportionally
@@ -1258,7 +1215,8 @@ function _runStoryMode(
 
 // ── Story mode narrative log generation ─────────────────────────────────────
 // Party traveling, voting, and narrative generation are now in BRL
-// (game/brl/story-rules.brl). The functions _narrativeHash, _pickOne,
-// _selectWorldLocations, and _generateNarrativeLog have been removed.
+// (game/brl/story-rules.brl). Quest composition, simulation, and quest narrative
+// are also in BRL (game/brl/story-adventure-rules.brl).
 // TypeScript sets up StoryHeroInfo/StoryEnemyInfo/StoryGenerateConfig entities,
-// schedules StoryGenerate, and reads back NarrativeEntry + StoryStepData entities.
+// schedules StoryGenerate, and reads back NarrativeEntry + StoryStepData +
+// QuestScore + AdventureState entities.
