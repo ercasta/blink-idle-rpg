@@ -7,68 +7,79 @@ import type { HeroDefinition, HeroClass } from '../types';
 import { randomTraits, computeBaseStats, computeLinePreference, computeRole } from './traits';
 import { generateHeroDescription } from './heroDescription';
 
-export const HEROES: HeroDefinition[] = [
-  {
-    id: 'aldric',
-    name: 'Aldric',
-    heroClass: 'Warrior',
-    description: 'A battle-hardened warrior who charges at the strongest foes.',
-    role: 'Tank / DPS',
-    emoji: '⚔️',
-    stats: computeBaseStats('Warrior', { pm: -8, od: -4, sa: 4, rc: -2, fw: 0, we: 2, ld: 0, co: 0, sh: 4, rm: 8, ai: 2, af: 2 }),
-    traits: { pm: -8, od: -4, sa: 4, rc: -2, fw: 0, we: 2, ld: 0, co: 0, sh: 4, rm: 8, ai: 2, af: 2 },
-  },
-  {
-    id: 'lyra',
-    name: 'Lyra',
-    heroClass: 'Mage',
-    description: 'A brilliant mage who obliterates the weakest enemy first.',
-    role: 'Burst DPS',
-    emoji: '🧙',
-    stats: computeBaseStats('Mage', { pm: 12, od: -6, sa: 4, rc: -4, fw: -10, we: 0, ld: 0, co: -4, sh: -2, rm: -8, ai: 4, af: -4 }),
-    traits: { pm: 12, od: -6, sa: 4, rc: -4, fw: -10, we: 0, ld: 0, co: -4, sh: -2, rm: -8, ai: 4, af: -4 },
-  },
-  {
-    id: 'sasha',
-    name: 'Sasha',
-    heroClass: 'Ranger',
-    description: 'A swift ranger who picks off priority targets from range.',
-    role: 'Control / DPS',
-    emoji: '🏹',
-    stats: computeBaseStats('Ranger', { pm: -4, od: -2, sa: 4, rc: -4, fw: 0, we: -4, ld: 0, co: 0, sh: -4, rm: -10, ai: 2, af: 4 }),
-    traits: { pm: -4, od: -2, sa: 4, rc: -4, fw: 0, we: -4, ld: 0, co: 0, sh: -4, rm: -10, ai: 2, af: 4 },
-  },
-  {
-    id: 'theron',
-    name: 'Theron',
-    heroClass: 'Paladin',
-    description: 'A holy paladin who endures the longest and protects allies.',
-    role: 'Support / Tank',
-    emoji: '🛡️',
-    stats: computeBaseStats('Paladin', { pm: 2, od: 8, sa: -6, rc: 6, fw: 0, we: 4, ld: -10, co: 8, sh: 10, rm: 4, ai: -8, af: -2 }),
-    traits: { pm: 2, od: 8, sa: -6, rc: 6, fw: 0, we: 4, ld: -10, co: 8, sh: 10, rm: 4, ai: -8, af: -2 },
-  },
-  {
-    id: 'kira',
-    name: 'Kira',
-    heroClass: 'Rogue',
-    description: 'A cunning rogue who backstabs wounded enemies for big crits.',
-    role: 'Finisher / DPS',
-    emoji: '🗡️',
-    stats: computeBaseStats('Rogue', { pm: -6, od: -8, sa: 6, rc: -6, fw: 0, we: 0, ld: 4, co: -2, sh: -12, rm: -2, ai: 8, af: 8 }),
-    traits: { pm: -6, od: -8, sa: 6, rc: -6, fw: 0, we: 0, ld: 4, co: -2, sh: -12, rm: -2, ai: 8, af: 8 },
-  },
-  {
-    id: 'elara',
-    name: 'Elara',
-    heroClass: 'Cleric',
-    description: 'A devoted cleric who targets the least threatening enemy.',
-    role: 'Healer / Support',
-    emoji: '🙏',
-    stats: computeBaseStats('Cleric', { pm: 6, od: 4, sa: -10, rc: 4, fw: 0, we: 0, ld: -12, co: 6, sh: 8, rm: 2, ai: -6, af: -4 }),
-    traits: { pm: 6, od: 4, sa: -10, rc: 4, fw: 0, we: 0, ld: -12, co: 6, sh: 8, rm: 2, ai: -6, af: -4 },
-  },
-];
+let _heroesCache: HeroDefinition[] | null = null;
+
+/**
+ * Returns the pre-built hero definitions for party selection.
+ * Stats are computed lazily on first call so that loadHeroClassData() has
+ * time to resolve before computeBaseStats() is invoked.
+ */
+export function getHeroes(): HeroDefinition[] {
+  if (_heroesCache) return _heroesCache;
+  _heroesCache = [
+    {
+      id: 'aldric',
+      name: 'Aldric',
+      heroClass: 'Warrior',
+      description: 'A battle-hardened warrior who charges at the strongest foes.',
+      role: 'Tank / DPS',
+      emoji: '⚔️',
+      stats: computeBaseStats('Warrior', { pm: -8, od: -4, sa: 4, rc: -2, fw: 0, we: 2, ld: 0, co: 0, sh: 4, rm: 8, ai: 2, af: 2 }),
+      traits: { pm: -8, od: -4, sa: 4, rc: -2, fw: 0, we: 2, ld: 0, co: 0, sh: 4, rm: 8, ai: 2, af: 2 },
+    },
+    {
+      id: 'lyra',
+      name: 'Lyra',
+      heroClass: 'Mage',
+      description: 'A brilliant mage who obliterates the weakest enemy first.',
+      role: 'Burst DPS',
+      emoji: '🧙',
+      stats: computeBaseStats('Mage', { pm: 12, od: -6, sa: 4, rc: -4, fw: -10, we: 0, ld: 0, co: -4, sh: -2, rm: -8, ai: 4, af: -4 }),
+      traits: { pm: 12, od: -6, sa: 4, rc: -4, fw: -10, we: 0, ld: 0, co: -4, sh: -2, rm: -8, ai: 4, af: -4 },
+    },
+    {
+      id: 'sasha',
+      name: 'Sasha',
+      heroClass: 'Ranger',
+      description: 'A swift ranger who picks off priority targets from range.',
+      role: 'Control / DPS',
+      emoji: '🏹',
+      stats: computeBaseStats('Ranger', { pm: -4, od: -2, sa: 4, rc: -4, fw: 0, we: -4, ld: 0, co: 0, sh: -4, rm: -10, ai: 2, af: 4 }),
+      traits: { pm: -4, od: -2, sa: 4, rc: -4, fw: 0, we: -4, ld: 0, co: 0, sh: -4, rm: -10, ai: 2, af: 4 },
+    },
+    {
+      id: 'theron',
+      name: 'Theron',
+      heroClass: 'Paladin',
+      description: 'A holy paladin who endures the longest and protects allies.',
+      role: 'Support / Tank',
+      emoji: '🛡️',
+      stats: computeBaseStats('Paladin', { pm: 2, od: 8, sa: -6, rc: 6, fw: 0, we: 4, ld: -10, co: 8, sh: 10, rm: 4, ai: -8, af: -2 }),
+      traits: { pm: 2, od: 8, sa: -6, rc: 6, fw: 0, we: 4, ld: -10, co: 8, sh: 10, rm: 4, ai: -8, af: -2 },
+    },
+    {
+      id: 'kira',
+      name: 'Kira',
+      heroClass: 'Rogue',
+      description: 'A cunning rogue who backstabs wounded enemies for big crits.',
+      role: 'Finisher / DPS',
+      emoji: '🗡️',
+      stats: computeBaseStats('Rogue', { pm: -6, od: -8, sa: 6, rc: -6, fw: 0, we: 0, ld: 4, co: -2, sh: -12, rm: -2, ai: 8, af: 8 }),
+      traits: { pm: -6, od: -8, sa: 6, rc: -6, fw: 0, we: 0, ld: 4, co: -2, sh: -12, rm: -2, ai: 8, af: 8 },
+    },
+    {
+      id: 'elara',
+      name: 'Elara',
+      heroClass: 'Cleric',
+      description: 'A devoted cleric who targets the least threatening enemy.',
+      role: 'Healer / Support',
+      emoji: '🙏',
+      stats: computeBaseStats('Cleric', { pm: 6, od: 4, sa: -10, rc: 4, fw: 0, we: 0, ld: -12, co: 6, sh: 8, rm: 2, ai: -6, af: -4 }),
+      traits: { pm: 6, od: 4, sa: -10, rc: 4, fw: 0, we: 0, ld: -12, co: 6, sh: 8, rm: 2, ai: -6, af: -4 },
+    },
+  ];
+  return _heroesCache;
+}
 
 // ── Random hero generation ──────────────────────────────────────────────────
 
