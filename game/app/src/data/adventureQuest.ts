@@ -140,7 +140,7 @@ interface EventTemplate {
 
 // Loaded from BRL via initAdventureData(). See story-adventure-templates.brl.
 let EVENT_TEMPLATES: readonly EventTemplate[] = [];
-// ── NPC pool (derived from World NPCs) ──────────────────────────────────────
+// ── NPC pool (derived from World NPCs at runtime) ───────────────────────────
 
 interface NpcEntry {
   name: string;
@@ -149,15 +149,20 @@ interface NpcEntry {
   greeting: string;
 }
 
-/** Convert world NPCs to quest NPC entries. */
-const NPC_POOL: readonly NpcEntry[] = WORLD_NPCS.map((npc: WorldNpc) => ({
-  name: npc.name,
-  role: npc.role.replace(/_/g, ' '),
-  personality: npc.personality,
-  greeting: npc.greeting,
-}));
+/** Convert world NPCs to quest NPC entries.  Lazy-computed on first use
+ *  (after initWorldData() has populated WORLD_NPCS from BRL). */
+function getNpcPool(): readonly NpcEntry[] {
+  return WORLD_NPCS.map((npc: WorldNpc) => ({
+    name: npc.name,
+    role: npc.role.replace(/_/g, ' '),
+    personality: npc.personality,
+    greeting: npc.greeting,
+  }));
+}
 
-// ── Villain pool ────────────────────────────────────────────────────────────
+// ── Content pools (loaded from BRL via initAdventureData) ───────────────────
+// All content pools are defined in story-quest-pools.brl.  They are compiled
+// to adventure-data.json at build time and loaded at runtime.
 
 interface VillainEntry {
   name: string;
@@ -165,91 +170,22 @@ interface VillainEntry {
   threatDesc: string;
 }
 
-const VILLAIN_POOL: readonly VillainEntry[] = [
-  { name: 'Malachar', title: 'the Undying', threatDesc: 'draining life from the land itself' },
-  { name: 'The Hollow King', title: 'Scourge of the North', threatDesc: 'raising an army of the restless dead' },
-  { name: 'Xanthara', title: 'the Veiled', threatDesc: 'infiltrating the kingdom from within' },
-  { name: 'Gorthak', title: 'the Breaker', threatDesc: 'uniting the savage hordes of the wilds' },
-  { name: 'Lady Seraphine', title: 'the Betrayer', threatDesc: 'twisting holy magic to dark ends' },
-  { name: 'Vrynn', title: 'the Whisper', threatDesc: 'spreading plague through poison and shadow' },
-  { name: 'The Iron Prophet', title: 'Herald of Ruin', threatDesc: 'summoning an ancient and terrible evil' },
-  { name: 'Draegon Ashclaw', title: 'the Last Flame', threatDesc: 'burning entire regions to ash' },
-  { name: 'Nocturne', title: 'the Dreamwalker', threatDesc: 'trapping minds in endless nightmares' },
-  { name: 'Grimjaw', title: 'the Devourer', threatDesc: 'consuming all light in the deep places' },
-];
-
-// ── Item pool ───────────────────────────────────────────────────────────────
-
 interface ItemEntry {
   name: string;
   origin: string;
 }
 
-const ITEM_POOL: readonly ItemEntry[] = [
-  { name: 'Sunstone Amulet', origin: 'Forged in the First Age by the Sun Priests' },
-  { name: 'Everflame Lantern', origin: 'A lantern that burns without fuel, guiding the lost' },
-  { name: 'Ironheart Shield', origin: 'Carried by the last Knight of the Silver Order' },
-  { name: 'Tome of Whispers', origin: 'Contains the spoken memories of a dying oracle' },
-  { name: 'Crystal of Binding', origin: 'A gem that can seal any portal between worlds' },
-  { name: "Serpent's Fang Dagger", origin: 'Carved from the tooth of the Great Wyrm' },
-  { name: 'Map of the Veil', origin: 'Shows paths hidden from mortal eyes' },
-  { name: 'Crown of Thorns', origin: 'Worn by those who would command the wild' },
-  { name: 'Emberstone Ring', origin: 'Warm to the touch — said to ward off curses' },
-  { name: 'Vial of Starlight', origin: 'Collected at the peak of Mount Celeste' },
-  { name: 'Rusted Compass', origin: 'Always points toward the nearest danger' },
-  { name: 'Bone Whistle', origin: 'Summons a spectral ally when blown at midnight' },
-  { name: 'Silvered Mirror', origin: 'Reveals the true form of any who gaze into it' },
-  { name: 'Cloak of Ashes', origin: 'Renders the wearer invisible to the undead' },
-  { name: 'Hearthstone Shard', origin: 'A fragment of the world\'s first hearth' },
-];
-
-// ── Location / creature / misc pools (derived from World data) ──────────────
-
-const CREATURE_POOL = [
-  'Razorback Wyvern', 'Shadowstalker', 'Iron Golem', 'Venomfang Spider',
-  'Dire Wolf', 'Cave Troll', 'Frost Wraith', 'Blight Hound',
-  'Stone Basilisk', 'Ember Drake',
-];
-
-const ENEMY_NAME_POOL = [
-  'Bandit', 'Cultist', 'Goblin', 'Undead', 'Orc',
-  'Dark Elf', 'Mercenary', 'Raider', 'Outlaw', 'Brigand',
-];
-
-const CURSE_POOL = [
-  'the Withering', 'the Ashen Blight', 'Hollow Eyes', 'the Rotwood',
-  'Nightfall Madness', 'the Frost Veil', 'Crimson Tears', 'the Silence',
-];
-
-const PORTAL_POOL = [
-  'Rift of Shadows', 'Gate of Chains', 'Veil Tear', 'Nexus of the Damned',
-  'the Obsidian Door', 'Abyssal Gate', 'Breach of Stars', 'the Hungering Maw',
-];
-
-const RIDDLE_POOL = [
-  'the Three Locks', 'the Stone Faces', 'the Moonlight Path',
-  'the Whispering Doors', 'the Weight of Souls', 'the Mirror Bridge',
-];
-
-const THREAT_POOL = [
-  'Goblin', 'Bandit', 'Undead', 'Orc', 'Dark Elf',
-  'Brigand', 'Cultist', 'Wild Beast', 'Shadow',
-];
-
-const INFO_POOL = [
-  'lost trail', 'hidden passage', 'enemy weakness', 'ancient map',
-  'coded message', 'trade route', 'escape plan', 'ritual incantation',
-];
-
-const INSCRIPTION_POOL = [
-  'Inscription of Ages', 'Runes of Warding', 'Prophecy Stone',
-  'Sunken Glyphs', 'Star Chart', 'Bone Carvings', 'Elder Script',
-];
-
-const CARGO_POOL = [
-  'medical supplies', 'weapons and armour', 'sacred relics',
-  'rare herbs', 'gold and silver', 'ancient texts',
-];
+let VILLAIN_POOL: readonly VillainEntry[] = [];
+let ITEM_POOL: readonly ItemEntry[] = [];
+let CREATURE_POOL: readonly string[] = [];
+let ENEMY_NAME_POOL: readonly string[] = [];
+let CURSE_POOL: readonly string[] = [];
+let PORTAL_POOL: readonly string[] = [];
+let RIDDLE_POOL: readonly string[] = [];
+let THREAT_POOL: readonly string[] = [];
+let INFO_POOL: readonly string[] = [];
+let INSCRIPTION_POOL: readonly string[] = [];
+let CARGO_POOL: readonly string[] = [];
 
 // ── Hero encounter templates ────────────────────────────────────────────────
 // 30 encounters: 6 class-specific + 24 trait-polarization (one per pole of each
@@ -544,6 +480,7 @@ let _initAdventurePromise: Promise<void> | null = null;
  * and hero encounters from `adventure-expansion-set-1.brl` + `expansion-pack-2.brl`.
  *
  * Must be called (and awaited) before any quest-generation functions are used.
+ * BRL is the single source of truth — there are no hardcoded fallbacks.
  *
  * Safe to call multiple times — subsequent calls return the cached result.
  */
@@ -552,10 +489,24 @@ export async function initAdventureData(): Promise<void> {
 
   _initAdventurePromise = (async () => {
     const data = await loadAdventureData();
-    if (data.objectives.length > 0)     OBJECTIVE_TEMPLATES = data.objectives;
-    if (data.milestones.length > 0)     MILESTONE_TEMPLATES = data.milestones;
-    if (data.events.length > 0)         EVENT_TEMPLATES = data.events;
-    if (data.heroEncounters.length > 0) HERO_ENCOUNTER_TEMPLATES = data.heroEncounters as HeroEncounterTemplate[];
+    OBJECTIVE_TEMPLATES = data.objectives;
+    MILESTONE_TEMPLATES = data.milestones;
+    EVENT_TEMPLATES = data.events;
+    HERO_ENCOUNTER_TEMPLATES = data.heroEncounters as HeroEncounterTemplate[];
+    // Load quest content pools from BRL
+    if (data.questPools) {
+      VILLAIN_POOL = data.questPools.villains;
+      ITEM_POOL = data.questPools.items;
+      CREATURE_POOL = data.questPools.creatures;
+      ENEMY_NAME_POOL = data.questPools.enemyNames;
+      CURSE_POOL = data.questPools.curses;
+      PORTAL_POOL = data.questPools.portals;
+      RIDDLE_POOL = data.questPools.riddles;
+      THREAT_POOL = data.questPools.threats;
+      INFO_POOL = data.questPools.infos;
+      INSCRIPTION_POOL = data.questPools.inscriptions;
+      CARGO_POOL = data.questPools.cargos;
+    }
   })();
 
   return _initAdventurePromise;
@@ -577,6 +528,9 @@ export function generateAdventureQuest(
   heroes?: readonly Pick<HeroDefinition, 'name' | 'heroClass' | 'traits'>[],
 ): AdventureQuest {
   const rng = new Rng(seed);
+
+  // NPC pool is derived from world NPCs at runtime (after initWorldData)
+  const NPC_POOL = getNpcPool();
 
   // 1. Draw objective
   const objective = OBJECTIVE_TEMPLATES[rng.next() % OBJECTIVE_TEMPLATES.length];

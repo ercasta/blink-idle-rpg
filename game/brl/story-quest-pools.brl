@@ -1,0 +1,274 @@
+// =============================================================================
+// BLINK IDLE RPG — QUEST CONTENT POOLS
+// =============================================================================
+// Defines all content pool entities used by the quest composition algorithm
+// in adventureQuest.ts.  These pools provide the narrative building blocks
+// (villains, items, creatures, curses, portals, etc.) that are randomly
+// drawn and slotted into quest templates.
+//
+// This file is the single source of truth for quest content pools.
+// At build time, compile-game-data.js extracts these entities into
+// adventure-data.json.  At runtime, the game app loads the JSON.
+//
+// NPC_POOL is derived from WORLD_NPCS (in story-world-data.brl) and does
+// not need a separate BRL declaration — the TypeScript code derives it
+// from the loaded world NPCs at runtime.
+//
+// Extensibility: add new entries by declaring new entities with the
+// appropriate component.  The composition algorithm automatically includes
+// new pool entries.
+//
+// See doc/game-design/adventure-design.md for full design documentation.
+// =============================================================================
+
+// ─── Component Declarations ──────────────────────────────────────────────────
+
+component VillainEntry {
+    name: string                    // Villain's name, e.g. "Malachar"
+    title: string                   // Villain's title, e.g. "the Undying"
+    threatDesc: string              // What the villain is doing, e.g. "draining life from the land itself"
+}
+
+component ItemEntry {
+    name: string                    // Item name, e.g. "Sunstone Amulet"
+    origin: string                  // Flavour text about the item's origin
+}
+
+component CreatureEntry {
+    name: string                    // Creature name, e.g. "Razorback Wyvern"
+}
+
+component EnemyNameEntry {
+    name: string                    // Generic enemy type name, e.g. "Bandit"
+}
+
+component CurseEntry {
+    name: string                    // Curse name, e.g. "the Withering"
+}
+
+component PortalEntry {
+    name: string                    // Portal name, e.g. "Rift of Shadows"
+}
+
+component RiddleEntry {
+    name: string                    // Riddle/puzzle name, e.g. "the Three Locks"
+}
+
+component ThreatEntry {
+    name: string                    // Threat type name, e.g. "Goblin"
+}
+
+component InfoEntry {
+    name: string                    // Information type, e.g. "lost trail"
+}
+
+component InscriptionEntry {
+    name: string                    // Inscription name, e.g. "Inscription of Ages"
+}
+
+component CargoEntry {
+    description: string             // Cargo description, e.g. "medical supplies"
+}
+
+// ─── Villain Pool (10) ──────────────────────────────────────────────────────
+
+villain_1 = new entity {
+    VillainEntry { name: "Malachar", title: "the Undying", threatDesc: "draining life from the land itself" }
+}
+
+villain_2 = new entity {
+    VillainEntry { name: "The Hollow King", title: "Scourge of the North", threatDesc: "raising an army of the restless dead" }
+}
+
+villain_3 = new entity {
+    VillainEntry { name: "Xanthara", title: "the Veiled", threatDesc: "infiltrating the kingdom from within" }
+}
+
+villain_4 = new entity {
+    VillainEntry { name: "Gorthak", title: "the Breaker", threatDesc: "uniting the savage hordes of the wilds" }
+}
+
+villain_5 = new entity {
+    VillainEntry { name: "Lady Seraphine", title: "the Betrayer", threatDesc: "twisting holy magic to dark ends" }
+}
+
+villain_6 = new entity {
+    VillainEntry { name: "Vrynn", title: "the Whisper", threatDesc: "spreading plague through poison and shadow" }
+}
+
+villain_7 = new entity {
+    VillainEntry { name: "The Iron Prophet", title: "Herald of Ruin", threatDesc: "summoning an ancient and terrible evil" }
+}
+
+villain_8 = new entity {
+    VillainEntry { name: "Draegon Ashclaw", title: "the Last Flame", threatDesc: "burning entire regions to ash" }
+}
+
+villain_9 = new entity {
+    VillainEntry { name: "Nocturne", title: "the Dreamwalker", threatDesc: "trapping minds in endless nightmares" }
+}
+
+villain_10 = new entity {
+    VillainEntry { name: "Grimjaw", title: "the Devourer", threatDesc: "consuming all light in the deep places" }
+}
+
+// ─── Item Pool (15) ─────────────────────────────────────────────────────────
+
+item_1 = new entity {
+    ItemEntry { name: "Sunstone Amulet", origin: "Forged in the First Age by the Sun Priests" }
+}
+
+item_2 = new entity {
+    ItemEntry { name: "Everflame Lantern", origin: "A lantern that burns without fuel, guiding the lost" }
+}
+
+item_3 = new entity {
+    ItemEntry { name: "Ironheart Shield", origin: "Carried by the last Knight of the Silver Order" }
+}
+
+item_4 = new entity {
+    ItemEntry { name: "Tome of Whispers", origin: "Contains the spoken memories of a dying oracle" }
+}
+
+item_5 = new entity {
+    ItemEntry { name: "Crystal of Binding", origin: "A gem that can seal any portal between worlds" }
+}
+
+item_6 = new entity {
+    ItemEntry { name: "Serpent's Fang Dagger", origin: "Carved from the tooth of the Great Wyrm" }
+}
+
+item_7 = new entity {
+    ItemEntry { name: "Map of the Veil", origin: "Shows paths hidden from mortal eyes" }
+}
+
+item_8 = new entity {
+    ItemEntry { name: "Crown of Thorns", origin: "Worn by those who would command the wild" }
+}
+
+item_9 = new entity {
+    ItemEntry { name: "Emberstone Ring", origin: "Warm to the touch — said to ward off curses" }
+}
+
+item_10 = new entity {
+    ItemEntry { name: "Vial of Starlight", origin: "Collected at the peak of Mount Celeste" }
+}
+
+item_11 = new entity {
+    ItemEntry { name: "Rusted Compass", origin: "Always points toward the nearest danger" }
+}
+
+item_12 = new entity {
+    ItemEntry { name: "Bone Whistle", origin: "Summons a spectral ally when blown at midnight" }
+}
+
+item_13 = new entity {
+    ItemEntry { name: "Silvered Mirror", origin: "Reveals the true form of any who gaze into it" }
+}
+
+item_14 = new entity {
+    ItemEntry { name: "Cloak of Ashes", origin: "Renders the wearer invisible to the undead" }
+}
+
+item_15 = new entity {
+    ItemEntry { name: "Hearthstone Shard", origin: "A fragment of the world's first hearth" }
+}
+
+// ─── Creature Pool (10) ─────────────────────────────────────────────────────
+
+creature_1 = new entity { CreatureEntry { name: "Razorback Wyvern" } }
+creature_2 = new entity { CreatureEntry { name: "Shadowstalker" } }
+creature_3 = new entity { CreatureEntry { name: "Iron Golem" } }
+creature_4 = new entity { CreatureEntry { name: "Venomfang Spider" } }
+creature_5 = new entity { CreatureEntry { name: "Dire Wolf" } }
+creature_6 = new entity { CreatureEntry { name: "Cave Troll" } }
+creature_7 = new entity { CreatureEntry { name: "Frost Wraith" } }
+creature_8 = new entity { CreatureEntry { name: "Blight Hound" } }
+creature_9 = new entity { CreatureEntry { name: "Stone Basilisk" } }
+creature_10 = new entity { CreatureEntry { name: "Ember Drake" } }
+
+// ─── Enemy Name Pool (10) ───────────────────────────────────────────────────
+
+enemy_name_1 = new entity { EnemyNameEntry { name: "Bandit" } }
+enemy_name_2 = new entity { EnemyNameEntry { name: "Cultist" } }
+enemy_name_3 = new entity { EnemyNameEntry { name: "Goblin" } }
+enemy_name_4 = new entity { EnemyNameEntry { name: "Undead" } }
+enemy_name_5 = new entity { EnemyNameEntry { name: "Orc" } }
+enemy_name_6 = new entity { EnemyNameEntry { name: "Dark Elf" } }
+enemy_name_7 = new entity { EnemyNameEntry { name: "Mercenary" } }
+enemy_name_8 = new entity { EnemyNameEntry { name: "Raider" } }
+enemy_name_9 = new entity { EnemyNameEntry { name: "Outlaw" } }
+enemy_name_10 = new entity { EnemyNameEntry { name: "Brigand" } }
+
+// ─── Curse Pool (8) ─────────────────────────────────────────────────────────
+
+curse_1 = new entity { CurseEntry { name: "the Withering" } }
+curse_2 = new entity { CurseEntry { name: "the Ashen Blight" } }
+curse_3 = new entity { CurseEntry { name: "Hollow Eyes" } }
+curse_4 = new entity { CurseEntry { name: "the Rotwood" } }
+curse_5 = new entity { CurseEntry { name: "Nightfall Madness" } }
+curse_6 = new entity { CurseEntry { name: "the Frost Veil" } }
+curse_7 = new entity { CurseEntry { name: "Crimson Tears" } }
+curse_8 = new entity { CurseEntry { name: "the Silence" } }
+
+// ─── Portal Pool (8) ────────────────────────────────────────────────────────
+
+portal_1 = new entity { PortalEntry { name: "Rift of Shadows" } }
+portal_2 = new entity { PortalEntry { name: "Gate of Chains" } }
+portal_3 = new entity { PortalEntry { name: "Veil Tear" } }
+portal_4 = new entity { PortalEntry { name: "Nexus of the Damned" } }
+portal_5 = new entity { PortalEntry { name: "the Obsidian Door" } }
+portal_6 = new entity { PortalEntry { name: "Abyssal Gate" } }
+portal_7 = new entity { PortalEntry { name: "Breach of Stars" } }
+portal_8 = new entity { PortalEntry { name: "the Hungering Maw" } }
+
+// ─── Riddle Pool (6) ────────────────────────────────────────────────────────
+
+riddle_1 = new entity { RiddleEntry { name: "the Three Locks" } }
+riddle_2 = new entity { RiddleEntry { name: "the Stone Faces" } }
+riddle_3 = new entity { RiddleEntry { name: "the Moonlight Path" } }
+riddle_4 = new entity { RiddleEntry { name: "the Whispering Doors" } }
+riddle_5 = new entity { RiddleEntry { name: "the Weight of Souls" } }
+riddle_6 = new entity { RiddleEntry { name: "the Mirror Bridge" } }
+
+// ─── Threat Pool (9) ────────────────────────────────────────────────────────
+
+threat_1 = new entity { ThreatEntry { name: "Goblin" } }
+threat_2 = new entity { ThreatEntry { name: "Bandit" } }
+threat_3 = new entity { ThreatEntry { name: "Undead" } }
+threat_4 = new entity { ThreatEntry { name: "Orc" } }
+threat_5 = new entity { ThreatEntry { name: "Dark Elf" } }
+threat_6 = new entity { ThreatEntry { name: "Brigand" } }
+threat_7 = new entity { ThreatEntry { name: "Cultist" } }
+threat_8 = new entity { ThreatEntry { name: "Wild Beast" } }
+threat_9 = new entity { ThreatEntry { name: "Shadow" } }
+
+// ─── Info Pool (8) ──────────────────────────────────────────────────────────
+
+info_1 = new entity { InfoEntry { name: "lost trail" } }
+info_2 = new entity { InfoEntry { name: "hidden passage" } }
+info_3 = new entity { InfoEntry { name: "enemy weakness" } }
+info_4 = new entity { InfoEntry { name: "ancient map" } }
+info_5 = new entity { InfoEntry { name: "coded message" } }
+info_6 = new entity { InfoEntry { name: "trade route" } }
+info_7 = new entity { InfoEntry { name: "escape plan" } }
+info_8 = new entity { InfoEntry { name: "ritual incantation" } }
+
+// ─── Inscription Pool (7) ───────────────────────────────────────────────────
+
+inscription_1 = new entity { InscriptionEntry { name: "Inscription of Ages" } }
+inscription_2 = new entity { InscriptionEntry { name: "Runes of Warding" } }
+inscription_3 = new entity { InscriptionEntry { name: "Prophecy Stone" } }
+inscription_4 = new entity { InscriptionEntry { name: "Sunken Glyphs" } }
+inscription_5 = new entity { InscriptionEntry { name: "Star Chart" } }
+inscription_6 = new entity { InscriptionEntry { name: "Bone Carvings" } }
+inscription_7 = new entity { InscriptionEntry { name: "Elder Script" } }
+
+// ─── Cargo Pool (6) ─────────────────────────────────────────────────────────
+
+cargo_1 = new entity { CargoEntry { description: "medical supplies" } }
+cargo_2 = new entity { CargoEntry { description: "weapons and armour" } }
+cargo_3 = new entity { CargoEntry { description: "sacred relics" } }
+cargo_4 = new entity { CargoEntry { description: "rare herbs" } }
+cargo_5 = new entity { CargoEntry { description: "gold and silver" } }
+cargo_6 = new entity { CargoEntry { description: "ancient texts" } }

@@ -384,10 +384,93 @@ function parseHeroEncounterTemplates(text) {
   return encounters;
 }
 
+function parseQuestPools(text) {
+  const entities = parseEntities(text);
+  const villains = [];
+  const items = [];
+  const creatures = [];
+  const enemyNames = [];
+  const curses = [];
+  const portals = [];
+  const riddles = [];
+  const threats = [];
+  const infos = [];
+  const inscriptions = [];
+  const cargos = [];
+
+  for (const entity of entities) {
+    const villainComp = getComponent(entity, 'VillainEntry');
+    if (villainComp) {
+      villains.push({
+        name:       extractStringField(villainComp.body, 'name'),
+        title:      extractStringField(villainComp.body, 'title'),
+        threatDesc: extractStringField(villainComp.body, 'threatDesc'),
+      });
+      continue;
+    }
+    const itemComp = getComponent(entity, 'ItemEntry');
+    if (itemComp) {
+      items.push({
+        name:   extractStringField(itemComp.body, 'name'),
+        origin: extractStringField(itemComp.body, 'origin'),
+      });
+      continue;
+    }
+    const creatureComp = getComponent(entity, 'CreatureEntry');
+    if (creatureComp) {
+      creatures.push(extractStringField(creatureComp.body, 'name'));
+      continue;
+    }
+    const enemyNameComp = getComponent(entity, 'EnemyNameEntry');
+    if (enemyNameComp) {
+      enemyNames.push(extractStringField(enemyNameComp.body, 'name'));
+      continue;
+    }
+    const curseComp = getComponent(entity, 'CurseEntry');
+    if (curseComp) {
+      curses.push(extractStringField(curseComp.body, 'name'));
+      continue;
+    }
+    const portalComp = getComponent(entity, 'PortalEntry');
+    if (portalComp) {
+      portals.push(extractStringField(portalComp.body, 'name'));
+      continue;
+    }
+    const riddleComp = getComponent(entity, 'RiddleEntry');
+    if (riddleComp) {
+      riddles.push(extractStringField(riddleComp.body, 'name'));
+      continue;
+    }
+    const threatComp = getComponent(entity, 'ThreatEntry');
+    if (threatComp) {
+      threats.push(extractStringField(threatComp.body, 'name'));
+      continue;
+    }
+    const infoComp = getComponent(entity, 'InfoEntry');
+    if (infoComp) {
+      infos.push(extractStringField(infoComp.body, 'name'));
+      continue;
+    }
+    const inscComp = getComponent(entity, 'InscriptionEntry');
+    if (inscComp) {
+      inscriptions.push(extractStringField(inscComp.body, 'name'));
+      continue;
+    }
+    const cargoComp = getComponent(entity, 'CargoEntry');
+    if (cargoComp) {
+      cargos.push(extractStringField(cargoComp.body, 'description'));
+      continue;
+    }
+  }
+
+  return { villains, items, creatures, enemyNames, curses, portals, riddles, threats, infos, inscriptions, cargos };
+}
+
 function compileAdventureData() {
   const templatesText   = readBrl('story-adventure-templates.brl');
   const expansion1Text  = readBrl('adventure-expansion-set-1.brl');
   const expansion2Text  = readBrl('expansion-pack-2.brl');
+  const poolsText       = readBrl('story-quest-pools.brl');
 
   return {
     objectives:     parseObjectiveTemplates(templatesText),
@@ -397,6 +480,7 @@ function compileAdventureData() {
       ...parseHeroEncounterTemplates(expansion1Text),
       ...parseHeroEncounterTemplates(expansion2Text),
     ],
+    questPools:     parseQuestPools(poolsText),
   };
 }
 

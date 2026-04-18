@@ -66,6 +66,31 @@ export interface HeroEncounterTemplate {
   difficultyModifier: number;
 }
 
+export interface VillainEntry {
+  name: string;
+  title: string;
+  threatDesc: string;
+}
+
+export interface ItemEntry {
+  name: string;
+  origin: string;
+}
+
+export interface QuestPools {
+  villains: VillainEntry[];
+  items: ItemEntry[];
+  creatures: string[];
+  enemyNames: string[];
+  curses: string[];
+  portals: string[];
+  riddles: string[];
+  threats: string[];
+  infos: string[];
+  inscriptions: string[];
+  cargos: string[];
+}
+
 // ── Public API ───────────────────────────────────────────────────────────────
 
 export interface AdventureDataSet {
@@ -73,6 +98,7 @@ export interface AdventureDataSet {
   milestones: MilestoneTemplate[];
   events: EventTemplate[];
   heroEncounters: HeroEncounterTemplate[];
+  questPools: QuestPools;
 }
 
 let adventureDataCache: AdventureDataSet | null = null;
@@ -105,6 +131,19 @@ export async function loadAdventureData(): Promise<AdventureDataSet> {
         milestones: [],
         events: [],
         heroEncounters: [],
+        questPools: {
+          villains: [],
+          items: [],
+          creatures: [],
+          enemyNames: [],
+          curses: [],
+          portals: [],
+          riddles: [],
+          threats: [],
+          infos: [],
+          inscriptions: [],
+          cargos: [],
+        },
       };
       return adventureDataCache;
     }
