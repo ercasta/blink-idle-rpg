@@ -6,6 +6,7 @@ import { ALL_LINE_PREFERENCES, ALL_ROLES } from '../types';
 import { generateRandomHero } from '../data/heroes';
 import { generateHeroDescription, encodeHeroToParams } from '../data/heroDescription';
 import type { SharedHeroData } from '../data/heroDescription';
+import { loadHeroClassData } from '../data/heroClassData';
 import { loadSkillCatalog } from '../data/skillCatalog';
 import type { SkillEntry } from '../data/skillCatalog';
 import { printHeroFigurine } from '../utils/heroFigurine';
@@ -256,20 +257,29 @@ export function RosterScreen({ roster, onRosterChange, onBack, sharedHero }: Ros
   const [sortBy, setSortBy] = useState<'name' | 'adventures'>('name');
   const [editingHero, setEditingHero] = useState<HeroDefinition | null>(null);
   // For create: a new hero being configured before adding
-  const [draftHero, setDraftHero] = useState<HeroDefinition | null>(() => {
-    if (!sharedHero) return null;
-    return {
-      id: `hero-${crypto.randomUUID()}`,
-      name: sharedHero.name,
-      heroClass: sharedHero.heroClass,
-      description: generateHeroDescription(sharedHero.heroClass, sharedHero.traits),
-      role: computeRole(sharedHero.heroClass, sharedHero.traits),
-      emoji: CLASS_EMOJIS[sharedHero.heroClass],
-      stats: computeBaseStats(sharedHero.heroClass, sharedHero.traits),
-      traits: sharedHero.traits,
-      linePreference: computeLinePreference(sharedHero.traits),
-    };
-  });
+  const [draftHero, setDraftHero] = useState<HeroDefinition | null>(null);
+
+  // Ensure hero class data is loaded; for shared-hero links, populate draftHero
+  // once it resolves (computeBaseStats requires the data to be loaded first).
+  useEffect(() => {
+    loadHeroClassData().then(() => {
+      if (sharedHero) {
+        setDraftHero(prev => prev ?? {
+          id: `hero-${crypto.randomUUID()}`,
+          name: sharedHero.name,
+          heroClass: sharedHero.heroClass,
+          description: generateHeroDescription(sharedHero.heroClass, sharedHero.traits),
+          role: computeRole(sharedHero.heroClass, sharedHero.traits),
+          emoji: CLASS_EMOJIS[sharedHero.heroClass],
+          stats: computeBaseStats(sharedHero.heroClass, sharedHero.traits),
+          traits: sharedHero.traits,
+          linePreference: computeLinePreference(sharedHero.traits),
+        });
+      }
+    });
+  // sharedHero is stable (decoded once from URL params and never changes)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [sharingHero, setSharingHero] = useState<HeroDefinition | null>(null);
   // Overwrite confirmation: holds the hero waiting for user confirmation
   const [pendingHeroCreate, setPendingHeroCreate] = useState<HeroDefinition | null>(null);
@@ -310,7 +320,8 @@ export function RosterScreen({ roster, onRosterChange, onBack, sharedHero }: Ros
     onRosterChange(roster.map(h => h.id === id ? { ...h, favourite: !h.favourite } : h));
   }
 
-  function openCreate() {
+  async function openCreate() {
+    await loadHeroClassData();
     setDraftHero(generateRandomHero());
     setView('create');
   }
@@ -476,6 +487,15 @@ export function RosterScreen({ roster, onRosterChange, onBack, sharedHero }: Ros
   }
 
   // ── Create hero ──────────────────────────────────────────────────────────
+
+  // Hero class data not yet loaded (shared-hero deep-link path)
+  if (view === 'create' && !draftHero) {
+    return (
+      <div className="flex flex-col min-h-screen bg-stone-900 text-stone-100 items-center justify-center">
+        <p className="text-stone-400 text-sm">Loading…</p>
+      </div>
+    );
+  }
 
   if (view === 'create' && draftHero) {
     return (
