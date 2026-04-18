@@ -2,7 +2,7 @@
 // BLINK IDLE RPG — QUEST CONTENT POOLS
 // =============================================================================
 // Defines all content pool entities used by the quest composition algorithm
-// in adventureQuest.ts.  These pools provide the narrative building blocks
+// in BRL quest composition rules.  These pools provide the narrative building blocks
 // (villains, items, creatures, curses, portals, etc.) that are randomly
 // drawn and slotted into quest templates.
 //
@@ -73,105 +73,190 @@ component CargoEntry {
 // ─── Villain Pool (10) ──────────────────────────────────────────────────────
 
 villain_1 = new entity {
-    VillainEntry { name: "Malachar", title: "the Undying", threatDesc: "draining life from the land itself" }
+    VillainEntry {
+        name: "Malachar"
+        title: "the Undying"
+        threatDesc: "draining life from the land itself"
+    }
 }
 
 villain_2 = new entity {
-    VillainEntry { name: "The Hollow King", title: "Scourge of the North", threatDesc: "raising an army of the restless dead" }
+    VillainEntry {
+        name: "The Hollow King"
+        title: "Scourge of the North"
+        threatDesc: "raising an army of the restless dead"
+    }
 }
 
 villain_3 = new entity {
-    VillainEntry { name: "Xanthara", title: "the Veiled", threatDesc: "infiltrating the kingdom from within" }
+    VillainEntry {
+        name: "Xanthara"
+        title: "the Veiled"
+        threatDesc: "infiltrating the kingdom from within"
+    }
 }
 
 villain_4 = new entity {
-    VillainEntry { name: "Gorthak", title: "the Breaker", threatDesc: "uniting the savage hordes of the wilds" }
+    VillainEntry {
+        name: "Gorthak"
+        title: "the Breaker"
+        threatDesc: "uniting the savage hordes of the wilds"
+    }
 }
 
 villain_5 = new entity {
-    VillainEntry { name: "Lady Seraphine", title: "the Betrayer", threatDesc: "twisting holy magic to dark ends" }
+    VillainEntry {
+        name: "Lady Seraphine"
+        title: "the Betrayer"
+        threatDesc: "twisting holy magic to dark ends"
+    }
 }
 
 villain_6 = new entity {
-    VillainEntry { name: "Vrynn", title: "the Whisper", threatDesc: "spreading plague through poison and shadow" }
+    VillainEntry {
+        name: "Vrynn"
+        title: "the Whisper"
+        threatDesc: "spreading plague through poison and shadow"
+    }
 }
 
 villain_7 = new entity {
-    VillainEntry { name: "The Iron Prophet", title: "Herald of Ruin", threatDesc: "summoning an ancient and terrible evil" }
+    VillainEntry {
+        name: "The Iron Prophet"
+        title: "Herald of Ruin"
+        threatDesc: "summoning an ancient and terrible evil"
+    }
 }
 
 villain_8 = new entity {
-    VillainEntry { name: "Draegon Ashclaw", title: "the Last Flame", threatDesc: "burning entire regions to ash" }
+    VillainEntry {
+        name: "Draegon Ashclaw"
+        title: "the Last Flame"
+        threatDesc: "burning entire regions to ash"
+    }
 }
 
 villain_9 = new entity {
-    VillainEntry { name: "Nocturne", title: "the Dreamwalker", threatDesc: "trapping minds in endless nightmares" }
+    VillainEntry {
+        name: "Nocturne"
+        title: "the Dreamwalker"
+        threatDesc: "trapping minds in endless nightmares"
+    }
 }
 
 villain_10 = new entity {
-    VillainEntry { name: "Grimjaw", title: "the Devourer", threatDesc: "consuming all light in the deep places" }
+    VillainEntry {
+        name: "Grimjaw"
+        title: "the Devourer"
+        threatDesc: "consuming all light in the deep places"
+    }
 }
 
 // ─── Item Pool (15) ─────────────────────────────────────────────────────────
 
 item_1 = new entity {
-    ItemEntry { name: "Sunstone Amulet", origin: "Forged in the First Age by the Sun Priests" }
+    ItemEntry {
+        name: "Sunstone Amulet"
+        origin: "Forged in the First Age by the Sun Priests"
+    }
 }
 
 item_2 = new entity {
-    ItemEntry { name: "Everflame Lantern", origin: "A lantern that burns without fuel, guiding the lost" }
+    ItemEntry {
+        name: "Everflame Lantern"
+        origin: "A lantern that burns without fuel, guiding the lost"
+    }
 }
 
 item_3 = new entity {
-    ItemEntry { name: "Ironheart Shield", origin: "Carried by the last Knight of the Silver Order" }
+    ItemEntry {
+        name: "Ironheart Shield"
+        origin: "Carried by the last Knight of the Silver Order"
+    }
 }
 
 item_4 = new entity {
-    ItemEntry { name: "Tome of Whispers", origin: "Contains the spoken memories of a dying oracle" }
+    ItemEntry {
+        name: "Tome of Whispers"
+        origin: "Contains the spoken memories of a dying oracle"
+    }
 }
 
 item_5 = new entity {
-    ItemEntry { name: "Crystal of Binding", origin: "A gem that can seal any portal between worlds" }
+    ItemEntry {
+        name: "Crystal of Binding"
+        origin: "A gem that can seal any portal between worlds"
+    }
 }
 
 item_6 = new entity {
-    ItemEntry { name: "Serpent's Fang Dagger", origin: "Carved from the tooth of the Great Wyrm" }
+    ItemEntry {
+        name: "Serpent's Fang Dagger"
+        origin: "Carved from the tooth of the Great Wyrm"
+    }
 }
 
 item_7 = new entity {
-    ItemEntry { name: "Map of the Veil", origin: "Shows paths hidden from mortal eyes" }
+    ItemEntry {
+        name: "Map of the Veil"
+        origin: "Shows paths hidden from mortal eyes"
+    }
 }
 
 item_8 = new entity {
-    ItemEntry { name: "Crown of Thorns", origin: "Worn by those who would command the wild" }
+    ItemEntry {
+        name: "Crown of Thorns"
+        origin: "Worn by those who would command the wild"
+    }
 }
 
 item_9 = new entity {
-    ItemEntry { name: "Emberstone Ring", origin: "Warm to the touch — said to ward off curses" }
+    ItemEntry {
+        name: "Emberstone Ring"
+        origin: "Warm to the touch — said to ward off curses"
+    }
 }
 
 item_10 = new entity {
-    ItemEntry { name: "Vial of Starlight", origin: "Collected at the peak of Mount Celeste" }
+    ItemEntry {
+        name: "Vial of Starlight"
+        origin: "Collected at the peak of Mount Celeste"
+    }
 }
 
 item_11 = new entity {
-    ItemEntry { name: "Rusted Compass", origin: "Always points toward the nearest danger" }
+    ItemEntry {
+        name: "Rusted Compass"
+        origin: "Always points toward the nearest danger"
+    }
 }
 
 item_12 = new entity {
-    ItemEntry { name: "Bone Whistle", origin: "Summons a spectral ally when blown at midnight" }
+    ItemEntry {
+        name: "Bone Whistle"
+        origin: "Summons a spectral ally when blown at midnight"
+    }
 }
 
 item_13 = new entity {
-    ItemEntry { name: "Silvered Mirror", origin: "Reveals the true form of any who gaze into it" }
+    ItemEntry {
+        name: "Silvered Mirror"
+        origin: "Reveals the true form of any who gaze into it"
+    }
 }
 
 item_14 = new entity {
-    ItemEntry { name: "Cloak of Ashes", origin: "Renders the wearer invisible to the undead" }
+    ItemEntry {
+        name: "Cloak of Ashes"
+        origin: "Renders the wearer invisible to the undead"
+    }
 }
 
 item_15 = new entity {
-    ItemEntry { name: "Hearthstone Shard", origin: "A fragment of the world's first hearth" }
+    ItemEntry {
+        name: "Hearthstone Shard"
+        origin: "A fragment of the world's first hearth"
+    }
 }
 
 // ─── Creature Pool (10) ─────────────────────────────────────────────────────

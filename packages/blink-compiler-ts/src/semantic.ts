@@ -40,6 +40,7 @@ export class SemanticAnalyzer {
     'min', 'max', 'floor', 'ceil', 'round', 'abs',
     'random', 'random_range', 'len', 'list', 'get',
     'entities_having', 'concat', 'to_string', 'str_replace', 'str_contains',
+    'str_pick_variant', 'str_count_variants',
   ]);
   
   // Built-in variables available in rules
