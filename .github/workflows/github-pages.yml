@@ -65,9 +65,6 @@ jobs:
         id: pages
         uses: actions/configure-pages@v4
 
-      - name: Copy BRL/BCL game files to web app
-        run: node scripts/copy-game-files.js
-
       - name: Compile BRL entity data to JSON
         run: node scripts/compile-game-data.js
 
