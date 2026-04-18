@@ -1,6 +1,6 @@
 # Blink Example: Basic Combat
 
-This folder contains example BRL and BCL code demonstrating basic combat mechanics.
+This folder contains example BRL code demonstrating basic combat mechanics.
 
 ## Files
 
@@ -8,7 +8,6 @@ This folder contains example BRL and BCL code demonstrating basic combat mechani
 |------|-------------|
 | `combat-components.brl` | Component definitions for combat |
 | `combat-rules.brl` | Combat rules |
-| `player-strategy.bcl` | Example player strategy |
 
 ## Running This Example
 

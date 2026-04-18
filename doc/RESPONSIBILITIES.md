@@ -132,7 +132,6 @@ The following duplication has been resolved:
 | Canonical source | Was duplicated at | Resolution |
 |------------------|-------------------|------------|
 | `game/brl/*.brl` | `game/app/public/game-files/*.brl` | Auto-copied at build time; copies removed from git |
-| `game/bcl/*.bcl` | `game/app/public/game-files/*.bcl` | Auto-copied at build time; copies removed from git |
 | `game/brl/enemies.brl` | `WasmSimEngine.ts` `ENEMY_TEMPLATES` | BRL loaded at runtime via `enemyData.ts`; TS fallback only |
 | `game/brl/scenario-*.brl` | `WasmSimEngine.ts` `MODE_CONFIGS` | BRL loaded at runtime via `scenarioData.ts`; TS fallback only |
 | `game/brl/story-world-data.brl` | `worldData.ts` data arrays | BRL loaded at runtime via `worldDataLoader.ts`; TS fallback only |
