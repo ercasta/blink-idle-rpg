@@ -935,11 +935,14 @@ fn emitQuestNarrativeForDay(day: integer): integer {
     }
 
     // Milestone activations (after the first one)
+    // Use hour=9 so these appear after milestone completions (hour=8) on the same day.
+    // When a milestone completes and the next one activates on the same day, the
+    // completion must appear first in the narrative log.
     for ms in milestones {
         if ms.QuestMilestone.milestoneIndex > 0 && ms.QuestMilestone.activationDay == day {
             let msNum = ms.QuestMilestone.milestoneIndex + 1
-            let n5 = emitNarrative(day, 1, 1, "📋 Milestone " + to_string(msNum) + "/" + to_string(msTotal) + ": " + ms.QuestMilestone.title)
-            let n6 = emitNarrative(day, 1, 2, ms.QuestMilestone.description)
+            let n5 = emitNarrative(day, 9, 1, "📋 Milestone " + to_string(msNum) + "/" + to_string(msTotal) + ": " + ms.QuestMilestone.title)
+            let n6 = emitNarrative(day, 9, 2, ms.QuestMilestone.description)
             emitted = emitted + 2
         }
     }
@@ -1006,7 +1009,10 @@ fn emitQuestNarrativeForDay(day: integer): integer {
         if objectiveDay > 30 { objectiveDay = 30 }
 
         if day == objectiveDay {
-            let n11 = emitNarrative(day, 0, 1, "🎉 Objective Complete: " + advState.AdventureState.objectiveTitle + "! (+" + to_string(questObjectiveBonus()) + " points)")
+            // Use hour=10 so objective completion appears after milestone completions (hour=8),
+            // new milestone activations (hour=9), and the day's regular events — but before
+            // the day-end summary (hour=11).
+            let n11 = emitNarrative(day, 10, 1, "🎉 Objective Complete: " + advState.AdventureState.objectiveTitle + "! (+" + to_string(questObjectiveBonus()) + " points)")
             emitted = emitted + 1
 
             // Check bail-out count for all-normal bonus
@@ -1017,7 +1023,7 @@ fn emitQuestNarrativeForDay(day: integer): integer {
                 }
             }
             if bailoutCt == 0 {
-                let n12 = emitNarrative(day, 0, 2, "🌟 All milestones completed without bail-outs! (+" + to_string(questAllNormalBonus()) + " bonus points)")
+                let n12 = emitNarrative(day, 10, 2, "🌟 All milestones completed without bail-outs! (+" + to_string(questAllNormalBonus()) + " bonus points)")
                 emitted = emitted + 1
             }
 
@@ -1030,7 +1036,7 @@ fn emitQuestNarrativeForDay(day: integer): integer {
                     let earlyBonus = daysRemaining * 50
                     let dayWord = " days"
                     if daysRemaining == 1 { dayWord = " day" }
-                    let n13 = emitNarrative(day, 1, 1, "⚡ Mission accomplished " + to_string(daysRemaining) + dayWord + " ahead of schedule! (+" + to_string(earlyBonus) + " early completion bonus)")
+                    let n13 = emitNarrative(day, 10, 1, "⚡ Mission accomplished " + to_string(daysRemaining) + dayWord + " ahead of schedule! (+" + to_string(earlyBonus) + " early completion bonus)")
                     emitted = emitted + 1
                 }
             }
